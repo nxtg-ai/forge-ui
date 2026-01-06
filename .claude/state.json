@@ -4,20 +4,23 @@
     "name": "nxtg-forge",
     "type": "platform",
     "created_at": "2025-01-04T12:00:00Z",
-    "last_updated": "2025-01-04T16:50:00Z",
+    "last_updated": "2026-01-05T19:47:12Z",
     "forge_version": "1.0.0"
   },
-
   "spec": {
     "status": "approved",
     "file": "docs/PROJECT-SPEC.md",
     "hash": "abc123...",
     "last_modified": "2025-01-04T13:00:00Z"
   },
-
   "architecture": {
     "pattern": "clean-architecture",
-    "layers": ["domain", "application", "infrastructure", "interface"],
+    "layers": [
+      "domain",
+      "application",
+      "infrastructure",
+      "interface"
+    ],
     "backend": {
       "language": "python",
       "framework": "fastapi",
@@ -36,12 +39,19 @@
       "version": "7"
     }
   },
-
   "development": {
     "current_phase": "testing",
-    "phases_completed": ["planning", "architecture", "setup", "implementation"],
-    "phases_remaining": ["testing", "documentation", "deployment"],
-
+    "phases_completed": [
+      "planning",
+      "architecture",
+      "setup",
+      "implementation"
+    ],
+    "phases_remaining": [
+      "testing",
+      "documentation",
+      "deployment"
+    ],
     "features": {
       "completed": [
         {
@@ -95,9 +105,10 @@
       ]
     }
   },
-
   "agents": {
-    "active": ["backend-master"],
+    "active": [
+      "backend-master"
+    ],
     "available": [
       "lead-architect",
       "cli-artisan",
@@ -115,7 +126,6 @@
       }
     ]
   },
-
   "mcp_servers": {
     "configured": [
       {
@@ -139,7 +149,6 @@
       }
     ]
   },
-
   "quality": {
     "tests": {
       "unit": {
@@ -172,7 +181,6 @@
       "last_scan": null
     }
   },
-
   "checkpoints": [
     {
       "id": "cp-001",
@@ -189,13 +197,12 @@
       "git_commit": "def456..."
     }
   ],
-
   "last_session": {
-    "id": "session-upgrade-001",
-    "started": "2025-01-04T16:30:00Z",
-    "agent": "platform-builder",
-    "task": "NXTG-Forge upgrade to v1.0",
-    "status": "completed",
+    "id": "test-123",
+    "started": "2026-01-05T19:47:12Z",
+    "agent": "general",
+    "task": "Test hook",
+    "status": "in_progress",
     "resume_command": null
   }
 }

@@ -27,12 +27,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/nxtg-forge.git"
+    "url": "https://github.com/nxtg-ai/nxtg-forge.git"
   },
   "bugs": {
-    "url": "https://github.com/your-org/nxtg-forge/issues"
+    "url": "https://github.com/nxtg-ai/nxtg-forge/issues"
   },
-  "homepage": "https://github.com/your-org/nxtg-forge#readme",
+  "homepage": "https://github.com/nxtg-ai/nxtg-forge#readme",
   "engines": {
     "node": ">=16.0.0",
     "python": ">=3.9.0"

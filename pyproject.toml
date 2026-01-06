@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "nxtg-forge"
 version = "1.0.0"
 description = "Self-Deploying AI Development Infrastructure"
-# readme = "README.md"  # Temporarily disabled due to encoding issue
+readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
@@ -58,10 +58,11 @@ nxtg-forge = "forge.cli:main"
 forge = "forge.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/your-org/nxtg-forge"
-Documentation = "https://github.com/your-org/nxtg-forge#readme"
-Repository = "https://github.com/your-org/nxtg-forge.git"
-"Bug Tracker" = "https://github.com/your-org/nxtg-forge/issues"
+Homepage = "https://github.com/nxtg-ai/nxtg-forge"
+Documentation = "https://github.com/nxtg-ai/nxtg-forge#readme"
+Repository = "https://github.com/nxtg-ai/nxtg-forge.git"
+"Bug Tracker" = "https://github.com/nxtg-ai/nxtg-forge/issues"
+Changelog = "https://github.com/nxtg-ai/nxtg-forge/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
 packages = ["forge", "forge.agents"]

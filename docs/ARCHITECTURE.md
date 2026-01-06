@@ -143,6 +143,60 @@ Each agent has:
 - Quality standards
 - Handoff protocols
 
+### 3.5. Lifecycle Hooks
+
+Automated bash scripts that run at different points in the Claude Code workflow:
+
+**Hook Types:**
+
+1. **pre-task.sh** - Pre-execution validation
+   - Ensures `state.json` exists (creates from template if missing)
+   - Updates last session tracking
+   - Validates project structure
+   - Checks for uncommitted git changes
+
+2. **post-task.sh** - Post-execution quality checks
+   - Runs quick test validation (10s timeout)
+   - Performs code quality checks with ruff
+   - Updates quality metrics in state.json
+   - Suggests next steps based on task status
+   - Recommends checkpoint creation for major tasks (>5 files modified)
+
+3. **on-error.sh** - Error handling and recovery
+   - Logs errors to `.claude/errors.log`
+   - Analyzes error types (imports, permissions, syntax, connections)
+   - Provides contextual recovery suggestions
+   - Tracks error patterns
+   - Updates state with error status
+
+4. **on-file-change.sh** - File modification automation
+   - Auto-formats Python files with Black
+   - Validates JSON/YAML syntax
+   - Warns about critical file modifications (.env, requirements.txt)
+   - Tracks file statistics
+   - Suggests running tests for test file changes
+
+5. **state-sync.sh** - State synchronization
+   - Creates automatic backups (retains last 10)
+   - Validates state.json integrity
+   - Syncs project statistics (file counts, LOC)
+   - Updates git information (branch, commit, status)
+   - Calculates project health scores
+   - Creates checkpoints
+   - Auto-restores corrupted state from backups
+
+**State Management:**
+- **Template**: `state.json.template` committed to repo
+- **User State**: `state.json` gitignored
+- **Backups**: `.claude/backups/state_YYYYMMDD_HHMMSS.json`
+- **Checkpoints**: `.claude/checkpoints/checkpoint_ID.json`
+
+**Dependencies:**
+- Required: bash
+- Recommended: jq (JSON manipulation), git, python, black, ruff
+
+See [`.claude/hooks/README.md`](.claude/hooks/README.md) for complete documentation.
+
 ### 4. State Management
 
 **State Schema:**

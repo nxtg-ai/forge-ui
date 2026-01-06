@@ -1,0 +1,113 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "",
+    "type": "",
+    "created_at": "",
+    "last_updated": "",
+    "forge_version": "1.0.0"
+  },
+
+  "spec": {
+    "status": "pending",
+    "file": null,
+    "hash": null,
+    "last_modified": null
+  },
+
+  "architecture": {
+    "pattern": "",
+    "layers": [],
+    "backend": {
+      "language": "",
+      "framework": "",
+      "version": ""
+    },
+    "frontend": {
+      "framework": "",
+      "version": ""
+    },
+    "database": {
+      "type": "",
+      "version": ""
+    },
+    "cache": {
+      "type": "",
+      "version": ""
+    }
+  },
+
+  "development": {
+    "current_phase": "planning",
+    "phases_completed": [],
+    "phases_remaining": ["planning", "architecture", "setup", "implementation", "testing", "documentation", "deployment"],
+
+    "features": {
+      "completed": [],
+      "in_progress": [],
+      "planned": []
+    }
+  },
+
+  "agents": {
+    "active": [],
+    "available": [
+      "lead-architect",
+      "backend-master",
+      "cli-artisan",
+      "platform-builder",
+      "integration-specialist",
+      "qa-sentinel"
+    ],
+    "history": []
+  },
+
+  "mcp_servers": {
+    "configured": [],
+    "recommended": []
+  },
+
+  "quality": {
+    "tests": {
+      "unit": {
+        "total": 0,
+        "passing": 0,
+        "coverage": 0
+      },
+      "integration": {
+        "total": 0,
+        "passing": 0,
+        "coverage": 0
+      },
+      "e2e": {
+        "total": 0,
+        "passing": 0,
+        "coverage": 0
+      }
+    },
+    "linting": {
+      "issues": 0,
+      "last_run": null
+    },
+    "security": {
+      "vulnerabilities": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "last_scan": null
+    }
+  },
+
+  "checkpoints": [],
+
+  "last_session": {
+    "id": null,
+    "started": null,
+    "agent": null,
+    "task": null,
+    "status": null,
+    "resume_command": null
+  }
+}

@@ -1,3 +1,4 @@
+LICENSE
 README.md
 pyproject.toml
 forge/__init__.py
