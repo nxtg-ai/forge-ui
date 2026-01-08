@@ -1,0 +1,24 @@
+name: django-project
+type: web-app
+description: Django web application
+
+backend:
+  language: python
+  framework: django
+  version: "4.2.0"
+
+database:
+  type: postgresql
+  version: "15"
+
+frontend:
+  framework: react
+  version: "18.2.0"
+
+testing:
+  framework: pytest
+  min_coverage: 80
+
+deployment:
+  target: docker
+  ci_cd: github-actions

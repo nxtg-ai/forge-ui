@@ -22,7 +22,7 @@ FORGE_VERSION = "1.0.0"
 class ForgeCLI:
     def __init__(self):
         self.project_root = Path.cwd()
-        self.state_manager = StateManager(self.project_root)
+        self.state_manager = StateManager(str(self.project_root))
 
     def run(self, args):
         parser = argparse.ArgumentParser(
@@ -114,6 +114,21 @@ Examples:
             help="Show what would be generated",
         )
 
+        # Config commands
+        config_parser = subparsers.add_parser("config", help="Configuration operations")
+        config_subparsers = config_parser.add_subparsers(dest="config_command")
+
+        config_show = config_subparsers.add_parser("show", help="Show current configuration")
+        config_show.add_argument(
+            "--section",
+            choices=["project", "development", "testing", "agents", "hooks", "context", "safety"],
+            help="Show specific section",
+        )
+        config_show.add_argument("--json", action="store_true", help="Output as JSON")
+
+        config_validate = config_subparsers.add_parser("validate", help="Validate configuration")
+        config_validate.add_argument("--fix", action="store_true", help="Attempt to fix issues")
+
         parsed_args = parser.parse_args(args)
 
         if not parsed_args.command:
@@ -131,6 +146,7 @@ Examples:
             "health": self.cmd_health,
             "recovery": self.cmd_recovery,
             "generate": self.cmd_generate,
+            "config": self.cmd_config,
         }
 
         handler = command_map.get(parsed_args.command)
@@ -242,7 +258,7 @@ Examples:
     def cmd_spec(self, args):
         """Spec operations"""
         if args.spec_command == "generate":
-            generator = SpecGenerator(self.project_root)
+            generator = SpecGenerator(str(self.project_root))
 
             if args.interactive:
                 spec = generator.interactive_mode()
@@ -271,7 +287,7 @@ Examples:
     def cmd_mcp(self, args):
         """MCP operations"""
         if args.mcp_command == "detect":
-            detector = MCPDetector(self.project_root)
+            detector = MCPDetector(str(self.project_root))
             recommendations = detector.detect()
 
             print("\n📋 MCP Server Recommendations:\n")
@@ -309,7 +325,7 @@ Examples:
 
     def cmd_gap_analysis(self, args):
         """Run gap analysis"""
-        analyzer = GapAnalyzer(self.project_root, self.state_manager.state)
+        analyzer = GapAnalyzer(str(self.project_root), self.state_manager.state)
         gaps = analyzer.analyze()
 
         output_file = self.project_root / args.output
@@ -387,7 +403,7 @@ Examples:
 
     def cmd_generate(self, args):
         """Generate project files"""
-        generator = FileGenerator(self.project_root)
+        generator = FileGenerator(str(self.project_root))
 
         # Load spec
         with open(args.spec) as f:
@@ -410,6 +426,148 @@ Examples:
 
         return 0
 
+    def cmd_config(self, args):
+        """Configuration operations"""
+        config_path = self.project_root / ".claude" / "config.json"
+
+        if not config_path.exists():
+            print(f"❌ Config file not found at {config_path}")
+            return 1
+
+        if args.config_command == "show":
+            try:
+                with open(config_path, encoding="utf-8") as f:
+                    config = json.load(f)
+            except json.JSONDecodeError as e:
+                print(f"❌ Invalid JSON in config file: {e}")
+                return 1
+
+            if args.json:
+                if args.section:
+                    print(json.dumps(config.get(args.section, {}), indent=2))
+                else:
+                    print(json.dumps(config, indent=2))
+                return 0
+
+            # Pretty print configuration
+            if args.section:
+                self._print_header(f"Configuration: {args.section.title()}")
+                self._print_config_section(config.get(args.section, {}))
+            else:
+                self._print_header("NXTG-Forge Configuration")
+                print(f"\n📄 Config File: {config_path}")
+                print(f"📦 Version: {config.get('version', 'unknown')}\n")
+
+                for section in [
+                    "project",
+                    "development",
+                    "testing",
+                    "agents",
+                    "hooks",
+                    "context",
+                    "safety",
+                ]:
+                    if section in config:
+                        print(f"\n{'─' * 60}")
+                        print(f"📋 {section.upper()}")
+                        print(f"{'─' * 60}")
+                        self._print_config_section(config[section], indent=2)
+
+            return 0
+
+        elif args.config_command == "validate":
+            print("\n🔍 Validating configuration...\n")
+
+            errors = []
+            warnings = []
+
+            try:
+                with open(config_path, encoding="utf-8") as f:
+                    config = json.load(f)
+            except json.JSONDecodeError as e:
+                print(f"❌ Invalid JSON: {e}")
+                return 1
+
+            # Validate required sections
+            required_sections = ["project", "development", "testing", "hooks"]
+            for section in required_sections:
+                if section not in config:
+                    errors.append(f"Missing required section: {section}")
+
+            # Validate project section
+            if "project" in config:
+                project = config["project"]
+                if "name" not in project:
+                    errors.append("Missing project.name")
+                if "language" not in project:
+                    warnings.append("Missing project.language (optional)")
+
+            # Validate development section
+            if "development" in config:
+                dev = config["development"]
+                lang = config.get("project", {}).get("language", "python")
+                if lang not in dev:
+                    warnings.append(f"Missing development.{lang} configuration")
+
+            # Validate testing section
+            if "testing" in config:
+                testing = config["testing"]
+                if "coverage_target" in testing:
+                    target = testing["coverage_target"]
+                    if not isinstance(target, (int, float)) or not 0 <= target <= 100:
+                        errors.append("testing.coverage_target must be between 0 and 100")
+
+            # Validate hooks
+            if "hooks" in config:
+                hooks = config["hooks"]
+                if "enabled" in hooks and not isinstance(hooks["enabled"], bool):
+                    errors.append("hooks.enabled must be a boolean")
+
+                # Check if hook files exist
+                for hook_type in ["pre_task", "post_task", "on_error", "on_file_change"]:
+                    if hook_type in hooks:
+                        hook_path = self.project_root / hooks[hook_type]
+                        if not hook_path.exists():
+                            warnings.append(f"Hook file not found: {hooks[hook_type]}")
+
+            # Validate agents
+            if "agents" in config:
+                agents_config = config["agents"]
+                if "available_agents" in agents_config:
+                    for agent in agents_config["available_agents"]:
+                        if "name" not in agent:
+                            errors.append(f"Agent missing 'name' field: {agent}")
+                        if "capabilities" not in agent:
+                            warnings.append(
+                                f"Agent {agent.get('name', 'unknown')} missing capabilities",
+                            )
+
+            # Print results
+            if not errors and not warnings:
+                print("✅ Configuration is valid!\n")
+                return 0
+            else:
+                if errors:
+                    print("❌ ERRORS:\n")
+                    for error in errors:
+                        print(f"  • {error}")
+                    print()
+
+                if warnings:
+                    print("⚠️  WARNINGS:\n")
+                    for warning in warnings:
+                        print(f"  • {warning}")
+                    print()
+
+                if errors:
+                    print("❌ Configuration validation failed\n")
+                    return 1
+                else:
+                    print("✅ Configuration is valid (with warnings)\n")
+                    return 0
+
+        return 0
+
     # Helper methods
 
     def _print_header(self, title):
@@ -417,6 +575,30 @@ Examples:
         print("\n" + "╔" + "═" * 58 + "╗")
         print(f"║ {title:^56} ║")
         print("╚" + "═" * 58 + "╝")
+
+    def _print_config_section(self, section, indent=0):
+        """Pretty print a configuration section"""
+        indent_str = " " * indent
+
+        if isinstance(section, dict):
+            for key, value in section.items():
+                if isinstance(value, (dict, list)):
+                    print(f"{indent_str}{key}:")
+                    self._print_config_section(value, indent + 2)
+                else:
+                    print(f"{indent_str}{key}: {value}")
+        elif isinstance(section, list):
+            for item in section:
+                if isinstance(item, dict):
+                    # For list of dicts, show condensed view
+                    if "name" in item:
+                        print(f"{indent_str}• {item['name']}")
+                    else:
+                        print(f"{indent_str}• {item}")
+                else:
+                    print(f"{indent_str}• {item}")
+        else:
+            print(f"{indent_str}{section}")
 
     def _progress_bar(self, percentage, width=20):
         """Generate progress bar"""

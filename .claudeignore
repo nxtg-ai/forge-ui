@@ -1,0 +1,148 @@
+# .claudeignore
+# Excludes files and directories from Claude Code's context
+# Uses gitignore syntax
+
+# ===================================================================
+# Python Build Artifacts
+# ===================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+wheels/
+*.whl
+
+# ===================================================================
+# Virtual Environments
+# ===================================================================
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# ===================================================================
+# Testing & Coverage
+# ===================================================================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# ===================================================================
+# IDE & Editor Files
+# ===================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ===================================================================
+# Logs & Temporary Files
+# ===================================================================
+*.log
+*.tmp
+*.temp
+.cache/
+tmp/
+temp/
+
+# ===================================================================
+# Git Internals (keep .git itself excluded)
+# ===================================================================
+.git/
+
+# ===================================================================
+# Documentation Build Artifacts
+# ===================================================================
+docs/_build/
+docs/.doctrees/
+site/
+
+# ===================================================================
+# Package Manager
+# ===================================================================
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ===================================================================
+# MyPy Type Checker
+# ===================================================================
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ===================================================================
+# Ruff Cache
+# ===================================================================
+.ruff_cache/
+
+# ===================================================================
+# Claude Code Operational Files
+# ===================================================================
+# Exclude backups and checkpoints from context (they're snapshots)
+.claude/backups/
+.claude/checkpoints/
+
+# ===================================================================
+# Generated Output
+# ===================================================================
+# Exclude generated projects from context (focus on templates)
+output/
+generated/
+
+# ===================================================================
+# Large Data Files
+# ===================================================================
+*.db
+*.sqlite
+*.sqlite3
+
+# ===================================================================
+# Security & Secrets
+# ===================================================================
+# These should never be in context
+.env.local
+.env.*.local
+secrets/
+credentials/
+*.key
+*.pem
+*.cert
+
+# ===================================================================
+# Archive Files
+# ===================================================================
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+
+# ===================================================================
+# What TO Include (for clarity)
+# ===================================================================
+# The following ARE included in context (not ignored):
+# - forge/** (source code)
+# - tests/** (test code)
+# - .claude/config.json (configuration)
+# - .claude/skills/** (skills documentation)
+# - .claude/commands/** (slash commands)
+# - .claude/hooks/** (lifecycle hooks)
+# - .claude/prompts/** (reusable prompts)
+# - .claude/templates/** (project templates)
+# - .claude/features/** (feature specifications)
+# - pyproject.toml (project configuration)
+# - README.md (project documentation)
+# - docs/** (documentation)

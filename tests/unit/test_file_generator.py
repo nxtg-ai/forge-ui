@@ -127,7 +127,8 @@ class TestFileGenerator:
         gitignore = generator._generate_gitignore(config)
 
         assert "__pycache__" in gitignore
-        assert "*.pyc" in gitignore
+        # *.pyc is included in *.py[cod] pattern
+        assert "*.py[cod]" in gitignore or "*.pyc" in gitignore
         assert "venv/" in gitignore
 
     def test_generate_gitignore_node(self, temp_project_dir):
@@ -195,3 +196,53 @@ class TestFileGenerator:
         assert (temp_project_dir / "README.md").exists()
         assert (temp_project_dir / ".gitignore").exists()
         assert (temp_project_dir / ".env.example").exists()
+
+    def test_parse_spec_extracts_database(self, temp_project_dir):
+        """Test parsing database from spec"""
+        templates_dir = temp_project_dir / ".claude" / "templates"
+        templates_dir.mkdir(parents=True)
+
+        generator = FileGenerator(temp_project_dir)
+
+        spec = """
+        #### Database
+        **Type:** PostgreSQL
+        """
+        config = generator._parse_spec(spec)
+
+        assert config["database"] == "postgresql"
+
+    def test_parse_spec_extracts_frontend_framework(self, temp_project_dir):
+        """Test parsing frontend framework from spec"""
+        templates_dir = temp_project_dir / ".claude" / "templates"
+        templates_dir.mkdir(parents=True)
+
+        generator = FileGenerator(temp_project_dir)
+
+        spec = """
+        #### Frontend
+        **Framework:** React
+        """
+        config = generator._parse_spec(spec)
+
+        assert config["frontend_framework"] == "react"
+
+    def test_generate_from_spec_with_dry_run(self, temp_project_dir):
+        """Test generate_from_spec method with dry_run"""
+        templates_dir = temp_project_dir / ".claude" / "templates"
+        templates_dir.mkdir(parents=True)
+
+        # Create a simple template
+        (templates_dir / "test.j2").write_text("# {{ project_name }}")
+
+        generator = FileGenerator(temp_project_dir)
+
+        spec = """# TestProject - Project Specification
+        **Type:** web-app
+        **Language:** Python
+        **Framework:** FastAPI
+        """
+
+        generated = generator.generate_from_spec(spec, dry_run=True)
+
+        assert isinstance(generated, list)

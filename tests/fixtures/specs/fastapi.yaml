@@ -1,0 +1,24 @@
+name: fastapi-project
+type: web-app
+description: FastAPI REST API application
+
+backend:
+  language: python
+  framework: fastapi
+  version: "0.100.0"
+
+database:
+  type: postgresql
+  version: "15"
+
+cache:
+  type: redis
+  version: "7"
+
+testing:
+  framework: pytest
+  min_coverage: 85
+
+deployment:
+  target: docker
+  ci_cd: github-actions

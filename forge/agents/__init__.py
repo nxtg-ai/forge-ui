@@ -10,15 +10,13 @@ from .orchestrator import AgentOrchestrator, AgentType, Task, suggest_agent
 
 
 __all__ = [
-    # Orchestrator
     "AgentOrchestrator",
     "AgentType",
-    "Task",
-    "suggest_agent",
-    # Dispatcher
-    "TaskDispatcher",
-    "TaskStatus",
-    "TaskResult",
     "DispatchedTask",
+    "Task",
+    "TaskDispatcher",
+    "TaskResult",
+    "TaskStatus",
     "dispatch_task",
+    "suggest_agent",
 ]

@@ -1,85 +1,126 @@
 # NXTG-Forge
 
-<div align="center">
-  <img src="docs/nxtg-forge.png" alt="NXTG-Forge Logo" width="100%">
-</div>
+**Make Claude Smarter**
 
-<div align="center">
+```bash
+# Clone and install from source
+git clone https://github.com/nxtg-ai/nxtg-forge.git
+cd nxtg-forge/v3
+pip install -e .
+```
 
-> **Self-Deploying AI Development Infrastructure**
+That's it. Use Claude Code normally—it just got better.
 
-[![GitHub release](https://img.shields.io/github/v/release/nxtg-ai/nxtg-forge)](https://github.com/nxtg-ai/nxtg-forge/releases)
+> **Note**: Package not yet published to PyPI. Install from source for now. PyPI publication coming soon.
+
+---
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![GitHub stars](https://img.shields.io/github/stars/nxtg-ai/nxtg-forge)](https://github.com/nxtg-ai/nxtg-forge/stargazers)
-[![GitHub issues](https://img.shields.io/github/issues/nxtg-ai/nxtg-forge)](https://github.com/nxtg-ai/nxtg-forge/issues)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Installation](https://img.shields.io/badge/install-from_source-orange.svg)](https://github.com/nxtg-ai/nxtg-forge#installation)
 
-</div>
+NXTG-Forge enhances Claude Code with intelligent multi-agent coordination, memory persistence, and automated workflows. You don't configure it—it learns from your project.
 
-NXTG-Forge is a comprehensive platform for rapid project initialization, development, and deployment with seamless Claude Code integration. Build production-ready applications from scratch with zero-context recovery capabilities.
+## What Just Happened?
 
-## Features
+Claude can now:
+- **Break complex tasks into steps** automatically
+- **Handle larger refactorings** intelligently across multiple files
+- **Remember context** across interrupted sessions
+- **Coordinate work** that spans architecture, implementation, and testing
 
-### Core Capabilities
+You don't configure any of this. It just works.
 
-- 🔄 **Zero-Context Recovery** - Resume work from any point without losing context
-- 📝 **Interactive Spec Builder** - Q&A-based project specification creation
-- ⚡ **Template-Driven Generation** - Production-ready code from templates
-- 🔌 **MCP Auto-Detection** - Automatic service configuration
-- 💾 **State Management** - Complete project state tracking and recovery
-- 🎯 **Agent Orchestration** - Specialized AI agents for different tasks
-- 🪝 **Lifecycle Hooks** - Automated workflows for validation, formatting, and error handling
+## Example
 
-### Technology Support
+**Without nxtg-forge:**
 
-- **Backend**: FastAPI, Django, Flask, Express, NestJS
-- **Frontend**: React, Vue, Svelte, Angular
-- **Databases**: PostgreSQL, MongoDB, Redis
-- **Deployment**: Docker, Kubernetes, AWS, GCP, Azure
-- **CI/CD**: GitHub Actions, GitLab CI, Jenkins
+```
+You: "Add OAuth2 authentication"
 
-## Quick Start
+Claude: "I'll help you add OAuth2. Where should I create the auth module?"
+You: "In src/auth/"
+Claude: "What providers do you want?"
+You: "Google and GitHub"
+Claude: [Implements one file]
+You: "Now add the database models"
+Claude: [Implements models]
+You: "Can you add tests?"
+... (5+ back-and-forth exchanges)
+```
 
-### Installation
+**With nxtg-forge:**
+
+```
+You: "Add OAuth2 authentication with Google and GitHub"
+
+Claude: "I'll implement OAuth2 authentication for you.
+
+Creating:
+  • User model with secure password hashing
+  • OAuth2 providers (Google, GitHub)
+  • Login/logout endpoints
+  • JWT token generation and validation
+  • Session management with Redis
+  • Database migrations
+  • 24 unit tests
+  • Integration tests for auth flows
+  • API documentation
+
+Starting with the user model..."
+
+[Delivers complete, tested authentication system]
+```
+
+**One request. Complete implementation.**
+
+## Installation
+
+### From Source (Current Method)
 
 ```bash
-# Clone repository
+# Clone the repository
 git clone https://github.com/nxtg-ai/nxtg-forge.git
-cd nxtg-forge
+cd nxtg-forge/v3
 
-# Install using make
-make install
-
-# Or install manually
-pip install -r requirements.txt
-npm install
+# Install in editable mode
+pip install -e .
 ```
 
-### Initialize a New Project
+> **PyPI Publication Status**: Package is not yet published to PyPI. For now, install from source using the method above. We're preparing for PyPI publication - stay tuned!
 
-**Using Claude Code:**
+### Verify
 
 ```bash
-/init nxtg-forge --new
+python -c "import forge; print(f'✅ nxtg-forge {forge.__version__} installed')"
 ```
 
-**Using CLI:**
+That's the entire setup. Now use Claude Code normally.
+
+## Usage
+
+Just use Claude Code like you always have:
 
 ```bash
-# Interactive mode
-python forge/spec_generator.py
-
-# Or use the CLI tool
-forge init my-project --framework fastapi --template standard
+cd your-project
+claude
 ```
 
-### Upgrade Existing Project
+Claude will automatically use nxtg-forge when it helps. You'll notice:
+- **Complex tasks** get handled in one go instead of many back-and-forth exchanges
+- **Interrupted work** can be resumed with `/resume`
+- **Quality** is consistently higher (tests, docs, error handling included)
 
-```bash
-/init nxtg-forge --upgrade
-```
+### When Does It Activate?
+
+Nxtg-forge activates automatically for:
+- **Feature development** ("Add payment processing")
+- **Cross-file refactoring** ("Extract all logging to a service")
+- **Complex setup** ("Create a REST API with auth")
+- **Multi-step tasks** ("Implement and test user registration")
+
+For simple tasks (documentation, quick fixes), Claude uses standard behavior.
 
 ## Documentation
 

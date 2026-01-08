@@ -16,13 +16,20 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
+from .config import ForgeConfig
+
 
 class StateManager:
     def __init__(self, project_root: str = "."):
         self.project_root = Path(project_root)
-        self.state_file = self.project_root / ".claude" / "state.json"
-        self.checkpoints_dir = self.project_root / ".claude" / "checkpoints"
-        self.checkpoints_dir.mkdir(parents=True, exist_ok=True)
+
+        # Use ForgeConfig for path management
+        self.forge_config = ForgeConfig(self.project_root)
+        self.forge_config.ensure_directories()
+
+        # Use paths from config
+        self.state_file = self.forge_config.state_file
+        self.checkpoints_dir = self.forge_config.checkpoints_dir
 
         self.state = self.load()
 
@@ -32,7 +39,8 @@ class StateManager:
             return self.create_initial_state()
 
         with open(self.state_file) as f:
-            return json.load(f)
+            state_data: dict[str, Any] = json.load(f)
+            return state_data
 
     def save(self):
         """Save current state"""
@@ -257,7 +265,7 @@ class StateManager:
 
     def run_hook(self, hook_name: str):
         """Run a lifecycle hook"""
-        hook_path = self.project_root / ".claude" / "hooks" / hook_name
+        hook_path = self.forge_config.claude_dir / "hooks" / hook_name
         if hook_path.exists() and os.access(hook_path, os.X_OK):
             subprocess.run([str(hook_path)], cwd=self.project_root, check=False)
 
@@ -279,8 +287,8 @@ if __name__ == "__main__":
         print(f"✓ Checkpoint created: {checkpoint_id}")
 
     elif command == "restore":
-        checkpoint_id = sys.argv[2] if len(sys.argv) > 2 else None
-        manager.restore(checkpoint_id)
+        restore_id: Optional[str] = sys.argv[2] if len(sys.argv) > 2 else None
+        manager.restore(restore_id)
 
     elif command == "recovery-info":
         info = manager.get_recovery_info()

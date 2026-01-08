@@ -72,7 +72,7 @@ class TaskDispatcher:
     v1.1+: Queue management, parallel execution, dependencies
     """
 
-    def __init__(self, project_root: Path = None):
+    def __init__(self, project_root: Optional[Path] = None):
         """Initialize the dispatcher.
 
         Args:
@@ -210,7 +210,9 @@ class TaskDispatcher:
         return self.tasks.get(task_id)
 
     def list_tasks(
-        self, status: Optional[TaskStatus] = None, agent: Optional[str] = None,
+        self,
+        status: Optional[TaskStatus] = None,
+        agent: Optional[str] = None,
     ) -> list[DispatchedTask]:
         """List tasks, optionally filtered.
 
@@ -298,9 +300,9 @@ class TaskDispatcher:
         ]
         avg_duration = 0.0
         if completed_tasks:
-            avg_duration = sum(t.result.duration_seconds for t in completed_tasks) / len(
-                completed_tasks,
-            )
+            avg_duration = sum(
+                t.result.duration_seconds for t in completed_tasks if t.result is not None
+            ) / len(completed_tasks)
 
         return {
             "total": total,

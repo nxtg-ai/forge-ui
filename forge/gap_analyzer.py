@@ -21,7 +21,7 @@ class GapAnalyzer:
     def __init__(self, project_root: str = ".", state: Optional[dict[str, Any]] = None):
         self.project_root = Path(project_root)
         self.state = state or {}
-        self.gaps = {
+        self.gaps: dict[str, list[dict[str, Any]]] = {
             "testing": [],
             "documentation": [],
             "security": [],

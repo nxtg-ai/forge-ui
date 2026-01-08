@@ -21,7 +21,7 @@ class MCPDetector:
         self.project_root = Path(project_root)
         self.auto_detect_script = self.project_root / ".mcp" / "auto-detect.js"
         self.state_file = self.project_root / ".claude" / "state.json"
-        self.recommendations = []
+        self.recommendations: list[dict[str, Any]] = []
 
     def detect(self) -> list[dict[str, Any]]:
         """Run MCP auto-detection"""
@@ -249,7 +249,8 @@ class MCPDetector:
 
         if server_config_file.exists():
             with open(server_config_file) as f:
-                return json.load(f)
+                config_data: dict[str, Any] = json.load(f)
+                return config_data
 
         # Fallback to default configs
         default_configs = {

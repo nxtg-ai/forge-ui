@@ -1,0 +1,23 @@
+# {{ project_name }}
+
+{{ description }}
+
+## Tech Stack
+
+{% if backend %}
+**Backend**: {{ backend.framework }} ({{ backend.language }})
+{% endif %}
+
+{% if database %}
+**Database**: {{ database.type }}
+{% endif %}
+
+{% if frontend %}
+**Frontend**: {{ frontend.framework }}
+{% endif %}
+
+## Features
+
+{% for feature in features %}
+- {{ feature }}
+{% endfor %}

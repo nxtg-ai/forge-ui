@@ -36,7 +36,7 @@ custom_style = Style(
 class SpecGenerator:
     def __init__(self, project_root: str = "."):
         self.project_root = Path(project_root)
-        self.answers = {}
+        self.answers: dict[str, Any] = {}
 
     def interactive_mode(self) -> str:
         """Interactive spec building through Q&A"""
@@ -443,8 +443,8 @@ class SpecGenerator:
         if answers.get("database") == "none":
             return "N/A"
 
-        lang = answers.get("backend_language")
-        db = answers.get("database")
+        lang: str = answers.get("backend_language", "")
+        db: str = answers.get("database", "")
 
         orms = {
             "python": {
@@ -490,7 +490,7 @@ class SpecGenerator:
 
     def _get_naming_convention(self, answers: dict[str, Any]) -> str:
         """Get naming convention based on language"""
-        lang = answers.get("backend_language")
+        lang: str = answers.get("backend_language", "")
         conventions = {
             "python": "snake_case",
             "node": "camelCase",

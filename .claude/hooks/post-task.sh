@@ -12,21 +12,19 @@
 
 set -e
 
-# Colors for output
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
-
+# Load shared library
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-STATE_FILE="$PROJECT_ROOT/.claude/state.json"
+source "$SCRIPT_DIR/lib.sh"
 
-echo -e "${BLUE}[NXTG-Forge]${NC} Post-task hook triggered"
+# Check if hooks are enabled
+if ! hooks_enabled; then
+    exit 0
+fi
+
+log_info "Post-task hook triggered"
 
 # 1. Update state.json with completion status
-if [ -n "$TASK_ID" ] && command -v jq &> /dev/null && [ -f "$STATE_FILE" ]; then
+if [ -n "$TASK_ID" ] && has_command jq && [ -f "$STATE_FILE" ]; then
     CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     STATUS="${TASK_STATUS:-completed}"
 
@@ -38,45 +36,46 @@ if [ -n "$TASK_ID" ] && command -v jq &> /dev/null && [ -f "$STATE_FILE" ]; then
        "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
 
     if [ "$STATUS" = "success" ]; then
-        echo -e "${GREEN}[Success]${NC} Task completed successfully"
+        log_success "Task completed successfully"
     elif [ "$STATUS" = "failed" ]; then
-        echo -e "${RED}[Failed]${NC} Task failed"
+        log_error "Task failed"
     else
-        echo -e "${YELLOW}[Info]${NC} Task status: $STATUS"
+        log_info "Task status: $STATUS"
     fi
 fi
 
 # 2. Run quality checks if tests exist
-if [ -d "$PROJECT_ROOT/tests" ] && command -v python &> /dev/null; then
-    echo -e "${BLUE}[Info]${NC} Running quick test validation..."
+if [ -d "$PROJECT_ROOT/tests" ] && has_command python; then
+    log_info "Running quick test validation..."
 
     # Quick smoke test (timeout after 10 seconds)
     if timeout 10 python -m pytest tests/ --tb=no -q --maxfail=1 2>/dev/null; then
-        echo -e "${GREEN}[Tests]${NC} Quick validation passed"
+        log_success "Quick validation passed"
     else
-        echo -e "${YELLOW}[Tests]${NC} Some tests may need attention (run 'make test' for details)"
+        log_warning "Some tests may need attention (run 'make test' for details)"
     fi
 fi
 
 # 3. Check code quality (if modified Python files)
 if [ -n "$FILES_MODIFIED" ] && [ "$FILES_MODIFIED" -gt 0 ]; then
-    if command -v ruff &> /dev/null; then
-        echo -e "${BLUE}[Info]${NC} Running linter on modified files..."
-        if ruff check "$PROJECT_ROOT/forge" --quiet 2>/dev/null; then
-            echo -e "${GREEN}[Lint]${NC} No linting issues found"
+    LINTER=$(get_linter)
+    if has_command "$LINTER"; then
+        log_info "Running $LINTER on modified files..."
+        if lint_python_files; then
+            log_success "No linting issues found"
         else
-            echo -e "${YELLOW}[Lint]${NC} Linting issues detected (run 'make lint' for details)"
+            log_warning "Linting issues detected (run 'make lint' for details)"
         fi
     fi
 fi
 
 # 4. Update quality metrics in state.json
-if command -v python &> /dev/null && [ -f "$STATE_FILE" ]; then
+if has_command python && [ -f "$STATE_FILE" ]; then
     # Get test count
     if [ -d "$PROJECT_ROOT/tests" ]; then
         TEST_COUNT=$(find "$PROJECT_ROOT/tests" -name "test_*.py" -type f | wc -l)
 
-        if command -v jq &> /dev/null; then
+        if has_command jq; then
             jq --argjson count "$TEST_COUNT" \
                '.quality.tests.unit.total = $count' \
                "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
@@ -84,22 +83,32 @@ if command -v python &> /dev/null && [ -f "$STATE_FILE" ]; then
     fi
 fi
 
-# 5. Suggest next steps based on task status
-if [ "$TASK_STATUS" = "success" ]; then
-    echo -e "${GREEN}[Next]${NC} Consider running:"
-    echo "  " make test    - Run full test suite"
-    echo "  " make quality - Run all quality checks"
-    echo "  " git status   - Review changes"
-fi
-
-# 6. Create automatic checkpoint for major milestones
-if [ -n "$TASK_ID" ] && [ "$TASK_STATUS" = "success" ]; then
-    # Check if this is a significant task (more than 5 files modified)
-    if [ -n "$FILES_MODIFIED" ] && [ "$FILES_MODIFIED" -gt 5 ]; then
-        echo -e "${BLUE}[Checkpoint]${NC} Major task completed. Consider creating a checkpoint:"
-        echo "  " python -m forge.cli checkpoint \"After $TASK_ID\""
+# 5. Check safety constraints
+if [ -n "$FILES_MODIFIED" ] && [ "$FILES_MODIFIED" -gt 0 ]; then
+    MAX_CHANGES=$(get_max_file_changes)
+    if [ "$FILES_MODIFIED" -gt "$MAX_CHANGES" ]; then
+        log_warning "Modified $FILES_MODIFIED files (limit: $MAX_CHANGES from config)"
+        log_info "Consider breaking this into smaller commits"
     fi
 fi
 
-echo -e "${GREEN}[Complete]${NC} Post-task checks complete"
+# 6. Suggest next steps based on task status
+if [ "$TASK_STATUS" = "success" ]; then
+    COVERAGE_TARGET=$(get_test_coverage_target)
+    log_info "Consider running:"
+    echo "  - make test    # Run full test suite (target: ${COVERAGE_TARGET}%)"
+    echo "  - make quality # Run all quality checks"
+    echo "  - git status   # Review changes"
+fi
+
+# 7. Create automatic checkpoint for major milestones
+if [ -n "$TASK_ID" ] && [ "$TASK_STATUS" = "success" ]; then
+    # Check if this is a significant task (more than 5 files modified)
+    if [ -n "$FILES_MODIFIED" ] && [ "$FILES_MODIFIED" -gt 5 ]; then
+        log_info "Major task completed. Consider creating a checkpoint:"
+        echo "  - python -m forge.cli checkpoint \"After $TASK_ID\""
+    fi
+fi
+
+log_success "Post-task checks complete"
 exit 0

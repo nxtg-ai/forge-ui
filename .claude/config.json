@@ -1,0 +1,148 @@
+{
+  "$schema": "https://claude.ai/schemas/config.json",
+  "version": "1.0.0",
+  "project": {
+    "name": "NXTG-Forge",
+    "description": "Next-generation project scaffolding and code generation CLI",
+    "language": "python",
+    "version": "0.3.0"
+  },
+  "development": {
+    "python": {
+      "version": "3.11+",
+      "formatter": "black",
+      "linter": "ruff",
+      "type_checker": "mypy",
+      "test_framework": "pytest"
+    },
+    "coding_standards": ".claude/skills/coding-standards.md",
+    "architecture": ".claude/skills/architecture.md"
+  },
+  "testing": {
+    "strategy": ".claude/skills/testing-strategy.md",
+    "coverage_target": 86,
+    "coverage_minimum": 80,
+    "test_patterns": [
+      "tests/unit/**/*_test.py",
+      "tests/integration/**/*_test.py",
+      "tests/e2e/**/*_test.py"
+    ],
+    "pytest_args": [
+      "-v",
+      "--cov=forge",
+      "--cov-report=term-missing",
+      "--cov-fail-under=80"
+    ]
+  },
+  "agents": {
+    "orchestration": {
+      "enabled": true,
+      "max_parallel": 3,
+      "handoff_timeout": 300
+    },
+    "available_agents": [
+      {
+        "name": "lead-architect",
+        "role": "System design and architectural decisions",
+        "capabilities": ["architecture", "design", "planning"],
+        "skill_file": ".claude/skills/agents/lead-architect.md"
+      },
+      {
+        "name": "backend-master",
+        "role": "Backend implementation and API design",
+        "capabilities": ["fastapi", "python", "api-design", "database"],
+        "skill_file": ".claude/skills/agents/backend-master.md"
+      },
+      {
+        "name": "cli-artisan",
+        "role": "CLI design and user experience",
+        "capabilities": ["click", "typer", "cli-design", "ux"],
+        "skill_file": ".claude/skills/agents/cli-artisan.md"
+      },
+      {
+        "name": "platform-builder",
+        "role": "Infrastructure and deployment",
+        "capabilities": ["docker", "ci-cd", "deployment", "infrastructure"],
+        "skill_file": ".claude/skills/agents/platform-builder.md"
+      },
+      {
+        "name": "integration-specialist",
+        "role": "System integration and interoperability",
+        "capabilities": ["integration", "apis", "protocols"],
+        "skill_file": ".claude/skills/agents/integration-specialist.md"
+      },
+      {
+        "name": "qa-sentinel",
+        "role": "Quality assurance and testing",
+        "capabilities": ["testing", "quality", "validation"],
+        "skill_file": ".claude/skills/agents/qa-sentinel.md"
+      }
+    ]
+  },
+  "hooks": {
+    "enabled": true,
+    "pre_task": ".claude/hooks/pre-task.sh",
+    "post_task": ".claude/hooks/post-task.sh",
+    "on_error": ".claude/hooks/on-error.sh",
+    "on_file_change": ".claude/hooks/on-file-change.sh"
+  },
+  "skills": {
+    "enabled": true,
+    "auto_load": [
+      "architecture",
+      "coding-standards",
+      "domain-knowledge"
+    ],
+    "directories": [
+      ".claude/skills"
+    ]
+  },
+  "workflows": {
+    "tdd": ".claude/workflows/tdd-workflow.sh",
+    "refactor": ".claude/workflows/refactor-bot.sh",
+    "code_review": ".claude/prompts/code-review.md"
+  },
+  "context": {
+    "include_patterns": [
+      "forge/**/*.py",
+      "tests/**/*.py",
+      ".claude/**/*.md",
+      "pyproject.toml",
+      "README.md",
+      "docs/**/*.md"
+    ],
+    "exclude_patterns": [
+      "**/__pycache__/**",
+      "**/*.pyc",
+      ".venv/**",
+      "dist/**",
+      "build/**",
+      "*.egg-info/**",
+      ".pytest_cache/**",
+      ".coverage",
+      "htmlcov/**"
+    ],
+    "max_file_size_kb": 500,
+    "prioritize": [
+      ".claude/skills/",
+      "forge/domain/",
+      "forge/application/"
+    ]
+  },
+  "safety": {
+    "require_tests_for_commit": true,
+    "prevent_force_push_main": true,
+    "require_code_review": false,
+    "max_file_changes_per_commit": 50
+  },
+  "documentation": {
+    "auto_generate_api_docs": true,
+    "docstring_style": "google",
+    "changelog_format": "keep-a-changelog"
+  },
+  "generation": {
+    "templates_dir": "templates/",
+    "output_dir": "output/",
+    "default_template": "fastapi-clean-arch"
+  }
+}

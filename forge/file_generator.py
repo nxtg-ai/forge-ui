@@ -21,7 +21,7 @@ class FileGenerator:
     def __init__(self, project_root: str = "."):
         self.project_root = Path(project_root)
         self.templates_dir = self.project_root / ".claude" / "templates"
-        self.generated_files = []
+        self.generated_files: list[str] = []
 
         # Setup Jinja2 environment
         self.jinja_env = Environment(
