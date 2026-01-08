@@ -66,6 +66,7 @@ Changelog = "https://github.com/nxtg-ai/nxtg-forge/blob/main/CHANGELOG.md"
 
 [tool.setuptools]
 packages = ["forge", "forge.agents"]
+include-package-data = true
 
 [tool.bandit]
 exclude_dirs = ["tests"]

@@ -11,6 +11,7 @@ from pathlib import Path
 
 from .file_generator import FileGenerator
 from .gap_analyzer import GapAnalyzer
+from .init_command import init_project
 from .mcp_detector import MCPDetector
 from .spec_generator import SpecGenerator
 from .state_manager import StateManager
@@ -22,7 +23,14 @@ FORGE_VERSION = "1.0.0"
 class ForgeCLI:
     def __init__(self):
         self.project_root = Path.cwd()
-        self.state_manager = StateManager(str(self.project_root))
+        self._state_manager = None
+
+    @property
+    def state_manager(self):
+        """Lazy-load state manager to avoid creating .claude/ during init"""
+        if self._state_manager is None:
+            self._state_manager = StateManager(str(self.project_root))
+        return self._state_manager
 
     def run(self, args):
         parser = argparse.ArgumentParser(
@@ -30,6 +38,8 @@ class ForgeCLI:
             formatter_class=argparse.RawDescriptionHelpFormatter,
             epilog="""
 Examples:
+  forge init                           # Initialize NXTG-Forge in project
+  forge init --force                   # Reinitialize, overwriting existing
   nxtg-forge status                    # Show project status
   nxtg-forge checkpoint "milestone"    # Create checkpoint
   nxtg-forge restore                   # Restore latest checkpoint
@@ -43,6 +53,28 @@ Examples:
         parser.add_argument("--version", action="version", version=f"NXTG-Forge {FORGE_VERSION}")
 
         subparsers = parser.add_subparsers(dest="command", help="Commands")
+
+        # Init command - MUST BE FIRST
+        init_parser = subparsers.add_parser(
+            "init",
+            help="Initialize NXTG-Forge in existing project"
+        )
+        init_parser.add_argument(
+            "directory",
+            nargs="?",
+            type=Path,
+            help="Target directory (default: current directory)",
+        )
+        init_parser.add_argument(
+            "--force",
+            action="store_true",
+            help="Overwrite existing .claude/ directory",
+        )
+        init_parser.add_argument(
+            "--quiet",
+            action="store_true",
+            help="Suppress output except errors",
+        )
 
         # Status command
         status_parser = subparsers.add_parser("status", help="Show project status")
@@ -137,6 +169,7 @@ Examples:
 
         # Route to command handlers
         command_map = {
+            "init": self.cmd_init,
             "status": self.cmd_status,
             "checkpoint": self.cmd_checkpoint,
             "restore": self.cmd_restore,
@@ -155,6 +188,14 @@ Examples:
         else:
             print(f"Unknown command: {parsed_args.command}")
             return 1
+
+    def cmd_init(self, args):
+        """Initialize NXTG-Forge in project"""
+        return init_project(
+            target_dir=args.directory,
+            force=args.force,
+            quiet=args.quiet,
+        )
 
     def cmd_status(self, args):
         """Show project status"""

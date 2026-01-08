@@ -1,0 +1,21 @@
+# Include .claude/ directory in package distribution
+recursive-include .claude *.md
+recursive-include .claude *.json
+recursive-include .claude *.sh
+recursive-include .claude *.yml
+recursive-include .claude *.yaml
+
+# Include documentation
+include README.md
+include LICENSE
+include CHANGELOG.md
+include CONTRIBUTING.md
+include CODE_OF_CONDUCT.md
+include SECURITY.md
+
+# Exclude unnecessary files
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude .DS_Store
+global-exclude *.so
+global-exclude .git*

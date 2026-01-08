@@ -3,13 +3,17 @@
 **Make Claude Smarter**
 
 ```bash
-# Clone and install from source
+# Install from source (PyPI coming soon)
 git clone https://github.com/nxtg-ai/nxtg-forge.git
 cd nxtg-forge/v3
 pip install -e .
+
+# Go to your project and initialize
+cd ~/my-project
+forge init
 ```
 
-That's it. Use Claude Code normally—it just got better.
+That's it. Now use Claude Code with `/feature`, `/status`, and intelligent agent orchestration.
 
 > **Note**: Package not yet published to PyPI. Install from source for now. PyPI publication coming soon.
 
@@ -77,7 +81,22 @@ Starting with the user model..."
 
 ## Installation
 
-### From Source (Current Method)
+### Quick Start (3 Commands)
+
+```bash
+# 1. Install the package
+pip install nxtg-forge  # (or install from source - see below)
+
+# 2. Go to your project
+cd ~/my-project
+
+# 3. Initialize
+forge init
+```
+
+That's it. Now `claude` in your project directory and use slash commands like `/feature` and `/status`.
+
+### From Source (Development)
 
 ```bash
 # Clone the repository
@@ -86,17 +105,36 @@ cd nxtg-forge/v3
 
 # Install in editable mode
 pip install -e .
+
+# Go to your project and initialize
+cd ~/my-project
+forge init
 ```
 
 > **PyPI Publication Status**: Package is not yet published to PyPI. For now, install from source using the method above. We're preparing for PyPI publication - stay tuned!
 
-### Verify
+### What `forge init` Does
+
+1. Copies `.claude/` directory with:
+   - Slash commands (`/init`, `/feature`, `/status`, etc.)
+   - Agent capabilities (architecture, backend, CLI, etc.)
+   - Lifecycle hooks (pre-commit, post-feature, etc.)
+   - Workflow automation (TDD cycle, refactor bot, etc.)
+   - Prompt templates
+
+2. Creates `.claude/forge/config.yml` with sensible defaults
+
+3. Ready to use - no configuration needed
+
+### Verify Installation
 
 ```bash
-python -c "import forge; print(f'✅ nxtg-forge {forge.__version__} installed')"
-```
+forge --version
+# nxtg-forge 1.0.0
 
-That's the entire setup. Now use Claude Code normally.
+forge --help
+# Shows all available commands including 'init'
+```
 
 ## Usage
 
