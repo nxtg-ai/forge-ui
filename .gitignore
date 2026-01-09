@@ -361,8 +361,60 @@ docker-compose.override.yml
 # Artificial Super Intelligence Framework
 .asif/
 
+# Personal and Internal Files (NEVER COMMIT!)
+.personal/
+*.personal.md
+*-INTERNAL.md
+
+# Internal Development Documentation (conversation artifacts)
+docs/PHASE-*
+docs/VISION-*
+docs/ALIGNMENT-*
+docs/CANONICAL-*
+docs/REFACTORING-*
+docs/*-REVIEW-*.md
+docs/*-AUDIT-*.md
+docs/*-REPORT-*.md
+docs/*-STATUS-*.md
+docs/*-SUMMARY-*.md
+docs/*-COMPLETE.md
+docs/*-PROGRESS-*.md
+docs/*-IMPLEMENTATION-*.md
+docs/*-REDESIGN-*.md
+
+# Internal root-level documentation
+IMPLEMENTATION-*.md
+PROTOCOL-*.md
+PYPI-*.md
+
+# Repository cleanup analysis (temporary)
+REPO-CLEANUP-*.md
+
 # Lock files (optional - some teams prefer to commit these)
 # Uncomment if you want to ignore lock files
 # package-lock.json
 # poetry.lock
 # Pipfile.lock
+
+# Internal documentation (keep out of public repo)
+docs/PHASE-*.md
+docs/VISION-*.md
+docs/CANONICAL-*.md
+docs/REFACTORING-*.md
+docs/ALIGNMENT-*.md
+docs/*-REVIEW-*.md
+docs/*-DELIVERABLES-*.md
+
+# Personal folders
+.asif/
+
+# Build artifacts
+coverage.json
+.coverage
+
+# Cleanup scripts (internal use only)
+cleanup-*.sh
+START-HERE-*.md
+CLEANUP-*.md
+REPO-CLEANUP-*.md
+DOCS-POLICY.md
