@@ -1,287 +1,156 @@
 ---
-description: "Display comprehensive session activity report"
+name: nxtg-report
+description: Display comprehensive session activity report
+category: project
 ---
 
-# Session Activity Report
+# 📈 Generate Comprehensive Session Activity Report
 
-You are generating a **comprehensive session activity report** following UX-SPECIFICATION-FINAL.md Part VII standards.
+## Overview
 
-## Load Required Services
+Generate a detailed report of all activities, changes, and accomplishments during the current session.
 
-First, import the SessionReporter service:
+### Report Sections
 
-```python
-from forge.services.session_reporter import SessionReporter
-from pathlib import Path
+1. **Session Summary**
+   - Session start time
+   - Total duration
+   - Commands executed
+   - Files modified
+   - Tests run
+   - Commits made
 
-# Initialize reporter
-reporter = SessionReporter(project_root=Path.cwd())
-```
+2. **Agent Activity**
+   ```
+   Agent Performance Report:
+   ┌─────────────────┬──────────┬──────────┬─────────┐
+   │ Agent           │ Tasks    │ Success  │ Time    │
+   ├─────────────────┼──────────┼──────────┼─────────┤
+   │ Orchestrator    │ 15       │ 100%     │ 2.3m    │
+   │ Architect       │ 8        │ 100%     │ 5.1m    │
+   │ Developer       │ 23       │ 95.6%    │ 12.4m   │
+   │ QA Engineer     │ 42       │ 100%     │ 8.7m    │
+   │ DevOps          │ 5        │ 100%     │ 3.2m    │
+   └─────────────────┴──────────┴──────────┴─────────┘
+   ```
 
-## Parse Arguments
+3. **Code Changes**
+   - Lines added/removed
+   - Files created/deleted
+   - Refactoring performed
+   - Technical debt addressed
 
-Arguments received: `$ARGUMENTS`
+4. **Quality Metrics**
+   - Test coverage delta
+   - Code complexity changes
+   - Performance improvements
+   - Security issues resolved
 
-Options:
+5. **Accomplishments**
+   - Features implemented
+   - Bugs fixed
+   - Documentation updated
+   - Deployments completed
 
-- `--brief` or `-b`: Show brief summary only (auto-display format)
-- `--full` or `-f`: Show full detailed report (default)
-- `--format=json`: Output as JSON instead of formatted text
-- `--since=<datetime>`: Show activity since specific time (ISO format)
-
-## Generate Report
-
-### For Brief Summary
-
-```python
-# Generate brief summary (Part VII: Brief Summary format)
-result = reporter.generate_brief_summary()
-
-if result.is_ok():
-    summary = result.value
-    print(summary)
-else:
-    print(f"❌ Failed to generate report: {result.error.message}")
-    exit(1)
-```
-
-Expected output format:
-
-```
-✅ NXTG-FORGE-ENABLED
-
-╔═══════════════════════════════════════════════════════╗
-║  📊 OVERNIGHT SESSION COMPLETED                       ║
-╚═══════════════════════════════════════════════════════╝
-
-Feature: {Feature Name}
-Commits: {count} | Tests: +{count} | Coverage: {before}% → {after}%
-PR #{number}: ✅ Ready for review (all checks passing)
-
-View full report? Type /report or press Enter to continue
-```
-
-### For Full Report
-
-```python
-# Generate comprehensive report (Part VII: Full Report format)
-result = reporter.generate_full_report()
-
-if result.is_ok():
-    report = result.value
-    print(report)
-else:
-    print(f"❌ Failed to generate report: {result.error.message}")
-    exit(1)
-```
-
-Expected output format:
+### Detailed Activity Log
 
 ```
-╔═══════════════════════════════════════════════════════╗
-║  OVERNIGHT ACTIVITY REPORT                            ║
-║  Session: {start_time} - {end_time}                   ║
-╚═══════════════════════════════════════════════════════╝
+═══════════════════════════════════════════════════════════
+                    SESSION ACTIVITY LOG
+═══════════════════════════════════════════════════════════
 
-📊 SESSION SUMMARY
-   Duration: {duration}
-   Commits: {count}
-   Files changed: {count}
-   Tests added: {count}
-   Coverage: {before}% → {after}% (+{delta}%)
-   Health Score: {before} → {after} (+{delta})
+[10:15:23] 🚀 Session started - NXTG-Forge v3.0 activated
+[10:15:45] 📝 /feature user-authentication initiated
+[10:16:12] 🏗️ Architect: Designed auth system architecture
+[10:18:34] 💻 Developer: Implemented JWT token service
+[10:22:15] ✅ QA: Added 15 unit tests (100% coverage)
+[10:24:08] 🔍 Security scan completed - 0 vulnerabilities
+[10:25:42] 📦 DevOps: Configured deployment pipeline
+[10:27:19] ✨ Feature completed successfully
+[10:28:03] 📊 /status-enhanced executed
+[10:30:44] 🎯 All quality gates passed
+[10:32:11] 🚢 Deployment to staging successful
 
-🔗 GIT ACTIVITY
-   Branch: {branch_name}
-
-   Commits created:
-   • {hash} {message}
-   • {hash} {message}
-   [...]
-
-   📈 All commits pushed to: {remote}/{branch}
-
-   🔍 View commits:
-      {github_url}
-
-📝 PULL REQUEST CREATED
-   #{number}: {title}
-
-   Status: ✅ All checks passing
-   • CI/CD pipeline: ✓ Passed ({duration})
-   • Security scan: ✓ No issues
-   • Code review bot: ✓ Approved (high quality)
-   • Test coverage: ✓ {percentage}% (above {threshold}% threshold)
-
-   Ready for human review
-
-   🔍 View PR: {pr_url}
-
-🎯 QUALITY IMPROVEMENTS
-   • Security score: {before} → {after} (+{delta})
-   • Code smells: {before} → {after} ({delta})
-   • Technical debt: {before}h → {after}h ({delta}h)
-
-🔖 CHECKPOINTS CREATED
-   • {checkpoint_id} - {description}
-   • {checkpoint_id} - {description}
-
-💡 RECOMMENDED NEXT STEPS
-   1. {Next action 1}
-   2. {Next action 2}
-   3. {Next action 3}
-
-📍 AUDIT TRAIL
-   Session log: {path_to_session_json}
-   All actions are fully documented and reversible
-
-[Continue Working] [Create New Feature] [Health Check]
+═══════════════════════════════════════════════════════════
 ```
 
-## JSON Output Format
-
-If `--format=json` specified:
-
-```python
-result = reporter.generate_report_json()
-
-if result.is_ok():
-    import json
-    print(json.dumps(result.value, indent=2))
-else:
-    print(json.dumps({
-        "error": result.error.message,
-        "detail": result.error.detail
-    }))
-    exit(1)
-```
-
-JSON structure:
-
-```json
-{
-  "session": {
-    "start_time": "2026-01-08T09:00:00Z",
-    "end_time": "2026-01-08T17:30:00Z",
-    "duration_hours": 8.5
-  },
-  "summary": {
-    "commits": 12,
-    "files_changed": 45,
-    "tests_added": 23,
-    "coverage_before": 78.5,
-    "coverage_after": 85.2,
-    "coverage_delta": 6.7
-  },
-  "git_activity": {
-    "branch": "feature/auth-system",
-    "commits": [
-      {
-        "hash": "abc123",
-        "message": "feat: add JWT authentication",
-        "timestamp": "2026-01-08T10:30:00Z"
-      }
-    ],
-    "remote_url": "https://github.com/user/repo"
-  },
-  "pull_requests": [
-    {
-      "number": 42,
-      "title": "Add authentication system",
-      "url": "https://github.com/user/repo/pull/42",
-      "status": "passing",
-      "checks": {
-        "ci_cd": "passed",
-        "security": "passed",
-        "coverage": "passed"
-      }
-    }
-  ],
-  "quality": {
-    "security_score_before": 85,
-    "security_score_after": 92,
-    "code_smells_before": 15,
-    "code_smells_after": 8,
-    "tech_debt_hours_before": 24.5,
-    "tech_debt_hours_after": 18.2
-  },
-  "checkpoints": [
-    {
-      "id": "cp-2026-01-08-001",
-      "description": "Auth system baseline"
-    }
-  ],
-  "recommendations": [
-    "Review PR #42 for final approval",
-    "Add integration tests for OAuth flow",
-    "Update API documentation"
-  ]
-}
-```
-
-## Error Handling
-
-If report generation fails:
+### Performance Analysis
 
 ```
-❌ Session Report Failed
-
-What happened:
-   Could not generate session activity report.
-
-Why it happened:
-   {error_detail}
-
-How to fix:
-   1. Check if state file exists: ls .claude/forge/state.json
-   2. Verify git repository: git status
-   3. Try brief report: /report --brief
-   4. Re-initialize if needed: /init --upgrade
-
-Need help? Try:
-   • /soundboard - Discuss troubleshooting
-   • GitHub: {issue_tracker_url}
+Performance Metrics:
+├─ Command Response Time: Avg 87ms (Target: <100ms) ✓
+├─ Build Time: 2.3s (15% faster than baseline) ✓
+├─ Test Execution: 8.7s (All passing) ✓
+├─ Memory Usage: 128MB (Stable) ✓
+└─ CPU Utilization: 35% (Optimal) ✓
 ```
 
-## Interactive Options
-
-After displaying full report, present action options:
+### Git Activity
 
 ```
-What would you like to do next?
-
-1. Continue Working
-   → Resume current feature development
-
-2. Create New Feature
-   → Start fresh feature with /feature
-
-3. Health Check
-   → Run comprehensive quality analysis
-
-4. View Git Activity
-   → Show detailed git log and diffs
-
-Your choice [1-4]:
+Git Statistics:
+├─ Commits: 7
+├─ Files Changed: 23
+├─ Insertions: +1,847
+├─ Deletions: -234
+├─ Pull Requests: 2 (Both merged)
+└─ Branches: feature/auth (merged → main)
 ```
 
-## Implementation Notes
+### Recommendations
 
-- Use SessionReporter service for all report generation
-- Follow UX-SPECIFICATION-FINAL.md Part VII formatting exactly
-- Ensure all data comes from state.json and git history
-- Include audit trail for transparency
-- Make reports machine-readable (JSON) and human-friendly (formatted)
-- Cache report data for 5 minutes to avoid redundant git queries
+Based on session activity:
+1. **Continue Excellence**: Maintain 100% test coverage
+2. **Performance**: Consider caching for auth tokens
+3. **Documentation**: Update API docs for new endpoints
+4. **Next Steps**: Implement refresh token rotation
 
-## Success Criteria
+### Export Options
 
-Report is successful when:
+The report can be exported in multiple formats:
+- **Markdown**: For documentation
+- **JSON**: For automation/parsing
+- **HTML**: For web viewing
+- **PDF**: For sharing/archiving
+- **CSV**: For data analysis
 
-- ✅ Displays all session activity accurately
-- ✅ Follows canonical UX format exactly
-- ✅ Git data matches actual repository state
-- ✅ Quality metrics are current and accurate
-- ✅ Recommendations are actionable and prioritized
-- ✅ JSON output is valid and complete
-- ✅ Interactive options work correctly
+### Team Collaboration
+
+Share session accomplishments with your team:
+```bash
+/report --share slack        # Post to Slack
+/report --share email        # Email to team
+/report --share confluence   # Update wiki
+/report --share github       # Create issue/PR comment
+```
+
+## Usage Examples
+
+```bash
+/report                      # Standard report
+/report --detailed          # Include all activities
+/report --metrics           # Focus on metrics
+/report --export pdf        # Export as PDF
+/report --since 2h          # Last 2 hours only
+/report --agent developer   # Developer agent focus
+```
+
+## Report Customization
+
+Configure what appears in your reports:
+- Activity level (summary/detailed/verbose)
+- Time range (session/hour/day/custom)
+- Metrics focus (quality/performance/productivity)
+- Export format preferences
+- Auto-generation schedule
+
+## Success Metrics
+
+Your session achievements:
+- ✅ Features delivered on time
+- ✅ Zero bugs introduced
+- ✅ Test coverage maintained
+- ✅ Performance improved
+- ✅ Documentation updated
+
+Excellent work this session! Keep forging ahead! 🔨

@@ -1,791 +1,476 @@
-# Getting Started with NXTG-Forge v3.0
+# 🚀 Getting Started with NXTG-Forge
 
-**The 10-Second Guide**
+<div align="center">
+  <h2>From zero to hero in 5 minutes</h2>
+  <p>This guide will have you building production-grade software with AI-powered excellence</p>
+</div>
 
+---
+
+## 📋 Prerequisites Checklist
+
+Before we begin, ensure you have:
+
+✅ **Git** installed ([Download](https://git-scm.com/downloads))
+✅ **Claude Desktop** or Claude CLI ([Get Claude](https://claude.ai))
+✅ **Node.js 18+** (for JS projects) or **Python 3.8+** (for Python projects)
+✅ **5 minutes** of your time
+✅ **A project** you want to supercharge (or we'll create one)
+
+## 🎯 Choose Your Path
+
+### Path A: Add Forge to Existing Project
+Perfect if you have a project that needs superpowers
+
+### Path B: Start Fresh with Forge
+Ideal for new projects or learning Forge
+
+---
+
+## 🛤️ Path A: Supercharge Your Existing Project
+
+### Step 1: Navigate to Your Project
 ```bash
-cd your-project
-claude-code .
+cd /path/to/your/amazing/project
 ```
 
-Then in Claude Code:
-```
+### Step 2: Initialize NXTG-Forge
+```bash
+# In Claude, simply type:
 /nxtg-init
 ```
 
-Done. Claude just got superpowers.
-
----
-
-## What You'll Experience
-
-After `/nxtg-init`, Claude Code handles complex requests with **persistent memory**, **multi-agent coordination**, and **state visibility**—all within the conversation.
-
-### Before (Standard Claude)
-
-```
-You: "Create a REST API for a todo app"
-
-Claude: "I can help with that. What framework would you like to use?"
-You: "FastAPI"
-Claude: "Great! Let me create the main.py file..."
-[Creates one file]
-You: "Now add database models"
-Claude: [Creates models]
-You: "Add CRUD endpoints"
-... [Many exchanges back and forth]
-
-[3 hours later, session times out]
-
-You: [Opens new session] "Continue working on the todo API"
-Claude: "I don't see any previous context. Can you describe what you've built so far?"
-You: [Manually re-explains everything] 😫
-```
-
-### After (With NXTG-Forge v3.0)
-
-```
-You: "Create a REST API for a todo app"
-
-Claude: "I'll create a complete FastAPI todo API for you.
-
-Architecture:
-  • FastAPI with async/await
-  • PostgreSQL database
-  • SQLAlchemy ORM
-  • Pydantic models for validation
-  • Full CRUD operations
-  • 100% test coverage
-
-I'll create:
-  1. Project structure
-  2. Database models and migrations
-  3. API endpoints (GET, POST, PUT, DELETE)
-  4. Request/response schemas
-  5. Unit and integration tests
-  6. API documentation (auto-generated)
-  7. Docker setup
-
-Starting with the project structure..."
-
-[State saved to .claude/forge/state.json automatically]
-
-[3 hours later, session times out]
-
-You: [Opens new session] "/nxtg-continue"
-
-Claude: "Resuming todo API development.
-
-Completed (3 hours ago):
-  ✅ Project structure
-  ✅ Database models
-  ✅ CRUD endpoints
-  ✅ Pydantic schemas
-  ✅ 28 tests (all passing)
-
-Remaining:
-  ☐ Docker setup
-  ☐ API documentation
-  ☐ Deployment configuration
-
-Continuing with Docker setup..." 🚀
-```
-
-**The difference**: State persistence, zero context loss, effortless continuation.
-
----
-
-## Installation
-
-### Step 1: Clone NXTG-Forge
-
-```bash
-git clone https://github.com/nxtg-ai/nxtg-forge.git
-```
-
-### Step 2: Open Your Project in Claude Code
-
-```bash
-cd your-project
-claude-code .
-```
-
-### Step 3: Initialize NXTG-Forge
-
-In the Claude Code conversation:
-
-```
-/nxtg-init
-```
-
-**Watch it happen**:
-
-```
-╔══════════════════════════════════════════════════════════╗
-║              NXTG-FORGE v3.0 INSTALLER                    ║
-║           From Exhaustion to Empowerment                  ║
-╚══════════════════════════════════════════════════════════╝
-
-🏗️ Creating infrastructure...
-   ├─ .claude/ structure              [████████████] ✅
-   ├─ State management                [████████████] ✅
-   └─ Documentation                   [████████████] ✅
-
-🤖 Installing agents (7)...           [████████████] ✅
-⚡ Registering commands (20)...       [████████████] ✅
-🎯 Configuring hooks (13)...          [████████████] ✅
-
-╔══════════════════════════════════════════════════════════╗
-║                ✅ INITIALIZATION COMPLETE                 ║
-║  Time: 8 seconds | Files: 156 | Commands: 20             ║
-╚══════════════════════════════════════════════════════════╝
-
-🎉 Your project is FORGE-ENABLED!
-
-Next: /nxtg-status to see your project state
-```
-
-**Installation Time**: <30 seconds
-**Manual Steps**: 0 (everything automated)
-**Success Rate**: 100%
-
----
-
-## Discover Commands
-
-### The `/nx` Pattern
-
-All NXTG-Forge commands start with `/nxtg-`. Type `/nx` to see them all:
-
-```
-/nxtg-init              Initialize NXTG-Forge
-/nxtg-verify            Validate setup (auto-fixes issues)
-/nxtg-status            View project state dashboard
-/nxtg-enable-forge      Access command center
-/nxtg-feature           Start feature development
-/nxtg-checkpoint        Save milestone
-/nxtg-continue          Resume from last session
-... (20 total)
-```
-
-**Why this pattern?**
-- **Non-invasive**: Doesn't replace any existing Claude commands
-- **Grouped**: Type `/nx` → see entire suite
-- **Discoverable**: 2 characters show everything
-- **Scales**: Works with 20, 50, 100+ commands
-
----
-
-## Essential Commands
-
-### `/nxtg-status` - See What's Being Tracked
-
-```
-/nxtg-status
-```
-
-**Shows**:
-```
-╔════════════════════════════════════════════════════════╗
-║                  Project State                         ║
-╚════════════════════════════════════════════════════════╝
-
-📍 Current Goal: Implement authentication system
-
-✅ Completed (3 items):
-  • User model with password hashing
-  • JWT token service
-  • Login/register endpoints
-
-☐ Pending (2 items):
-  • Password reset flow
-  • Email verification
-
-🔑 Key Decisions:
-  • Using JWT for sessions (stateless, scalable)
-  • bcrypt for password hashing (OWASP recommended)
-
-💡 Engagement Quality: 94/100
-
-📊 Token Usage: 52,341 / 200,000 (26%)
-
-Last saved: 2 minutes ago
-```
-
-**Always know what Claude remembers.**
-
-### `/nxtg-verify` - Health Check
-
-```
-/nxtg-verify
-```
-
-**Validates**:
-- Directory structure
-- Agent configurations
-- Command registration
-- Hook executability
-- State management
-- Documentation structure
-- Git configuration
-
-**Auto-fixes** common issues automatically.
-
-### `/nxtg-feature` - Build Something
-
-```
-/nxtg-feature "implement user authentication with JWT"
-```
-
-**Orchestrates**:
-1. **@forge-planner** designs the feature
-2. **@forge-builder** implements step-by-step
-3. **@forge-guardian** validates quality
-4. **State persists** automatically
-
-### `/nxtg-checkpoint` - Save Milestone
-
-```
-/nxtg-checkpoint "authentication complete"
-```
-
-**Saves** current state as named milestone for easy restoration.
-
-### `/nxtg-continue` - Resume Session
-
-```
-/nxtg-continue
-```
-
-**Restores** exactly where you left off:
-- Loads last checkpoint
-- Shows completed work
-- Lists remaining tasks
-- Continues seamlessly
-
----
-
-## Real-World Scenarios
-
-### Scenario 1: Feature Development with State Persistence
-
-**Request**: `/nxtg-feature "add user authentication with JWT tokens"`
-
-**Session 1** (1 hour):
-```
-Claude: [Invokes @forge-planner]
-"Planning authentication system...
-
-Architecture:
-  • User model with bcrypt hashing
-  • JWT access + refresh tokens
-  • Login/register endpoints
-  • Protected route middleware
-  • Password reset flow
-
-Creating implementation plan..."
-
-[Invokes @forge-builder]
-"Implementing user model and password hashing..."
-
-[30 minutes later]
-"✅ User model complete
- ✅ Password hashing implemented
- ✅ Tests passing (12/12)
-
-State saved to .claude/forge/state.json"
-
-[Session ends]
-```
-
-**Session 2** (next day):
-```
-You: "/nxtg-continue"
-
-Claude: "Resuming authentication feature.
-
-Last checkpoint: User model complete
-Next: JWT token generation and validation
-
-Implementing TokenService..."
-
-[Seamlessly continues from exact point, no re-explanation needed]
-```
-
-**The magic**: State persists automatically. No manual reminders.
-
-### Scenario 2: Multi-Agent Coordination
-
-**Request**: `/nxtg-feature "refactor auth for testability"`
-
-**What happens**:
-```
-Claude: [Launches 3 agents in parallel]
-
-@nxtg-master-architect:
-"Analyzing current architecture...
-Recommending:
-  • Dependency injection pattern
-  • Repository abstraction
-  • Service layer separation"
-
-@forge-builder:
-"Implementing refactoring...
-  1. Creating AuthRepository interface
-  2. Extracting AuthService
-  3. Adding DI container"
-
-@forge-guardian:
-"Running validation...
-  ✅ All tests still passing
-  ✅ Coverage maintained (95%)
-  ✅ No security regressions"
-
-[All agents report to main session]
-
-"✅ Refactoring complete
- • 8 files modified
- • 0 tests broken
- • Coverage: 95% → 96%
- • Ready for code review"
-```
-
-**The magic**: Parallel agent coordination, quality validation, state tracking.
-
-### Scenario 3: State Visibility
-
-**Problem** (before v3.0): "I have no idea what Claude is remembering"
-
-**Solution** (v3.0): `/nxtg-status`
-
-Shows:
-- Current goal
-- Completed work (with timestamps)
-- Pending todos
-- Key decisions (with rationale)
-- Engagement quality metrics
-- Token usage
-
-**The magic**: Always know what's being tracked.
-
----
-
-## Available Commands
-
-### Core Commands
-
-```bash
-/nxtg-init                    # Initialize NXTG-Forge
-/nxtg-verify                  # Validate setup (auto-fix)
-/nxtg-status                  # View project state
-/nxtg-enable-forge            # Access command center
-```
-
-### Feature Development
-
-```bash
-/nxtg-feature "description"   # Feature development with orchestration
-/nxtg-integrate "service"     # Integration development
-/nxtg-spec "name"             # Specification creation
-/nxtg-gap-analysis            # Identify implementation gaps
-```
-
-### State Management
-
-```bash
-/nxtg-checkpoint "message"    # Save current state
-/nxtg-continue                # Resume from last checkpoint
-/nxtg-restore                 # Restore previous checkpoint
-/nxtg-report                  # Session summary
-```
-
-### Documentation
-
-```bash
-/nxtg-docs-audit              # Audit documentation quality
-/nxtg-docs-status             # Coverage report
-/nxtg-docs-update             # Update from code changes
-```
-
-### Advanced
-
-```bash
-/nxtg-deploy                  # Deployment orchestration
-/nxtg-upgrade                 # Upgrade NXTG-Forge
-/nxtg-agent-assign            # Assign task to specific agent
-```
-
-### Agent Invocation
-
-```bash
-# Invoke specialized agents directly
-@forge-orchestrator           # Planning & coordination
-@nxtg-master-architect        # Architecture & design
-@forge-builder                # Implementation
-@nxtg-design-vanguard         # UI/UX design
-@forge-guardian               # Quality assurance
-
-# Example
-@nxtg-master-architect review this authentication design
-@forge-guardian validate security of the auth implementation
-```
-
----
-
-## Understanding State Management
-
-### What Gets Saved Automatically
-
-Every interaction saves:
-
-1. **Session Information**:
-   - Session ID (UUID)
-   - Start time, last updated
-   - Token usage (current / limit)
-
-2. **Context**:
-   - Current goal
-   - Completed work (with timestamps)
-   - Pending todos
-   - Key decisions (with rationale)
-   - Discoveries and insights
-
-3. **Recovery System**:
-   - Recovery instructions
-   - Checkpoint name
-   - Next steps
-   - Current blockers
-
-4. **Engagement Quality**:
-   - Overall score (0-100)
-   - Context awareness metric
-   - Update richness metric
-   - Progress clarity metric
-
-### View State Anytime
-
-```bash
-# Pretty-printed state
-/nxtg-status
-
-# Or raw JSON
-cat .claude/forge/state.json | jq .
-
-# Specific sections
-jq '.context.completed_work' .claude/forge/state.json
-jq '.recovery.next_steps' .claude/forge/state.json
-jq '.engagement_quality.current_score' .claude/forge/state.json
-```
-
----
-
-## What Gets Installed
-
-### 1. Agent Suite (7 Specialists)
-
-- **@forge-orchestrator** - Planning & coordination
-- **@nxtg-master-architect** - Architecture & design
-- **@forge-planner** - Feature planning
-- **@forge-builder** - Implementation
-- **@forge-guardian** - Quality assurance
-- **@nxtg-design-vanguard** - UI/UX design
-- **@forge-detective** - Project analysis
-
-### 2. Command Suite (20 Commands)
-
-All using `/nxtg-*` prefix for grouped discovery.
-
-### 3. Event Hooks (13 Automatic Triggers)
-
-- `session-start.sh` - Offer `/nxtg-continue`
-- `pre-compact.sh` - Save before context compaction
-- `post-task.sh` - Auto-save after work
-- `session-end.sh` - Final state persistence
-- ... (9 more)
-
-### 4. State Management v2.0
-
-Automatic JSON-based state persistence with:
-- Session tracking
-- Token usage monitoring
-- Recovery system
-- Engagement quality scoring
-
-### 5. Canonical Documentation
-
-- `docs/architecture/` - System design
-- `docs/design/` - UI/UX decisions
-- `docs/testing/` - Test strategies
-- `docs/workflow/` - Forge workflows
-
----
-
-## Advanced Usage (Optional)
-
-### Multi-Agent Coordination
-
-Run multiple agents in parallel:
-
-```bash
-# Option 1: Explicit parallel invocation
-@nxtg-master-architect @forge-builder @forge-guardian
-"Implement payment processing with architecture review and security validation"
-
-# Option 2: Let orchestrator coordinate
-/nxtg-feature "implement payment processing"
-# Orchestrator automatically launches:
-#   - forge-planner (design)
-#   - forge-builder (implement)
-#   - forge-guardian (validate)
-```
-
-### Checkpoints
-
-Create manual checkpoints for important milestones:
-
-```bash
-/nxtg-checkpoint "authentication complete - ready for testing"
-
-# Later, view checkpoints
-jq '.recovery.checkpoint' .claude/forge/state.json
-```
-
-### State Export
-
-Export state for reporting or sharing:
-
-```bash
-# Full state export
-cat .claude/forge/state.json > session-backup-$(date +%Y%m%d).json
-
-# Completed work only
-jq '.context.completed_work' .claude/forge/state.json > completed-work.json
-
-# Key decisions only
-jq '.context.key_decisions' .claude/forge/state.json > decisions.json
-```
-
----
-
-## Troubleshooting
-
-### "State not persisting across sessions"
-
-**Check**:
+**What happens:**
+- 🔍 Forge analyzes your tech stack
+- 📁 Creates `.claude/` structure
+- 🤖 Configures specialized agents for your stack
+- ⚙️ Sets up automation hooks
+- ✨ You're ready to build!
+
+### Step 3: Verify Installation
 ```bash
 /nxtg-status
 ```
 
-Shows last save time and health.
+You'll see:
+- Project overview with tech stack
+- Available commands
+- Active agents
+- Current configuration
 
-**Fix**:
+### Step 4: Your First AI-Powered Feature
 ```bash
-/nxtg-verify
+/nxtg-feature "Add user profile page with avatar upload"
 ```
 
-Auto-fixes state management issues.
+Watch as Forge:
+1. **Clarifies** requirements with you
+2. **Designs** the architecture
+3. **Implements** the feature
+4. **Writes** comprehensive tests
+5. **Documents** everything
+6. **Validates** quality standards
 
 ---
 
-### "Commands not appearing"
+## 🆕 Path B: Start Fresh with Forge
 
-**Check**:
+### Step 1: Create a New Project
 ```bash
-# Verify commands installed
-ls .claude/commands/ | grep nxtg- | wc -l
-# Should show 20 files
+# Create and enter project directory
+mkdir my-forge-project
+cd my-forge-project
+
+# Initialize git
+git init
 ```
 
-**Fix**:
+### Step 2: Let Forge Set Everything Up
 ```bash
-/nxtg-verify
-```
-
-Auto-fixes command registration.
-
----
-
-### "Agents not responding"
-
-**Check**:
-```bash
-# Verify agents installed
-ls .claude/agents/ | wc -l
-# Should show 7 files
-```
-
-**Fix**:
-```bash
-/nxtg-verify
-```
-
-Auto-fixes agent configurations.
-
----
-
-### "Want to start fresh"
-
-```bash
-# Remove state (keeps structure)
-rm .claude/forge/state.json
-
-# Reinitialize
+# In Claude:
 /nxtg-init
 
-# Or completely remove and reinstall
-rm -rf .claude/
+# When prompted, choose:
+# - Project type (Web App, API, CLI Tool, etc.)
+# - Language (TypeScript, Python, Go, etc.)
+# - Framework (React, FastAPI, Express, etc.)
+```
+
+### Step 3: Scaffold Your Project
+```bash
+# Forge will now create:
+# - Project structure
+# - Package/dependency files
+# - Configuration files
+# - Initial components
+# - Test setup
+# - Documentation templates
+```
+
+### Step 4: Build Something Amazing
+```bash
+/nxtg-feature "Create todo list with real-time sync"
+```
+
+---
+
+## 🎮 Command Mastery
+
+### Essential Commands
+
+#### 🏁 `/nxtg-init` - Initialize Forge
+```bash
+/nxtg-init
+# Sets up Forge in any project
+# Auto-detects your stack
+# Configures everything automatically
+```
+
+#### 📊 `/nxtg-status` - Project Intelligence
+```bash
+/nxtg-status
+# Shows project health
+# Lists available capabilities
+# Displays current configuration
+```
+
+#### ✨ `/nxtg-feature` - Build Features
+```bash
+/nxtg-feature "Add payment processing with Stripe"
+# Breaks down the feature
+# Implements with tests
+# Documents everything
+```
+
+#### 🧪 `/nxtg-test` - Comprehensive Testing
+```bash
+/nxtg-test
+# Runs all test suites
+# Generates coverage reports
+# Identifies gaps
+```
+
+#### 🚀 `/nxtg-deploy` - Ship with Confidence
+```bash
+/nxtg-deploy production
+# Pre-flight checks
+# Builds optimized artifacts
+# Deploys with rollback capability
+# Runs smoke tests
+```
+
+#### ⚡ `/nxtg-optimize` - Performance Tuning
+```bash
+/nxtg-optimize
+# Analyzes performance bottlenecks
+# Implements optimizations
+# Validates improvements
+```
+
+---
+
+## 🤖 Meet Your AI Team
+
+### 🎯 The Orchestrator
+**Your project manager and coordinator**
+
+Ask the Orchestrator to:
+- Break down complex features
+- Coordinate multi-step workflows
+- Make architectural decisions
+
+Example:
+```
+"Build a complete authentication system with email verification,
+password reset, and OAuth providers"
+```
+
+### 🏗️ The Architect
+**Your system design expert**
+
+Ask the Architect to:
+- Design system architecture
+- Choose design patterns
+- Make technology decisions
+
+Example:
+```
+"Design a scalable microservices architecture for our e-commerce platform"
+```
+
+### 💻 The Developer
+**Your coding virtuoso**
+
+Ask the Developer to:
+- Implement features
+- Refactor code
+- Fix bugs
+
+Example:
+```
+"Refactor the payment module to use the strategy pattern"
+```
+
+### 🔍 The QA Engineer
+**Your quality guardian**
+
+Ask the QA to:
+- Write comprehensive tests
+- Review code quality
+- Validate implementations
+
+Example:
+```
+"Create integration tests for the user registration flow"
+```
+
+### 🚀 The DevOps Engineer
+**Your deployment specialist**
+
+Ask DevOps to:
+- Set up CI/CD pipelines
+- Configure infrastructure
+- Optimize deployments
+
+Example:
+```
+"Set up GitHub Actions for automated testing and deployment"
+```
+
+---
+
+## 🎯 Real-World Workflows
+
+### Workflow 1: Building a New Feature
+
+```bash
+# 1. Start with the feature command
+/nxtg-feature "Add real-time chat with typing indicators"
+
+# 2. Forge will ask clarifying questions:
+# - How many users per chat room?
+# - Need message persistence?
+# - File sharing support?
+
+# 3. Watch the orchestration:
+# - Architect designs the solution
+# - Developer implements components
+# - QA writes tests
+# - DevOps updates deployment
+
+# 4. Review and iterate
+# Code is ready for review!
+```
+
+### Workflow 2: Fixing a Bug
+
+```bash
+# Describe the issue
+"Users report login fails after password reset.
+The error shows 'Invalid token'. Please investigate and fix."
+
+# Forge will:
+# 1. Reproduce the issue
+# 2. Identify root cause
+# 3. Implement fix with tests
+# 4. Validate the solution
+```
+
+### Workflow 3: Performance Optimization
+
+```bash
+# Run optimization command
+/nxtg-optimize database queries
+
+# Forge will:
+# 1. Profile current performance
+# 2. Identify bottlenecks
+# 3. Implement optimizations
+# 4. Measure improvements
+# 5. Document changes
+```
+
+---
+
+## ⚡ Pro Tips
+
+### 1. Be Specific with Requirements
+```bash
+# Good
+/nxtg-feature "Add user dashboard with charts showing weekly activity,
+total tasks completed, and streak counter"
+
+# Less effective
+/nxtg-feature "Add dashboard"
+```
+
+### 2. Use Natural Language
+```bash
+# Forge understands context
+"The login page needs better error messages.
+Users should know if it's wrong password or account doesn't exist"
+```
+
+### 3. Iterate and Refine
+```bash
+# Start simple
+/nxtg-feature "Basic todo list"
+
+# Then enhance
+"Add drag-and-drop reordering to the todo list"
+
+# Then optimize
+"Make the todo list real-time with WebSocket updates"
+```
+
+### 4. Leverage the Status Command
+```bash
+# Before starting work
+/nxtg-status
+
+# Understand:
+# - Current state
+# - Available tools
+# - Recent changes
+```
+
+### 5. Trust the Process
+- Let Forge handle the orchestration
+- Review generated code to learn patterns
+- Customize agents for your team's style
+
+---
+
+## 🔧 Customization
+
+### Adjusting Agent Behavior
+
+Edit agent files in `.claude/agents/`:
+```markdown
+# orchestrator.md
+---
+style: detailed  # or: concise
+approach: conservative  # or: innovative
+testing: comprehensive  # or: essential
+---
+```
+
+### Creating Custom Commands
+
+Add new commands in `.claude/commands/`:
+```markdown
+# review.md
+---
+description: Comprehensive code review
+category: quality
+---
+
+Perform detailed code review focusing on:
+- Security vulnerabilities
+- Performance issues
+- Code style compliance
+- Test coverage
+```
+
+### Setting Up Hooks
+
+Configure automation in `.claude/hooks/`:
+```markdown
+# pre-deploy.md
+---
+trigger: before-deployment
+---
+
+Run these checks before any deployment:
+1. All tests must pass
+2. Coverage must be >80%
+3. No security vulnerabilities
+4. Documentation is updated
+```
+
+---
+
+## 🚨 Troubleshooting
+
+### Issue: Commands Not Working
+
+**Solution:**
+```bash
+# Verify .claude folder exists
+ls -la .claude/
+
+# Re-initialize if needed
 /nxtg-init
 ```
 
----
+### Issue: Tests Failing
 
-## The Point
-
-You should **never have to think about NXTG-Forge**.
-
-- Initialize once (`/nxtg-init`)
-- Use Claude Code normally
-- Notice Claude:
-  - Remembers context automatically
-  - Coordinates multiple agents
-  - Shows you what it's tracking (`/nxtg-status`)
-  - Never loses progress
-  - Celebrates achievements 🎉
-
-**That's elegant software.**
-
----
-
-## Next Steps
-
-### Start Using It
-
+**Solution:**
 ```bash
-cd your-project
-claude-code .
+# Get detailed test output
+/nxtg-test --verbose
+
+# Fix specific test
+"Fix the failing authentication test"
 ```
 
-Then:
-```
-/nxtg-init              # Initialize
-/nxtg-status            # View current state
-/nxtg-feature "implement user profiles"  # Build something
-```
+### Issue: Deployment Problems
 
-### Try Complex Requests
-
+**Solution:**
 ```bash
-# Feature development
-"Implement OAuth2 authentication with Google and GitHub"
+# Check deployment configuration
+/nxtg-status deployment
 
-# Refactoring
-"Refactor all database access to use repository pattern"
-
-# Integration
-"Integrate Stripe for subscription billing with webhooks"
+# Validate environment
+"Verify all deployment environment variables are set"
 ```
-
-Watch Claude:
-- Plan the work
-- Coordinate agents
-- Implement step by step
-- Save state automatically
-- Show you progress
-
-### Customize (Optional)
-
-Most users never need this, but you can:
-
-- Edit agents: `.claude/agents/*.md`
-- Edit commands: `.claude/commands/*.md`
-- Edit hooks: `.claude/hooks/*.sh`
-- Edit state schema: `.claude/forge/state.schema.json`
-
-But honestly? **Just use it**. The defaults work great.
 
 ---
 
-## What's Happening Behind the Scenes?
+## 📈 Leveling Up
 
-*You don't need to know this, but if you're curious:*
+### Week 1: Master the Basics
+- Use `/nxtg-init` and `/nxtg-status` daily
+- Build 3 features with `/nxtg-feature`
+- Run `/nxtg-test` after each feature
 
-When you make a complex request:
+### Week 2: Leverage the Team
+- Work directly with individual agents
+- Customize agent behaviors
+- Create your first custom command
 
-1. **Orchestrator** analyzes the request
-2. **Planner** creates multi-step plan
-3. **Builder** implements step-by-step
-4. **Guardian** validates quality
-5. **State Manager** saves progress automatically
-6. **Recovery System** enables `/nxtg-continue`
+### Week 3: Automation Excellence
+- Set up all hooks
+- Create project-specific commands
+- Optimize your workflow
 
-Every action:
-- Updates `state.json`
-- Tracks token usage
-- Monitors engagement quality
-- Records decisions and discoveries
-
-**All automatically. You just see the results.**
-
----
-
-## Comparison
-
-### Standard Claude Code
-- ✅ Helpful assistant
-- ✅ Good at coding tasks
-- ❌ Loses context between sessions
-- ❌ Manual context reminders needed
-- ❌ No state visibility
-- ❌ Single-threaded execution
-
-### NXTG-Forge v3.0
-- ✅ Helpful assistant
-- ✅ Good at coding tasks
-- ✅ Automatic state persistence
-- ✅ Zero manual reminders
-- ✅ Real-time state visibility (`/nxtg-status`)
-- ✅ Parallel agent coordination
-- ✅ Engagement quality monitoring
-- ✅ <30 second installation
-- ✅ 100% success rate
-- ✅ Pure Claude Code (zero bash scripts)
+### Week 4: Full Power
+- Orchestrate complex features
+- Contribute improvements back
+- Share your success story
 
 ---
 
-## Questions?
+## 🎉 You're Ready!
 
-- **Main Documentation**: [README.md](README.md)
-- **Canonical Vision**: [docs/CANONICAL-VISION.md](docs/CANONICAL-VISION.md)
-- **Architectural Pivot**: [docs/ARCHITECTURAL-PIVOT-v3.0.md](docs/ARCHITECTURAL-PIVOT-v3.0.md)
-- **Issues**: [GitHub Issues](https://github.com/nxtg-ai/nxtg-forge/issues)
+You now have everything you need to:
+- ✅ Build features 10x faster
+- ✅ Maintain 95%+ test coverage
+- ✅ Deploy with confidence
+- ✅ Focus on solving real problems
 
----
+### Next Steps
 
-## Ready to See It in Action?
-
-```bash
-# Initialize
-cd your-project
-claude-code .
-```
-
-In Claude Code:
-```
-/nxtg-init
-```
-
-Then try:
-```
-/nxtg-enable-forge
-
-/nxtg-feature "create a REST API with authentication, database, tests, and docs"
-```
-
-**Watch what happens. You'll feel the difference immediately.**
+1. **Try your first feature**: `/nxtg-feature "Your idea here"`
+2. **Explore the agents**: Talk to them directly
+3. **Join the community**: Share tips and get help
+4. **Build something amazing**: The only limit is your imagination
 
 ---
 
-**From Exhaustion to Empowerment**
-
-NXTG-Forge v3.0 - Pure Claude Code, Zero Manual Steps, 100% Success
-
-[Documentation](docs/) • [README](README.md) • [Canonical Vision](docs/CANONICAL-VISION.md)
+<div align="center">
+  <h3>🚀 Welcome to the future of development</h3>
+  <p><strong>Now go forth and forge greatness!</strong></p>
+  <br/>
+  <p>Questions? Issues? Just ask Forge - it's here to help!</p>
+</div>

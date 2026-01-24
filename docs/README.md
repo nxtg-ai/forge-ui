@@ -1,108 +1,153 @@
-# NXTG-Forge Documentation
+# 📚 NXTG-Forge Documentation
 
-Complete documentation for NXTG-Forge - the intelligent enhancement system for Claude Code.
-
-## Quick Navigation
-
-### Getting Started
-
-- [Installation & Setup](../GETTING-STARTED.md) - 30-second quickstart guide
-- [Real-World Examples](../EXAMPLES.md) - See it in action with actual scenarios
-- [Troubleshooting](TROUBLESHOOTING.md) - Common issues and solutions
-
-### Architecture & Design
-
-- [System Architecture](ARCHITECTURE.md) - How everything works together
-- [UX Redesign Philosophy](UX-REDESIGN-2026-01-07.md) - From configuration tool to invisible intelligence
-- [UX Implementation Details](UX-IMPLEMENTATION-2026-01-07.md) - Technical implementation of the redesign
-- [API Reference](API.md) - Complete API documentation
-
-### Operations
-
-- [Deployment Guide](DEPLOYMENT.md) - Production deployment instructions
-- [Gap Analysis](GAP-ANALYSIS.md) - Project improvement recommendations
-- [Project Health](../README.md#project-health) - Current status and metrics
-
-### Customization (Advanced)
-
-- [Customization Guide](CUSTOMIZATION.md) - Advanced configuration options
-- [State Recovery](STATE-RECOVERY.md) - Session persistence and recovery
-
-### Internal Documentation
-
-- [Runbook](.asif/RUNBOOK.md) - Operational procedures
-- [UAT Guide](.asif/UAT-GUIDE.md) - User acceptance testing
-- [FAQ](.asif/FAQ.md) - Frequently asked questions
-- [Sysadmin Guide](.asif/SYSADMIN.md) - System administration
-
-## Philosophy
-
-NXTG-Forge follows a **zero-configuration** philosophy:
-
-- **90% of users**: Never touch configuration
-- **9% of users**: Edit auto-generated config for minor tweaks
-- **1% of users**: Deep customization with custom agents/workflows
-
-The best documentation is the one users don't need to read.
-
-## Quick Reference
-
-### Installation (3 commands)
-
-```bash
-git clone https://github.com/nxtg-ai/nxtg-forge.git
-cd nxtg-forge
-pip install -e .
-```
-
-### Project Setup (2 commands)
-
-```bash
-cd ~/my-project
-forge init
-```
-
-### Use (1 command)
-
-```bash
-claude
-```
-
-That's it. Claude is now smarter.
-
-## Documentation Principles
-
-All NXTG-Forge documentation follows these principles:
-
-1. **Show, Don't Tell** - Examples over explanations
-2. **Experience-Focused** - What users get, not how it works
-3. **Progressive Disclosure** - Simple first, advanced optional
-4. **Real-World Scenarios** - Actual use cases, not toy examples
-5. **Honest and Accurate** - No aspirational claims, only reality
-
-## Getting Help
-
-- **Quick Questions**: Check [GETTING-STARTED.md](../GETTING-STARTED.md)
-- **Issues**: [GitHub Issues](https://github.com/nxtg-ai/nxtg-forge/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/nxtg-ai/nxtg-forge/discussions)
-- **Email**: <axw@nxtg.ai>
-
-## Contributing to Documentation
-
-When updating documentation:
-
-1. **Test everything** - Every command must actually work
-2. **No hallucination** - Only document what exists
-3. **User perspective** - Write for the person installing, not the person who built it
-4. **Examples first** - Show before explaining
-5. **Keep it current** - Update when code changes
-
-## Document Status
-
-All documentation is current as of 2026-01-07.
-
-Last major update: UX Redesign (complete removal of setup wizard, zero-config implementation)
+<div align="center">
+  <h2>Everything you need to master NXTG-Forge</h2>
+  <p>From concepts to implementation, we've got you covered</p>
+</div>
 
 ---
 
-**Made with NXTG-Forge**
+## 📖 Documentation Structure
+
+### 🏗️ [Architecture](./architecture/)
+Deep dive into NXTG-Forge's design philosophy and technical architecture
+- System design principles
+- Multi-agent orchestration patterns
+- Technology decisions and trade-offs
+
+### 🤖 [Agents](./agents/)
+Comprehensive guide to each specialized AI agent
+- Agent capabilities and responsibilities
+- Communication patterns
+- Customization and extension
+
+### 💻 [Commands](./commands/)
+Complete reference for all Forge commands
+- Command syntax and options
+- Real-world examples
+- Advanced usage patterns
+
+### 🔄 [Hooks](./hooks/)
+Automation and workflow customization
+- Available hook points
+- Event-driven automation
+- Custom hook creation
+
+### 🎯 [Skills](./skills/)
+Domain-specific expertise modules
+- Built-in skills overview
+- Creating custom skills
+- Skill composition patterns
+
+### ✨ [Best Practices](./best-practices/)
+Proven patterns for maximum effectiveness
+- Project organization
+- Team workflows
+- Performance optimization
+
+### 🎓 [Tutorials](./tutorials/)
+Step-by-step guides for common scenarios
+- Building your first API
+- Setting up CI/CD
+- Deploying to production
+
+### 🔧 [API Reference](./api/)
+Technical reference for developers
+- Configuration options
+- Extension points
+- Integration guides
+
+---
+
+## 🚀 Quick Navigation
+
+### Getting Started
+- [Installation Guide](../GETTING-STARTED.md)
+- [Your First Feature](./tutorials/first-feature.md)
+- [Understanding Agents](./agents/README.md)
+
+### Common Tasks
+- [Building REST APIs](./tutorials/rest-api.md)
+- [Adding Authentication](./tutorials/authentication.md)
+- [Database Integration](./tutorials/database.md)
+- [Testing Strategies](./best-practices/nxtg-testing.md)
+
+### Advanced Topics
+- [Multi-Agent Orchestration](./architecture/orchestration.md)
+- [Custom Agent Creation](./agents/custom-agents.md)
+- [Performance Tuning](./best-practices/performance.md)
+- [Enterprise Integration](./best-practices/enterprise.md)
+
+---
+
+## 🎯 Learning Paths
+
+### 🌱 Beginner Path
+1. [Getting Started](../GETTING-STARTED.md)
+2. [Core Concepts](./architecture/concepts.md)
+3. [Basic Commands](./commands/basic.md)
+4. [Your First Feature](./tutorials/first-feature.md)
+
+### 🚀 Intermediate Path
+1. [Working with Agents](./agents/working-with-agents.md)
+2. [Automation with Hooks](./hooks/automation.md)
+3. [Testing Best Practices](./best-practices/nxtg-testing.md)
+4. [Deployment Strategies](./best-practices/nxtg-deployment.md)
+
+### 🏆 Advanced Path
+1. [Custom Agent Development](./agents/custom-agents.md)
+2. [Performance Optimization](./best-practices/performance.md)
+3. [Enterprise Patterns](./best-practices/enterprise.md)
+4. [Contributing to Forge](./contributing.md)
+
+---
+
+## 💡 Tips for Using This Documentation
+
+### Search Effectively
+- Use Ctrl/Cmd + F to search within pages
+- Check the relevant section based on your need
+- Look for code examples in gray boxes
+
+### Code Examples
+All code examples are:
+- ✅ Production-ready
+- ✅ Tested and validated
+- ✅ Following best practices
+- ✅ Copy-paste friendly
+
+### Version Information
+This documentation is for **NXTG-Forge v3.0.0**
+- Last updated: 2024
+- Compatibility: Claude Desktop 1.0+
+
+---
+
+## 🤝 Contributing to Documentation
+
+Found an issue or want to improve the docs?
+1. Report issues in GitHub
+2. Submit pull requests with improvements
+3. Share your use cases and examples
+
+---
+
+## 📞 Getting Help
+
+### Documentation Not Enough?
+- Ask in the [Discord Community](https://discord.gg/nxtg-forge)
+- Check [Stack Overflow](https://stackoverflow.com/questions/tagged/nxtg-forge)
+- Email support: forge@nxtg.ai
+
+### Quick Links
+- [FAQ](./faq.md)
+- [Troubleshooting](./troubleshooting.md)
+- [Changelog](../CHANGELOG.md)
+- [License](../LICENSE)
+
+---
+
+<div align="center">
+  <h3>📚 Happy Learning!</h3>
+  <p>Remember: The best way to learn is by doing. Start building!</p>
+</div>
