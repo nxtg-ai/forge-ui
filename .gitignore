@@ -346,12 +346,20 @@ docker-compose.override.yml
 
 # Claude Code (user-specific state files - keep templates!)
 .claude/state.json
+.claude/forge/state.json
+.nxtg-forge/state.json
 !.claude/state.json.template
 .claude/.user-*
 .claude/backups/
 .claude/checkpoints/
 .claude/errors.log
 .claude/cache/
+
+# NXTG-Forge state files (CRITICAL - never commit!)
+state.json
+.state.json
+**/state.json
+**/.state.json
 
 # Backup files
 *.bak
