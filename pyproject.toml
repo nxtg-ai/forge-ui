@@ -4,17 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nxtg-forge"
-version = "1.0.0"
-description = "Self-Deploying AI Development Infrastructure"
+version = "2.1.0"
+description = "DEPRECATED: Use init.sh bash scaffolding instead. Pure bash Claude Code enhancement tool."
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT"}
 authors = [
     {name = "NXTG-Forge Contributors"}
 ]
-keywords = ["ai", "development", "infrastructure", "claude", "mcp", "automation"]
+keywords = ["ai", "development", "infrastructure", "claude", "mcp", "automation", "deprecated"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 7 - Inactive",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -53,9 +53,11 @@ dev = [
     "mypy>=1.7.0",
 ]
 
-[project.scripts]
-nxtg-forge = "forge.cli:main"
-forge = "forge.cli:main"
+# DEPRECATED: Python package archived in forge-v2.0-archive/
+# Use init.sh bash scaffolding instead
+# [project.scripts]
+# nxtg-forge = "forge.cli:main"
+# forge = "forge.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/nxtg-ai/nxtg-forge"
@@ -64,9 +66,10 @@ Repository = "https://github.com/nxtg-ai/nxtg-forge.git"
 "Bug Tracker" = "https://github.com/nxtg-ai/nxtg-forge/issues"
 Changelog = "https://github.com/nxtg-ai/nxtg-forge/blob/main/CHANGELOG.md"
 
-[tool.setuptools]
-packages = ["forge", "forge.agents"]
-include-package-data = true
+# DEPRECATED: Package archived, no longer builds
+# [tool.setuptools]
+# packages = ["forge-v2.0-archive", "forge-v2.0-archive.agents"]
+# include-package-data = true
 
 [tool.bandit]
 exclude_dirs = ["tests"]

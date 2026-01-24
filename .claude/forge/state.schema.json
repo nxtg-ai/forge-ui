@@ -1,0 +1,264 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "NXTG-Forge State v2.0",
+  "description": "Enhanced state management schema for NXTG-Forge Beta v2.1",
+  "type": "object",
+  "required": ["version", "session", "context", "recovery"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "2.0",
+      "description": "State schema version"
+    },
+    "session": {
+      "type": "object",
+      "required": ["id", "started", "last_updated"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique session identifier"
+        },
+        "started": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Session start timestamp"
+        },
+        "last_updated": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last state update timestamp"
+        },
+        "token_usage": {
+          "type": "object",
+          "properties": {
+            "current": {
+              "type": "integer",
+              "description": "Current token count"
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Token limit"
+            },
+            "last_compact": {
+              "type": "string",
+              "format": "date-time",
+              "description": "Last compaction timestamp"
+            }
+          }
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "required": ["current_goal", "completed_work", "pending_todos", "key_decisions"],
+      "properties": {
+        "current_goal": {
+          "type": "string",
+          "description": "High-level goal for current session",
+          "examples": ["Implement authentication system", "Fix production bugs", "Add payment integration"]
+        },
+        "completed_work": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["description", "timestamp"],
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "files_changed": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "tests_added": {
+                "type": "integer"
+              }
+            }
+          },
+          "description": "List of completed tasks/work items"
+        },
+        "pending_todos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["content", "status", "activeForm"],
+            "properties": {
+              "content": {
+                "type": "string",
+                "description": "Todo item description (imperative form)"
+              },
+              "activeForm": {
+                "type": "string",
+                "description": "Todo item in present continuous form"
+              },
+              "status": {
+                "type": "string",
+                "enum": ["pending", "in_progress", "completed"],
+                "description": "Current status"
+              },
+              "priority": {
+                "type": "string",
+                "enum": ["P0", "P1", "P2", "P3"],
+                "description": "Priority level"
+              },
+              "created": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "completed": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          },
+          "description": "Current todo list"
+        },
+        "key_decisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["decision", "rationale", "timestamp"],
+            "properties": {
+              "decision": {
+                "type": "string",
+                "description": "What was decided",
+                "examples": ["Using JWT over sessions", "PostgreSQL over MongoDB"]
+              },
+              "rationale": {
+                "type": "string",
+                "description": "Why this decision was made",
+                "examples": ["Better for API architecture", "ACID compliance needed"]
+              },
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "alternatives_considered": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "trade_offs": {
+                "type": "string"
+              }
+            }
+          },
+          "description": "Important architectural/design decisions"
+        },
+        "discoveries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["insight", "timestamp"],
+            "properties": {
+              "insight": {
+                "type": "string",
+                "description": "Key learning or discovery"
+              },
+              "timestamp": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "category": {
+                "type": "string",
+                "enum": ["architecture", "design", "testing", "workflow", "performance", "security"],
+                "description": "Type of discovery"
+              },
+              "saved_to_canonical": {
+                "type": "boolean",
+                "description": "Whether this was persisted to canonical docs"
+              }
+            }
+          },
+          "description": "Insights and learnings from this session"
+        }
+      }
+    },
+    "recovery": {
+      "type": "object",
+      "required": ["instructions", "checkpoint"],
+      "properties": {
+        "instructions": {
+          "type": "string",
+          "description": "Human-readable instructions for continuing this session",
+          "examples": ["We were implementing JWT authentication. Completed the token generation logic. Next: Add refresh token handling and test the full flow."]
+        },
+        "checkpoint": {
+          "type": "string",
+          "description": "Last known good state identifier"
+        },
+        "next_steps": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Specific next actions to take"
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "description": {"type": "string"},
+              "severity": {
+                "type": "string",
+                "enum": ["critical", "high", "medium", "low"]
+              }
+            }
+          },
+          "description": "Any blockers or issues preventing progress"
+        },
+        "context_summary": {
+          "type": "string",
+          "description": "1-2 sentence summary of current state for quick recovery"
+        }
+      }
+    },
+    "engagement_quality": {
+      "type": "object",
+      "properties": {
+        "current_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Overall engagement quality score"
+        },
+        "metrics": {
+          "type": "object",
+          "properties": {
+            "contextAwareness": {"type": "number", "minimum": 0, "maximum": 100},
+            "updateRichness": {"type": "number", "minimum": 0, "maximum": 100},
+            "progressClarity": {"type": "number", "minimum": 0, "maximum": 100},
+            "insightCapture": {"type": "number", "minimum": 0, "maximum": 100}
+          }
+        },
+        "history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "timestamp": {"type": "string", "format": "date-time"},
+              "score": {"type": "number"}
+            }
+          },
+          "description": "Quality score over time"
+        }
+      }
+    },
+    "agents_used": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "agent": {"type": "string"},
+          "invoked_at": {"type": "string", "format": "date-time"},
+          "purpose": {"type": "string"},
+          "outcome": {"type": "string", "enum": ["success", "partial", "failed"]}
+        }
+      },
+      "description": "Agents invoked during this session"
+    }
+  }
+}
