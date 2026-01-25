@@ -66,7 +66,7 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({ status, size = 'mediu
   };
 
   return (
-    <div className={`${sizeClasses[size]} ${statusColors[status]} rounded-full animate-pulse`} />
+    <div data-testid={`monitoring-health-score-${status}`} className={`${sizeClasses[size]} ${statusColors[status]} rounded-full animate-pulse`} />
   );
 };
 
@@ -139,7 +139,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   };
 
   return (
-    <div className={`bg-white rounded-lg shadow p-4 border-l-4 ${status ? statusColors[status] : 'border-blue-500'}`}>
+    <div data-testid={`monitoring-metric-item-${title.toLowerCase().replace(/\s+/g, '-')}`} className={`bg-white rounded-lg shadow p-4 border-l-4 ${status ? statusColors[status] : 'border-blue-500'}`}>
       <div className="flex justify-between items-start">
         <div>
           <p className="text-sm text-gray-600">{title}</p>
@@ -273,9 +273,9 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
   if (compact) {
     // Compact view for embedding
     return (
-      <div className="bg-gray-50 rounded-lg p-3">
+      <div data-testid="monitoring-dashboard-compact" className="bg-gray-50 rounded-lg p-3">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold">System Health</h3>
+          <h3 data-testid="monitoring-health-title" className="text-sm font-semibold">System Health</h3>
           {health && <StatusIndicator status={health.status} size="small" />}
         </div>
         {health && (
@@ -303,10 +303,10 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
 
   // Full dashboard view
   return (
-    <div className="bg-gray-50 min-h-screen p-6">
+    <div data-testid="monitoring-dashboard-container" className="bg-gray-50 min-h-screen p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-6">
+        <div data-testid="monitoring-dashboard-header" className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900">System Metrics Dashboard</h1>
           <p className="text-gray-600 mt-1">Real-time health and performance monitoring</p>
         </div>

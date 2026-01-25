@@ -120,7 +120,7 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
   }, [agents]);
 
   const renderNetworkView = () => (
-    <div className="relative w-full h-[500px] bg-gray-900/30 rounded-2xl border border-gray-800 overflow-hidden">
+    <div data-testid="agent-collab-network-view" className="relative w-full h-[500px] bg-gray-900/30 rounded-2xl border border-gray-800 overflow-hidden">
       {/* Background grid */}
       <svg className="absolute inset-0 w-full h-full">
         <defs>
@@ -150,7 +150,7 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
           if (!fromPos || !toPos) return null;
 
           return (
-            <g key={`${edge.from}-${edge.to}-${index}`}>
+            <g key={`${edge.from}-${edge.to}-${index}`} data-testid={`agent-collab-edge-${edge.from}-${edge.to}`}>
               <motion.line
                 x1={fromPos.x}
                 y1={fromPos.y}
@@ -203,6 +203,7 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
         return (
           <motion.div
             key={agent.id}
+            data-testid={`agent-collab-node-${agent.id}`}
             className="absolute cursor-pointer"
             style={{
               '--agent-x': `${position.x - 30}px`,
@@ -361,10 +362,11 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
   );
 
   const renderListView = () => (
-    <div className="space-y-2">
+    <div data-testid="agent-collab-list-view" className="space-y-2">
       {agents.map((agent, index) => (
         <motion.div
           key={agent.id}
+          data-testid={`agent-collab-list-item-${agent.id}`}
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: index * 0.05 }}
@@ -461,7 +463,7 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
   );
 
   return (
-    <div className="space-y-4">
+    <div data-testid="agent-collab-container" className="space-y-4">
       {viewMode === 'network' && renderNetworkView()}
       {viewMode === 'list' && renderListView()}
     </div>

@@ -165,9 +165,9 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-900/50 rounded-2xl border border-gray-800">
+    <div data-testid="activity-feed-container" className="h-full flex flex-col bg-gray-900/50 rounded-2xl border border-gray-800">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-800">
+      <div data-testid="activity-feed-header" className="px-4 py-3 border-b border-gray-800">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Activity className="w-5 h-5 text-blue-400" />
@@ -188,8 +188,9 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
 
           {/* Filters */}
           <div className="flex items-center gap-2">
-            <div className="flex gap-1 px-1 py-1 bg-gray-800 rounded-lg">
+            <div data-testid="activity-feed-filter-group" className="flex gap-1 px-1 py-1 bg-gray-800 rounded-lg">
               <button
+                data-testid="activity-feed-filter-all"
                 onClick={() => setFilter('all')}
                 className={`px-2 py-1 rounded text-xs transition-all ${
                   filter === 'all'
@@ -200,6 +201,7 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                 All
               </button>
               <button
+                data-testid="activity-feed-filter-important"
                 onClick={() => setFilter('important')}
                 className={`px-2 py-1 rounded text-xs transition-all ${
                   filter === 'important'
@@ -210,6 +212,7 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                 Important
               </button>
               <button
+                data-testid="activity-feed-filter-errors"
                 onClick={() => setFilter('errors')}
                 className={`px-2 py-1 rounded text-xs transition-all ${
                   filter === 'errors'
@@ -221,7 +224,7 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
               </button>
             </div>
 
-            <button className="p-1 hover:bg-gray-800 rounded transition-all">
+            <button data-testid="activity-feed-filter-btn" className="p-1 hover:bg-gray-800 rounded transition-all">
               <Filter className="w-4 h-4 text-gray-400" />
             </button>
           </div>
@@ -238,6 +241,7 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
             filteredActivities.map((activity, index) => (
               <motion.div
                 key={activity.id}
+                data-testid={`activity-feed-item-${activity.id}`}
                 layout
                 initial={{ opacity: 0, x: -20, scale: 0.95 }}
                 animate={{
@@ -337,7 +341,7 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                       </div>
 
                       {/* Timestamp */}
-                      <span className="text-xs text-gray-500 whitespace-nowrap">
+                      <span data-testid={`activity-feed-timestamp-${activity.id}`} className="text-xs text-gray-500 whitespace-nowrap">
                         {formatTimestamp(activity.timestamp)}
                       </span>
                     </div>

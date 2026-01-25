@@ -150,32 +150,34 @@ export const VisionCapture: React.FC<VisionCaptureProps> = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
+      data-testid="vision-capture-container"
     >
-      <div className="w-full max-w-4xl">
+      <div className="w-full max-w-4xl" data-testid="vision-capture-main">
         {/* Header */}
         <motion.div
           className="mb-12 text-center"
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
+          data-testid="vision-capture-header"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/20 mb-6">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 border border-purple-500/20 mb-6" data-testid="vision-capture-status-badge">
             <Sparkles className="w-4 h-4 text-purple-400" />
-            <span className="text-sm font-medium text-purple-300">
+            <span className="text-sm font-medium text-purple-300" data-testid="vision-capture-mode-label">
               {mode === 'initial' ? 'Initializing Chief of Staff' : 'Updating Vision'}
             </span>
           </div>
 
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-4">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent mb-4" data-testid="vision-capture-title">
             Define Your Vision
           </h1>
-          <p className="text-gray-400 text-lg">
+          <p className="text-gray-400 text-lg" data-testid="vision-capture-subtitle">
             Your AI Chief of Staff needs to understand your mission
           </p>
         </motion.div>
 
         {/* Progress Bar */}
-        <div className="mb-8">
+        <div className="mb-8" data-testid="vision-capture-progress">
           <div className="flex items-center justify-between mb-2">
             {steps.map((step, idx) => (
               <div
@@ -183,6 +185,7 @@ export const VisionCapture: React.FC<VisionCaptureProps> = ({
                 className={`flex items-center gap-2 ${
                   idx <= currentStep ? 'text-purple-400' : 'text-gray-600'
                 }`}
+                data-testid={`vision-capture-step-${step.id}`}
               >
                 <div className={`
                   w-8 h-8 rounded-full border flex items-center justify-center
@@ -193,7 +196,8 @@ export const VisionCapture: React.FC<VisionCaptureProps> = ({
                     ? 'border-purple-400 bg-purple-500/20'
                     : 'border-gray-700'
                   }
-                `}>
+                `}
+                data-testid={`vision-capture-step-indicator-${step.id}`}>
                   {idx < currentStep ? '✓' : idx + 1}
                 </div>
                 {idx < steps.length - 1 && (
@@ -216,15 +220,16 @@ export const VisionCapture: React.FC<VisionCaptureProps> = ({
             exit={{ x: -20, opacity: 0 }}
             transition={{ duration: 0.3 }}
             className="mb-8"
+            data-testid={`vision-capture-step-content-${currentStepData.id}`}
           >
-            <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl border border-gray-800 p-8">
+            <div className="bg-gray-900/50 backdrop-blur-sm rounded-2xl border border-gray-800 p-8" data-testid="vision-capture-step-card">
               <div className="flex items-start gap-4 mb-6">
                 <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
                   {currentStepData.icon}
                 </div>
                 <div>
-                  <h2 className="text-2xl font-semibold mb-1">{currentStepData.title}</h2>
-                  <p className="text-gray-400">{currentStepData.subtitle}</p>
+                  <h2 className="text-2xl font-semibold mb-1" data-testid="vision-capture-step-title">{currentStepData.title}</h2>
+                  <p className="text-gray-400" data-testid="vision-capture-step-subtitle">{currentStepData.subtitle}</p>
                 </div>
               </div>
 
@@ -240,6 +245,7 @@ export const VisionCapture: React.FC<VisionCaptureProps> = ({
                            focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20
                            outline-none transition-all text-gray-100 placeholder-gray-500"
                   autoFocus
+                  data-testid={`vision-capture-input-${currentStepData.id}`}
                 />
                 {!currentStepData.isArray && (
                   <button
@@ -247,6 +253,7 @@ export const VisionCapture: React.FC<VisionCaptureProps> = ({
                     className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg
                              bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20
                              transition-all"
+                    data-testid="vision-capture-next-btn"
                   >
                     <ChevronRight className="w-5 h-5 text-purple-400" />
                   </button>
@@ -255,13 +262,14 @@ export const VisionCapture: React.FC<VisionCaptureProps> = ({
 
               {/* Array Items Display */}
               {currentStepData.isArray && (vision[currentStepData.field as keyof VisionData] as string[]).length > 0 && (
-                <div className="mt-4 space-y-2">
+                <div className="mt-4 space-y-2" data-testid={`vision-capture-list-${currentStepData.id}`}>
                   {(vision[currentStepData.field as keyof VisionData] as string[]).map((item, idx) => (
                     <motion.div
                       key={idx}
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       className="flex items-center gap-3 px-4 py-2 bg-gray-900 rounded-lg border border-gray-800"
+                      data-testid={`vision-capture-item-${currentStepData.id}-${idx}`}
                     >
                       <div className="w-2 h-2 rounded-full bg-purple-400" />
                       <span className="text-gray-300">{item}</span>
@@ -271,6 +279,7 @@ export const VisionCapture: React.FC<VisionCaptureProps> = ({
                     onClick={handleNext}
                     className="mt-3 px-6 py-2 bg-purple-500 hover:bg-purple-600 rounded-lg
                              transition-all font-medium"
+                    data-testid="vision-capture-continue-btn"
                   >
                     Continue
                   </button>
@@ -287,11 +296,12 @@ export const VisionCapture: React.FC<VisionCaptureProps> = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
             className="mt-8"
+            data-testid="vision-capture-engagement-selector"
           >
-            <h3 className="text-lg font-semibold mb-4 text-gray-300">
+            <h3 className="text-lg font-semibold mb-4 text-gray-300" data-testid="vision-capture-engagement-title">
               How involved do you want to be?
             </h3>
-            <div className="grid grid-cols-5 gap-3">
+            <div className="grid grid-cols-5 gap-3" data-testid="vision-capture-engagement-modes">
               {engagementModes.map((mode) => (
                 <button
                   key={mode.id}
@@ -303,6 +313,7 @@ export const VisionCapture: React.FC<VisionCaptureProps> = ({
                       : 'bg-gray-900/50 border-gray-800 hover:border-gray-700'
                     }
                   `}
+                  data-testid={`vision-capture-mode-${mode.id}-btn`}
                 >
                   <div className="text-sm font-semibold mb-1">{mode.label}</div>
                   <div className="text-xs text-gray-500">{mode.description}</div>

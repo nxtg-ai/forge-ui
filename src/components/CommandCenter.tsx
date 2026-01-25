@@ -141,6 +141,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
         className="fixed bottom-6 right-6 z-40 group"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
+        data-testid="command-center-trigger-btn"
       >
         <div className="relative">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-lg">
@@ -169,6 +170,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="fixed bottom-6 left-6 z-30"
+          data-testid="command-center-quick-actions"
         >
           <div className="flex items-center gap-2 px-4 py-3 bg-gray-900/90 backdrop-blur-sm rounded-2xl border border-gray-800">
             <div className="text-xs text-gray-500 mr-2">Quick:</div>
@@ -183,6 +185,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                     ? 'opacity-50 cursor-not-allowed'
                     : 'hover:bg-gray-800 active:scale-95'}
                 `}
+                data-testid={`command-center-quick-${action.id}-btn`}
               >
                 {action.icon}
                 {action.label}
@@ -212,10 +215,11 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
               exit={{ opacity: 0, scale: 0.95, y: -20 }}
               transition={{ type: 'spring', duration: 0.3 }}
               className="fixed inset-x-0 top-20 mx-auto w-full max-w-2xl z-50 px-4"
+              data-testid="command-center-modal"
             >
-              <div className="bg-gray-900 rounded-2xl border border-gray-800 shadow-2xl overflow-hidden">
+              <div className="bg-gray-900 rounded-2xl border border-gray-800 shadow-2xl overflow-hidden" data-testid="command-center-palette">
                 {/* Search Header */}
-                <div className="p-4 border-b border-gray-800">
+                <div className="p-4 border-b border-gray-800" data-testid="command-center-search-header">
                   <div className="flex items-center gap-3">
                     <Search className="w-5 h-5 text-gray-400" />
                     <input
@@ -225,6 +229,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                       placeholder="Type a command or search..."
                       className="flex-1 bg-transparent outline-none text-gray-100 placeholder-gray-500 text-lg"
                       autoFocus
+                      data-testid="command-center-search-input"
                     />
                     <div className="flex items-center gap-2">
                       {isExecuting && (
@@ -274,7 +279,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                 </div>
 
                 {/* Commands List */}
-                <div className="max-h-96 overflow-y-auto">
+                <div className="max-h-96 overflow-y-auto" data-testid="command-center-commands-list">
                   {filteredCommands.length > 0 ? (
                     <div className="p-2">
                       {Object.entries(
@@ -284,7 +289,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                           return acc;
                         }, {} as Record<string, Command[]>)
                       ).map(([category, commands]) => (
-                        <div key={category} className="mb-4">
+                        <div key={category} className="mb-4" data-testid={`command-center-category-${category}`}>
                           <div className="px-3 py-1 mb-2">
                             <span className="text-xs font-medium text-gray-500 uppercase">
                               {category}
@@ -301,6 +306,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                                   ? 'bg-gray-800 text-gray-100'
                                   : 'hover:bg-gray-800/50 text-gray-300'}
                               `}
+                              data-testid={`command-center-command-${command.id}`}
                             >
                               <div className={`
                                 w-8 h-8 rounded-lg flex items-center justify-center border

@@ -174,9 +174,9 @@ function IntegratedApp() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div data-testid="app-container" className="min-h-screen bg-black text-white">
       {/* Navigation Header */}
-      <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-40">
+      <header data-testid="app-header" className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-8">
@@ -193,6 +193,7 @@ function IntegratedApp() {
                 ].map(nav => (
                   <button
                     key={nav.id}
+                    data-testid={`app-nav-btn-${nav.id}`}
                     onClick={() => setCurrentView(nav.id as any)}
                     className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                       currentView === nav.id
@@ -209,7 +210,7 @@ function IntegratedApp() {
 
             {/* Connection Status */}
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
+              <div data-testid="app-connection-status" className="flex items-center space-x-2">
                 <div className={`h-2 w-2 rounded-full ${
                   forge.isConnected ? 'bg-green-500' : 'bg-red-500'
                 } animate-pulse`} />

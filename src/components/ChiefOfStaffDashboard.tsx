@@ -150,28 +150,28 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
+    <div className="min-h-screen bg-gray-950 text-gray-100" data-testid="dashboard-container">
       {/* Header Bar */}
-      <div className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-50">
+      <div className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-50" data-testid="dashboard-header">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2" data-testid="dashboard-logo">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
                   <Sparkles className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold">NXTG Chief of Staff</h1>
-                  <p className="text-xs text-gray-400">Orchestrating your vision</p>
+                  <h1 className="text-xl font-bold" data-testid="dashboard-title">NXTG Chief of Staff</h1>
+                  <p className="text-xs text-gray-400" data-testid="dashboard-subtitle">Orchestrating your vision</p>
                 </div>
               </div>
             </div>
 
             {/* Mode Selector */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4" data-testid="dashboard-mode-selector">
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-900 border border-gray-800">
                 <span className="text-xs text-gray-400">Engagement Mode:</span>
-                <div className="flex gap-1">
+                <div className="flex gap-1" data-testid="dashboard-engagement-modes">
                   {Object.entries(modeConfig).map(([mode, config]) => (
                     <button
                       key={mode}
@@ -184,6 +184,7 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
                         }
                       `}
                       title={config.description}
+                      data-testid={`dashboard-mode-${mode}-btn`}
                     >
                       <div className="flex items-center gap-1">
                         {config.icon}
@@ -203,6 +204,7 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
                     : 'bg-gray-900 text-gray-500 border border-gray-800'
                   }
                 `}
+                data-testid="dashboard-yolo-toggle-btn"
               >
                 <div className="flex items-center gap-1">
                   <Zap className="w-3 h-3" />
@@ -220,14 +222,15 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/20"
+          data-testid="dashboard-vision-card"
         >
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center flex-shrink-0">
               <Target className="w-6 h-6 text-purple-400" />
             </div>
             <div className="flex-1">
-              <h2 className="text-lg font-semibold mb-2 text-purple-100">Mission</h2>
-              <p className="text-gray-300 mb-4">{visionData.mission}</p>
+              <h2 className="text-lg font-semibold mb-2 text-purple-100" data-testid="dashboard-mission-title">Mission</h2>
+              <p className="text-gray-300 mb-4" data-testid="dashboard-mission-text">{visionData.mission}</p>
 
               {(currentMode === 'founder' || currentMode === 'ceo') && (
                 <div className="flex gap-6 text-sm">
@@ -257,13 +260,14 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
             className="lg:col-span-2 p-6 rounded-2xl bg-gray-900/50 border border-gray-800"
+            data-testid="dashboard-progress-card"
           >
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
+              <h3 className="text-lg font-semibold flex items-center gap-2" data-testid="dashboard-progress-title">
                 <Activity className="w-5 h-5 text-blue-400" />
                 Project Progress
               </h3>
-              <div className="text-2xl font-bold text-blue-400">
+              <div className="text-2xl font-bold text-blue-400" data-testid="dashboard-progress-value">
                 {projectState.progress}%
               </div>
             </div>
@@ -295,13 +299,14 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
 
             {/* Active Agents */}
             {(currentMode !== 'ceo') && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-gray-400">Active Agents</h4>
+              <div className="space-y-3" data-testid="dashboard-active-agents">
+                <h4 className="text-sm font-medium text-gray-400" data-testid="dashboard-agents-title">Active Agents</h4>
                 {projectState.activeAgents.map((agent) => (
                   <div
                     key={agent.id}
                     onClick={() => setSelectedAgent(agent)}
                     className="flex items-center justify-between p-3 rounded-xl bg-gray-900 border border-gray-800 hover:border-gray-700 cursor-pointer transition-all"
+                    data-testid={`dashboard-agent-card-${agent.id}`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-2 h-2 rounded-full ${getAgentStatusColor(agent.status)} animate-pulse`} />
@@ -330,12 +335,12 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
             className="space-y-6"
           >
             {/* Health Score */}
-            <div className={`p-6 rounded-2xl border ${getHealthColor(projectState.healthScore)}`}>
+            <div className={`p-6 rounded-2xl border ${getHealthColor(projectState.healthScore)}`} data-testid="dashboard-health-card">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">System Health</h3>
+                <h3 className="text-lg font-semibold" data-testid="dashboard-health-title">System Health</h3>
                 <Shield className="w-5 h-5" />
               </div>
-              <div className="text-4xl font-bold mb-2">
+              <div className="text-4xl font-bold mb-2" data-testid="dashboard-health-score">
                 {projectState.healthScore}%
               </div>
               <div className="text-sm opacity-75">
@@ -347,14 +352,14 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
 
             {/* Blockers */}
             {projectState.blockers.length > 0 && (
-              <div className="p-6 rounded-2xl bg-red-900/10 border border-red-500/20">
+              <div className="p-6 rounded-2xl bg-red-900/10 border border-red-500/20" data-testid="dashboard-blockers-card">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-red-400">Blockers</h3>
+                  <h3 className="text-lg font-semibold text-red-400" data-testid="dashboard-blockers-title">Blockers</h3>
                   <AlertCircle className="w-5 h-5 text-red-400" />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2" data-testid="dashboard-blockers-list">
                   {projectState.blockers.slice(0, currentMode === 'ceo' ? 1 : 3).map((blocker) => (
-                    <div key={blocker.id} className="p-3 rounded-lg bg-gray-900/50 border border-gray-800">
+                    <div key={blocker.id} className="p-3 rounded-lg bg-gray-900/50 border border-gray-800" data-testid={`dashboard-blocker-${blocker.id}`}>
                       <div className="flex items-start justify-between">
                         <div>
                           <div className="text-sm font-medium">{blocker.title}</div>
@@ -383,15 +388,17 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
             className="p-6 rounded-2xl bg-gray-900/50 border border-gray-800"
+            data-testid="dashboard-activity-stream"
           >
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
+              <h3 className="text-lg font-semibold flex items-center gap-2" data-testid="dashboard-activity-title">
                 <MessageSquare className="w-5 h-5 text-green-400" />
                 Agent Activity
               </h3>
               <button
                 onClick={() => setShowDetails(!showDetails)}
                 className="text-sm text-gray-400 hover:text-gray-300 flex items-center gap-1"
+                data-testid="dashboard-toggle-details-btn"
               >
                 {showDetails ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 {showDetails ? 'Hide' : 'Show'} Details

@@ -169,10 +169,11 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 p-6">
+    <div data-testid="architect-discussion-container" className="min-h-screen bg-gray-950 text-gray-100 p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <motion.div
+          data-testid="architect-discussion-header"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
@@ -231,10 +232,11 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
                 <Users className="w-5 h-5 text-blue-400" />
                 Architects
               </h3>
-              <div className="space-y-3">
+              <div data-testid="architect-discussion-participants" className="space-y-3">
                 {participants.map((architect) => (
                   <div
                     key={architect.id}
+                    data-testid={`architect-discussion-participant-${architect.id}`}
                     className="p-3 rounded-xl bg-gray-900 border border-gray-800"
                   >
                     <div className="flex items-center gap-3 mb-2">
@@ -331,6 +333,7 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
               {humanRole === 'participant' && (
                 <div className="flex gap-2 pt-4 border-t border-gray-800">
                   <input
+                    data-testid="architect-discussion-message-input"
                     type="text"
                     value={humanInput}
                     onChange={(e) => setHumanInput(e.target.value)}
@@ -340,6 +343,7 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
                              focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
                   />
                   <button
+                    data-testid="architect-discussion-send-btn"
                     onClick={handleHumanInput}
                     className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg transition-all"
                   >
@@ -406,6 +410,7 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
 
                   <div className="flex gap-3 pt-4">
                     <button
+                      data-testid="architect-discussion-approve-btn"
                       onClick={() => onDecision(decision)}
                       className="px-6 py-2 bg-green-500 hover:bg-green-600 rounded-lg font-medium transition-all"
                     >
@@ -413,6 +418,7 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
                     </button>
                     {humanRole === 'arbiter' && (
                       <button
+                        data-testid="architect-discussion-revise-btn"
                         className="px-6 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg font-medium transition-all"
                       >
                         Request Revision

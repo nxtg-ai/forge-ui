@@ -329,9 +329,9 @@ const LiveDashboard: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div data-testid="live-dashboard-container" className="min-h-screen bg-gray-950">
       {/* Status bar */}
-      <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-gray-900">
+      <div data-testid="live-dashboard-status-bar" className="fixed top-0 left-0 right-0 z-50 h-1 bg-gray-900">
         <AnimatePresence>
           {isCommandExecuting && (
             <motion.div
@@ -349,9 +349,10 @@ const LiveDashboard: React.FC = () => {
       </div>
 
       {/* View mode selector */}
-      <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-40">
+      <div data-testid="live-dashboard-view-selector" className="fixed top-4 left-1/2 transform -translate-x-1/2 z-40">
         <div className="flex gap-1 p-1 bg-gray-900/90 backdrop-blur-sm rounded-xl border border-gray-800">
           <button
+            data-testid="live-dashboard-view-overview"
             onClick={() => setViewMode('overview')}
             className={`
               px-4 py-2 rounded-lg text-sm font-medium transition-all
@@ -365,6 +366,7 @@ const LiveDashboard: React.FC = () => {
             Overview
           </button>
           <button
+            data-testid="live-dashboard-view-agents"
             onClick={() => setViewMode('agents')}
             className={`
               px-4 py-2 rounded-lg text-sm font-medium transition-all
@@ -378,6 +380,7 @@ const LiveDashboard: React.FC = () => {
             Agents
           </button>
           <button
+            data-testid="live-dashboard-view-activity"
             onClick={() => setViewMode('activity')}
             className={`
               px-4 py-2 rounded-lg text-sm font-medium transition-all
@@ -417,6 +420,7 @@ const LiveDashboard: React.FC = () => {
           </span>
           {!isConnected && (
             <button
+              data-testid="live-dashboard-refresh-btn"
               onClick={forceRefresh}
               className="p-1 hover:bg-gray-800 rounded transition-all"
             >

@@ -89,25 +89,27 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
   if (compactMode) {
     return (
       <motion.div
+        data-testid="vision-display-compact-container"
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         className="p-4 rounded-xl bg-gradient-to-r from-purple-900/10 to-blue-900/10 border border-purple-500/20"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+            <div data-testid="vision-display-compact-icon" className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
               <Compass className="w-4 h-4 text-purple-400" />
             </div>
             <div>
-              <div className="text-sm font-medium text-gray-200 line-clamp-1">
+              <div data-testid="vision-display-compact-mission" className="text-sm font-medium text-gray-200 line-clamp-1">
                 {vision.mission}
               </div>
-              <div className="text-xs text-gray-500">
+              <div data-testid="vision-display-compact-progress" className="text-xs text-gray-500">
                 {progress.overallProgress}% complete • {vision.goals.length} goals
               </div>
             </div>
           </div>
           <button
+            data-testid="vision-display-compact-toggle-btn"
             onClick={() => setShowMetrics(!showMetrics)}
             className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
           >
@@ -120,34 +122,36 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
 
   return (
     <motion.div
+      data-testid="vision-display-container"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
       {/* Mission Statement */}
-      <div className="p-6 rounded-2xl bg-gradient-to-br from-purple-900/20 via-blue-900/10 to-cyan-900/10 border border-purple-500/20">
+      <div data-testid="vision-display-mission-section" className="p-6 rounded-2xl bg-gradient-to-br from-purple-900/20 via-blue-900/10 to-cyan-900/10 border border-purple-500/20">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+            <div data-testid="vision-display-mission-icon" className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
               <Mountain className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+              <h2 data-testid="vision-display-mission-title" className="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
                 North Star Vision
               </h2>
-              <div className="text-xs text-gray-500">
+              <div data-testid="vision-display-mission-version" className="text-xs text-gray-500">
                 v{vision.version} • Updated {new Date(vision.lastUpdated).toLocaleDateString()}
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {isLocked ? (
-              <div className="px-3 py-1 rounded-lg bg-gray-800 text-gray-400 text-xs flex items-center gap-1">
+              <div data-testid="vision-display-lock-status" className="px-3 py-1 rounded-lg bg-gray-800 text-gray-400 text-xs flex items-center gap-1">
                 <Lock className="w-3 h-3" />
                 Locked
               </div>
             ) : (
               <button
+                data-testid="vision-display-edit-btn"
                 onClick={() => setIsEditing(!isEditing)}
                 className="px-3 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs flex items-center gap-1 transition-all"
               >
@@ -158,7 +162,7 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
           </div>
         </div>
 
-        <p className="text-lg text-gray-200 leading-relaxed mb-4">
+        <p data-testid="vision-display-mission-text" className="text-lg text-gray-200 leading-relaxed mb-4">
           {vision.mission}
         </p>
 
@@ -182,15 +186,16 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
       </div>
 
       {/* Goals Grid */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+      <div data-testid="vision-display-goals-section">
+        <h3 data-testid="vision-display-goals-title" className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Target className="w-5 h-5 text-blue-400" />
           Strategic Goals
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div data-testid="vision-display-goals-grid" className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {vision.goals.map((goal) => (
             <motion.div
               key={goal.id}
+              data-testid={`vision-display-goal-item-${goal.id}`}
               layout
               className="p-4 rounded-xl bg-gray-900/50 border border-gray-800 hover:border-gray-700 transition-all cursor-pointer"
               onClick={() => setExpandedGoal(expandedGoal === goal.id ? null : goal.id)}
@@ -255,15 +260,16 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
       </div>
 
       {/* Success Metrics */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+      <div data-testid="vision-display-metrics-section">
+        <h3 data-testid="vision-display-metrics-title" className="text-lg font-semibold mb-4 flex items-center gap-2">
           <Trophy className="w-5 h-5 text-yellow-400" />
           Success Metrics
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div data-testid="vision-display-metrics-grid" className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {vision.successMetrics.map((metric) => (
             <div
               key={metric.id}
+              data-testid={`vision-display-metric-item-${metric.id}`}
               className="p-4 rounded-xl bg-gray-900/50 border border-gray-800"
             >
               <div className="flex items-center justify-between mb-2">

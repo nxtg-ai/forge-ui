@@ -99,7 +99,7 @@ const ToastContainer: React.FC<{
   onDismiss: (id: string) => void;
 }> = ({ toasts, onDismiss }) => {
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2 max-w-md">
+    <div data-testid="toast-container" className="fixed top-4 right-4 z-50 space-y-2 max-w-md">
       <AnimatePresence mode="popLayout">
         {toasts.map((toast, index) => (
           <ToastItem
@@ -162,6 +162,7 @@ const ToastItem: React.FC<{
 
   return (
     <motion.div
+      data-testid={`toast-item-${toast.id}`}
       layout
       initial={{ opacity: 0, y: -20, scale: 0.95 }}
       animate={{
@@ -254,6 +255,7 @@ const ToastItem: React.FC<{
                     {toast.actions.map((action, idx) => (
                       <button
                         key={idx}
+                        data-testid={`toast-action-btn-${toast.id}-${idx}`}
                         onClick={action.onClick}
                         className={`
                           flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
@@ -274,6 +276,7 @@ const ToastItem: React.FC<{
 
               {/* Dismiss button */}
               <button
+                data-testid={`toast-close-btn-${toast.id}`}
                 onClick={() => onDismiss(toast.id)}
                 className="flex-shrink-0 p-1 rounded-lg hover:bg-gray-800/50 transition-colors"
               >

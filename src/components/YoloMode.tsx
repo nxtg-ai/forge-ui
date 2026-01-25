@@ -130,9 +130,10 @@ export const YoloMode: React.FC<YoloModeProps> = ({
   const currentLevel = automationLevels[automationLevel];
 
   return (
-    <div className="space-y-6">
+    <div data-testid="yolo-panel" className="space-y-6">
       {/* Main Control Panel */}
       <motion.div
+        data-testid="yolo-control-panel"
         className={`
           p-6 rounded-2xl border transition-all duration-500
           ${enabled
@@ -144,6 +145,7 @@ export const YoloMode: React.FC<YoloModeProps> = ({
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <button
+              data-testid="yolo-toggle-btn"
               onClick={() => onToggle(!enabled)}
               className={`
                 relative w-20 h-10 rounded-full transition-all duration-300
@@ -202,10 +204,11 @@ export const YoloMode: React.FC<YoloModeProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-2">
+          <div data-testid="yolo-level-grid" className="grid grid-cols-4 gap-2">
             {Object.entries(automationLevels).map(([level, config]) => (
               <button
                 key={level}
+                data-testid={`yolo-level-btn-${level}`}
                 onClick={() => onLevelChange(level as AutomationLevel)}
                 disabled={!enabled}
                 className={`
@@ -291,20 +294,22 @@ export const YoloMode: React.FC<YoloModeProps> = ({
       {/* Recent Automated Actions */}
       {enabled && showDetails && recentActions.length > 0 && (
         <motion.div
+          data-testid="yolo-actions-section"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="p-6 rounded-2xl bg-gray-900/50 border border-gray-800"
         >
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <h3 data-testid="yolo-actions-title" className="text-lg font-semibold mb-4 flex items-center gap-2">
             <RefreshCw className="w-5 h-5 text-blue-400" />
             Recent Automated Actions
           </h3>
 
-          <div className="space-y-3">
+          <div data-testid="yolo-actions-list" className="space-y-3">
             <AnimatePresence>
               {recentActions.slice(0, 5).map((action, idx) => (
                 <motion.div
                   key={action.id}
+                  data-testid={`yolo-action-item-${action.id}`}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
@@ -424,11 +429,11 @@ export const YoloMode: React.FC<YoloModeProps> = ({
 
                 <div className="flex gap-3 pt-4">
                   {selectedAction.status === 'completed' && (
-                    <button className="px-4 py-2 bg-yellow-500/20 text-yellow-400 rounded-lg hover:bg-yellow-500/30 transition-all">
+                    <button data-testid="yolo-rollback-btn" className="px-4 py-2 bg-yellow-500/20 text-yellow-400 rounded-lg hover:bg-yellow-500/30 transition-all">
                       Revert Action
                     </button>
                   )}
-                  <button className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-all">
+                  <button data-testid="yolo-view-logs-btn" className="px-4 py-2 bg-gray-800 text-gray-300 rounded-lg hover:bg-gray-700 transition-all">
                     View Logs
                   </button>
                 </div>
