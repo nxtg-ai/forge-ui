@@ -55,16 +55,16 @@ Monitor code quality, test coverage, and performance metrics as you build
 
 ```bash
 # Initialize Forge in your project (30 seconds)
-/nxtg-init
+/[FRG]-init
 
 # Check your project status
-/nxtg-status
+/[FRG]-status
 
 # Build your first feature (watch the magic happen)
-/nxtg-feature "Add user authentication with OAuth2"
+/[FRG]-feature "Add user authentication with OAuth2"
 
 # Deploy with confidence
-/nxtg-deploy production
+/[FRG]-deploy production
 ```
 
 That's it. **Four commands** to production-grade software.
@@ -91,45 +91,75 @@ Each agent is an expert in its domain, working together seamlessly to deliver ex
 
 ## 🎭 The Agent Team
 
+### NXTG AI Forge Production Agents ([AFRG]- Prefix)
+
 | Agent | Role | Expertise |
 |-------|------|-----------|
-| **🎯 Orchestrator** | Master Coordinator | Breaks down complex requests, delegates tasks, ensures integration |
-| **🏗️ Architect** | Design Expert | System architecture, design patterns, technology decisions |
-| **💻 Developer** | Code Craftsman | Clean code implementation, refactoring, optimization |
-| **🔍 QA** | Quality Guardian | Test design, code review, standards enforcement |
-| **🚀 DevOps** | Operations Expert | CI/CD, deployment, monitoring, infrastructure |
+| **🎯 [AFRG]-orchestrator** | Master Coordinator | Coordinates multi-agent workflows, task delegation, strategic planning |
+| **📋 [AFRG]-planner** | Strategic Planner | Feature decomposition, resource allocation, timeline planning |
+| **🏗️ [AFRG]-builder** | Implementation Expert | Code generation, feature development, architecture implementation |
+| **🔍 [AFRG]-detective** | Problem Solver | Bug investigation, root cause analysis, performance profiling |
+| **🛡️ [AFRG]-guardian** | Quality Sentinel | Code review, security audits, standards enforcement |
+| **📦 [AFRG]-release-sentinel** | Documentation Manager | Changelog generation, release notes, documentation sync |
+
+### Standard Development Agents
+
+| Agent | Role | Expertise |
+|-------|------|-----------|
+| **🏗️ architect** | Design Expert | System architecture, design patterns, technology decisions |
+| **💻 developer** | Code Craftsman | Clean code implementation, refactoring, optimization |
+| **🔍 qa** | Quality Guardian | Test design, code review, standards enforcement |
+| **🚀 devops** | Operations Expert | CI/CD, deployment, monitoring, infrastructure |
+| **🎯 orchestrator** | Project Coordinator | Task coordination, workflow management |
 
 ## 📦 What's Included
 
 ```
 .claude/
-├── agents/           # 5 specialized AI agents
-│   ├── orchestrator.md
-│   ├── architect.md
-│   ├── developer.md
-│   ├── qa.md
-│   └── devops.md
-├── commands/         # 9 power commands
-│   ├── nxtg-init.md
-│   ├── nxtg-status.md
-│   ├── nxtg-feature.md
-│   ├── nxtg-test.md
-│   ├── nxtg-deploy.md
-│   ├── nxtg-optimize.md
-│   ├── nxtg-enable-forge.md
-│   ├── nxtg-report.md
-│   └── nxtg-status-enhanced.md
-├── hooks/           # 5 automation hooks
-│   ├── pre-commit.md
-│   ├── post-edit.md
-│   ├── error-handler.md
+├── agents/           # 11 specialized AI agents
+│   ├── [AFRG]-orchestrator.md    # Production orchestrator
+│   ├── [AFRG]-planner.md         # Strategic planning
+│   ├── [AFRG]-builder.md         # Implementation expert
+│   ├── [AFRG]-detective.md       # Problem solver
+│   ├── [AFRG]-guardian.md        # Quality sentinel
+│   ├── [AFRG]-release-sentinel.md # Documentation manager
+│   ├── orchestrator.md           # Standard coordinator
+│   ├── architect.md              # Design expert
+│   ├── developer.md              # Code craftsman
+│   ├── qa.md                     # Quality assurance
+│   └── devops.md                 # Operations expert
+├── commands/         # 19 powerful commands
+│   ├── [FRG]-init.md             # Initialize Forge
+│   ├── [FRG]-status.md           # Project status
+│   ├── [FRG]-status-enhanced.md  # Real-time dashboard
+│   ├── [FRG]-feature.md          # Feature development
+│   ├── [FRG]-test.md             # Test execution
+│   ├── [FRG]-deploy.md           # Deployment
+│   ├── [FRG]-optimize.md         # Performance tuning
+│   ├── [FRG]-enable-forge.md     # Command center
+│   ├── [FRG]-report.md           # Activity reporting
+│   ├── [FRG]-agent-assign.md     # Agent assignment
+│   ├── [FRG]-checkpoint.md       # State management
+│   ├── [FRG]-docs-audit.md       # Documentation audit
+│   ├── [FRG]-docs-status.md      # Documentation status
+│   ├── [FRG]-docs-update.md      # Documentation updates
+│   ├── [FRG]-gap-analysis.md     # Gap analysis
+│   ├── [FRG]-integrate.md        # Integration tools
+│   ├── [FRG]-restore.md          # State restoration
+│   ├── [FRG]-spec.md             # Specification generation
+│   └── [FRG]-upgrade.md          # System upgrades
+├── hooks/           # 12 automation hooks
 │   ├── session-start.md
-│   └── quality-gate.md
-├── skills/          # 4 domain expertises
+│   ├── error-handler.md
+│   └── ... (12 total)
+├── skills/          # 10 domain expertises
 │   ├── architecture.md
 │   ├── testing.md
 │   ├── security.md
-│   └── optimization.md
+│   ├── optimization.md
+│   ├── agent-development.md
+│   ├── [FRG]-skill-development.md
+│   └── ... (10 total)
 └── claude.json      # Intelligent configuration
 ```
 
@@ -137,25 +167,25 @@ Each agent is an expert in its domain, working together seamlessly to deliver ex
 
 ### Build a REST API
 ```bash
-/nxtg-feature "Create REST API for task management with CRUD operations"
+/[FRG]-feature "Create REST API for task management with CRUD operations"
 ```
 **Result**: Complete API with models, controllers, tests, documentation, and OpenAPI spec
 
 ### Add Authentication
 ```bash
-/nxtg-feature "Implement JWT authentication with refresh tokens"
+/[FRG]-feature "Implement JWT authentication with refresh tokens"
 ```
 **Result**: Secure auth system with middleware, token management, and test coverage
 
 ### Optimize Performance
 ```bash
-/nxtg-optimize database queries
+/[FRG]-optimize database queries
 ```
 **Result**: Analyzed queries, added indexes, implemented caching, 10x performance improvement
 
 ### Deploy to Production
 ```bash
-/nxtg-deploy production --with-rollback
+/[FRG]-deploy production --with-rollback
 ```
 **Result**: Blue-green deployment with health checks and automatic rollback on failure
 
@@ -210,20 +240,20 @@ NXTG-Forge is built on four core principles:
 
 ```bash
 # Option 1: Clone the repository
-git clone https://github.com/nxtgai/nxtg-forge.git
-cd nxtg-forge
+git clone https://github.com/nxtg-ai/forge.git
+cd forge
 
 # Option 2: Use Claude directly
-# Just run /nxtg-init in any project
+# Just run /[FRG]-init in any project
 ```
 
 ### Your First Feature
 
-1. **Initialize**: `/nxtg-init` - Sets up Forge in your project
-2. **Status Check**: `/nxtg-status` - Understand your codebase
-3. **Build Feature**: `/nxtg-feature "Your requirement here"` - Watch the magic
-4. **Test**: `/nxtg-test` - Comprehensive validation
-5. **Deploy**: `/nxtg-deploy` - Ship with confidence
+1. **Initialize**: `/[FRG]-init` - Sets up Forge in your project
+2. **Status Check**: `/[FRG]-status` - Understand your codebase
+3. **Build Feature**: `/[FRG]-feature "Your requirement here"` - Watch the magic
+4. **Test**: `/[FRG]-test` - Comprehensive validation
+5. **Deploy**: `/[FRG]-deploy` - Ship with confidence
 
 ## 📚 Documentation
 
@@ -235,7 +265,7 @@ cd nxtg-forge
 
 ## 🤝 Community & Support
 
-- **GitHub**: [github.com/nxtgai/nxtg-forge](https://github.com/nxtgai/nxtg-forge)
+- **GitHub**: [github.com/nxtg-ai/forge](https://github.com/nxtg-ai/forge)
 - **Discord**: [Join our community](https://discord.gg/nxtg-forge)
 - **Twitter**: [@nxtgai](https://twitter.com/nxtgai)
 - **Email**: forge@nxtg.ai
@@ -269,7 +299,7 @@ Special thanks to the open-source community and early adopters who made this pos
 
 <div align="center">
   <h3>🚀 Ready to 10x your development?</h3>
-  <p><strong>Start with <code>/nxtg-init</code> and experience the future of software development</strong></p>
+  <p><strong>Start with <code>/[FRG]-init</code> and experience the future of software development</strong></p>
   <br/>
   <p>Made with ❤️ by developers, for developers</p>
 </div>

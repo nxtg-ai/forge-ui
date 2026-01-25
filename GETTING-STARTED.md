@@ -37,7 +37,7 @@ cd /path/to/your/amazing/project
 ### Step 2: Initialize NXTG-Forge
 ```bash
 # In Claude, simply type:
-/nxtg-init
+/[FRG]-init
 ```
 
 **What happens:**
@@ -49,7 +49,7 @@ cd /path/to/your/amazing/project
 
 ### Step 3: Verify Installation
 ```bash
-/nxtg-status
+/[FRG]-status
 ```
 
 You'll see:
@@ -60,7 +60,7 @@ You'll see:
 
 ### Step 4: Your First AI-Powered Feature
 ```bash
-/nxtg-feature "Add user profile page with avatar upload"
+/[FRG]-feature "Add user profile page with avatar upload"
 ```
 
 Watch as Forge:
@@ -88,7 +88,7 @@ git init
 ### Step 2: Let Forge Set Everything Up
 ```bash
 # In Claude:
-/nxtg-init
+/[FRG]-init
 
 # When prompted, choose:
 # - Project type (Web App, API, CLI Tool, etc.)
@@ -109,7 +109,7 @@ git init
 
 ### Step 4: Build Something Amazing
 ```bash
-/nxtg-feature "Create todo list with real-time sync"
+/[FRG]-feature "Create todo list with real-time sync"
 ```
 
 ---
@@ -118,50 +118,50 @@ git init
 
 ### Essential Commands
 
-#### 🏁 `/nxtg-init` - Initialize Forge
+#### 🏁 `/[FRG]-init` - Initialize Forge
 ```bash
-/nxtg-init
+/[FRG]-init
 # Sets up Forge in any project
 # Auto-detects your stack
 # Configures everything automatically
 ```
 
-#### 📊 `/nxtg-status` - Project Intelligence
+#### 📊 `/[FRG]-status` - Project Intelligence
 ```bash
-/nxtg-status
+/[FRG]-status
 # Shows project health
 # Lists available capabilities
 # Displays current configuration
 ```
 
-#### ✨ `/nxtg-feature` - Build Features
+#### ✨ `/[FRG]-feature` - Build Features
 ```bash
-/nxtg-feature "Add payment processing with Stripe"
+/[FRG]-feature "Add payment processing with Stripe"
 # Breaks down the feature
 # Implements with tests
 # Documents everything
 ```
 
-#### 🧪 `/nxtg-test` - Comprehensive Testing
+#### 🧪 `/[FRG]-test` - Comprehensive Testing
 ```bash
-/nxtg-test
+/[FRG]-test
 # Runs all test suites
 # Generates coverage reports
 # Identifies gaps
 ```
 
-#### 🚀 `/nxtg-deploy` - Ship with Confidence
+#### 🚀 `/[FRG]-deploy` - Ship with Confidence
 ```bash
-/nxtg-deploy production
+/[FRG]-deploy production
 # Pre-flight checks
 # Builds optimized artifacts
 # Deploys with rollback capability
 # Runs smoke tests
 ```
 
-#### ⚡ `/nxtg-optimize` - Performance Tuning
+#### ⚡ `/[FRG]-optimize` - Performance Tuning
 ```bash
-/nxtg-optimize
+/[FRG]-optimize
 # Analyzes performance bottlenecks
 # Implements optimizations
 # Validates improvements
@@ -171,71 +171,124 @@ git init
 
 ## 🤖 Meet Your AI Team
 
-### 🎯 The Orchestrator
-**Your project manager and coordinator**
+### NXTG AI Forge Production Agents
 
-Ask the Orchestrator to:
-- Break down complex features
-- Coordinate multi-step workflows
-- Make architectural decisions
+### 🎯 [AFRG]-orchestrator
+**Master workflow coordinator**
 
-Example:
-```
-"Build a complete authentication system with email verification,
-password reset, and OAuth providers"
-```
-
-### 🏗️ The Architect
-**Your system design expert**
-
-Ask the Architect to:
-- Design system architecture
-- Choose design patterns
-- Make technology decisions
+Specializes in:
+- Multi-agent coordination and task delegation
+- Complex feature orchestration
+- Strategic planning and execution
 
 Example:
 ```
-"Design a scalable microservices architecture for our e-commerce platform"
+"Orchestrate the implementation of a complete e-commerce checkout system
+with payment processing, inventory management, and order confirmation"
 ```
 
-### 💻 The Developer
-**Your coding virtuoso**
+### 📋 [AFRG]-planner
+**Strategic feature planner**
 
-Ask the Developer to:
-- Implement features
-- Refactor code
-- Fix bugs
+Specializes in:
+- Breaking down complex features into tasks
+- Resource allocation and timeline planning
+- Dependency management
 
 Example:
 ```
-"Refactor the payment module to use the strategy pattern"
+"Plan the migration from REST API to GraphQL with zero downtime"
 ```
 
-### 🔍 The QA Engineer
-**Your quality guardian**
+### 🏗️ [AFRG]-builder
+**Implementation powerhouse**
 
-Ask the QA to:
-- Write comprehensive tests
-- Review code quality
-- Validate implementations
+Specializes in:
+- Feature development and code generation
+- Architecture implementation
+- Best practices enforcement
 
 Example:
 ```
-"Create integration tests for the user registration flow"
+"Build a real-time notification system with WebSocket support
+and push notifications"
 ```
 
-### 🚀 The DevOps Engineer
-**Your deployment specialist**
+### 🔍 [AFRG]-detective
+**Problem-solving expert**
 
-Ask DevOps to:
-- Set up CI/CD pipelines
-- Configure infrastructure
-- Optimize deployments
+Specializes in:
+- Bug investigation and root cause analysis
+- Performance profiling and optimization
+- Security vulnerability detection
 
 Example:
 ```
-"Set up GitHub Actions for automated testing and deployment"
+"Investigate why the API response time increased from 100ms to 2s
+after the last deployment"
 ```
+
+### 🛡️ [AFRG]-guardian
+**Quality and security sentinel**
+
+Specializes in:
+- Code review and quality standards
+- Security audits and vulnerability scanning
+- Best practices enforcement
+
+Example:
+```
+"Perform comprehensive security audit on authentication system
+and fix any vulnerabilities"
+```
+
+### 📦 [AFRG]-release-sentinel
+**Documentation and release manager**
+
+Specializes in:
+- Changelog generation from commits
+- Release notes preparation
+- Documentation synchronization
+
+Example:
+```
+"Generate release notes for v2.0.0 and ensure all documentation
+is up to date"
+```
+
+### Standard Development Agents
+
+### 🏗️ architect
+**System design expert**
+
+Specializes in:
+- System architecture design
+- Design pattern selection
+- Technology stack decisions
+
+### 💻 developer
+**Code craftsman**
+
+Specializes in:
+- Clean code implementation
+- Refactoring and optimization
+- Feature development
+
+### 🔍 qa
+**Quality assurance specialist**
+
+Specializes in:
+- Test design and implementation
+- Code review
+- Quality standards
+
+### 🚀 devops
+**Operations and deployment expert**
+
+Specializes in:
+- CI/CD pipeline setup
+- Infrastructure configuration
+- Deployment automation
 
 ---
 
@@ -245,7 +298,7 @@ Example:
 
 ```bash
 # 1. Start with the feature command
-/nxtg-feature "Add real-time chat with typing indicators"
+/[FRG]-feature "Add real-time chat with typing indicators"
 
 # 2. Forge will ask clarifying questions:
 # - How many users per chat room?
@@ -280,7 +333,7 @@ The error shows 'Invalid token'. Please investigate and fix."
 
 ```bash
 # Run optimization command
-/nxtg-optimize database queries
+/[FRG]-optimize database queries
 
 # Forge will:
 # 1. Profile current performance
@@ -297,11 +350,11 @@ The error shows 'Invalid token'. Please investigate and fix."
 ### 1. Be Specific with Requirements
 ```bash
 # Good
-/nxtg-feature "Add user dashboard with charts showing weekly activity,
+/[FRG]-feature "Add user dashboard with charts showing weekly activity,
 total tasks completed, and streak counter"
 
 # Less effective
-/nxtg-feature "Add dashboard"
+/[FRG]-feature "Add dashboard"
 ```
 
 ### 2. Use Natural Language
@@ -314,7 +367,7 @@ Users should know if it's wrong password or account doesn't exist"
 ### 3. Iterate and Refine
 ```bash
 # Start simple
-/nxtg-feature "Basic todo list"
+/[FRG]-feature "Basic todo list"
 
 # Then enhance
 "Add drag-and-drop reordering to the todo list"
@@ -326,7 +379,7 @@ Users should know if it's wrong password or account doesn't exist"
 ### 4. Leverage the Status Command
 ```bash
 # Before starting work
-/nxtg-status
+/[FRG]-status
 
 # Understand:
 # - Current state
@@ -400,7 +453,7 @@ Run these checks before any deployment:
 ls -la .claude/
 
 # Re-initialize if needed
-/nxtg-init
+/[FRG]-init
 ```
 
 ### Issue: Tests Failing
@@ -408,7 +461,7 @@ ls -la .claude/
 **Solution:**
 ```bash
 # Get detailed test output
-/nxtg-test --verbose
+/[FRG]-test --verbose
 
 # Fix specific test
 "Fix the failing authentication test"
@@ -419,7 +472,7 @@ ls -la .claude/
 **Solution:**
 ```bash
 # Check deployment configuration
-/nxtg-status deployment
+/[FRG]-status deployment
 
 # Validate environment
 "Verify all deployment environment variables are set"
@@ -430,9 +483,9 @@ ls -la .claude/
 ## 📈 Leveling Up
 
 ### Week 1: Master the Basics
-- Use `/nxtg-init` and `/nxtg-status` daily
-- Build 3 features with `/nxtg-feature`
-- Run `/nxtg-test` after each feature
+- Use `/[FRG]-init` and `/[FRG]-status` daily
+- Build 3 features with `/[FRG]-feature`
+- Run `/[FRG]-test` after each feature
 
 ### Week 2: Leverage the Team
 - Work directly with individual agents
@@ -461,7 +514,7 @@ You now have everything you need to:
 
 ### Next Steps
 
-1. **Try your first feature**: `/nxtg-feature "Your idea here"`
+1. **Try your first feature**: `/[FRG]-feature "Your idea here"`
 2. **Explore the agents**: Talk to them directly
 3. **Join the community**: Share tips and get help
 4. **Build something amazing**: The only limit is your imagination

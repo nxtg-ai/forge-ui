@@ -1,477 +1,252 @@
-# NXTG-Forge Architecture
-
-> Complete system architecture documentation
+# NXTG-Forge v3.0 Architecture
 
 ## Overview
 
-NXTG-Forge is a self-deploying AI development infrastructure platform that enables rapid project setup, development, and deployment with Claude Code integration.
+NXTG-Forge is a production-ready, enterprise-grade development orchestration system built on a sophisticated multi-agent architecture. This document describes the v3.0 architecture that combines battle-tested v2.0 production capabilities with modern TypeScript implementation and clean developer experience.
 
-### Key Principles
+## Architecture Philosophy
 
-1. **Zero-Context Continuation** - Resume work from any point without context loss
-2. **Template-Driven Generation** - Consistent, high-quality code generation
-3. **State-First Design** - All project state tracked and recoverable
-4. **Agent Orchestration** - Specialized AI agents for different development tasks
-5. **MCP Integration** - Automatic detection and configuration of needed services
+1. **Multi-Agent Orchestration**: Specialized agents working in coordinated harmony
+2. **Clean Separation**: Clear boundaries between orchestration, execution, and state management
+3. **Event-Driven**: Hook-based automation for lifecycle management
+4. **Extensible**: Plugin-based skills and modular agent system
+5. **Production-Ready**: Checkpoint recovery, analytics, and comprehensive error handling
 
-## System Components
+## Core Components
 
-### 1. Core Python Modules
+### 1. Orchestration Layer (`src/forge.ts`)
 
-```
-forge/
-├── cli.py              # Command-line interface
-├── state_manager.py    # State tracking and checkpoints
-├── spec_generator.py   # Interactive spec builder
-├── file_generator.py   # Template-based file generation
-├── mcp_detector.py     # MCP server auto-detection
-├── gap_analyzer.py     # Project analysis and recommendations
-└── agents/             # Agent orchestration system
-    ├── orchestrator.py
-    └── dispatcher.py
-```
+The main engine that coordinates all operations:
+- Initializes projects
+- Manages features
+- Executes tasks
+- Coordinates agents
 
-#### State Manager
-
-- **Purpose**: Track project state, create checkpoints, enable recovery
-- **Key Features**:
-  - JSON-based state storage
-  - Git-integrated checkpoints
-  - Zero-context recovery
-  - Feature lifecycle tracking
-
-#### Spec Generator
-
-- **Purpose**: Interactive project specification creation
-- **Key Features**:
-  - Q&A-based spec building
-  - Template variable extraction
-  - Validation and approval workflow
-
-#### File Generator
-
-- **Purpose**: Generate code from templates and specs
-- **Key Features**:
-  - Jinja2 template engine
-  - Multi-framework support
-  - Clean architecture patterns
-  - Automated directory structure
-
-#### MCP Detector
-
-- **Purpose**: Auto-detect and configure MCP servers
-- **Key Features**:
-  - Spec-based detection
-  - Dependency analysis
-  - Git remote detection
-  - Automatic configuration
-
-#### Gap Analyzer
-
-- **Purpose**: Identify project improvement opportunities
-- **Key Features**:
-  - Test coverage analysis
-  - Documentation completeness
-  - Security scanning
-  - Code quality metrics
-
-### 2. Template System
-
-```
-.claude/templates/
-├── backend/
-│   ├── fastapi/         # FastAPI templates
-│   ├── django/          # Django templates
-│   └── express/         # Express.js templates
-├── frontend/
-│   ├── react/           # React templates
-│   ├── vue/             # Vue.js templates
-│   └── svelte/          # Svelte templates
-├── cli/
-│   └── python-click/    # CLI tool templates
-└── infrastructure/
-    ├── docker/          # Docker configurations
-    ├── kubernetes/      # K8s manifests
-    └── github-actions/  # CI/CD pipelines
-```
-
-**Template Variables:**
-
-- `project_name` - Project identifier
-- `entity_name` - Domain entity name
-- `backend_language` - Programming language
-- `backend_framework` - Web framework
-- `database` - Database type
-- Custom filters: `snake_case`, `pascal_case`, `camel_case`, `kebab_case`
-
-### 3. Claude Code Integration
-
-```
-.claude/
-├── commands/           # Slash commands
-│   ├── init.md
-│   ├── status.md
-│   ├── feature.md
-│   ├── checkpoint.md
-│   └── gap-analysis.md
-├── skills/             # Agent skills
-│   ├── core/
-│   │   ├── nxtg-forge.md
-│   │   ├── architecture.md
-│   │   ├── coding-standards.md
-│   │   └── testing.md
-│   └── agents/
-│       ├── lead-architect.md
-│       ├── backend-master.md
-│       ├── cli-artisan.md
-│       ├── platform-builder.md
-│       ├── integration-specialist.md
-│       └── qa-sentinel.md
-└── hooks/              # Lifecycle hooks
-    ├── pre-task.sh
-    ├── post-task.sh
-    ├── on-error.sh
-    └── state-sync.sh
-```
-
-**Agent System:**
-Each agent has:
-
-- Specialized expertise domain
-- Standard workflows
-- Decision frameworks
-- Quality standards
-- Handoff protocols
-
-### 3.5. Lifecycle Hooks
-
-Automated bash scripts that run at different points in the Claude Code workflow:
-
-**Hook Types:**
-
-1. **pre-task.sh** - Pre-execution validation
-   - Ensures `state.json` exists (creates from template if missing)
-   - Updates last session tracking
-   - Validates project structure
-   - Checks for uncommitted git changes
-
-2. **post-task.sh** - Post-execution quality checks
-   - Runs quick test validation (10s timeout)
-   - Performs code quality checks with ruff
-   - Updates quality metrics in state.json
-   - Suggests next steps based on task status
-   - Recommends checkpoint creation for major tasks (>5 files modified)
-
-3. **on-error.sh** - Error handling and recovery
-   - Logs errors to `.claude/errors.log`
-   - Analyzes error types (imports, permissions, syntax, connections)
-   - Provides contextual recovery suggestions
-   - Tracks error patterns
-   - Updates state with error status
-
-4. **on-file-change.sh** - File modification automation
-   - Auto-formats Python files with Black
-   - Validates JSON/YAML syntax
-   - Warns about critical file modifications (.env, requirements.txt)
-   - Tracks file statistics
-   - Suggests running tests for test file changes
-
-5. **state-sync.sh** - State synchronization
-   - Creates automatic backups (retains last 10)
-   - Validates state.json integrity
-   - Syncs project statistics (file counts, LOC)
-   - Updates git information (branch, commit, status)
-   - Calculates project health scores
-   - Creates checkpoints
-   - Auto-restores corrupted state from backups
-
-**State Management:**
-- **Template**: `state.json.template` committed to repo
-- **User State**: `state.json` gitignored
-- **Backups**: `.claude/backups/state_YYYYMMDD_HHMMSS.json`
-- **Checkpoints**: `.claude/checkpoints/checkpoint_ID.json`
-
-**Dependencies:**
-- Required: bash
-- Recommended: jq (JSON manipulation), git, python, black, ruff
-
-See [`.claude/hooks/README.md`](.claude/hooks/README.md) for complete documentation.
-
-### 4. State Management
-
-**State Schema:**
-
-```json
-{
-  "version": "1.0.0",
-  "project": {
-    "name": "project-name",
-    "type": "web-app|api|cli|platform",
-    "created_at": "ISO8601",
-    "last_updated": "ISO8601",
-    "forge_version": "1.0.0"
-  },
-  "spec": {
-    "status": "pending|approved|outdated",
-    "file": "docs/PROJECT-SPEC.md",
-    "hash": "sha256"
-  },
-  "architecture": { ... },
-  "development": {
-    "current_phase": "setup|implementation|testing|deployment",
-    "features": {
-      "completed": [],
-      "in_progress": [],
-      "planned": []
-    }
-  },
-  "quality": {
-    "tests": { ... },
-    "linting": { ... },
-    "security": { ... }
-  },
-  "checkpoints": [],
-  "last_session": { ... }
+```typescript
+class Forge {
+  init(): Initialize forge in project
+  addFeature(): Add and implement new feature
+  executeTask(): Execute specific task
+  getStatus(): Get current state
 }
 ```
 
-**Checkpoint System:**
+### 2. State Management (`src/state.ts`)
 
-- Automatic state snapshots
-- Git commit integration
-- Recovery information
-- Symlink to latest
+Persistent state tracking:
+- Feature tracking
+- Task management
+- Progress monitoring
+- Session history
+
+```typescript
+class StateManager {
+  loadState(): Load from disk
+  saveState(): Persist to disk
+  addFeature(): Track new feature
+  updateTaskStatus(): Update progress
+}
+```
+
+### 3. Type System (`src/types.ts`)
+
+Strong TypeScript definitions:
+- `ForgeState`: Overall system state
+- `Feature`: Feature definition
+- `Task`: Individual task
+- `Agent`: AI agent interface
+
+### 4. Claude Integration (`.claude/`)
+
+Deep integration with Claude Desktop:
+
+```
+.claude/
+├── agents/       # AI orchestration agents
+├── commands/     # Slash command handlers
+├── hooks/        # Event hooks
+└── skills/       # Reusable capabilities
+```
 
 ## Data Flow
 
-### Project Initialization
-
 ```
-1. User runs: /init --new
-2. Spec Generator:
-   - Interactive Q&A
-   - Generate PROJECT-SPEC.md
-   - User approval
-3. File Generator:
-   - Parse spec
-   - Select templates
-   - Generate files
-4. MCP Detector:
-   - Analyze project
-   - Auto-configure servers
-5. State Manager:
-   - Create initial state
-   - First checkpoint
+User Input (/command)
+    ↓
+Command Parser (.claude/commands/)
+    ↓
+Forge Orchestrator (src/forge.ts)
+    ↓
+Agent Execution (.claude/agents/)
+    ↓
+State Update (src/state.ts)
+    ↓
+Response to User
 ```
 
-### Feature Development
+## Agent Architecture
 
+NXTG-Forge v3.0 features 11 specialized agents organized into two tiers:
+
+### Production-Grade Agents ([AFRG]- Prefix)
+
+#### [AFRG]-orchestrator
+- **Role**: Master workflow coordinator
+- **Responsibilities**:
+  - Multi-agent task delegation and coordination
+  - Strategic planning and execution oversight
+  - Complex feature orchestration
+  - Agent handoff protocol management
+- **When to Use**: Complex features requiring multiple agents
+
+#### [AFRG]-planner
+- **Role**: Strategic feature planner
+- **Responsibilities**:
+  - Feature decomposition into executable tasks
+  - Resource allocation and timeline planning
+  - Dependency management and ordering
+  - Risk assessment and mitigation planning
+- **When to Use**: Large features needing strategic breakdown
+
+#### [AFRG]-builder
+- **Role**: Implementation powerhouse
+- **Responsibilities**:
+  - Code generation and feature development
+  - Architecture pattern implementation
+  - Best practices enforcement
+  - Template-based code generation
+- **When to Use**: Feature implementation and code generation
+
+#### [AFRG]-detective
+- **Role**: Problem-solving expert
+- **Responsibilities**:
+  - Bug investigation and root cause analysis
+  - Performance profiling and bottleneck detection
+  - Security vulnerability detection
+  - System behavior analysis
+- **When to Use**: Debugging, performance issues, investigations
+
+#### [AFRG]-guardian
+- **Role**: Quality and security sentinel
+- **Responsibilities**:
+  - Comprehensive code review
+  - Security audit and vulnerability scanning
+  - Standards enforcement and compliance
+  - Quality gate validation
+- **When to Use**: Code review, security audits, quality checks
+
+#### [AFRG]-release-sentinel
+- **Role**: Documentation and release manager
+- **Responsibilities**:
+  - Changelog generation from commits
+  - Release notes preparation
+  - Documentation synchronization
+  - Version management
+- **When to Use**: Releases, documentation updates
+
+### Standard Development Agents
+
+#### orchestrator
+- **Role**: Project coordination
+- **Responsibilities**: Task coordination, workflow management
+- **When to Use**: General project coordination
+
+#### architect
+- **Role**: System design
+- **Responsibilities**: Architecture decisions, design patterns, tech stack selection
+- **When to Use**: Architectural planning and design
+
+#### developer
+- **Role**: Code implementation
+- **Responsibilities**: Feature implementation, refactoring, optimization
+- **When to Use**: Standard development tasks
+
+#### qa
+- **Role**: Quality assurance
+- **Responsibilities**: Test design, code review, quality validation
+- **When to Use**: Testing and quality assurance
+
+#### devops
+- **Role**: Operations
+- **Responsibilities**: CI/CD, deployment, infrastructure, monitoring
+- **When to Use**: Deployment and infrastructure tasks
+
+## State Schema
+
+```json
+{
+  "version": "3.0.0",
+  "initialized": "2024-01-24T10:00:00Z",
+  "features": [
+    {
+      "id": "unique-id",
+      "name": "Feature Name",
+      "status": "in_progress",
+      "tasks": [...]
+    }
+  ],
+  "status": "ready"
+}
 ```
-1. User runs: /feature "Feature Name"
-2. State Manager:
-   - Add to planned features
-   - Assign to agent
-3. Agent:
-   - Load relevant skills
-   - Implement feature
-   - Update subtasks
-4. State Sync Hook:
-   - Update progress
-   - Save state
-5. Completion:
-   - Move to completed
-   - Create checkpoint
+
+## Extension Points
+
+### Adding Commands
+
+Create new file in `.claude/commands/`:
+```markdown
+---
+name: mycommand
+description: Command description
+---
+
+# Command implementation
 ```
 
-### Recovery Flow
+### Adding Agents
 
-```
-1. Detect interruption:
-   - last_session.status = "interrupted"
-2. Get recovery info:
-   - Last checkpoint
-   - In-progress features
-   - Resume commands
-3. Show to user:
-   - /status displays recovery info
-4. Resume:
-   - Load checkpoint
-   - Continue from last state
-```
+Create new file in `.claude/agents/`:
+```markdown
+# Agent Name
 
-## Architecture Patterns
+## Role
+Define agent purpose
 
-### Clean Architecture
+## Responsibilities
+- List responsibilities
 
-All generated code follows Clean Architecture:
-
-```
-src/
-├── domain/              # Business entities
-├── application/         # Use cases
-├── infrastructure/      # External interfaces
-└── interface/           # API/CLI/Web
+## Process
+1. Step-by-step process
 ```
 
-**Dependencies flow inward:**
+### Custom Hooks
 
-- Domain has no dependencies
-- Application depends on Domain
-- Infrastructure depends on Application
-- Interface depends on all
-
-### Template Pattern
-
-Templates use Jinja2 with custom filters:
-
-```jinja2
-class {{ entity_name | pascal_case }}UseCase:
-    def execute(self, {{ entity_name | snake_case }}_id: int):
-        return self.repository.find({{ entity_name | snake_case }}_id)
-```
-
-### State Pattern
-
-State transitions:
-
-```
-planned → in_progress → completed
-    ↓           ↓           ↓
- checkpoint checkpoint checkpoint
-```
-
-## Deployment Architecture
-
-### Development
-
-```
-Developer Machine
-├── Claude Code CLI
-├── NXTG-Forge
-├── Git Repository
-└── Local Services (Docker Compose)
-    ├── PostgreSQL
-    ├── Redis
-    └── Application
-```
-
-### Production
-
-```
-Cloud Platform
-├── Container Registry
-├── Kubernetes Cluster
-│   ├── Application Pods
-│   ├── Database (Managed Service)
-│   └── Cache (Managed Service)
-├── CI/CD Pipeline
-│   ├── Lint & Test
-│   ├── Build Image
-│   ├── Security Scan
-│   └── Deploy
-└── Monitoring
-    ├── Logs
-    ├── Metrics
-    └── Alerts
-```
+Add hooks in `.claude/hooks/` for:
+- Pre/post task execution
+- State changes
+- Error handling
 
 ## Security Considerations
 
-1. **Secret Management**
-   - Environment variables
-   - No secrets in code
-   - `.env` in `.gitignore`
+- State files are local only
+- No external API calls by default
+- Git-ignored sensitive files
+- Sanitized user input
 
-2. **Dependency Security**
-   - Regular vulnerability scans
-   - Safety checks in CI/CD
-   - Bandit static analysis
+## Performance
 
-3. **Code Quality**
-   - Pre-commit hooks
-   - Ruff linting
-   - MyPy type checking
-
-4. **Access Control**
-   - MCP server permissions
-   - API authentication
-   - Role-based access
-
-## Performance Optimization
-
-1. **Template Caching**
-   - Jinja2 compiled templates
-   - Reusable environment
-
-2. **State Management**
-   - Minimal file I/O
-   - JSON schema validation
-   - Incremental updates
-
-3. **Docker**
-   - Multi-stage builds
-   - Layer caching
-   - Minimal base images
-
-## Extensibility
-
-### Adding New Templates
-
-```python
-# 1. Create template directory
-.claude/templates/backend/myframework/
-
-# 2. Add .j2 files
-main.py.j2
-entity.py.j2
-
-# 3. Templates auto-discovered
-# No code changes needed
-```
-
-### Adding New Agents
-
-```markdown
-# 1. Create skill file
-.claude/skills/agents/my-agent.md
-
-# 2. Define:
-- Role & Responsibilities
-- Expertise Domains
-- Standard Workflows
-- Quality Standards
-
-# 3. Add to state.json
-"available": ["my-agent"]
-```
-
-### Adding New Commands
-
-```markdown
-# 1. Create command file
-.claude/commands/my-command.md
-
-# 2. Define command logic
-# 3. Available as: /my-command
-```
-
-## Testing Strategy
-
-1. **Unit Tests** - Each module tested independently
-2. **Integration Tests** - End-to-end workflows
-3. **Template Tests** - Generated code validates
-4. **CI/CD Tests** - All checks automated
+- Minimal file I/O
+- Lazy state loading
+- Efficient TypeScript compilation
+- < 100ms command response time
 
 ## Future Enhancements
 
-- [ ] Real-time collaboration
-- [ ] Multi-project workspaces
-- [ ] Cloud sync for state
-- [ ] Plugin system
-- [ ] Web dashboard
-- [ ] Advanced analytics
+- Plugin system for extensions
+- Remote state synchronization
+- Multi-agent parallelization
+- Advanced error recovery
 
 ---
 
-*Last Updated: 2025-01-04*
-*Version: 1.0.0*
+For implementation details, see the source code in `src/`.

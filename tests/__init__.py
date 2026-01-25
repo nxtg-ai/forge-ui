@@ -1,3 +1,0 @@
-"""
-NXTG-Forge Test Suite
-"""

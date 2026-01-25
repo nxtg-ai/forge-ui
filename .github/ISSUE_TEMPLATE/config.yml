@@ -1,8 +1,0 @@
-blank_issues_enabled: true
-contact_links:
-  - name: Questions & Discussions
-    url: https://github.com/nxtg-ai/nxtg-forge/discussions
-    about: Ask questions and discuss ideas with the community
-  - name: Security Vulnerability
-    url: https://github.com/nxtg-ai/nxtg-forge/blob/main/SECURITY.md
-    about: Report security vulnerabilities privately to security@nxtg.ai

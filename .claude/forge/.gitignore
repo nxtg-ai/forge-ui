@@ -1,7 +1,0 @@
-# Forge memory (don't commit)
-memory/
-*.log
-
-# Keep config (do commit)
-!config.yml
-!config.json

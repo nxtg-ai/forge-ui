@@ -1,68 +1,326 @@
 ---
-event: SessionStart
-when: Beginning of each Claude session
+description: "Session start hook - displays NXTG-Forge status banner"
+trigger: "session_start"
+priority: 100
 ---
 
-# 🚀 NXTG-Forge Activated - You Have Superpowers!
+# NXTG-Forge Status Detection
 
-Welcome! You're working with **NXTG-Forge v3.0** - a powerful development orchestration system that gives you extraordinary capabilities.
+This hook runs at the start of every Claude Code session to detect and display NXTG-Forge status.
 
-## 🎯 Your Available Commands
+## Detection Logic
 
-**Core Commands:**
-- `/nxtg-init` - Initialize NXTG-Forge in any project (new or existing)
-- `/nxtg-status` - Display complete project state and health
-- `/nxtg-feature` - Add new features with full agent orchestration
-- `/nxtg-test` - Run comprehensive test suite with analysis
-- `/nxtg-deploy` - Deploy with automated quality gates
-- `/nxtg-optimize` - Performance and code optimization
+Check for NXTG-Forge initialization:
 
-**Enhanced Commands:**
-- `/nxtg-status-enhanced` - Real-time project dashboard with metrics
-- `/nxtg-enable-forge` - Activate the full Forge Command Center
-- `/nxtg-report` - Generate comprehensive session activity report
+```python
+from pathlib import Path
+import json
+import sys
 
-## 🤖 Your Agent Team
+project_root = Path.cwd()
 
-**Available Agents:**
-- **Orchestrator** - Coordinates all development activities
-- **Architect** - Designs and structures solutions
-- **Developer** - Implements features and fixes
-- **QA Engineer** - Ensures quality and testing
-- **DevOps** - Handles deployment and infrastructure
+# Check if forge is initialized
+orchestrator_agent = project_root / ".claude" / "agents" / "agent-forge-orchestrator.md"
+state_file = project_root / ".claude" / "forge" / "state.json"
 
-## 🔥 Your Superpowers
+forge_initialized = orchestrator_agent.exists()
+forge_configured = state_file.exists()
 
-With NXTG-Forge, you can:
-- **Orchestrate Complex Workflows** - Coordinate multiple agents seamlessly
-- **Maintain Perfect Quality** - Automated checks and validations
-- **Track Everything** - Full visibility into project state
-- **Deploy Confidently** - Quality gates ensure production readiness
-- **Scale Efficiently** - Handle projects of any size
+if forge_initialized and forge_configured:
+    status = "ENABLED"
+elif forge_initialized:
+    status = "READY"
+else:
+    status = "NOT_INSTALLED"
+    # Don't display anything if not installed
+    sys.exit(0)
+```
 
-## 📋 Session Initialization
+## Display Banner
 
-1. **Environment Check** ✓
-   - NXTG-Forge commands loaded
-   - Agent team ready
-   - Quality systems active
+### If Status = ENABLED
 
-2. **Project Analysis**
-   - Detecting technology stack
-   - Identifying project structure
-   - Loading configurations
+Display full enabled banner (per UX-SPECIFICATION-FINAL.md Part III):
 
-3. **Status Check**
-   - Use `/nxtg-status` for full project state
-   - Use `/nxtg-report` for session activity
+```python
+if status == "ENABLED":
+    # Load health data
+    health_score = 0
+    health_rating = "Unknown"
+    active_agents = 5
+    monitoring = "OFF"
 
-## 💡 Pro Tips
+    try:
+        from forge.services.health_service import HealthService
+        health_service = HealthService(project_root)
+        health_result = health_service.calculate_health()
 
-- Start with `/nxtg-status` to understand the project
-- Use `/nxtg-feature` for guided feature development
-- Run `/nxtg-test` before any deployment
-- Check `/nxtg-report` to track your progress
+        if health_result.is_ok():
+            health_data = health_result.value
+            health_score = health_data.score
+            health_rating = health_data.rating
+    except Exception:
+        pass
 
-**Remember:** You're not just coding - you're orchestrating excellence with NXTG-Forge!
+    # Get project name
+    project_name = project_root.name
 
-Ready to forge ahead with superhuman capabilities? Let's build something amazing! 🔨
+    # Display banner
+    banner = f"""
+╔══════════════════════════════════════════════════════════╗
+║                                                          ║
+║  ✅ NXTG-FORGE-ENABLED                                    ║
+║                                                          ║
+║     Your AI development infrastructure is active         ║
+║     and watching your back.                              ║
+║                                                          ║
+║     Project: {project_name:<43} ║
+║     Health Score: {health_score}/100 ({health_rating:<15}) ║
+║     Active Agents: {active_agents:<35} ║
+║     Monitoring: {monitoring:<38} ║
+║                                                          ║
+║     Type /status for detailed project health            ║
+║     Type /help for all available commands               ║
+║                                                          ║
+╚══════════════════════════════════════════════════════════╝
+"""
+    print(banner)
+```
+
+### If Status = READY
+
+Display ready banner (per UX-SPECIFICATION-FINAL.md Part III):
+
+```python
+elif status == "READY":
+    banner = """
+╔══════════════════════════════════════════════════════════╗
+║                                                          ║
+║  ✨ NXTG-FORGE-READY                                      ║
+║                                                          ║
+║     This project can have AI-powered infrastructure      ║
+║     Turn it on with: /enable-forge                       ║
+║                                                          ║
+║     It will:                                             ║
+║     • Set up intelligent project scaffolding             ║
+║     • Enable continuous quality checks                   ║
+║     • Activate autonomous documentation                  ║
+║     • Deploy intelligent git workflows                   ║
+║     • Monitor and optimize your project 24/7            ║
+║                                                          ║
+║     Takes ~30 seconds. Want to try it?                   ║
+║                                                          ║
+║     Type: /enable-forge                                  ║
+║                                                          ║
+╚══════════════════════════════════════════════════════════╝
+"""
+    print(banner)
+```
+
+## Check for Overnight Activity
+
+If ENABLED and there's a recent session:
+
+```python
+if status == "ENABLED":
+    try:
+        # Check if there was overnight activity
+        from forge.services.session_reporter import SessionReporter
+
+        reporter = SessionReporter(project_root)
+        overnight_result = reporter.check_overnight_activity()
+
+        if overnight_result.is_ok() and overnight_result.value:
+            # Display brief summary
+            brief_result = reporter.generate_brief_summary()
+            if brief_result.is_ok():
+                print("")
+                print(brief_result.value)
+                print("")
+    except Exception:
+        pass
+```
+
+Expected overnight summary format:
+
+```
+╔═══════════════════════════════════════════════════════╗
+║  📊 OVERNIGHT SESSION COMPLETED                       ║
+╚═══════════════════════════════════════════════════════╝
+
+Feature: Add authentication system
+Commits: 8 | Tests: +15 | Coverage: 78% → 85%
+PR #42: ✅ Ready for review (all checks passing)
+
+View full report? Type /report or press Enter to continue
+```
+
+## Performance Requirements
+
+- Banner MUST display within 1 second (per UX spec Part XII)
+- If health calculation takes >500ms, show banner with cached data
+- Never block session start waiting for data
+- Fail gracefully if services unavailable
+
+## Implementation
+
+```python
+#!/usr/bin/env python3
+"""NXTG-Forge session start hook."""
+
+import sys
+from pathlib import Path
+
+def main():
+    """Display NXTG-Forge status banner on session start."""
+    try:
+        project_root = Path.cwd()
+
+        # Quick check for forge initialization
+        orchestrator_agent = project_root / ".claude" / "agents" / "agent-forge-orchestrator.md"
+
+        if not orchestrator_agent.exists():
+            # Not installed, exit silently
+            return
+
+        # Determine status
+        state_file = project_root / ".claude" / "forge" / "state.json"
+
+        if state_file.exists():
+            display_enabled_banner(project_root)
+            check_overnight_activity(project_root)
+        else:
+            display_ready_banner()
+
+    except Exception as e:
+        # Never fail loudly - this is a cosmetic feature
+        print(f"⚠️  Forge status check skipped: {e}", file=sys.stderr)
+
+def display_enabled_banner(project_root: Path):
+    """Display ENABLED banner with project info."""
+    project_name = project_root.name
+    health_score = "?"
+    health_rating = "Unknown"
+
+    # Try to get health score (with timeout)
+    try:
+        import signal
+
+        def timeout_handler(signum, frame):
+            raise TimeoutError()
+
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(1)  # 1 second timeout
+
+        try:
+            from forge.services.health_service import HealthService
+            health_service = HealthService(project_root)
+            health_result = health_service.calculate_health()
+
+            if health_result.is_ok():
+                health_data = health_result.value
+                health_score = health_data.score
+                health_rating = health_data.rating
+        finally:
+            signal.alarm(0)
+
+    except Exception:
+        pass
+
+    banner = f"""
+╔══════════════════════════════════════════════════════════╗
+║                                                          ║
+║  ✅ NXTG-FORGE-ENABLED                                    ║
+║                                                          ║
+║     Your AI development infrastructure is active         ║
+║     and watching your back.                              ║
+║                                                          ║
+║     Project: {project_name:<43} ║
+║     Health Score: {health_score}/100 ({health_rating:<15}) ║
+║     Active Agents: 5                                     ║
+║     Monitoring: OFF                                      ║
+║                                                          ║
+║     Type /status for detailed project health            ║
+║     Type /help for all available commands               ║
+║                                                          ║
+╚══════════════════════════════════════════════════════════╝
+"""
+    print(banner)
+
+def display_ready_banner():
+    """Display READY banner."""
+    banner = """
+╔══════════════════════════════════════════════════════════╗
+║                                                          ║
+║  ✨ NXTG-FORGE-READY                                      ║
+║                                                          ║
+║     This project can have AI-powered infrastructure      ║
+║     Turn it on with: /enable-forge                       ║
+║                                                          ║
+║     It will:                                             ║
+║     • Set up intelligent project scaffolding             ║
+║     • Enable continuous quality checks                   ║
+║     • Activate autonomous documentation                  ║
+║     • Deploy intelligent git workflows                   ║
+║     • Monitor and optimize your project 24/7            ║
+║                                                          ║
+║     Takes ~30 seconds. Want to try it?                   ║
+║                                                          ║
+║     Type: /enable-forge                                  ║
+║                                                          ║
+╚══════════════════════════════════════════════════════════╝
+"""
+    print(banner)
+
+def check_overnight_activity(project_root: Path):
+    """Check for overnight activity and display brief summary."""
+    try:
+        from forge.services.session_reporter import SessionReporter
+
+        reporter = SessionReporter(project_root)
+
+        # Check if overnight session occurred
+        overnight_result = reporter.check_overnight_activity()
+
+        if overnight_result.is_ok() and overnight_result.value:
+            # Display brief summary
+            brief_result = reporter.generate_brief_summary()
+            if brief_result.is_ok():
+                print("")
+                print(brief_result.value)
+                print("")
+    except Exception:
+        # Silently skip if service unavailable
+        pass
+
+if __name__ == "__main__":
+    main()
+```
+
+## Testing
+
+Test the hook:
+
+```bash
+# Test enabled state
+python .claude/hooks/session-start.md
+
+# Test ready state (temporarily rename orchestrator)
+mv .claude/forge/state.json .claude/forge/state.json.bak
+python .claude/hooks/session-start.md
+mv .claude/forge/state.json.bak .claude/forge/state.json
+
+# Test not installed state (no output expected)
+mv .claude/agents .claude/agents.bak
+python .claude/hooks/session-start.md
+mv .claude/agents.bak .claude/agents
+```
+
+## Success Criteria
+
+- ✅ Banner displays within 1 second
+- ✅ Correct status detected (ENABLED vs READY)
+- ✅ Health score displayed when available
+- ✅ Overnight activity detected and summarized
+- ✅ Never blocks or crashes session start
+- ✅ Fails gracefully if services unavailable

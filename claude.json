@@ -1,0 +1,72 @@
+{
+  "name": "NXTG-Forge v3.0",
+  "version": "3.0.0",
+  "description": "State-of-the-Art Development Orchestration System",
+  "author": "NXTG.ai",
+  "license": "MIT",
+  "features": {
+    "agents": {
+      "enabled": true,
+      "count": 5,
+      "list": [
+        "orchestrator",
+        "architect",
+        "developer",
+        "qa",
+        "devops"
+      ]
+    },
+    "commands": {
+      "enabled": true,
+      "count": 9,
+      "list": [
+        "init",
+        "status",
+        "status-enhanced",
+        "feature",
+        "test",
+        "deploy",
+        "optimize",
+        "enable-forge",
+        "report"
+      ]
+    },
+    "skills": {
+      "enabled": true,
+      "count": 4,
+      "list": [
+        "architecture",
+        "optimization",
+        "security",
+        "testing"
+      ]
+    },
+    "hooks": {
+      "enabled": true,
+      "count": 5,
+      "list": [
+        "session-start",
+        "error-handler",
+        "post-edit",
+        "pre-commit",
+        "quality-gate"
+      ]
+    }
+  },
+  "configuration": {
+    "autoInit": true,
+    "qualityGates": true,
+    "realTimeMetrics": true,
+    "agentOrchestration": true,
+    "continuousMonitoring": true,
+    "errorRecovery": true
+  },
+  "requirements": {
+    "node": ">=18.0.0",
+    "typescript": ">=5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nxtg-ai/nxtg-forge"
+  }
+}

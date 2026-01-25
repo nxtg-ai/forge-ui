@@ -1,0 +1,36 @@
+{
+  "name": "NXTG-Forge",
+  "version": "3.0.0",
+  "description": "Transform exhaustion into empowerment with intelligent development orchestration",
+  "author": "NXTG.ai",
+  "agents": {
+    "orchestrator": {
+      "priority": 1,
+      "capabilities": ["workflow", "coordination", "architecture"]
+    },
+    "architect": {
+      "priority": 2,
+      "capabilities": ["design", "patterns", "decisions"]
+    },
+    "developer": {
+      "priority": 3,
+      "capabilities": ["implementation", "refactoring", "debugging"]
+    },
+    "qa": {
+      "priority": 4,
+      "capabilities": ["testing", "validation", "review"]
+    },
+    "devops": {
+      "priority": 5,
+      "capabilities": ["deployment", "infrastructure", "monitoring"]
+    }
+  },
+  "settings": {
+    "autoOrchestration": true,
+    "qualityGates": true,
+    "testFirst": true,
+    "minTestCoverage": 80,
+    "maxFileSize": 200,
+    "maxFunctionLength": 20
+  }
+}

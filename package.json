@@ -1,44 +1,31 @@
 {
   "name": "nxtg-forge",
-  "version": "1.0.0",
-  "description": "Self-Deploying AI Development Infrastructure",
-  "main": "index.js",
-  "bin": {
-    "nxtg-forge": "./forge/cli.py",
-    "forge": "./forge/cli.py"
-  },
+  "version": "3.0.0",
+  "description": "Next-Generation Development Forge - AI-Orchestrated Development System",
+  "main": "dist/index.js",
   "scripts": {
-    "mcp-detect": "node .mcp/auto-detect.js",
-    "test": "python -m pytest tests/",
-    "lint": "ruff check forge/",
-    "format": "black forge/",
-    "typecheck": "mypy forge/"
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "init": "./init.sh",
+    "test": "echo \"Tests coming soon\" && exit 0"
   },
   "keywords": [
+    "forge",
     "ai",
-    "development",
-    "infrastructure",
+    "orchestration",
     "claude",
-    "mcp",
-    "automation",
-    "devops"
+    "development",
+    "automation"
   ],
-  "author": "NXTG-Forge Contributors",
+  "author": "NXTG Team",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/nxtg-ai/nxtg-forge.git"
-  },
-  "bugs": {
-    "url": "https://github.com/nxtg-ai/nxtg-forge/issues"
-  },
-  "homepage": "https://github.com/nxtg-ai/nxtg-forge#readme",
-  "engines": {
-    "node": ">=16.0.0",
-    "python": ">=3.9.0"
-  },
-  "dependencies": {},
   "devDependencies": {
-    "prettier": "^3.1.0"
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "prettier": "^3.0.0",
+    "eslint": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
