@@ -1,6 +1,7 @@
 {
   "name": "nxtg-forge",
   "version": "3.0.0",
+  "type": "module",
   "description": "Next-Generation Development Forge - AI-Orchestrated Development System",
   "main": "dist/index.js",
   "scripts": {

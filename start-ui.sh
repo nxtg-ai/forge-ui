@@ -2,7 +2,7 @@
 
 echo "🔥 Starting NXTG-Forge UI..."
 echo ""
-echo "Opening: http://localhost:5173"
+echo "The UI will open at http://localhost:5173 (or next available port)"
 echo ""
 echo "Press Ctrl+C to stop"
 echo ""
