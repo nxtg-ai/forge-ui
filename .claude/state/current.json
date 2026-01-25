@@ -1,0 +1,35 @@
+{
+  "state": {
+    "version": "3.0.0",
+    "timestamp": "2026-01-25T22:57:35.077Z",
+    "vision": {
+      "version": "1.0",
+      "created": "2026-01-25T22:57:35.077Z",
+      "updated": "2026-01-25T22:57:35.077Z",
+      "mission": "Build amazing software",
+      "principles": [],
+      "strategicGoals": [],
+      "currentFocus": "",
+      "successMetrics": {}
+    },
+    "currentTasks": [],
+    "agentStates": {},
+    "conversationContext": {
+      "sessionId": "e581e320bcee617d",
+      "startedAt": "2026-01-25T22:57:35.077Z",
+      "lastInteraction": "2026-01-25T22:57:35.077Z",
+      "messageCount": 0,
+      "recentMessages": [],
+      "contextTags": []
+    },
+    "progressGraph": [],
+    "metadata": {
+      "sessionId": "7bbe2741672c4e5b",
+      "environment": "development",
+      "projectPath": "/home/axw/projects/NXTG-Forge/v3"
+    }
+  },
+  "timestamp": "2026-01-25T22:57:35.078Z",
+  "checksum": "d7b5942646491556739013efb7f2948ee8d82ae62eaa6346b123a1cb74983fda",
+  "compressed": false
+}

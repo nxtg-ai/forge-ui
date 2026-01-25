@@ -20,7 +20,7 @@ const wss = new WebSocketServer({ server, path: '/ws' });
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || 'http://localhost:5050', // NXTG-Forge UI
   credentials: true
 }));
 app.use(express.json());
@@ -490,7 +490,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5051; // NXTG-Forge dedicated API port
 
 server.listen(PORT, () => {
   console.log(`NXTG-Forge API Server running on port ${PORT}`);
