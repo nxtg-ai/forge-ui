@@ -19,9 +19,31 @@ module.exports = {
           },
         },
       },
+      spacing: {
+        '100': '25rem',
+        '120': '30rem',
+        '140': '35rem',
+      },
+      maxHeight: {
+        '100': '25rem',
+        '120': '30rem',
+        '140': '35rem',
+      },
+      width: {
+        '1/10': '10%',
+        '2/10': '20%',
+        '3/10': '30%',
+        '4/10': '40%',
+        '5/10': '50%',
+        '6/10': '60%',
+        '7/10': '70%',
+        '8/10': '80%',
+        '9/10': '90%',
+      },
       animation: {
         'spring-in': 'springIn 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
         'fade-up': 'fadeUp 0.4s ease-out',
+        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
       keyframes: {
         springIn: {
@@ -32,6 +54,16 @@ module.exports = {
           '0%': { transform: 'translateY(10px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
+      },
+      inset: {
+        '30': '7.5rem',
+        '34': '8.5rem',
+        '38': '9.5rem',
+      },
+      translate: {
+        '30': '7.5rem',
+        '34': '8.5rem',
+        '38': '9.5rem',
       },
     },
   },

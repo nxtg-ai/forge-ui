@@ -566,3 +566,6 @@ export class BootstrapOrchestrator {
     logger.info('Rollback completed');
   }
 }
+
+// Export alias for API compatibility
+export const BootstrapService = BootstrapOrchestrator;

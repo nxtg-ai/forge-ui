@@ -80,7 +80,23 @@ STATE=$(cat .claude/state.json)
      Resume: claude --resume {session_id}
 
 📊 PROJECT HEALTH: {overall_health_score}/100
-   {health_breakdown}
+   System Status: {health_status}
+   Uptime: {system_uptime}
+
+   Health Checks:
+   ✓ UI Responsiveness: {ui_score}%
+   ✓ Backend Availability: {backend_score}%
+   ✓ State Sync: {state_sync_score}%
+   ✓ Agent Execution: {agent_score}%
+   ✓ File System: {fs_score}%
+   ✓ Memory Usage: {memory_score}%
+   ✓ Command Processing: {command_score}%
+   ✓ Automation: {automation_score}%
+
+   Performance Metrics:
+   Average Latency: {avg_latency}ms
+   Error Rate: {error_rate}%
+   Active Alerts: {active_alerts}
 
 ═════════════════════════════════════════════════════════
 
@@ -105,34 +121,33 @@ If `--json` flag: output raw state.json
 If `--detail <section>`: show detailed view of section (features/agents/quality/etc)
 If `--export`: export state to shareable format
 
-## Health Score Calculation
+## Health Score Integration
 
-```python
-def calculate_health_score(state):
-    score = 100
-    
-    # Test coverage (-20 if < 80%)
-    avg_coverage = (unit_cov + int_cov + e2e_cov) / 3
-    if avg_coverage < 80:
-        score -= (80 - avg_coverage) / 4
-    
-    # Security vulnerabilities
-    score -= (critical_vulns * 10 + high_vulns * 5)
-    
-    # Linting issues
-    score -= min(linting_issues / 2, 10)
-    
-    # Feature completion
-    completion_rate = completed / total_features
-    if completion_rate < 0.5:
-        score -= 10
-    
-    # Checkpoint recency
-    hours_since_checkpoint = (now - last_checkpoint) / 3600
-    if hours_since_checkpoint > 24:
-        score -= 5
-    
-    return max(0, min(100, score))
+```typescript
+// Use the integrated health monitoring system
+import { MonitoringSystem } from '../src/monitoring';
+
+async function getHealthStatus() {
+    const monitoring = new MonitoringSystem();
+    const health = await monitoring.getHealthMonitor().performHealthCheck();
+
+    return {
+        overallScore: health.overallScore,
+        status: health.status,
+        uptime: formatUptime(health.uptime),
+        checks: health.checks,
+        recommendations: health.recommendations,
+        performance: monitoring.getPerformanceMonitor().generateReport(),
+        errors: monitoring.getErrorTracker().generateReport(),
+        alerts: monitoring.getAlertingSystem().getActiveAlerts()
+    };
+}
+
+// Run diagnostics if requested
+if (args.includes('--diagnostics')) {
+    const diagnostics = await monitoring.runDiagnostics();
+    console.log(monitoring.getDiagnosticTools().formatDiagnosticSummary(diagnostics));
+}
 ```
 
 ## Zero-Context Recovery Info

@@ -5,6 +5,7 @@ import {
   AlertTriangle, Edit3, Lock, Unlock, GitBranch,
   Flag, Compass, Mountain, Trophy, Zap
 } from 'lucide-react';
+import { ProgressBar } from './ui/ProgressBar';
 
 interface VisionDisplayProps {
   vision: VisionData;
@@ -218,14 +219,12 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
               <p className="text-sm text-gray-400 line-clamp-2">{goal.description}</p>
 
               {/* Progress Bar */}
-              <div className="mt-3 h-1 bg-gray-800 rounded-full overflow-hidden">
-                <motion.div
-                  className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${goal.progress}%` }}
-                  transition={{ duration: 0.5 }}
-                />
-              </div>
+              <ProgressBar
+                value={goal.progress}
+                max={100}
+                className="mt-3 h-1"
+                animated={true}
+              />
 
               <AnimatePresence>
                 {expandedGoal === goal.id && (
@@ -279,12 +278,13 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
               <div className="text-xs text-gray-500">
                 Target: {metric.target}{metric.unit}
               </div>
-              <div className="mt-2 h-1 bg-gray-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-green-500 to-emerald-500"
-                  style={{ width: `${Math.min(100, (metric.current / metric.target) * 100)}%` }}
-                />
-              </div>
+              <ProgressBar
+                value={metric.current}
+                max={metric.target}
+                className="mt-2 h-1"
+                fillColor="bg-gradient-to-r from-green-500 to-emerald-500"
+                animated={false}
+              />
             </div>
           ))}
         </div>
@@ -321,14 +321,12 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
             Day {progress.daysElapsed} of estimated {progress.daysElapsed + progress.estimatedDaysRemaining}
           </div>
         </div>
-        <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
-            style={{
-              width: `${(progress.daysElapsed / (progress.daysElapsed + progress.estimatedDaysRemaining)) * 100}%`
-            }}
-          />
-        </div>
+        <ProgressBar
+          value={progress.daysElapsed}
+          max={progress.daysElapsed + progress.estimatedDaysRemaining}
+          className="h-2"
+          animated={false}
+        />
         <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
           <span>Started {progress.daysElapsed} days ago</span>
           <span>{progress.estimatedDaysRemaining} days remaining</span>

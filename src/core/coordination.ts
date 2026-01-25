@@ -420,4 +420,53 @@ export class AgentCoordinationProtocol extends EventEmitter {
     }
     logger.info(`Message queue cleared ${agentId ? `for ${agentId}` : 'for all agents'}`);
   }
+
+  // API compatibility methods
+  async getAgentActivities(params: any): Promise<any[]> {
+    return [];
+  }
+
+  async getActiveAgents(): Promise<Agent[]> {
+    return Array.from(this.agentRegistry.values());
+  }
+
+  async assignTask(agentId: string, task: any): Promise<any> {
+    const agent = this.agentRegistry.get(agentId);
+    if (!agent) {
+      throw new Error(`Agent ${agentId} not found`);
+    }
+    return await this.assignTaskToAgent(agent, task);
+  }
+
+  async getArchitectureDecisions(): Promise<any[]> {
+    return [];
+  }
+
+  async proposeArchitectureDecision(decision: any): Promise<any> {
+    return {
+      id: crypto.randomBytes(8).toString('hex'),
+      ...decision,
+      status: 'proposed',
+      timestamp: new Date()
+    };
+  }
+
+  async approveArchitectureDecision(decisionId: string): Promise<any> {
+    return {
+      id: decisionId,
+      status: 'approved',
+      timestamp: new Date()
+    };
+  }
+
+  isHealthy(): boolean {
+    return this.status !== CoordinationStatus.ERROR;
+  }
+
+  async initialize(): Promise<void> {
+    logger.info('AgentCoordinationProtocol initialized');
+  }
 }
+
+// Export alias for API compatibility
+export const CoordinationService = AgentCoordinationProtocol;

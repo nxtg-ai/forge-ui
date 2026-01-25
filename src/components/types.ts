@@ -105,6 +105,7 @@ export interface Architect {
 }
 
 export interface ArchitectureDecision {
+  id: string;
   approach: string;
   rationale: string;
   tradeoffs: string[];

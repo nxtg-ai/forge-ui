@@ -604,4 +604,58 @@ export class StateManager extends EventEmitter {
   getEvents(): StateEvent[] {
     return [...this.events];
   }
+
+  // API compatibility methods
+  getState(): SystemState | null {
+    return this.currentState;
+  }
+
+  async updateState(updates: Partial<SystemState>): Promise<SystemState> {
+    if (!this.currentState) {
+      throw new Error('No state to update');
+    }
+
+    // Apply updates
+    Object.assign(this.currentState, updates);
+    this.currentState.timestamp = new Date();
+
+    // Save state
+    await this.saveState(this.currentState);
+
+    return this.currentState;
+  }
+
+  async updatePhase(phase: string): Promise<SystemState> {
+    if (!this.currentState) {
+      throw new Error('No state available');
+    }
+
+    // Update metadata with phase
+    this.currentState.metadata = {
+      ...this.currentState.metadata,
+      currentPhase: phase
+    };
+
+    await this.saveState(this.currentState);
+    return this.currentState;
+  }
+
+  async getHealthMetrics(): Promise<any> {
+    const tasks = this.currentState?.currentTasks || [];
+    const completed = tasks.filter(t => t.status === 'completed').length;
+    const failed = tasks.filter(t => t.status === 'failed').length;
+    const total = tasks.length;
+
+    return {
+      healthy: failed === 0,
+      taskCompletion: total > 0 ? completed / total : 0,
+      failedTasks: failed,
+      totalTasks: total,
+      timestamp: new Date()
+    };
+  }
+
+  isHealthy(): boolean {
+    return this.currentState !== null;
+  }
 }

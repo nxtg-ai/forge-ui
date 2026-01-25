@@ -6,6 +6,7 @@ import {
   ThumbsUp, ThumbsDown, Brain, ChevronRight, Clock,
   ArrowRight, Layers, Package, Settings
 } from 'lucide-react';
+import { ProgressBar } from './ui/ProgressBar';
 
 interface ArchitectDiscussionProps {
   topic: string;
@@ -246,12 +247,13 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-xs">
-                      <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-blue-500 to-green-500"
-                          style={{ width: `${architect.confidence}%` }}
-                        />
-                      </div>
+                      <ProgressBar
+                        value={architect.confidence}
+                        max={100}
+                        className="flex-1 h-1"
+                        fillColor="bg-gradient-to-r from-blue-500 to-green-500"
+                        animated={false}
+                      />
                       <span className="text-gray-400">{architect.confidence}%</span>
                     </div>
                     {isTyping === architect.id && (

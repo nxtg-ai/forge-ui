@@ -3,6 +3,19 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    /* Dynamic progress bar widths */
+    --progress-width: 0%;
+    --confidence-width: 0%;
+    --metric-width: 0%;
+    --timeline-width: 0%;
+    --sparkline-height: 0%;
+
+    /* Dynamic positions for network view */
+    --agent-x: 0px;
+    --agent-y: 0px;
+  }
+
   body {
     @apply bg-gray-950 text-white antialiased;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -17,5 +30,32 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Dynamic width utilities using CSS variables */
+  .progress-bar {
+    width: var(--progress-width);
+  }
+
+  .confidence-bar {
+    width: var(--confidence-width);
+  }
+
+  .metric-bar {
+    width: var(--metric-width);
+  }
+
+  .timeline-bar {
+    width: var(--timeline-width);
+  }
+
+  .sparkline-bar {
+    height: var(--sparkline-height);
+  }
+
+  /* Agent positioning */
+  .agent-position {
+    left: var(--agent-x);
+    top: var(--agent-y);
   }
 }

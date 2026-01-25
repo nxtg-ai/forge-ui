@@ -6,6 +6,7 @@ import {
   Sparkles, Command, ChevronRight, BarChart3, Eye, EyeOff,
   Cpu, Database, Network, Terminal, Code2, Layers
 } from 'lucide-react';
+import { ProgressBar } from './ui/ProgressBar';
 
 interface DashboardProps {
   visionData: VisionData;
@@ -520,12 +521,13 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
                 <div>
                   <div className="text-sm text-gray-400 mb-1">Confidence Level</div>
                   <div className="flex items-center gap-3">
-                    <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-blue-500 to-green-500"
-                        style={{ width: `${selectedAgent.confidence}%` }}
-                      />
-                    </div>
+                    <ProgressBar
+                      value={selectedAgent.confidence}
+                      max={100}
+                      className="flex-1 h-2"
+                      fillColor="bg-gradient-to-r from-blue-500 to-green-500"
+                      animated={false}
+                    />
                     <span className="text-sm font-medium">{selectedAgent.confidence}%</span>
                   </div>
                 </div>

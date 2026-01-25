@@ -704,4 +704,29 @@ export class VisionManager {
   getCurrentVision(): CanonicalVision | null {
     return this.currentVision;
   }
+
+  // API compatibility methods
+  async getVision(): Promise<CanonicalVision> {
+    if (!this.currentVision) {
+      await this.loadVision();
+    }
+    return this.currentVision!;
+  }
+
+  async captureVision(text: string): Promise<CanonicalVision> {
+    // Parse vision from text input
+    const updates: VisionUpdate = {
+      mission: text,
+      currentFocus: text
+    };
+    await this.updateVision(updates);
+    return this.currentVision!;
+  }
+
+  isHealthy(): boolean {
+    return this.currentVision !== null;
+  }
 }
+
+// Export alias for API compatibility
+export const VisionSystem = VisionManager;

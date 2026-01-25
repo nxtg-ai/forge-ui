@@ -92,7 +92,8 @@ export const SystemStateSchema = z.object({
     environment: z.string(),
     gitBranch: z.string().optional(),
     gitCommit: z.string().optional(),
-    projectPath: z.string()
+    projectPath: z.string(),
+    currentPhase: z.string().optional()
   })
 });
 
