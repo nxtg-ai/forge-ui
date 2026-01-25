@@ -1,0 +1,423 @@
+/**
+ * Agent Coordination Protocol
+ * Inter-agent communication and coordination system
+ */
+
+import { EventEmitter } from 'events';
+import * as crypto from 'crypto';
+import { Logger } from '../utils/logger';
+import { Task } from '../types/state';
+import {
+  Agent,
+  Message,
+  MessageType,
+  SignOffRequest,
+  SignOffResult,
+  Artifact,
+  AgentResponse
+} from '../types/agents';
+
+const logger = new Logger('AgentCoordination');
+
+// Message priority levels
+export enum MessagePriority {
+  LOW = 1,
+  NORMAL = 5,
+  HIGH = 8,
+  CRITICAL = 10
+}
+
+// Coordination status
+export enum CoordinationStatus {
+  IDLE = 'idle',
+  COORDINATING = 'coordinating',
+  WAITING = 'waiting',
+  COMPLETE = 'complete',
+  ERROR = 'error'
+}
+
+// Message queue entry
+interface QueueEntry {
+  message: Message;
+  priority: number;
+  timestamp: Date;
+  retries: number;
+}
+
+export class AgentCoordinationProtocol extends EventEmitter {
+  private messageQueue: Map<string, QueueEntry[]> = new Map();
+  private activeMessages: Map<string, Message> = new Map();
+  private signOffRequests: Map<string, SignOffRequest> = new Map();
+  private agentRegistry: Map<string, Agent> = new Map();
+  private status: CoordinationStatus = CoordinationStatus.IDLE;
+  private messageHandlers: Map<string, (message: Message) => Promise<any>> = new Map();
+
+  constructor() {
+    super();
+    this.startMessageProcessor();
+  }
+
+  /**
+   * Start message processing loop
+   */
+  private startMessageProcessor(): void {
+    setInterval(() => {
+      this.processMessageQueues();
+    }, 100); // Process every 100ms
+  }
+
+  /**
+   * Process message queues for all agents
+   */
+  private async processMessageQueues(): Promise<void> {
+    for (const [agentId, queue] of this.messageQueue.entries()) {
+      if (queue.length > 0) {
+        // Sort by priority (highest first)
+        queue.sort((a, b) => b.priority - a.priority);
+
+        // Process highest priority message
+        const entry = queue.shift();
+        if (entry) {
+          await this.deliverMessage(entry.message);
+        }
+      }
+    }
+  }
+
+  /**
+   * Register an agent with the protocol
+   */
+  registerAgent(agent: Agent, handler?: (message: Message) => Promise<any>): void {
+    this.agentRegistry.set(agent.id, agent);
+    if (handler) {
+      this.messageHandlers.set(agent.id, handler);
+    }
+    this.messageQueue.set(agent.id, []);
+    logger.info(`Agent ${agent.id} registered`);
+  }
+
+  /**
+   * Send message to specific agent
+   */
+  async sendMessage(agentId: string, message: Message): Promise<void> {
+    if (!this.agentRegistry.has(agentId)) {
+      throw new Error(`Agent ${agentId} not found`);
+    }
+
+    // Add to queue
+    const queue = this.messageQueue.get(agentId) || [];
+    queue.push({
+      message,
+      priority: message.priority || MessagePriority.NORMAL,
+      timestamp: new Date(),
+      retries: 0
+    });
+    this.messageQueue.set(agentId, queue);
+
+    logger.debug(`Message queued for agent ${agentId}`, {
+      messageId: message.id,
+      type: message.type
+    });
+
+    this.emit('messageSent', message);
+  }
+
+  /**
+   * Broadcast message to all agents
+   */
+  async broadcast(message: Message): Promise<void> {
+    const broadcastMessage = {
+      ...message,
+      type: MessageType.BROADCAST as MessageType
+    };
+
+    const promises = Array.from(this.agentRegistry.keys()).map(agentId =>
+      this.sendMessage(agentId, { ...broadcastMessage, to: agentId })
+    );
+
+    await Promise.all(promises);
+
+    logger.info('Message broadcast to all agents', {
+      messageId: message.id,
+      agentCount: this.agentRegistry.size
+    });
+
+    this.emit('messageBroadcast', broadcastMessage);
+  }
+
+  /**
+   * Request sign-off from agent
+   */
+  async requestSignOff(agentId: string, artifact: Artifact): Promise<SignOffResult> {
+    const request: SignOffRequest = {
+      artifactId: artifact.id,
+      artifactType: artifact.type,
+      description: `Sign-off request for ${artifact.type} artifact`,
+      checkpoints: [],
+      requestedBy: 'orchestrator',
+      deadline: new Date(Date.now() + 300000) // 5 minutes
+    };
+
+    // Store request
+    this.signOffRequests.set(request.artifactId, request);
+
+    // Create sign-off message
+    const message: Message = {
+      id: crypto.randomBytes(8).toString('hex'),
+      from: 'orchestrator',
+      to: agentId,
+      type: MessageType.SIGN_OFF,
+      subject: 'Sign-off Request',
+      payload: request,
+      timestamp: new Date(),
+      priority: MessagePriority.HIGH
+    };
+
+    // Send message and wait for response
+    await this.sendMessage(agentId, message);
+
+    // Wait for sign-off response (with timeout)
+    return await this.waitForSignOff(request.artifactId, 300000);
+  }
+
+  /**
+   * Wait for sign-off response
+   */
+  private async waitForSignOff(artifactId: string, timeout: number): Promise<SignOffResult> {
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(new Error(`Sign-off timeout for artifact ${artifactId}`));
+      }, timeout);
+
+      const checkSignOff = () => {
+        // Check if sign-off received (simplified)
+        const signOff = this.getSignOffResult(artifactId);
+        if (signOff) {
+          clearTimeout(timeoutId);
+          resolve(signOff);
+        } else {
+          setTimeout(checkSignOff, 1000); // Check every second
+        }
+      };
+
+      checkSignOff();
+    });
+  }
+
+  /**
+   * Get sign-off result (simplified)
+   */
+  private getSignOffResult(artifactId: string): SignOffResult | null {
+    // In production, this would check actual responses
+    return {
+      approved: true,
+      reviewer: 'architect',
+      timestamp: new Date(),
+      comments: 'Approved with minor suggestions',
+      suggestions: ['Consider adding more error handling']
+    };
+  }
+
+  /**
+   * Coordinate parallel work among agents
+   */
+  async coordinateParallel(agents: Agent[], task: Task): Promise<any> {
+    this.status = CoordinationStatus.COORDINATING;
+    logger.info(`Coordinating parallel work for ${agents.length} agents`);
+
+    const subtasks = this.divideTask(task, agents.length);
+    const promises = agents.map((agent, index) =>
+      this.assignTaskToAgent(agent, subtasks[index])
+    );
+
+    try {
+      const results = await Promise.all(promises);
+      this.status = CoordinationStatus.COMPLETE;
+      return {
+        success: true,
+        results,
+        duration: 0 // Would calculate actual duration
+      };
+    } catch (error) {
+      this.status = CoordinationStatus.ERROR;
+      throw error;
+    }
+  }
+
+  /**
+   * Execute task with agent
+   */
+  async executeTask(agent: Agent, task: Task): Promise<AgentResponse> {
+    const startTime = Date.now();
+    logger.info(`Executing task ${task.id} with agent ${agent.id}`);
+
+    // Create task message
+    const message: Message = {
+      id: crypto.randomBytes(8).toString('hex'),
+      from: 'orchestrator',
+      to: agent.id,
+      type: MessageType.REQUEST,
+      subject: `Execute task: ${task.title}`,
+      payload: task,
+      timestamp: new Date(),
+      priority: task.priority
+    };
+
+    // Send to agent
+    await this.sendMessage(agent.id, message);
+
+    // Simulate agent execution (in production, would wait for actual response)
+    await this.simulateAgentExecution(agent, task);
+
+    return {
+      success: true,
+      result: { taskCompleted: task.id },
+      artifacts: [`artifact-${task.id}`],
+      duration: Date.now() - startTime
+    };
+  }
+
+  /**
+   * Deliver message to agent
+   */
+  private async deliverMessage(message: Message): Promise<void> {
+    const handler = this.messageHandlers.get(message.to);
+
+    if (handler) {
+      try {
+        const response = await handler(message);
+        this.handleMessageResponse(message, response);
+      } catch (error) {
+        logger.error(`Failed to deliver message to ${message.to}`, error);
+        this.retryMessage(message);
+      }
+    } else {
+      // Default handling
+      logger.debug(`No handler for agent ${message.to}, using default`);
+      this.emit('messageReceived', message);
+    }
+  }
+
+  /**
+   * Handle message response
+   */
+  private handleMessageResponse(originalMessage: Message, response: any): void {
+    if (originalMessage.replyTo) {
+      // This is a response to another message
+      this.emit('responseReceived', {
+        originalId: originalMessage.replyTo,
+        response
+      });
+    }
+
+    // Store response if needed
+    this.activeMessages.delete(originalMessage.id);
+  }
+
+  /**
+   * Retry failed message
+   */
+  private retryMessage(message: Message): void {
+    const queue = this.messageQueue.get(message.to) || [];
+    const entry = queue.find(e => e.message.id === message.id);
+
+    if (entry && entry.retries < 3) {
+      entry.retries++;
+      entry.timestamp = new Date();
+      logger.info(`Retrying message ${message.id} (attempt ${entry.retries})`);
+    } else {
+      logger.error(`Message ${message.id} failed after max retries`);
+      this.emit('messageFailed', message);
+    }
+  }
+
+  /**
+   * Divide task into subtasks
+   */
+  private divideTask(task: Task, count: number): Task[] {
+    const subtasks: Task[] = [];
+    for (let i = 0; i < count; i++) {
+      subtasks.push({
+        ...task,
+        id: `${task.id}-sub-${i}`,
+        title: `${task.title} (Part ${i + 1}/${count})`
+      });
+    }
+    return subtasks;
+  }
+
+  /**
+   * Assign task to agent
+   */
+  private async assignTaskToAgent(agent: Agent, task: Task): Promise<any> {
+    const message: Message = {
+      id: crypto.randomBytes(8).toString('hex'),
+      from: 'orchestrator',
+      to: agent.id,
+      type: MessageType.REQUEST,
+      subject: 'Task Assignment',
+      payload: task,
+      timestamp: new Date()
+    };
+
+    await this.sendMessage(agent.id, message);
+
+    // Simulate execution
+    return await this.simulateAgentExecution(agent, task);
+  }
+
+  /**
+   * Simulate agent execution (for testing)
+   */
+  private async simulateAgentExecution(agent: Agent, task: Task): Promise<any> {
+    // Simulate processing time based on task complexity
+    const processingTime = Math.random() * 2000 + 1000; // 1-3 seconds
+    await new Promise(resolve => setTimeout(resolve, processingTime));
+
+    return {
+      agentId: agent.id,
+      taskId: task.id,
+      status: 'completed',
+      result: `Task ${task.id} completed by ${agent.name}`
+    };
+  }
+
+  /**
+   * Get coordination status
+   */
+  getStatus(): CoordinationStatus {
+    return this.status;
+  }
+
+  /**
+   * Get message queue stats
+   */
+  getQueueStats(): Record<string, any> {
+    const stats: Record<string, any> = {
+      totalQueued: 0,
+      byAgent: {}
+    };
+
+    for (const [agentId, queue] of this.messageQueue.entries()) {
+      stats.byAgent[agentId] = queue.length;
+      stats.totalQueued += queue.length;
+    }
+
+    return stats;
+  }
+
+  /**
+   * Clear message queue for agent
+   */
+  clearQueue(agentId?: string): void {
+    if (agentId) {
+      this.messageQueue.set(agentId, []);
+    } else {
+      // Clear all queues
+      for (const id of this.messageQueue.keys()) {
+        this.messageQueue.set(id, []);
+      }
+    }
+    logger.info(`Message queue cleared ${agentId ? `for ${agentId}` : 'for all agents'}`);
+  }
+}
