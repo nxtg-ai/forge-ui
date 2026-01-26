@@ -167,8 +167,12 @@ function IntegratedApp() {
   };
   const activities = agentActivities.activities || [];
 
-  // Show vision capture if no real vision exists
-  if (visionData.mission === 'No vision defined yet' && currentView !== 'vision-capture') {
+  // Show vision capture if no real vision exists (empty or default message)
+  const hasNoVision = !visionData.mission ||
+                      visionData.mission === 'No vision defined yet' ||
+                      visionData.mission.trim() === '';
+
+  if (hasNoVision && currentView !== 'vision-capture') {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">

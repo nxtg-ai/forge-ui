@@ -15,6 +15,33 @@ import type {
   YoloStatistics
 } from '../components/types';
 
+// ============= Data Mappers (Backend -> Frontend) =============
+
+/**
+ * Maps backend vision response to frontend VisionData structure
+ */
+function mapBackendVisionToFrontend(backendData: any): VisionData | null {
+  if (!backendData) return null;
+
+  return {
+    mission: backendData.mission || '',
+    goals: (backendData.strategicGoals || []).map((goal: any, index: number) => ({
+      id: `goal-${index}`,
+      title: goal.title || goal,
+      description: goal.description || '',
+      status: 'pending' as const,
+      progress: 0,
+      dependencies: []
+    })),
+    constraints: backendData.principles || [],
+    successMetrics: [],
+    timeframe: 'Not set',
+    createdAt: backendData.created ? new Date(backendData.created) : new Date(),
+    lastUpdated: backendData.updated ? new Date(backendData.updated) : new Date(),
+    version: typeof backendData.version === 'string' ? 1 : backendData.version
+  };
+}
+
 // ============= Vision Hook =============
 
 export function useVision() {
@@ -29,7 +56,8 @@ export function useVision() {
     const response = await apiClient.getVision();
 
     if (response.success && response.data) {
-      setVision(response.data);
+      const mappedVision = mapBackendVisionToFrontend(response.data);
+      setVision(mappedVision);
     } else {
       setError(response.error || 'Failed to fetch vision');
     }
@@ -44,7 +72,8 @@ export function useVision() {
     const response = await apiClient.updateVision(updates);
 
     if (response.success && response.data) {
-      setVision(response.data);
+      const mappedVision = mapBackendVisionToFrontend(response.data);
+      setVision(mappedVision);
     } else {
       setError(response.error || 'Failed to update vision');
     }
@@ -60,7 +89,8 @@ export function useVision() {
     const response = await apiClient.captureVision(visionText);
 
     if (response.success && response.data) {
-      setVision(response.data);
+      const mappedVision = mapBackendVisionToFrontend(response.data);
+      setVision(mappedVision);
     } else {
       setError(response.error || 'Failed to capture vision');
     }
@@ -73,8 +103,9 @@ export function useVision() {
     fetchVision();
 
     // Subscribe to vision changes
-    const unsubscribe = apiClient.subscribe('vision.change', (data: VisionData) => {
-      setVision(data);
+    const unsubscribe = apiClient.subscribe('vision.change', (data: any) => {
+      const mappedVision = mapBackendVisionToFrontend(data);
+      setVision(mappedVision);
     });
 
     return unsubscribe;
