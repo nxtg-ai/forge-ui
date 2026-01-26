@@ -301,7 +301,7 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
             {(currentMode !== 'ceo') && (
               <div className="space-y-3" data-testid="dashboard-active-agents">
                 <h4 className="text-sm font-medium text-gray-400" data-testid="dashboard-agents-title">Active Agents</h4>
-                {projectState.activeAgents.map((agent) => (
+                {(projectState.activeAgents || []).map((agent) => (
                   <div
                     key={agent.id}
                     onClick={() => setSelectedAgent(agent)}
@@ -351,14 +351,14 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
             </div>
 
             {/* Blockers */}
-            {projectState.blockers.length > 0 && (
+            {(projectState.blockers || []).length > 0 && (
               <div className="p-6 rounded-2xl bg-red-900/10 border border-red-500/20" data-testid="dashboard-blockers-card">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-red-400" data-testid="dashboard-blockers-title">Blockers</h3>
                   <AlertCircle className="w-5 h-5 text-red-400" />
                 </div>
                 <div className="space-y-2" data-testid="dashboard-blockers-list">
-                  {projectState.blockers.slice(0, currentMode === 'ceo' ? 1 : 3).map((blocker) => (
+                  {(projectState.blockers || []).slice(0, currentMode === 'ceo' ? 1 : 3).map((blocker) => (
                     <div key={blocker.id} className="p-3 rounded-lg bg-gray-900/50 border border-gray-800" data-testid={`dashboard-blocker-${blocker.id}`}>
                       <div className="flex items-start justify-between">
                         <div>
@@ -437,7 +437,7 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
         )}
 
         {/* Recent Decisions (for VP and above) */}
-        {(currentMode === 'vp' || currentMode === 'founder') && projectState.recentDecisions.length > 0 && (
+        {(currentMode === 'vp' || currentMode === 'founder') && (projectState.recentDecisions || []).length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -449,7 +449,7 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
               Recent Strategic Decisions
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {projectState.recentDecisions.slice(0, 4).map((decision) => (
+              {(projectState.recentDecisions || []).slice(0, 4).map((decision) => (
                 <div
                   key={decision.id}
                   className="p-4 rounded-xl bg-gray-900 border border-gray-800"
