@@ -21,6 +21,7 @@ import {
   useYoloMode,
   useForgeIntegration
 } from './hooks/useForgeIntegration';
+import { apiClient } from './services/api-client';
 import type {
   EngagementMode,
   Architect,
@@ -68,7 +69,7 @@ function IntegratedApp() {
   const [currentView, setCurrentView] = useState<
     'vision-capture' | 'dashboard' | 'architect' | 'command' | 'vision-display' | 'yolo'
   >('dashboard');
-  const [engagementMode, setEngagementMode] = useState<EngagementMode>('guided');
+  const [engagementMode, setEngagementMode] = useState<EngagementMode>('founder');
   const [automationLevel, setAutomationLevel] = useState<AutomationLevel>('conservative');
   const [selectedArchitect, setSelectedArchitect] = useState<Architect | null>(null);
 
@@ -93,10 +94,10 @@ function IntegratedApp() {
   // Handle YOLO mode activation
   const handleYoloModeToggle = useCallback((active: boolean) => {
     if (active) {
-      setEngagementMode('autonomous');
+      setEngagementMode('founder');
       setAutomationLevel('aggressive');
     } else {
-      setEngagementMode('guided');
+      setEngagementMode('engineer');
       setAutomationLevel('conservative');
     }
   }, []);
@@ -147,20 +148,36 @@ function IntegratedApp() {
     return <LoadingOverlay />;
   }
 
-  // Get data from hooks
+  // Get data from hooks with safe defaults
   const { vision, projectState, agentActivities } = forge;
-  const visionData = vision.vision;
-  const currentProjectState = projectState.projectState;
-  const activities = agentActivities.activities;
+  const visionData = vision.vision || {
+    mission: 'No vision defined yet',
+    goals: [],
+    constraints: [],
+    successMetrics: [],
+    timeframe: 'Not set'
+  };
+  const currentProjectState = projectState.projectState || {
+    phase: 'planning' as const,
+    progress: 0,
+    blockers: [],
+    recentDecisions: [],
+    activeAgents: [],
+    healthScore: 100
+  };
+  const activities = agentActivities.activities || [];
 
-  // Show error state if no critical data
-  if (!visionData || !currentProjectState) {
+  // Show vision capture if no real vision exists
+  if (visionData.mission === 'No vision defined yet' && currentView !== 'vision-capture') {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-white mb-4">
-            Forge Not Initialized
+            Welcome to NXTG-Forge
           </h2>
+          <p className="text-gray-400 mb-6">
+            Let's start by capturing your vision for this project
+          </p>
           <button
             onClick={() => setCurrentView('vision-capture')}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
@@ -269,36 +286,95 @@ function IntegratedApp() {
         {/* Command Center View */}
         {currentView === 'command' && (
           <CommandCenter
-            commands={forge.commandExecution.history || []}
-            suggestions={[]}
-            onExecute={handleCommandExecution}
-            isExecuting={forge.commandExecution.executing}
+            onCommandExecute={(commandId: string) => {
+              console.log('Executing command:', commandId);
+              // Handle command execution through forge integration
+              handleCommandExecution({
+                id: commandId,
+                name: commandId,
+                description: '',
+                category: 'forge',
+                icon: null
+              } as Command);
+            }}
+            availableCommands={[
+              {
+                id: 'status',
+                name: 'Status Report',
+                description: 'Get current project status',
+                category: 'forge',
+                icon: null
+              },
+              {
+                id: 'feature',
+                name: 'New Feature',
+                description: 'Start implementing a new feature',
+                category: 'forge',
+                requiresConfirmation: true,
+                icon: null
+              },
+              {
+                id: 'test',
+                name: 'Run Tests',
+                description: 'Execute all test suites',
+                category: 'test',
+                icon: null
+              },
+              {
+                id: 'deploy',
+                name: 'Deploy',
+                description: 'Deploy to production',
+                category: 'deploy',
+                requiresConfirmation: true,
+                icon: null
+              },
+              {
+                id: 'analyze',
+                name: 'Analyze Code',
+                description: 'Run static code analysis',
+                category: 'analyze',
+                icon: null
+              }
+            ] as Command[]}
             projectContext={{
+              name: 'NXTG-Forge Project',
               phase: currentProjectState.phase,
               activeAgents: (currentProjectState.activeAgents || []).length,
-              recentActivity: (activities || []).slice(0, 5).map(a => a.action).join(', '),
+              pendingTasks: 0,
               healthScore: currentProjectState.healthScore,
-              currentFocus: 'Integration and testing'
+              lastActivity: new Date()
             }}
+            isExecuting={forge.commandExecution.executing || false}
           />
         )}
 
         {/* Architect Discussion View */}
         {currentView === 'architect' && (
           <ArchitectDiscussion
-            architects={architects}
-            decisions={forge.architectureDecisions.decisions || []}
-            onSelectArchitect={setSelectedArchitect}
-            onProposeDecision={forge.architectureDecisions.proposeDecision}
-            onApproveDecision={handleDecisionApproval}
-            selectedArchitect={selectedArchitect}
+            topic="System Architecture Design"
+            participants={architects.map(a => ({
+              id: a.id,
+              name: a.name,
+              specialty: a.role,
+              avatar: a.avatar,
+              confidence: 85
+            }))}
+            onDecision={(decision) => {
+              console.log('Architecture decision made:', decision);
+              // Handle the decision through forge integration
+              forge.architectureDecisions.proposeDecision({
+                ...decision,
+                id: `decision-${Date.now()}`
+              });
+            }}
+            humanRole="observer"
           />
         )}
 
         {/* YOLO Mode View */}
         {currentView === 'yolo' && (
           <YoloMode
-            isActive={engagementMode === 'autonomous' && automationLevel === 'aggressive'}
+            isActive={engagementMode === 'founder' && automationLevel === 'aggressive'}
             onToggle={handleYoloModeToggle}
             automationLevel={automationLevel}
             onAutomationLevelChange={setAutomationLevel}

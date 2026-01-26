@@ -61,6 +61,7 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
   compactMode = false
 }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [editedMission, setEditedMission] = useState('');
   const [expandedGoal, setExpandedGoal] = useState<string | null>(null);
   const [showMetrics, setShowMetrics] = useState(!compactMode);
 
@@ -164,19 +165,64 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
             ) : (
               <button
                 data-testid="vision-display-edit-btn"
-                onClick={() => setIsEditing(!isEditing)}
+                onClick={() => {
+                  setIsEditing(!isEditing);
+                  setEditedMission(vision.mission);
+                }}
                 className="px-3 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs flex items-center gap-1 transition-all"
               >
                 <Edit3 className="w-3 h-3" />
-                Edit Vision
+                {isEditing ? 'Cancel Edit' : 'Edit Vision'}
               </button>
             )}
           </div>
         </div>
 
-        <p data-testid="vision-display-mission-text" className="text-lg text-gray-200 leading-relaxed mb-4">
-          {vision.mission}
-        </p>
+        {isEditing ? (
+          <div className="mb-4">
+            <textarea
+              data-testid="vision-display-mission-input"
+              value={editedMission}
+              onChange={(e) => setEditedMission(e.target.value)}
+              className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-gray-200 text-lg leading-relaxed focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none resize-none"
+              rows={3}
+              placeholder="Enter your vision mission..."
+            />
+            <div className="mt-3 flex gap-2">
+              <button
+                data-testid="vision-display-save-btn"
+                onClick={() => {
+                  if (onVisionUpdate) {
+                    onVisionUpdate({
+                      ...vision,
+                      mission: editedMission,
+                      lastUpdated: new Date(),
+                      version: (vision.version || 0) + 1
+                    });
+                  }
+                  setIsEditing(false);
+                }}
+                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-all"
+              >
+                Save Changes
+              </button>
+              <button
+                data-testid="vision-display-cancel-btn"
+                onClick={() => {
+                  setIsEditing(false);
+                  setEditedMission(vision.mission);
+                }}
+                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm font-medium transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p data-testid="vision-display-mission-text" className="text-lg text-gray-200 leading-relaxed mb-4">
+            {vision.mission}
+          </p>
+        )}
 
         <div className="flex items-center gap-6 text-sm">
           <div className="flex items-center gap-1">
