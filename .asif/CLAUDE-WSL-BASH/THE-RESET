@@ -1,0 +1,189 @@
+Absolutely — here’s a **tight, no‑nonsense, reproducible guide** you can save and run through any time Claude Code melts down again.
+
+This is the **exact sequence** that fixes every ghost plugin, broken marketplace, stale LSP, and WSL/Windows config conflict you hit tonight.
+
+---
+
+# **🔥 CLAUDE CODE RESET + CLEAN BASELINE (WSL)**
+A fast, repeatable recovery guide.
+
+---
+
+# **1. Delete ALL Claude config in WSL**
+This wipes stale plugin references, broken marketplaces, and corrupted caches.
+
+```bash
+rm -rf ~/.claude
+mkdir -p ~/.claude
+```
+
+Claude will recreate defaults on next launch.
+
+---
+
+# **2. Delete Windows-side Claude config (optional but recommended)**
+Only if you want WSL to be the *only* source of truth.
+
+```bash
+rm -rf /mnt/c/Users/<windows-username>/.claude
+```
+
+If you want Windows Claude later, it will regenerate cleanly.
+
+---
+
+# **3. Launch Claude Code fresh**
+```bash
+claudeyolo
+```
+
+Claude will recreate:
+
+```
+~/.claude/config.json
+~/.claude/plugins/
+~/.claude/marketplaces/
+```
+
+---
+
+# **4. Add the ONLY two marketplaces you actually need**
+These are the **correct**, **maintained**, **compatible** ones.
+
+### **Official Anthropic marketplace**
+```
+/plugin marketplace add https://github.com/anthropics/claude-code
+```
+
+### **Community marketplace**
+```
+/plugin marketplace add https://github.com/claude-market/marketplace
+```
+
+**Do NOT add anything else.**  
+Everything else you had earlier was abandoned or malformed.
+
+---
+
+# **5. Install LSPs the NEW way (system-installed, not plugins)**
+
+Claude Code no longer ships LSP plugins.  
+It auto-detects language servers installed on your system.
+
+### **Python**
+```bash
+pip install python-lsp-server
+```
+
+### **TypeScript**
+```bash
+npm install -g typescript-language-server typescript
+```
+
+### **Bash**
+```bash
+npm install -g bash-language-server
+```
+
+### **Dockerfile**
+```bash
+npm install -g dockerfile-language-server-nodejs
+```
+
+### **JSON**
+```bash
+npm install -g vscode-langservers-extracted
+```
+
+Claude will pick these up automatically.
+
+---
+
+# **6. Verify LSP detection**
+Inside Claude CLI:
+
+```
+/lsp
+```
+
+You should see:
+
+- pylsp  
+- typescript-language-server  
+- bash-language-server  
+- docker-langserver  
+- vscode-json-language-server  
+
+If one is missing, run `which <server>` in WSL to confirm the path.
+
+---
+
+# **7. Verify plugin state**
+Inside Claude CLI:
+
+```
+/plugin
+```
+
+You should see:
+
+```
+No plugins installed
+```
+
+This is correct — LSPs are no longer plugins.
+
+---
+
+# **8. Verify marketplace state**
+Inside Claude CLI:
+
+```
+/plugin marketplace
+```
+
+You should see ONLY:
+
+- claude-code-plugins  
+- claude-market  
+
+If anything else appears, remove it:
+
+```
+/plugin marketplace remove <name>
+```
+
+---
+
+# **9. (Optional) Create a one-command nuke script**
+If you ever want to reset instantly:
+
+```bash
+cat << 'EOF' > ~/claude-reset.sh
+rm -rf ~/.claude
+mkdir -p ~/.claude
+EOF
+
+chmod +x ~/claude-reset.sh
+```
+
+Run:
+
+```
+./claude-reset.sh
+```
+
+---
+
+# **That’s the entire recovery workflow**
+This guide guarantees:
+
+- no ghost plugins  
+- no stale marketplaces  
+- no broken manifests  
+- no SSH marketplace errors  
+- no Windows/WSL config conflicts  
+- correct LSP detection  
+- clean Claude Code startup  
+
+If you want, I can turn this into a **markdown doc**, **PDF**, or **shell script** you can keep in your repo.

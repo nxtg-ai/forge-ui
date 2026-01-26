@@ -1,4 +1,9 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * NXTG-Forge Integrated Application
+ * Full UI-Backend Integration with Real-time Updates
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   VisionCapture,
   ChiefOfStaffDashboard,
@@ -7,404 +12,336 @@ import {
   VisionDisplay,
   YoloMode
 } from './components';
+import {
+  useVision,
+  useProjectState,
+  useAgentActivities,
+  useCommandExecution,
+  useArchitectureDecisions,
+  useYoloMode,
+  useForgeIntegration
+} from './hooks/useForgeIntegration';
 import type {
-  VisionData,
-  ProjectState,
-  AgentActivity,
   EngagementMode,
   Architect,
-  ArchitectureDecision,
   Command,
-  ProjectContext,
-  Goal,
-  Metric,
-  ProgressData,
-  AutomationLevel,
-  AutomatedAction,
-  YoloStatistics
+  AutomationLevel
 } from './components/types';
 
-// Mock data for demonstration
-const mockVisionData: VisionData = {
-  mission: "Build a platform that eliminates developer burnout through intelligent automation",
-  goals: [
-    {
-      id: '1',
-      title: 'Reduce Cognitive Load',
-      description: 'Implement AI-driven task management that reduces mental overhead by 80%',
-      status: 'in-progress',
-      progress: 65,
-      dependencies: []
-    },
-    {
-      id: '2',
-      title: 'Accelerate Development',
-      description: 'Achieve 3x development velocity through intelligent code generation',
-      status: 'in-progress',
-      progress: 40,
-      dependencies: ['1']
-    },
-    {
-      id: '3',
-      title: 'Ensure Quality',
-      description: 'Maintain 99% code quality through automated testing and review',
-      status: 'pending',
-      progress: 20,
-      dependencies: ['2']
-    }
-  ] as Goal[],
-  constraints: [
-    'Must integrate with existing CI/CD pipelines',
-    'Zero disruption to current workflows',
-    'Enterprise-grade security required'
-  ],
-  successMetrics: [
-    {
-      id: '1',
-      name: 'Dev Velocity',
-      current: 2.1,
-      target: 3,
-      unit: 'x',
-      trend: 'up'
-    },
-    {
-      id: '2',
-      name: 'Cognitive Load',
-      current: 45,
-      target: 20,
-      unit: '%',
-      trend: 'down'
-    },
-    {
-      id: '3',
-      name: 'Code Quality',
-      current: 94,
-      target: 99,
-      unit: '%',
-      trend: 'up'
-    }
-  ] as Metric[],
-  timeframe: '2 weeks for MVP, 2 months for production',
-  createdAt: new Date(),
-  lastUpdated: new Date(),
-  version: 1
-};
-
-const mockProjectState: ProjectState = {
-  phase: 'building',
-  progress: 42,
-  blockers: [
-    {
-      id: '1',
-      severity: 'high',
-      title: 'Database migration pending approval',
-      agent: 'DevOps Agent',
-      needsHuman: true
-    }
-  ],
-  recentDecisions: [
-    {
-      id: '1',
-      type: 'architecture',
-      title: 'Adopted microservices with event-driven communication',
-      madeBy: 'Lead Architect',
-      timestamp: new Date(),
-      impact: 'high'
-    }
-  ],
-  activeAgents: [
-    {
-      id: 'orchestrator',
-      name: 'Chief Orchestrator',
-      role: 'Coordination',
-      status: 'working',
-      currentTask: 'Managing team alignment and vision execution',
-      confidence: 92
-    },
-    {
-      id: 'architect',
-      name: 'System Architect',
-      role: 'Design',
-      status: 'thinking',
-      currentTask: 'Designing authentication system',
-      confidence: 87
-    },
-    {
-      id: 'developer',
-      name: 'Code Builder',
-      role: 'Implementation',
-      status: 'working',
-      currentTask: 'Implementing user service',
-      confidence: 95
-    }
-  ],
-  healthScore: 78
-};
-
-const mockCommands: Command[] = [
-  {
-    id: 'status',
-    name: 'Project Status',
-    description: 'View comprehensive project status',
-    category: 'forge',
-    hotkey: '⌘S',
-    icon: '📊'
-  },
-  {
-    id: 'feature',
-    name: 'New Feature',
-    description: 'Start implementing a new feature',
-    category: 'forge',
-    hotkey: '⌘N',
-    icon: '✨'
-  },
-  {
-    id: 'test',
-    name: 'Run Tests',
-    description: 'Execute test suite with coverage',
-    category: 'test',
-    icon: '🧪'
-  },
-  {
-    id: 'deploy',
-    name: 'Deploy',
-    description: 'Deploy to staging or production',
-    category: 'deploy',
-    requiresConfirmation: true,
-    icon: '🚀'
-  }
-];
-
-const mockArchitects: Architect[] = [
-  {
-    id: 'lead',
-    name: 'Lead Architect',
-    specialty: 'System Design',
-    avatar: 'LA',
-    confidence: 92
-  },
-  {
-    id: 'security',
-    name: 'Security Architect',
-    specialty: 'Security & Compliance',
-    avatar: 'SA',
-    confidence: 88
-  },
-  {
-    id: 'data',
-    name: 'Data Architect',
-    specialty: 'Data & Storage',
-    avatar: 'DA',
-    confidence: 85
-  }
-];
-
-export default function App() {
-  const [currentView, setCurrentView] = useState<'onboarding' | 'dashboard' | 'discussion'>('dashboard');
-  const [visionData, setVisionData] = useState<VisionData | null>(mockVisionData);
-  const [engagementMode, setEngagementMode] = useState<EngagementMode>('founder');
-  const [yoloEnabled, setYoloEnabled] = useState(false);
-  const [automationLevel, setAutomationLevel] = useState<AutomationLevel>('balanced');
-  const [isExecuting, setIsExecuting] = useState(false);
-
-  // Mock agent activities
-  const mockActivities: AgentActivity[] = [
-    {
-      agentId: 'orchestrator',
-      action: 'Analyzed project requirements and aligned team objectives',
-      timestamp: new Date(),
-      visibility: 'ceo'
-    },
-    {
-      agentId: 'architect',
-      action: 'Proposed microservices architecture with event-driven communication',
-      timestamp: new Date(),
-      visibility: 'vp'
-    },
-    {
-      agentId: 'developer',
-      action: 'Implemented UserService with full CRUD operations',
-      timestamp: new Date(),
-      visibility: 'engineer'
-    },
-    {
-      agentId: 'qa',
-      action: 'Generated 47 unit tests with 94% coverage',
-      timestamp: new Date(),
-      visibility: 'builder'
-    }
-  ];
-
-  // Mock progress data
-  const mockProgress: ProgressData = {
-    overallProgress: 42,
-    phase: 'Building',
-    daysElapsed: 3,
-    estimatedDaysRemaining: 11,
-    velocity: 2.1,
-    blockers: 1
-  };
-
-  // Mock YOLO statistics
-  const mockYoloStats: YoloStatistics = {
-    actionsToday: 23,
-    successRate: 92,
-    timesSaved: 147,
-    issuesFixed: 18,
-    performanceGain: 27,
-    costSaved: 1250
-  };
-
-  // Mock automated actions
-  const mockAutomatedActions: AutomatedAction[] = [
-    {
-      id: '1',
-      type: 'fix',
-      title: 'Fixed TypeScript compilation error',
-      description: 'Resolved missing type definition in UserService',
-      impact: 'low',
-      status: 'completed',
-      timestamp: new Date(),
-      confidence: 98,
-      automated: true
-    },
-    {
-      id: '2',
-      type: 'optimize',
-      title: 'Optimized database queries',
-      description: 'Added indexes and query optimization for 3x speed improvement',
-      impact: 'high',
-      status: 'completed',
-      timestamp: new Date(),
-      confidence: 94,
-      automated: true
-    },
-    {
-      id: '3',
-      type: 'refactor',
-      title: 'Refactored authentication module',
-      description: 'Improved code structure and reduced complexity',
-      impact: 'medium',
-      status: 'executing',
-      timestamp: new Date(),
-      confidence: 87,
-      automated: true
-    }
-  ];
-
-  const handleVisionSubmit = (vision: VisionData) => {
-    setVisionData(vision);
-    setCurrentView('dashboard');
-  };
-
-  const handleCommandExecute = (command: string, args?: any) => {
-    setIsExecuting(true);
-    console.log(`Executing command: ${command}`, args);
-
-    // Simulate command execution
-    setTimeout(() => {
-      setIsExecuting(false);
-
-      // Handle specific commands
-      if (command === 'discussion') {
-        setCurrentView('discussion');
-      }
-    }, 2000);
-  };
-
-  const handleArchitectDecision = (decision: ArchitectureDecision) => {
-    console.log('Architecture decision made:', decision);
-    setCurrentView('dashboard');
-  };
-
-  // Show onboarding if no vision
-  if (!visionData && currentView === 'onboarding') {
-    return (
-      <VisionCapture
-        onVisionSubmit={handleVisionSubmit}
-        mode="initial"
-      />
-    );
-  }
-
-  // Show architect discussion
-  if (currentView === 'discussion') {
-    return (
-      <ArchitectDiscussion
-        topic="Authentication System Architecture"
-        participants={mockArchitects}
-        onDecision={handleArchitectDecision}
-        humanRole={engagementMode === 'founder' ? 'arbiter' : 'observer'}
-      />
-    );
-  }
-
-  // Main dashboard view
-  return (
-    <div className="min-h-screen bg-gray-950">
-      <ChiefOfStaffDashboard
-        visionData={visionData!}
-        projectState={mockProjectState}
-        agentActivity={mockActivities}
-        onModeChange={setEngagementMode}
-        currentMode={engagementMode}
-      />
-
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        {/* Vision Display */}
-        <VisionDisplay
-          vision={visionData!}
-          progress={mockProgress}
-          compactMode={engagementMode === 'ceo'}
-        />
-
-        {/* YOLO Mode Control */}
-        <YoloMode
-          enabled={yoloEnabled}
-          onToggle={setYoloEnabled}
-          automationLevel={automationLevel}
-          onLevelChange={setAutomationLevel}
-          recentActions={mockAutomatedActions}
-          statistics={mockYoloStats}
-        />
-
-        {/* Example Buttons for Testing */}
-        <div className="flex gap-4 p-6 rounded-2xl bg-gray-900/50 border border-gray-800">
-          <button
-            onClick={() => setCurrentView('onboarding')}
-            className="px-4 py-2 bg-purple-500 hover:bg-purple-600 rounded-lg text-white transition-all"
-          >
-            Update Vision
-          </button>
-          <button
-            onClick={() => setCurrentView('discussion')}
-            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-white transition-all"
-          >
-            View Discussion
-          </button>
-          <button
-            onClick={() => handleCommandExecute('status')}
-            className="px-4 py-2 bg-green-500 hover:bg-green-600 rounded-lg text-white transition-all"
-          >
-            Check Status
-          </button>
+// Loading component
+const LoadingOverlay: React.FC<{ message?: string }> = ({ message = 'Connecting to Forge backend...' }) => (
+  <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+    <div className="bg-gray-900 border border-gray-700 rounded-lg p-8 max-w-md">
+      <div className="flex items-center space-x-4">
+        <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+        <div>
+          <h3 className="text-lg font-semibold text-white">Initializing Forge</h3>
+          <p className="text-sm text-gray-400 mt-1">{message}</p>
         </div>
       </div>
+    </div>
+  </div>
+);
 
-      {/* Command Center (floating) */}
-      <CommandCenter
-        onCommandExecute={handleCommandExecute}
-        availableCommands={mockCommands}
-        projectContext={{
-          name: 'NXTG-Forge',
-          phase: mockProjectState.phase,
-          activeAgents: mockProjectState.activeAgents.length,
-          pendingTasks: 12,
-          healthScore: mockProjectState.healthScore,
-          lastActivity: new Date()
-        }}
-        isExecuting={isExecuting}
-      />
+// Error boundary component
+const ErrorDisplay: React.FC<{ errors: string[] }> = ({ errors }) => {
+  if (errors.length === 0) return null;
+
+  return (
+    <div className="fixed bottom-4 right-4 max-w-md z-50">
+      <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-4">
+        <h4 className="text-red-400 font-semibold mb-2">Connection Issues</h4>
+        {errors.map((error, idx) => (
+          <p key={idx} className="text-sm text-red-300/80">{error}</p>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Main integrated app component
+function IntegratedApp() {
+  // Use integrated hooks for backend connection
+  const forge = useForgeIntegration();
+
+  // Local state management
+  const [currentView, setCurrentView] = useState<
+    'vision-capture' | 'dashboard' | 'architect' | 'command' | 'vision-display' | 'yolo'
+  >('dashboard');
+  const [engagementMode, setEngagementMode] = useState<EngagementMode>('guided');
+  const [automationLevel, setAutomationLevel] = useState<AutomationLevel>('conservative');
+  const [selectedArchitect, setSelectedArchitect] = useState<Architect | null>(null);
+
+  // Handle vision capture
+  const handleVisionCapture = useCallback(async (visionText: string) => {
+    const success = await forge.vision.captureVision(visionText);
+    if (success) {
+      setCurrentView('dashboard');
+    }
+  }, [forge.vision]);
+
+  // Handle command execution
+  const handleCommandExecution = useCallback(async (command: Command) => {
+    return await forge.commandExecution.executeCommand(command);
+  }, [forge.commandExecution]);
+
+  // Handle architecture decision approval
+  const handleDecisionApproval = useCallback(async (decisionId: string) => {
+    return await forge.architectureDecisions.approveDecision(decisionId);
+  }, [forge.architectureDecisions]);
+
+  // Handle YOLO mode activation
+  const handleYoloModeToggle = useCallback((active: boolean) => {
+    if (active) {
+      setEngagementMode('autonomous');
+      setAutomationLevel('aggressive');
+    } else {
+      setEngagementMode('guided');
+      setAutomationLevel('conservative');
+    }
+  }, []);
+
+  // Handle engagement mode changes
+  const handleModeChange = useCallback((mode: EngagementMode) => {
+    setEngagementMode(mode);
+
+    // Send mode change to backend
+    forge.projectState.projectState && apiClient.sendWSMessage('state.update', {
+      engagementMode: mode
+    });
+  }, [forge.projectState.projectState]);
+
+  // Architecture discussion handlers
+  const architects: Architect[] = [
+    {
+      id: 'lead-architect',
+      name: 'Lead Architect',
+      role: 'System Architecture & Integration',
+      avatar: '🏛️',
+      status: 'available',
+      expertise: ['system-design', 'scalability', 'integration'],
+      currentFocus: 'Analyzing system boundaries'
+    },
+    {
+      id: 'security-architect',
+      name: 'Security Architect',
+      role: 'Security & Compliance',
+      avatar: '🔒',
+      status: 'available',
+      expertise: ['security', 'compliance', 'encryption'],
+      currentFocus: 'Reviewing authentication flow'
+    },
+    {
+      id: 'data-architect',
+      name: 'Data Architect',
+      role: 'Data Flow & Storage',
+      avatar: '💾',
+      status: 'busy',
+      expertise: ['database', 'caching', 'data-flow'],
+      currentFocus: 'Optimizing query patterns'
+    }
+  ];
+
+  // Show loading state
+  if (forge.isLoading) {
+    return <LoadingOverlay />;
+  }
+
+  // Get data from hooks
+  const { vision, projectState, agentActivities } = forge;
+  const visionData = vision.vision;
+  const currentProjectState = projectState.projectState;
+  const activities = agentActivities.activities;
+
+  // Show error state if no critical data
+  if (!visionData || !currentProjectState) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-white mb-4">
+            Forge Not Initialized
+          </h2>
+          <button
+            onClick={() => setCurrentView('vision-capture')}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
+          >
+            Capture Vision to Start
+          </button>
+        </div>
+        <ErrorDisplay errors={forge.errors} />
+      </div>
+    );
+  }
+
+  return (
+    <div data-testid="app-container" className="min-h-screen bg-black text-white">
+      {/* Navigation Header */}
+      <header data-testid="app-header" className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-8">
+              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                NXTG-Forge
+              </h1>
+              <nav className="flex space-x-4">
+                {[
+                  { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+                  { id: 'vision-display', label: 'Vision', icon: '🎯' },
+                  { id: 'command', label: 'Command', icon: '⚡' },
+                  { id: 'architect', label: 'Architect', icon: '🏛️' },
+                  { id: 'yolo', label: 'YOLO', icon: '🚀' }
+                ].map(nav => (
+                  <button
+                    key={nav.id}
+                    data-testid={`app-nav-btn-${nav.id}`}
+                    onClick={() => setCurrentView(nav.id as any)}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      currentView === nav.id
+                        ? 'bg-gray-800 text-white'
+                        : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                    }`}
+                  >
+                    <span className="mr-2">{nav.icon}</span>
+                    {nav.label}
+                  </button>
+                ))}
+              </nav>
+            </div>
+
+            {/* Connection Status */}
+            <div className="flex items-center space-x-4">
+              <div data-testid="app-connection-status" className="flex items-center space-x-2">
+                <div className={`h-2 w-2 rounded-full ${
+                  forge.isConnected ? 'bg-green-500' : 'bg-red-500'
+                } animate-pulse`} />
+                <span className="text-sm text-gray-400">
+                  {forge.isConnected ? 'Connected' : 'Disconnected'}
+                </span>
+              </div>
+
+              {/* Mode Indicator */}
+              <div className="px-3 py-1 bg-gray-800 rounded-full">
+                <span className="text-xs text-gray-400">Mode: </span>
+                <span className="text-xs font-semibold text-blue-400">
+                  {engagementMode.toUpperCase()}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Vision Capture View */}
+        {currentView === 'vision-capture' && (
+          <VisionCapture onVisionCapture={handleVisionCapture} />
+        )}
+
+        {/* Dashboard View */}
+        {currentView === 'dashboard' && (
+          <ChiefOfStaffDashboard
+            visionData={visionData}
+            projectState={currentProjectState}
+            agentActivity={activities}
+            onModeChange={handleModeChange}
+            currentMode={engagementMode}
+          />
+        )}
+
+        {/* Vision Display View */}
+        {currentView === 'vision-display' && (
+          <VisionDisplay
+            visionData={visionData}
+            progress={{
+              overall: currentProjectState.progress,
+              phases: [
+                { name: 'Planning', status: 'completed', progress: 100 },
+                { name: 'Architecture', status: 'in-progress', progress: 75 },
+                { name: 'Implementation', status: 'in-progress', progress: 45 },
+                { name: 'Testing', status: 'pending', progress: 20 },
+                { name: 'Deployment', status: 'pending', progress: 0 }
+              ],
+              timeline: {
+                start: new Date(),
+                estimated: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                milestones: []
+              }
+            }}
+            isEditable={engagementMode === 'interactive'}
+            onUpdate={forge.vision.updateVision}
+          />
+        )}
+
+        {/* Command Center View */}
+        {currentView === 'command' && (
+          <CommandCenter
+            commands={forge.commandExecution.history}
+            suggestions={[]}
+            onExecute={handleCommandExecution}
+            isExecuting={forge.commandExecution.executing}
+            projectContext={{
+              phase: currentProjectState.phase,
+              activeAgents: currentProjectState.activeAgents.length,
+              recentActivity: activities.slice(0, 5).map(a => a.action).join(', '),
+              healthScore: currentProjectState.healthScore,
+              currentFocus: 'Integration and testing'
+            }}
+          />
+        )}
+
+        {/* Architect Discussion View */}
+        {currentView === 'architect' && (
+          <ArchitectDiscussion
+            architects={architects}
+            decisions={forge.architectureDecisions.decisions}
+            onSelectArchitect={setSelectedArchitect}
+            onProposeDecision={forge.architectureDecisions.proposeDecision}
+            onApproveDecision={handleDecisionApproval}
+            selectedArchitect={selectedArchitect}
+          />
+        )}
+
+        {/* YOLO Mode View */}
+        {currentView === 'yolo' && (
+          <YoloMode
+            isActive={engagementMode === 'autonomous' && automationLevel === 'aggressive'}
+            onToggle={handleYoloModeToggle}
+            automationLevel={automationLevel}
+            onAutomationLevelChange={setAutomationLevel}
+            statistics={forge.yoloMode.statistics || {
+              totalActions: 0,
+              successRate: 0,
+              averageTime: 0,
+              savedHours: 0
+            }}
+            recentActions={forge.yoloMode.history}
+          />
+        )}
+      </main>
+
+      {/* Error Display */}
+      <ErrorDisplay errors={forge.errors} />
+
+      {/* Real-time Activity Feed (floating) */}
+      {activities.length > 0 && currentView === 'dashboard' && (
+        <div className="fixed bottom-4 left-4 max-w-sm bg-gray-900/90 backdrop-blur-sm border border-gray-700 rounded-lg p-4 max-h-64 overflow-y-auto">
+          <h4 className="text-sm font-semibold text-gray-400 mb-2">Live Activity</h4>
+          <div className="space-y-2">
+            {activities.slice(0, 5).map((activity, idx) => (
+              <div key={activity.id || idx} className="flex items-start space-x-2">
+                <div className="h-2 w-2 bg-green-500 rounded-full mt-1 animate-pulse" />
+                <div className="flex-1">
+                  <p className="text-xs text-white">{activity.agent}</p>
+                  <p className="text-xs text-gray-400">{activity.action}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+export default IntegratedApp;

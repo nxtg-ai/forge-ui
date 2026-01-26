@@ -1,0 +1,117 @@
+{
+  "brand": "NextGen AI (nxtg.ai)",
+  "tagline": "Build with Intelligence.",
+  "subtitle": "Where human context meets machine clarity.",
+  "palette": {
+    "primary": {
+      "Cyan Mist": "#A5F3FC",
+      "Sunset Orange": "#FDBA74",
+      "Lilac Glow": "#C084FC",
+      "Soft Pink": "#F9A8D4",
+      "Deep Graphite": "#1E1B4B",
+      "White Mist (optional)": "#FAFAFA"
+    },
+    "gradients": {
+      "cycle": [
+        "#A5F3FC",
+        "#FDBA74",
+        "#C084FC",
+        "#F9A8D4",
+        "#A5F3FC"
+      ],
+      "pairs": {
+        "OpenEnergy": [
+          "#A5F3FC",
+          "#FDBA74"
+        ],
+        "CreativeInsight": [
+          "#FDBA74",
+          "#C084FC"
+        ],
+        "SpiritHarmony": [
+          "#C084FC",
+          "#F9A8D4"
+        ],
+        "EmotionalClarity": [
+          "#F9A8D4",
+          "#A5F3FC"
+        ]
+      },
+      "notes": [
+        "Favor soft, luminous transitions; avoid harsh neon or oversaturation.",
+        "Keep compositions breathable with generous negative space."
+      ]
+    }
+  },
+  "typography": {
+    "primary": {
+      "family": "Inter",
+      "weights": [
+        "Regular",
+        "Medium",
+        "Bold"
+      ],
+      "usage": "Body, headers, labels"
+    },
+    "accent": {
+      "family": "IBM Plex Mono",
+      "usage": "Data, code, contrast"
+    }
+  },
+  "shape_grammar": [
+    {
+      "shape": "Circle",
+      "meaning": "Context",
+      "represents": "Human-centered understanding"
+    },
+    {
+      "shape": "Arc/Loop",
+      "meaning": "Flow",
+      "represents": "Agentic recursion, continuity"
+    },
+    {
+      "shape": "Triangle",
+      "meaning": "Insight",
+      "represents": "Synthesis, emergence"
+    },
+    {
+      "shape": "Square/Grid",
+      "meaning": "Structure",
+      "represents": "Quality, precision"
+    },
+    {
+      "shape": "Infinity",
+      "meaning": "Evolution",
+      "represents": "Continuous learning"
+    },
+    {
+      "shape": "Spiral",
+      "meaning": "Growth",
+      "represents": "Recursion and emergence"
+    }
+  ],
+  "voice": [
+    "Trustworthy",
+    "Intelligent",
+    "Warm",
+    "Visionary",
+    "Precise"
+  ],
+  "motion": {
+    "principles": [
+      "Smooth, continuous, physics-based motion",
+      "Seamless loops (agentic flow)",
+      "Ease curve: easeInOutCubic"
+    ],
+    "duration_s_recommended": [
+      1.8,
+      3.0
+    ]
+  },
+  "accessibility": {
+    "notes": [
+      "Use Deep Graphite for text on light backgrounds; white on dark tones/strong gradients.",
+      "Maintain WCAG AA 4.5:1 minimum contrast."
+    ]
+  }
+}
