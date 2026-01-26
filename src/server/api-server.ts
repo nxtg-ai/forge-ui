@@ -13,10 +13,11 @@ import { VisionSystem } from '../core/vision';
 import { StateManager } from '../core/state';
 import { CoordinationService } from '../core/coordination';
 import { BootstrapService } from '../core/bootstrap';
+import { createPTYBridge, cleanupPTYBridge } from './pty-bridge';
 
 const app = express();
 const server = createServer(app);
-const wss = new WebSocketServer({ server, path: '/ws' });
+const wss = new WebSocketServer({ noServer: true });
 
 // Middleware
 app.use(cors({
@@ -492,6 +493,18 @@ app.get('/api/health', (req, res) => {
 // Start server
 const PORT = process.env.PORT || 5051; // NXTG-Forge dedicated API port
 
+// Handle WebSocket upgrade routing
+server.on('upgrade', (request, socket, head) => {
+  const url = new URL(request.url!, `http://${request.headers.host}`);
+
+  if (url.pathname === '/ws') {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit('connection', ws, request);
+    });
+  }
+  // PTY bridge handles /terminal path in createPTYBridge
+});
+
 server.listen(PORT, () => {
   console.log(`NXTG-Forge API Server running on port ${PORT}`);
   console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
@@ -501,6 +514,10 @@ server.listen(PORT, () => {
   visionSystem.initialize();
   stateManager.initialize();
   coordinationService.initialize();
+
+  // Initialize PTY Bridge for Claude Code Terminal
+  createPTYBridge(server);
+  console.log(`PTY Bridge initialized at ws://localhost:${PORT}/terminal`);
 
   console.log('All services initialized successfully');
 });

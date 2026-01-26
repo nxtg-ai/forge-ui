@@ -20,9 +20,22 @@ const sessions = new Map<string, TerminalSession>();
  * Initialize PTY bridge server
  */
 export function createPTYBridge(server: http.Server) {
-  const wss = new WebSocketServer({
-    server,
-    path: '/terminal'
+  // Create WebSocket server without auto-attach
+  const wss = new WebSocketServer({ noServer: true });
+
+  // Handle upgrade manually for /terminal path
+  server.on('upgrade', (request, socket, head) => {
+    const url = new URL(request.url!, `http://${request.headers.host}`);
+
+    if (url.pathname === '/terminal') {
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+      });
+    }
+  });
+
+  wss.on('error', (error) => {
+    console.error('[PTY Bridge] WebSocket server error:', error);
   });
 
   wss.on('connection', (ws: WebSocket) => {

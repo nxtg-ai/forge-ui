@@ -12,6 +12,7 @@ import {
   VisionDisplay,
   YoloMode
 } from './components';
+import TerminalView from './pages/terminal-view';
 import {
   useVision,
   useProjectState,
@@ -67,7 +68,7 @@ function IntegratedApp() {
 
   // Local state management
   const [currentView, setCurrentView] = useState<
-    'vision-capture' | 'dashboard' | 'architect' | 'command' | 'vision-display' | 'yolo'
+    'vision-capture' | 'dashboard' | 'architect' | 'command' | 'vision-display' | 'yolo' | 'terminal'
   >('dashboard');
   const [engagementMode, setEngagementMode] = useState<EngagementMode>('founder');
   const [automationLevel, setAutomationLevel] = useState<AutomationLevel>('conservative');
@@ -208,6 +209,7 @@ function IntegratedApp() {
                 {[
                   { id: 'dashboard', label: 'Dashboard', icon: '📊' },
                   { id: 'vision-display', label: 'Vision', icon: '🎯' },
+                  { id: 'terminal', label: 'Terminal', icon: '💻' },
                   { id: 'command', label: 'Command', icon: '⚡' },
                   { id: 'architect', label: 'Architect', icon: '🏛️' },
                   { id: 'yolo', label: 'YOLO', icon: '🚀' }
@@ -390,6 +392,11 @@ function IntegratedApp() {
             }}
             recentActions={forge.yoloMode.history || []}
           />
+        )}
+
+        {/* Terminal View */}
+        {currentView === 'terminal' && (
+          <TerminalView />
         )}
       </main>
 
