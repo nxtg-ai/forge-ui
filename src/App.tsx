@@ -75,12 +75,18 @@ function IntegratedApp() {
   const [selectedArchitect, setSelectedArchitect] = useState<Architect | null>(null);
 
   // Handle vision capture
-  const handleVisionCapture = useCallback(async (visionText: string) => {
+  const handleVisionCapture = useCallback(async (visionData: any) => {
+    const visionText = `Mission: ${visionData.mission}\nGoals: ${visionData.goals.join(', ')}\nConstraints: ${visionData.constraints.join(', ')}\nMetrics: ${visionData.successMetrics.join(', ')}\nTimeframe: ${visionData.timeframe}`;
     const success = await forge.vision.captureVision(visionText);
     if (success) {
       setCurrentView('dashboard');
     }
   }, [forge.vision]);
+
+  // Handle skip vision (for testing)
+  const handleSkipVision = useCallback(() => {
+    setCurrentView('dashboard');
+  }, []);
 
   // Handle command execution
   const handleCommandExecution = useCallback(async (command: Command) => {
@@ -183,12 +189,20 @@ function IntegratedApp() {
           <p className="text-gray-400 mb-6">
             Let's start by capturing your vision for this project
           </p>
-          <button
-            onClick={() => setCurrentView('vision-capture')}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
-          >
-            Capture Vision to Start
-          </button>
+          <div className="flex gap-4 justify-center">
+            <button
+              onClick={() => setCurrentView('vision-capture')}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
+            >
+              Capture Vision
+            </button>
+            <button
+              onClick={handleSkipVision}
+              className="px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              Skip for Now
+            </button>
+          </div>
         </div>
         <ErrorDisplay errors={forge.errors} />
       </div>
@@ -258,7 +272,10 @@ function IntegratedApp() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Vision Capture View */}
         {currentView === 'vision-capture' && (
-          <VisionCapture onVisionCapture={handleVisionCapture} />
+          <VisionCapture
+            onVisionSubmit={handleVisionCapture}
+            mode="initial"
+          />
         )}
 
         {/* Dashboard View */}

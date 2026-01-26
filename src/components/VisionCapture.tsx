@@ -249,10 +249,20 @@ export const VisionCapture: React.FC<VisionCaptureProps> = ({
                 />
                 {!currentStepData.isArray && (
                   <button
-                    onClick={handleNext}
+                    onClick={() => {
+                      // Save current input to vision before proceeding
+                      if (inputValue.trim()) {
+                        setVision(prev => ({
+                          ...prev,
+                          [currentStepData.field]: inputValue
+                        }));
+                      }
+                      handleNext();
+                    }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg
                              bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20
-                             transition-all"
+                             transition-all cursor-pointer"
+                    title="Continue to next step"
                     data-testid="vision-capture-next-btn"
                   >
                     <ChevronRight className="w-5 h-5 text-purple-400" />
