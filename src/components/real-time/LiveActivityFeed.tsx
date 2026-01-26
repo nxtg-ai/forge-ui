@@ -45,7 +45,7 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
 
     const connect = () => {
       try {
-        ws = new WebSocket(process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/activities');
+        ws = new WebSocket(import.meta.env.VITE_WS_URL || 'ws://localhost:5051/ws');
 
         ws.onopen = () => {
           setIsConnected(true);

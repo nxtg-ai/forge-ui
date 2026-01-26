@@ -14,9 +14,9 @@ import type {
   YoloStatistics
 } from '../components/types';
 
-// API Configuration
-const API_BASE_URL = process.env.VITE_API_URL || 'http://localhost:3000/api';
-const WS_URL = process.env.VITE_WS_URL || 'ws://localhost:3000/ws';
+// API Configuration (Vite uses import.meta.env, not process.env)
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5051/api';
+const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:5051/ws';
 
 // Response schemas for type safety
 const ApiResponseSchema = <T extends z.ZodType>(dataSchema: T) =>
