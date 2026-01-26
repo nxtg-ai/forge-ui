@@ -64,6 +64,18 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
   const [expandedGoal, setExpandedGoal] = useState<string | null>(null);
   const [showMetrics, setShowMetrics] = useState(!compactMode);
 
+  // Handle case where vision is undefined
+  if (!vision) {
+    return (
+      <div className="p-6 rounded-2xl bg-gray-900/50 border border-gray-800" data-testid="vision-display-empty">
+        <div className="text-center text-gray-500">
+          <p className="text-lg font-medium mb-2">No Vision Defined</p>
+          <p className="text-sm">Click "Update Vision" to create your canonical vision</p>
+        </div>
+      </div>
+    );
+  }
+
   const getGoalStatusColor = (status: Goal['status']) => {
     const colors = {
       'pending': 'text-gray-400 bg-gray-500/10 border-gray-500/20',
