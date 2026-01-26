@@ -73,6 +73,7 @@ function IntegratedApp() {
   const [engagementMode, setEngagementMode] = useState<EngagementMode>('founder');
   const [automationLevel, setAutomationLevel] = useState<AutomationLevel>('conservative');
   const [selectedArchitect, setSelectedArchitect] = useState<Architect | null>(null);
+  const [visionSkipped, setVisionSkipped] = useState(false);
 
   // Handle vision capture
   const handleVisionCapture = useCallback(async (visionData: any) => {
@@ -85,6 +86,7 @@ function IntegratedApp() {
 
   // Handle skip vision (for testing)
   const handleSkipVision = useCallback(() => {
+    setVisionSkipped(true);
     setCurrentView('dashboard');
   }, []);
 
@@ -179,7 +181,7 @@ function IntegratedApp() {
                       visionData.mission === 'No vision defined yet' ||
                       visionData.mission.trim() === '';
 
-  if (hasNoVision && currentView !== 'vision-capture') {
+  if (hasNoVision && !visionSkipped && currentView !== 'vision-capture') {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
