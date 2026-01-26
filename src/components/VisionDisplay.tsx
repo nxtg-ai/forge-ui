@@ -192,7 +192,7 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
           Strategic Goals
         </h3>
         <div data-testid="vision-display-goals-grid" className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {vision.goals.map((goal) => (
+          {(Array.isArray(vision.goals) ? vision.goals : []).map((goal) => (
             <motion.div
               key={goal.id}
               data-testid={`vision-display-goal-item-${goal.id}`}
@@ -266,7 +266,7 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
           Success Metrics
         </h3>
         <div data-testid="vision-display-metrics-grid" className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {vision.successMetrics.map((metric) => (
+          {(Array.isArray(vision.successMetrics) ? vision.successMetrics : []).map((metric) => (
             <div
               key={metric.id}
               data-testid={`vision-display-metric-item-${metric.id}`}
@@ -297,7 +297,7 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
       </div>
 
       {/* Constraints */}
-      {vision.constraints.length > 0 && (
+      {(vision.constraints || []).length > 0 && (
         <div>
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-amber-400" />
@@ -305,7 +305,7 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
           </h3>
           <div className="p-4 rounded-xl bg-amber-900/10 border border-amber-500/20">
             <ul className="space-y-2">
-              {vision.constraints.map((constraint, idx) => (
+              {(vision.constraints || []).map((constraint, idx) => (
                 <li key={idx} className="flex items-start gap-2 text-sm">
                   <span className="text-amber-400 mt-0.5">•</span>
                   <span className="text-gray-300">{constraint}</span>
