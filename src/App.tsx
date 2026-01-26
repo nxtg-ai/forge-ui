@@ -252,38 +252,31 @@ function IntegratedApp() {
         {/* Vision Display View */}
         {currentView === 'vision-display' && (
           <VisionDisplay
-            visionData={visionData}
+            vision={visionData}
             progress={{
-              overall: currentProjectState.progress,
-              phases: [
-                { name: 'Planning', status: 'completed', progress: 100 },
-                { name: 'Architecture', status: 'in-progress', progress: 75 },
-                { name: 'Implementation', status: 'in-progress', progress: 45 },
-                { name: 'Testing', status: 'pending', progress: 20 },
-                { name: 'Deployment', status: 'pending', progress: 0 }
-              ],
-              timeline: {
-                start: new Date(),
-                estimated: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-                milestones: []
-              }
+              overallProgress: currentProjectState.progress,
+              phase: currentProjectState.phase,
+              daysElapsed: 0,
+              estimatedDaysRemaining: 30,
+              velocity: 1.0,
+              blockers: (currentProjectState.blockers || []).length
             }}
-            isEditable={engagementMode === 'interactive'}
-            onUpdate={forge.vision.updateVision}
+            isLocked={false}
+            onVisionUpdate={forge.vision.updateVision}
           />
         )}
 
         {/* Command Center View */}
         {currentView === 'command' && (
           <CommandCenter
-            commands={forge.commandExecution.history}
+            commands={forge.commandExecution.history || []}
             suggestions={[]}
             onExecute={handleCommandExecution}
             isExecuting={forge.commandExecution.executing}
             projectContext={{
               phase: currentProjectState.phase,
-              activeAgents: currentProjectState.activeAgents.length,
-              recentActivity: activities.slice(0, 5).map(a => a.action).join(', '),
+              activeAgents: (currentProjectState.activeAgents || []).length,
+              recentActivity: (activities || []).slice(0, 5).map(a => a.action).join(', '),
               healthScore: currentProjectState.healthScore,
               currentFocus: 'Integration and testing'
             }}
@@ -294,7 +287,7 @@ function IntegratedApp() {
         {currentView === 'architect' && (
           <ArchitectDiscussion
             architects={architects}
-            decisions={forge.architectureDecisions.decisions}
+            decisions={forge.architectureDecisions.decisions || []}
             onSelectArchitect={setSelectedArchitect}
             onProposeDecision={forge.architectureDecisions.proposeDecision}
             onApproveDecision={handleDecisionApproval}
@@ -315,7 +308,7 @@ function IntegratedApp() {
               averageTime: 0,
               savedHours: 0
             }}
-            recentActions={forge.yoloMode.history}
+            recentActions={forge.yoloMode.history || []}
           />
         )}
       </main>
@@ -324,11 +317,11 @@ function IntegratedApp() {
       <ErrorDisplay errors={forge.errors} />
 
       {/* Real-time Activity Feed (floating) */}
-      {activities.length > 0 && currentView === 'dashboard' && (
+      {(activities || []).length > 0 && currentView === 'dashboard' && (
         <div className="fixed bottom-4 left-4 max-w-sm bg-gray-900/90 backdrop-blur-sm border border-gray-700 rounded-lg p-4 max-h-64 overflow-y-auto">
           <h4 className="text-sm font-semibold text-gray-400 mb-2">Live Activity</h4>
           <div className="space-y-2">
-            {activities.slice(0, 5).map((activity, idx) => (
+            {(activities || []).slice(0, 5).map((activity, idx) => (
               <div key={activity.id || idx} className="flex items-start space-x-2">
                 <div className="h-2 w-2 bg-green-500 rounded-full mt-1 animate-pulse" />
                 <div className="flex-1">
