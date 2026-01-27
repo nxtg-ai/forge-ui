@@ -451,18 +451,18 @@ Active Now:
 ### 7.1 Command Palette UI
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  > forge                                   Ctrl+K      │
+│  > forge                                   Ctrl+K       │
 │                                                         │
-│  Suggested Commands:                                   │
-│  ├─ forge init           Initialize new project        │
-│  ├─ forge status         Show project status           │
-│  ├─ forge feature        Add new feature               │
-│  ├─ forge test          Run test suite                │
-│  └─ forge deploy        Deploy to production          │
+│  Suggested Commands:                                    │
+│  ├─ forge init           Initialize new project         │
+│  ├─ forge status         Show project status            │
+│  ├─ forge feature        Add new feature                │
+│  ├─ forge test           Run test suite                 │
+│  └─ forge deploy         Deploy to production           │
 │                                                         │
-│  Recent:                                               │
-│  ├─ architect review    (2 min ago)                   │
-│  └─ developer fix-bug   (15 min ago)                  │
+│  Recent:                                                │
+│  ├─ architect review     (2 min ago)                    │
+│  └─ developer fix-bug    (15 min ago)                   │
 │                                                         │
 └─────────────────────────────────────────────────────────┘
 ```

@@ -70,6 +70,7 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
   const fitAddonRef = useRef<FitAddon | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const commandBufferRef = useRef<string>('');
+  const initializedRef = useRef(false);
 
   const [isConnected, setIsConnected] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -83,6 +84,13 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
   // Initialize terminal
   useEffect(() => {
     if (!terminalRef.current) return;
+
+    // Prevent duplicate initialization in React Strict Mode
+    if (initializedRef.current) {
+      console.log('[Terminal] Already initialized, skipping');
+      return;
+    }
+    initializedRef.current = true;
 
     // Create terminal instance
     const term = new Terminal({
@@ -150,9 +158,9 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
         return;
       }
 
-      // Add to command buffer
+      // Build command buffer for dangerous command checking
       if (data === '\r') {
-        // Enter pressed - check for dangerous commands
+        // Enter pressed - check for dangerous commands before sending
         const command = commandBufferRef.current.trim();
 
         const dangerCheck = checkDangerousCommand(command);
@@ -163,22 +171,22 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
           setPendingCommand(command);
           setShowDangerAlert(true);
           commandBufferRef.current = '';
-          return;
+          return; // Don't send to PTY
         }
 
-        // Safe to execute
-        executeCommand(command);
+        // Clear buffer after Enter
         commandBufferRef.current = '';
       } else if (data === '\x7f') {
-        // Backspace
+        // Backspace - update buffer
         if (commandBufferRef.current.length > 0) {
           commandBufferRef.current = commandBufferRef.current.slice(0, -1);
         }
-      } else {
+      } else if (data >= ' ' && data <= '~') {
+        // Printable character - add to buffer
         commandBufferRef.current += data;
       }
 
-      // Send to backend
+      // Always send raw input to PTY (let bash handle echo)
       wsRef.current.send(JSON.stringify({
         type: 'input',
         data
@@ -199,15 +207,21 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
 
     window.addEventListener('resize', handleResize);
 
-    // Cleanup
+    // Cleanup - Don't cleanup if we're preventing re-init
     return () => {
       window.removeEventListener('resize', handleResize);
-      wsRef.current?.close();
-      term.dispose();
+      // Don't dispose terminal/websocket since we prevent re-initialization
     };
   }, []);
 
   const connectToBackend = (term: Terminal) => {
+    // Prevent duplicate connections
+    if (wsRef.current?.readyState === WebSocket.CONNECTING ||
+        wsRef.current?.readyState === WebSocket.OPEN) {
+      console.log('[Terminal] WebSocket already connected, skipping');
+      return;
+    }
+
     const ws = new WebSocket('ws://localhost:5051/terminal');
 
     ws.onopen = () => {

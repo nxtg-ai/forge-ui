@@ -41,101 +41,119 @@ export function createPTYBridge(server: http.Server) {
   wss.on('connection', (ws: WebSocket) => {
     console.log('[PTY Bridge] New terminal connection');
 
-    // Generate session ID
-    const sessionId = Math.random().toString(36).substring(7);
+    try {
+      // Generate session ID
+      const sessionId = Math.random().toString(36).substring(7);
 
-    // Spawn Claude Code CLI in PTY
-    // Note: This assumes 'claude' CLI is in PATH
-    // For development, we'll use 'bash' as fallback
-    const shell = process.env.SHELL || '/bin/bash';
-    const pty = spawn(shell, [], {
-      name: 'xterm-256color',
-      cols: 80,
-      rows: 24,
-      cwd: process.env.PWD || process.cwd(),
-      env: {
-        ...process.env,
-        TERM: 'xterm-256color',
-        COLORTERM: 'truecolor',
-        // Add Claude CLI to PATH if needed
-        PATH: `${process.env.PATH}:/usr/local/bin:${process.env.HOME}/.local/bin`
-      }
-    });
+      // Spawn Claude Code CLI in PTY
+      // Note: This assumes 'claude' CLI is in PATH
+      // For development, we'll use 'bash' as fallback
+      const shell = process.env.SHELL || '/bin/bash';
+      console.log(`[PTY Bridge] Spawning shell: ${shell} in ${process.cwd()}`);
 
-    // Store session
-    const session: TerminalSession = {
-      pty,
-      ws,
-      commandBuffer: ''
-    };
-    sessions.set(sessionId, session);
+      // Use --noprofile --norc to skip bash init files that might be causing EIO
+      const pty = spawn(shell, ['--noprofile', '--norc', '-i'], {
+        name: 'xterm-256color',
+        cols: 80,
+        rows: 24,
+        cwd: process.cwd(),
+        env: {
+          ...process.env,
+          TERM: 'xterm-256color',
+          COLORTERM: 'truecolor',
+          PS1: '\\[\\033[1;36m\\]NXTG-Forge\\[\\033[0m\\] \\$ ',  // Custom prompt
+          HOME: process.env.HOME,
+          USER: process.env.USER,
+          // Add Claude CLI to PATH if needed
+          PATH: `${process.env.PATH}:/usr/local/bin:${process.env.HOME}/.local/bin`
+        }
+      });
 
-    // Send PTY output to WebSocket
-    pty.onData((data: string) => {
+      console.log(`[PTY Bridge] PTY spawned successfully, PID: ${pty.pid}`);
+
+      // Store session
+      const session: TerminalSession = {
+        pty,
+        ws,
+        commandBuffer: ''
+      };
+      sessions.set(sessionId, session);
+
+      // Send PTY output to WebSocket
+      pty.onData((data: string) => {
+        console.log(`[PTY Bridge] PTY data received: ${JSON.stringify(data.substring(0, 100))}`);
+        if (ws.readyState === WebSocket.OPEN) {
+          // Intercept special patterns for enhanced UI
+          const enrichedData = interceptOutput(data, ws);
+
+          ws.send(JSON.stringify({
+            type: 'output',
+            data: enrichedData
+          }));
+        } else {
+          console.error(`[PTY Bridge] Cannot send data, WebSocket state: ${ws.readyState}`);
+        }
+      });
+
+      // Handle PTY exit
+      pty.onExit(({ exitCode, signal }: any) => {
+        console.log(`[PTY Bridge] PTY exited: code=${exitCode}, signal=${signal}`);
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'output',
+            data: `\r\n[Process exited with code ${exitCode}]\r\n`
+          }));
+          ws.close();
+        }
+        sessions.delete(sessionId);
+      });
+
+      // Handle WebSocket messages
+      ws.on('message', (message: Buffer) => {
+        try {
+          const data = JSON.parse(message.toString());
+
+          switch (data.type) {
+            case 'input':
+              // Forward input to PTY
+              pty.write(data.data);
+              session.commandBuffer += data.data;
+              break;
+
+            case 'resize':
+              // Resize PTY
+              pty.resize(data.cols, data.rows);
+              break;
+
+            case 'execute':
+              // Execute command
+              executeCommand(session, data.command);
+              break;
+          }
+        } catch (error) {
+          console.error('[PTY Bridge] Error handling message:', error);
+        }
+      });
+
+      // Handle WebSocket close
+      ws.on('close', () => {
+        console.log('[PTY Bridge] WebSocket closed');
+        pty.kill();
+        sessions.delete(sessionId);
+      });
+
+      // Handle WebSocket errors
+      ws.on('error', (error) => {
+        console.error('[PTY Bridge] WebSocket error:', error);
+        pty.kill();
+        sessions.delete(sessionId);
+      });
+    } catch (error) {
+      console.error('[PTY Bridge] Fatal error in connection handler:', error);
       if (ws.readyState === WebSocket.OPEN) {
-        // Intercept special patterns for enhanced UI
-        const enrichedData = interceptOutput(data, ws);
-
-        ws.send(JSON.stringify({
-          type: 'output',
-          data: enrichedData
-        }));
-      }
-    });
-
-    // Handle PTY exit
-    pty.onExit(({ exitCode, signal }: any) => {
-      console.log(`[PTY Bridge] PTY exited: code=${exitCode}, signal=${signal}`);
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
-          type: 'output',
-          data: `\r\n[Process exited with code ${exitCode}]\r\n`
-        }));
         ws.close();
       }
-      sessions.delete(sessionId);
-    });
-
-    // Handle WebSocket messages
-    ws.on('message', (message: Buffer) => {
-      try {
-        const data = JSON.parse(message.toString());
-
-        switch (data.type) {
-          case 'input':
-            // Forward input to PTY
-            pty.write(data.data);
-            session.commandBuffer += data.data;
-            break;
-
-          case 'resize':
-            // Resize PTY
-            pty.resize(data.cols, data.rows);
-            break;
-
-          case 'execute':
-            // Execute command
-            executeCommand(session, data.command);
-            break;
-        }
-      } catch (error) {
-        console.error('[PTY Bridge] Error handling message:', error);
-      }
-    });
-
-    // Handle WebSocket close
-    ws.on('close', () => {
-      console.log('[PTY Bridge] WebSocket closed');
-      pty.kill();
-      sessions.delete(sessionId);
-    });
-
-    // Handle WebSocket errors
-    ws.on('error', (error) => {
-      console.error('[PTY Bridge] WebSocket error:', error);
-      pty.kill();
-      sessions.delete(sessionId);
-    });
+    }
   });
 
   console.log('[PTY Bridge] WebSocket server initialized on /terminal');
