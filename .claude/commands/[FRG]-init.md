@@ -137,14 +137,14 @@ git commit -m "chore: initialize project with NXTG-Forge"
 mkdir -p .claude/agents
 
 # Copy all five native agents
-cp {forge_root}/.claude/agents/agent-forge-orchestrator.md .claude/agents/
-cp {forge_root}/.claude/agents/agent-forge-detective.md .claude/agents/
-cp {forge_root}/.claude/agents/agent-forge-planner.md .claude/agents/
-cp {forge_root}/.claude/agents/agent-forge-builder.md .claude/agents/
-cp {forge_root}/.claude/agents/agent-forge-guardian.md .claude/agents/
+cp {forge_root}/.claude/agents/[AFRG]-orchestrator.md .claude/agents/
+cp {forge_root}/.claude/agents/[AFRG]-detective.md .claude/agents/
+cp {forge_root}/.claude/agents/[AFRG]-planner.md .claude/agents/
+cp {forge_root}/.claude/agents/[AFRG]-builder.md .claude/agents/
+cp {forge_root}/.claude/agents/[AFRG]-guardian.md .claude/agents/
 
 # Verify agents are accessible
-ls -la .claude/agents/agent-forge-*.md
+ls -la ".claude/agents/[AFRG]-"*.md
 
 # Register agents with status detection
 forge agents register --verify
@@ -161,7 +161,7 @@ forge hooks create session-start \
   --output .claude/hooks/on-session-start.sh
 
 # Hook checks:
-# 1. If .claude/agents/agent-forge-orchestrator.md exists
+# 1. If .claude/agents/[AFRG]-orchestrator.md exists
 # 2. If forge services initialized
 # 3. Displays appropriate banner (ENABLED or READY)
 ```

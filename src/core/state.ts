@@ -23,6 +23,8 @@ import {
   ProgressNode
 } from '../types/state';
 import { CanonicalVision } from '../types/vision';
+import { CheckpointManager, TaskCheckpoint } from './checkpoint-manager';
+import { Result, Ok, Err } from '../utils/result';
 
 const logger = new Logger('StateManager');
 
@@ -59,11 +61,13 @@ export class StateManager extends EventEmitter {
   private contextGraph: ContextGraph | null = null;
   private autoSaveInterval: NodeJS.Timeout | null = null;
   private isDirty: boolean = false;
+  private checkpointManager: CheckpointManager;
 
   constructor(projectPath?: string) {
     super();
     this.projectPath = projectPath || process.cwd();
     this.paths = this.initializePaths();
+    this.checkpointManager = new CheckpointManager(this.projectPath);
   }
 
   /**
@@ -86,11 +90,15 @@ export class StateManager extends EventEmitter {
     if (projectPath) {
       this.projectPath = projectPath;
       this.paths = this.initializePaths();
+      this.checkpointManager = new CheckpointManager(this.projectPath);
     }
 
     // Ensure state directory exists
     const stateDir = path.dirname(this.paths.current);
     await fs.mkdir(stateDir, { recursive: true });
+
+    // Initialize checkpoint manager
+    await this.checkpointManager.initialize();
 
     // Try to restore existing state
     const restored = await this.restoreState();
@@ -657,5 +665,56 @@ export class StateManager extends EventEmitter {
 
   isHealthy(): boolean {
     return this.currentState !== null;
+  }
+
+  // Checkpoint management methods
+
+  /**
+   * Save task checkpoint
+   */
+  async saveCheckpoint(taskId: string, checkpoint: TaskCheckpoint): Promise<Result<void, string>> {
+    return await this.checkpointManager.saveCheckpoint(taskId, checkpoint);
+  }
+
+  /**
+   * Restore task from checkpoint
+   */
+  async restoreFromCheckpoint(taskId: string): Promise<Result<TaskCheckpoint, string>> {
+    return await this.checkpointManager.restoreFromCheckpoint(taskId);
+  }
+
+  /**
+   * List all checkpoints
+   */
+  async listCheckpoints(): Promise<TaskCheckpoint[]> {
+    return await this.checkpointManager.listCheckpoints();
+  }
+
+  /**
+   * Clear checkpoint for a task
+   */
+  async clearCheckpoint(taskId: string): Promise<void> {
+    await this.checkpointManager.clearCheckpoint(taskId);
+  }
+
+  /**
+   * Check if checkpoint exists for task
+   */
+  async hasCheckpoint(taskId: string): Promise<boolean> {
+    return await this.checkpointManager.hasCheckpoint(taskId);
+  }
+
+  /**
+   * Clear all checkpoints
+   */
+  async clearAllCheckpoints(): Promise<Result<number, string>> {
+    return await this.checkpointManager.clearAllCheckpoints();
+  }
+
+  /**
+   * Clean up old checkpoints
+   */
+  async cleanupOldCheckpoints(maxAgeMs: number): Promise<Result<number, string>> {
+    return await this.checkpointManager.cleanupOldCheckpoints(maxAgeMs);
   }
 }

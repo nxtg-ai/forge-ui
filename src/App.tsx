@@ -10,8 +10,11 @@ import {
   ArchitectDiscussion,
   CommandCenter,
   VisionDisplay,
-  YoloMode
+  YoloMode,
+  ProjectSwitcher,
+  ProjectsManagement
 } from './components';
+import { MCPSelectionView } from './components/onboarding/MCPSelectionView';
 import TerminalView from './pages/terminal-view';
 import {
   useVision,
@@ -29,6 +32,7 @@ import type {
   Command,
   AutomationLevel
 } from './components/types';
+import type { Runspace } from './core/runspace';
 
 // Loading component
 const LoadingOverlay: React.FC<{ message?: string }> = ({ message = 'Connecting to Forge backend...' }) => (
@@ -68,25 +72,90 @@ function IntegratedApp() {
 
   // Local state management
   const [currentView, setCurrentView] = useState<
-    'vision-capture' | 'dashboard' | 'architect' | 'command' | 'vision-display' | 'yolo' | 'terminal'
+    'vision-capture' | 'mcp-selection' | 'dashboard' | 'architect' | 'command' | 'vision-display' | 'yolo' | 'terminal'
   >('dashboard');
   const [engagementMode, setEngagementMode] = useState<EngagementMode>('founder');
   const [automationLevel, setAutomationLevel] = useState<AutomationLevel>('conservative');
   const [selectedArchitect, setSelectedArchitect] = useState<Architect | null>(null);
   const [visionSkipped, setVisionSkipped] = useState(false);
+  const [capturedVision, setCapturedVision] = useState<any>(null);
+  const [mcpSuggestions, setMcpSuggestions] = useState<any>(null);
+  const [loadingMcpSuggestions, setLoadingMcpSuggestions] = useState(false);
+
+  // Runspace state for multi-project support
+  const [runspaces, setRunspaces] = useState<Runspace[]>([]);
+  const [activeRunspace, setActiveRunspace] = useState<Runspace | null>(null);
+  const [loadingRunspaces, setLoadingRunspaces] = useState(false);
+  const [showProjectsManagement, setShowProjectsManagement] = useState(false);
 
   // Handle vision capture
   const handleVisionCapture = useCallback(async (visionData: any) => {
+    // Save vision data
+    setCapturedVision(visionData);
+
+    // Capture vision in backend
     const visionText = `Mission: ${visionData.mission}\nGoals: ${visionData.goals.join(', ')}\nConstraints: ${visionData.constraints.join(', ')}\nMetrics: ${visionData.successMetrics.join(', ')}\nTimeframe: ${visionData.timeframe}`;
-    const success = await forge.vision.captureVision(visionText);
-    if (success) {
+    await forge.vision.captureVision(visionText);
+
+    // Fetch MCP suggestions
+    setLoadingMcpSuggestions(true);
+    try {
+      const response = await fetch('http://localhost:5051/api/mcp/suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vision: visionData })
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        setMcpSuggestions(result.data);
+        setCurrentView('mcp-selection');
+      } else {
+        console.error('Failed to get MCP suggestions:', result.error);
+        setCurrentView('dashboard');
+      }
+    } catch (error) {
+      console.error('Error fetching MCP suggestions:', error);
       setCurrentView('dashboard');
+    } finally {
+      setLoadingMcpSuggestions(false);
     }
   }, [forge.vision]);
 
   // Handle skip vision (for testing)
   const handleSkipVision = useCallback(() => {
     setVisionSkipped(true);
+    setCurrentView('dashboard');
+  }, []);
+
+  // Handle MCP selection completion
+  const handleMcpSelectionComplete = useCallback(async (selectedIds: string[]) => {
+    console.log('Selected MCP servers:', selectedIds);
+
+    try {
+      // Send selected MCPs to backend for configuration
+      const response = await fetch('http://localhost:5051/api/mcp/configure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selectedServers: selectedIds })
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        console.log('MCP configuration generated:', result.data);
+        // TODO: Trigger /[FRG]-init with MCP config
+      }
+    } catch (error) {
+      console.error('Error configuring MCPs:', error);
+    }
+
+    // Navigate to dashboard
+    setCurrentView('dashboard');
+  }, []);
+
+  // Handle MCP selection skip
+  const handleMcpSkip = useCallback(() => {
+    console.log('User skipped MCP selection');
     setCurrentView('dashboard');
   }, []);
 
@@ -108,6 +177,115 @@ function IntegratedApp() {
     } else {
       setEngagementMode('engineer');
       setAutomationLevel('conservative');
+    }
+  }, []);
+
+  // Fetch runspaces on mount
+  useEffect(() => {
+    const fetchRunspaces = async () => {
+      try {
+        setLoadingRunspaces(true);
+        const response = await fetch('http://localhost:5051/api/runspaces');
+        const result = await response.json();
+
+        if (result.success) {
+          setRunspaces(result.data.runspaces || []);
+          if (result.data.activeRunspaceId) {
+            const active = result.data.runspaces.find(
+              (r: Runspace) => r.id === result.data.activeRunspaceId
+            );
+            setActiveRunspace(active || null);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching runspaces:', error);
+      } finally {
+        setLoadingRunspaces(false);
+      }
+    };
+
+    fetchRunspaces();
+  }, []);
+
+  // Handle runspace switch
+  const handleRunspaceSwitch = useCallback(async (runspaceId: string) => {
+    try {
+      const response = await fetch(`http://localhost:5051/api/runspaces/${runspaceId}/switch`, {
+        method: 'POST'
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        setActiveRunspace(result.data);
+        // Refresh runspaces list
+        const listResponse = await fetch('http://localhost:5051/api/runspaces');
+        const listResult = await listResponse.json();
+        if (listResult.success) {
+          setRunspaces(listResult.data.runspaces || []);
+        }
+      }
+    } catch (error) {
+      console.error('Error switching runspace:', error);
+    }
+  }, []);
+
+  // Handle new project creation
+  const handleNewProject = useCallback(() => {
+    // Navigate to vision capture for new project
+    setCurrentView('vision-capture');
+  }, []);
+
+  // Handle manage projects
+  const handleManageProjects = useCallback(() => {
+    setShowProjectsManagement(true);
+  }, []);
+
+  // Runspace management handlers
+  const handleRunspaceStart = useCallback(async (runspaceId: string) => {
+    try {
+      await apiClient.post(`/api/runspaces/${runspaceId}/start`, {});
+      await loadRunspaces();
+    } catch (error) {
+      console.error('Failed to start runspace:', error);
+    }
+  }, []);
+
+  const handleRunspaceStop = useCallback(async (runspaceId: string) => {
+    try {
+      await apiClient.post(`/api/runspaces/${runspaceId}/stop`, {});
+      await loadRunspaces();
+    } catch (error) {
+      console.error('Failed to stop runspace:', error);
+    }
+  }, []);
+
+  const handleRunspaceDelete = useCallback(async (runspaceId: string) => {
+    try {
+      await apiClient.delete(`/api/runspaces/${runspaceId}`, {});
+      await loadRunspaces();
+    } catch (error) {
+      console.error('Failed to delete runspace:', error);
+      throw error;
+    }
+  }, []);
+
+  const loadRunspaces = useCallback(async () => {
+    try {
+      setLoadingRunspaces(true);
+      const response = await apiClient.get('/api/runspaces');
+      if (response.success && response.data) {
+        setRunspaces(response.data.runspaces || []);
+        if (response.data.activeRunspaceId) {
+          const active = (response.data.runspaces || []).find(
+            (r: Runspace) => r.id === response.data.activeRunspaceId
+          );
+          setActiveRunspace(active || null);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load runspaces:', error);
+    } finally {
+      setLoadingRunspaces(false);
     }
   }, []);
 
@@ -221,6 +399,16 @@ function IntegratedApp() {
               <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
                 NXTG-Forge
               </h1>
+
+              {/* Project Switcher for multi-project support */}
+              <ProjectSwitcher
+                currentRunspace={activeRunspace}
+                runspaces={runspaces}
+                onSwitch={handleRunspaceSwitch}
+                onNew={handleNewProject}
+                onManage={handleManageProjects}
+              />
+
               <nav className="flex space-x-4">
                 {[
                   { id: 'dashboard', label: 'Dashboard', icon: '📊' },
@@ -278,6 +466,30 @@ function IntegratedApp() {
             onVisionSubmit={handleVisionCapture}
             mode="initial"
           />
+        )}
+
+        {/* MCP Selection View */}
+        {currentView === 'mcp-selection' && mcpSuggestions && (
+          <MCPSelectionView
+            suggestions={mcpSuggestions}
+            onSelectionComplete={handleMcpSelectionComplete}
+            onSkip={handleMcpSkip}
+          />
+        )}
+
+        {/* Loading MCP Suggestions */}
+        {loadingMcpSuggestions && (
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="text-center">
+              <div className="animate-spin h-12 w-12 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-white mb-2">
+                Analyzing Your Project...
+              </h2>
+              <p className="text-gray-400">
+                Our AI is selecting the perfect MCP servers for your vision
+              </p>
+            </div>
+          </div>
         )}
 
         {/* Dashboard View */}
@@ -439,6 +651,19 @@ function IntegratedApp() {
           </div>
         </div>
       )}
+
+      {/* Projects Management Modal */}
+      <ProjectsManagement
+        isOpen={showProjectsManagement}
+        onClose={() => setShowProjectsManagement(false)}
+        runspaces={runspaces}
+        activeRunspaceId={activeRunspace?.id || null}
+        onRefresh={loadRunspaces}
+        onSwitch={handleRunspaceSwitch}
+        onStart={handleRunspaceStart}
+        onStop={handleRunspaceStop}
+        onDelete={handleRunspaceDelete}
+      />
     </div>
   );
 }

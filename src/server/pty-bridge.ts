@@ -1,25 +1,30 @@
 /**
  * PTY Bridge Server
- * WebSocket server that spawns Claude Code CLI in a PTY
- * Bridges terminal I/O between frontend and Claude CLI
+ * WebSocket server that spawns shells in PTYs for runspaces
+ * Bridges terminal I/O between frontend and runspace shells
+ * Supports multi-project runspace isolation
  */
 
-import { spawn } from 'node-pty';
 import { WebSocketServer, WebSocket } from 'ws';
 import * as http from 'http';
+import type { RunspaceManager } from '../core/runspace-manager';
+import type { Runspace } from '../core/runspace';
+import { WSLBackend } from '../core/backends/wsl-backend';
 
 interface TerminalSession {
-  pty: any;
+  runspaceId: string;
+  sessionId: string;
   ws: WebSocket;
   commandBuffer: string;
 }
 
 const sessions = new Map<string, TerminalSession>();
+const wslBackend = new WSLBackend();
 
 /**
- * Initialize PTY bridge server
+ * Initialize PTY bridge server with runspace support
  */
-export function createPTYBridge(server: http.Server) {
+export function createPTYBridge(server: http.Server, runspaceManager: RunspaceManager) {
   // Create WebSocket server without auto-attach
   const wss = new WebSocketServer({ noServer: true });
 
@@ -38,50 +43,66 @@ export function createPTYBridge(server: http.Server) {
     console.error('[PTY Bridge] WebSocket server error:', error);
   });
 
-  wss.on('connection', (ws: WebSocket) => {
+  wss.on('connection', async (ws: WebSocket, request: http.IncomingMessage) => {
     console.log('[PTY Bridge] New terminal connection');
 
     try {
+      // Extract runspace ID from query params
+      const url = new URL(request.url!, `http://${request.headers.host}`);
+      const runspaceId = url.searchParams.get('runspace');
+
+      // Get runspace (use active runspace if not specified)
+      let runspace: Runspace | null | undefined = null;
+      let useDefaultShell = false;
+
+      if (runspaceId) {
+        runspace = runspaceManager.getRunspace(runspaceId);
+        if (!runspace) {
+          console.error(`[PTY Bridge] Runspace not found: ${runspaceId}`);
+          ws.send(JSON.stringify({
+            type: 'error',
+            data: `Runspace not found: ${runspaceId}`
+          }));
+          ws.close();
+          return;
+        }
+      } else {
+        // Try to use active runspace
+        runspace = runspaceManager.getActiveRunspace();
+        if (!runspace) {
+          // No runspace specified and none active - use default shell mode
+          console.log('[PTY Bridge] No active runspace, using default shell mode');
+          useDefaultShell = true;
+        }
+      }
+
+      let ptySession: any;
+
+      if (useDefaultShell) {
+        // Default mode: spawn a basic PTY in current working directory
+        console.log('[PTY Bridge] Creating default PTY session');
+        ptySession = await wslBackend.createDefaultPTY();
+      } else {
+        // Runspace mode: attach PTY to specific runspace
+        console.log(`[PTY Bridge] Attaching PTY to runspace: ${runspace!.displayName} (${runspace!.id})`);
+        ptySession = await wslBackend.attachPTY(runspace!);
+      }
+
       // Generate session ID
       const sessionId = Math.random().toString(36).substring(7);
 
-      // Spawn Claude Code CLI in PTY
-      // Note: This assumes 'claude' CLI is in PATH
-      // For development, we'll use 'bash' as fallback
-      const shell = process.env.SHELL || '/bin/bash';
-      console.log(`[PTY Bridge] Spawning shell: ${shell} in ${process.cwd()}`);
-
-      // Use --noprofile --norc to skip bash init files that might be causing EIO
-      const pty = spawn(shell, ['--noprofile', '--norc', '-i'], {
-        name: 'xterm-256color',
-        cols: 80,
-        rows: 24,
-        cwd: process.cwd(),
-        env: {
-          ...process.env,
-          TERM: 'xterm-256color',
-          COLORTERM: 'truecolor',
-          PS1: '\\[\\033[1;36m\\]NXTG-Forge\\[\\033[0m\\] \\$ ',  // Custom prompt
-          HOME: process.env.HOME,
-          USER: process.env.USER,
-          // Add Claude CLI to PATH if needed
-          PATH: `${process.env.PATH}:/usr/local/bin:${process.env.HOME}/.local/bin`
-        }
-      });
-
-      console.log(`[PTY Bridge] PTY spawned successfully, PID: ${pty.pid}`);
-
       // Store session
       const session: TerminalSession = {
-        pty,
+        runspaceId: runspace?.id || 'default',
+        sessionId,
         ws,
         commandBuffer: ''
       };
       sessions.set(sessionId, session);
 
       // Send PTY output to WebSocket
-      pty.onData((data: string) => {
-        console.log(`[PTY Bridge] PTY data received: ${JSON.stringify(data.substring(0, 100))}`);
+      ptySession.pty.onData((data: string) => {
+        // Only log errors, not every keystroke/output
         if (ws.readyState === WebSocket.OPEN) {
           // Intercept special patterns for enhanced UI
           const enrichedData = interceptOutput(data, ws);
@@ -96,7 +117,7 @@ export function createPTYBridge(server: http.Server) {
       });
 
       // Handle PTY exit
-      pty.onExit(({ exitCode, signal }: any) => {
+      ptySession.pty.onExit(({ exitCode, signal }: any) => {
         console.log(`[PTY Bridge] PTY exited: code=${exitCode}, signal=${signal}`);
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
@@ -106,6 +127,7 @@ export function createPTYBridge(server: http.Server) {
           ws.close();
         }
         sessions.delete(sessionId);
+        wslBackend.removeSession(runspace.id);
       });
 
       // Handle WebSocket messages
@@ -116,18 +138,18 @@ export function createPTYBridge(server: http.Server) {
           switch (data.type) {
             case 'input':
               // Forward input to PTY
-              pty.write(data.data);
+              ptySession.pty.write(data.data);
               session.commandBuffer += data.data;
               break;
 
             case 'resize':
               // Resize PTY
-              pty.resize(data.cols, data.rows);
+              ptySession.pty.resize(data.cols, data.rows);
               break;
 
             case 'execute':
               // Execute command
-              executeCommand(session, data.command);
+              executeCommand(ptySession, session, data.command);
               break;
           }
         } catch (error) {
@@ -138,15 +160,19 @@ export function createPTYBridge(server: http.Server) {
       // Handle WebSocket close
       ws.on('close', () => {
         console.log('[PTY Bridge] WebSocket closed');
-        pty.kill();
+        ptySession.pty.kill();
         sessions.delete(sessionId);
+        // Remove session from backend (use 'default' if no runspace)
+        wslBackend.removeSession(runspace?.id || 'default');
       });
 
       // Handle WebSocket errors
       ws.on('error', (error) => {
         console.error('[PTY Bridge] WebSocket error:', error);
-        pty.kill();
+        ptySession.pty.kill();
         sessions.delete(sessionId);
+        // Remove session from backend (use 'default' if no runspace)
+        wslBackend.removeSession(runspace?.id || 'default');
       });
     } catch (error) {
       console.error('[PTY Bridge] Fatal error in connection handler:', error);
@@ -237,11 +263,11 @@ function interceptOutput(data: string, ws: WebSocket): string {
 /**
  * Execute command and track for safety
  */
-function executeCommand(session: TerminalSession, command: string) {
+function executeCommand(ptySession: any, session: TerminalSession, command: string) {
   console.log(`[PTY Bridge] Executing command: ${command}`);
 
   // Write command to PTY
-  session.pty.write(command + '\r');
+  ptySession.pty.write(command + '\r');
   session.commandBuffer = '';
 }
 
@@ -251,10 +277,12 @@ function executeCommand(session: TerminalSession, command: string) {
 export function cleanupPTYBridge() {
   console.log('[PTY Bridge] Cleaning up sessions...');
   sessions.forEach((session) => {
-    session.pty.kill();
+    // Close WebSocket
     if (session.ws.readyState === WebSocket.OPEN) {
       session.ws.close();
     }
+    // Remove runspace session from backend
+    wslBackend.removeSession(session.runspaceId);
   });
   sessions.clear();
 }

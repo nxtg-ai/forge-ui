@@ -16,6 +16,13 @@ import {
   Artifact,
   AgentResponse
 } from '../types/agents';
+import { approvalQueue } from '../services/approval-queue';
+import {
+  DecisionImpact,
+  DecisionRisk,
+  ApproverRole,
+  ApprovalStatus
+} from '../types/approval';
 
 const logger = new Logger('AgentCoordination');
 
@@ -48,6 +55,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
   private messageQueue: Map<string, QueueEntry[]> = new Map();
   private activeMessages: Map<string, Message> = new Map();
   private signOffRequests: Map<string, SignOffRequest> = new Map();
+  private approvalRequestIds: Map<string, string> = new Map(); // artifactId -> approvalRequestId
   private agentRegistry: Map<string, Agent> = new Map();
   private status: CoordinationStatus = CoordinationStatus.IDLE;
   private messageHandlers: Map<string, (message: Message) => Promise<any>> = new Map();
@@ -161,6 +169,29 @@ export class AgentCoordinationProtocol extends EventEmitter {
     // Store request
     this.signOffRequests.set(request.artifactId, request);
 
+    // Map agent ID to approver role
+    const approverRole = this.mapAgentToApproverRole(agentId);
+
+    // Create approval request in the real queue
+    const approvalRequest = await approvalQueue.requestApproval(
+      {
+        taskId: artifact.id,
+        agentId: 'orchestrator',
+        action: `Sign-off for ${artifact.type}`,
+        rationale: request.description,
+        filesAffected: artifact.files || [],
+      },
+      DecisionImpact.MEDIUM,
+      DecisionRisk.MEDIUM,
+      {
+        requiredApprover: approverRole,
+        timeoutMinutes: 5,
+      }
+    );
+
+    // Track the approval request ID
+    this.approvalRequestIds.set(artifact.id, approvalRequest.id);
+
     // Create sign-off message
     const message: Message = {
       id: crypto.randomBytes(8).toString('hex'),
@@ -173,11 +204,26 @@ export class AgentCoordinationProtocol extends EventEmitter {
       priority: MessagePriority.HIGH
     };
 
-    // Send message and wait for response
+    // Send message to notify agent
     await this.sendMessage(agentId, message);
 
-    // Wait for sign-off response (with timeout)
+    // Wait for real approval response (with timeout)
     return await this.waitForSignOff(request.artifactId, 300000);
+  }
+
+  /**
+   * Map agent ID to approver role
+   */
+  private mapAgentToApproverRole(agentId: string): ApproverRole | undefined {
+    if (agentId.includes('architect')) {
+      return ApproverRole.ARCHITECT;
+    } else if (agentId.includes('designer') || agentId.includes('vanguard')) {
+      return ApproverRole.DESIGNER;
+    } else if (agentId.includes('ceo') || agentId.includes('CEO-LOOP')) {
+      return ApproverRole.CEO;
+    }
+    // Default: no specific approver required
+    return undefined;
   }
 
   /**
@@ -205,17 +251,60 @@ export class AgentCoordinationProtocol extends EventEmitter {
   }
 
   /**
-   * Get sign-off result (simplified)
+   * Get sign-off result from real approval queue
    */
   private getSignOffResult(artifactId: string): SignOffResult | null {
-    // In production, this would check actual responses
-    return {
-      approved: true,
-      reviewer: 'architect',
-      timestamp: new Date(),
-      comments: 'Approved with minor suggestions',
-      suggestions: ['Consider adding more error handling']
-    };
+    const approvalRequestId = this.approvalRequestIds.get(artifactId);
+    if (!approvalRequestId) {
+      return null;
+    }
+
+    const approvalRequest = approvalQueue.getRequest(approvalRequestId);
+    if (!approvalRequest) {
+      return null;
+    }
+
+    // Check if decision has been made
+    if (approvalRequest.status === ApprovalStatus.PENDING) {
+      return null; // Still waiting
+    }
+
+    // Map approval result to sign-off result
+    if (approvalRequest.status === ApprovalStatus.APPROVED) {
+      return {
+        approved: true,
+        reviewer: approvalRequest.approver || 'unknown',
+        timestamp: approvalRequest.approvedAt || new Date(),
+        comments: approvalRequest.feedback || 'Approved',
+        suggestions: []
+      };
+    } else if (approvalRequest.status === ApprovalStatus.REJECTED) {
+      return {
+        approved: false,
+        reviewer: approvalRequest.approver || 'unknown',
+        timestamp: approvalRequest.approvedAt || new Date(),
+        comments: approvalRequest.feedback || 'Rejected',
+        suggestions: []
+      };
+    } else if (approvalRequest.status === ApprovalStatus.TIMEOUT) {
+      return {
+        approved: false,
+        reviewer: 'system',
+        timestamp: approvalRequest.approvedAt || new Date(),
+        comments: 'Request timed out without decision',
+        suggestions: []
+      };
+    } else if (approvalRequest.status === ApprovalStatus.CANCELLED) {
+      return {
+        approved: false,
+        reviewer: 'system',
+        timestamp: new Date(),
+        comments: 'Request was cancelled',
+        suggestions: []
+      };
+    }
+
+    return null;
   }
 
   /**

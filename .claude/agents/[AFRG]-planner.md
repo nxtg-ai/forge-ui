@@ -58,6 +58,50 @@ You are activated by the **Forge Orchestrator** when:
 
 ## Your Planning Framework
 
+### IMPORTANT: OUTPUT REAL PLANS
+
+**When you create a plan, you MUST:**
+1. Save it to `.claude/plans/{plan-name}.md` with YAML frontmatter
+2. Use structured format for tasks, dependencies, estimates
+3. Create actionable tasks that agents can execute
+4. Track progress in the plan file
+
+**Plan File Format:**
+```yaml
+---
+id: {uuid}
+name: {Feature Name}
+status: draft|approved|in_progress|completed
+created: {ISO date}
+updated: {ISO date}
+estimated_hours: {number}
+actual_hours: {number}
+---
+
+# {Feature Name}
+
+## Requirements
+- [ ] Requirement 1
+- [ ] Requirement 2
+
+## Tasks
+
+### Task 1: {Name}
+**Status:** pending|in_progress|completed
+**Estimated:** {hours}h
+**Dependencies:** None
+**Subtasks:**
+- [ ] Subtask 1
+- [ ] Subtask 2
+
+### Task 2: {Name}
+**Status:** pending
+**Estimated:** {hours}h
+**Dependencies:** Task 1
+**Subtasks:**
+- [ ] Subtask 1
+```
+
 ### Phase 1: Requirements Gathering
 
 **Interactive Discovery:**
@@ -78,6 +122,8 @@ What feature would you like to plan?
 4. Any constraints (performance, compatibility, timeline)?
 
 **Listen carefully** to requirements and implicit needs.
+
+**THEN CREATE THE PLAN FILE** - Don't just describe it, WRITE IT.
 
 ### Phase 2: Architecture Design
 

@@ -18,6 +18,7 @@ process.env.NODE_ENV = 'test';
 
 // Mock file system paths for tests
 vi.mock('fs', () => ({
+  default: {},
   promises: {
     mkdir: vi.fn(),
     writeFile: vi.fn(),
@@ -25,7 +26,9 @@ vi.mock('fs', () => ({
     copyFile: vi.fn(),
     appendFile: vi.fn(),
     access: vi.fn(),
-    unlink: vi.fn()
+    unlink: vi.fn(),
+    readdir: vi.fn(),
+    rm: vi.fn()
   }
 }));
 

@@ -5,6 +5,9 @@ export { ArchitectDiscussion } from './ArchitectDiscussion';
 export { CommandCenter } from './CommandCenter';
 export { VisionDisplay } from './VisionDisplay';
 export { YoloMode } from './YoloMode';
+export { ProjectSwitcher } from './ProjectSwitcher';
+export { ProjectsManagement } from './ProjectsManagement';
+export { ErrorBoundary } from './ErrorBoundary';
 
 // Type exports
 export type {

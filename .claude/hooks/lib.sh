@@ -14,7 +14,11 @@ fi
 export PROJECT_ROOT="$(cd "$HOOKS_DIR/../.." && pwd)"
 export CLAUDE_DIR="$PROJECT_ROOT/.claude"
 export CONFIG_FILE="$CLAUDE_DIR/config.json"
-export STATE_FILE="$CLAUDE_DIR/state.json"
+export PROJECT_STATE_FILE="$CLAUDE_DIR/project.json"
+export GOVERNANCE_STATE_FILE="$CLAUDE_DIR/governance.json"
+
+# Backward compatibility alias (deprecated - use PROJECT_STATE_FILE)
+export STATE_FILE="$PROJECT_STATE_FILE"
 
 # Colors for output
 export RED='\033[0;31m'
@@ -164,6 +168,119 @@ get_state() {
     else
         echo "$default"
         return 1
+    fi
+}
+
+# ===================================================================
+# Governance State Functions
+# ===================================================================
+
+# Calculate and sync workstream progress from tasks
+sync_governance_progress() {
+    if [ ! -f "$GOVERNANCE_STATE_FILE" ]; then
+        log_warning "Governance state file not found"
+        return 1
+    fi
+
+    if ! command -v jq &> /dev/null; then
+        log_warning "jq not available, cannot sync governance"
+        return 1
+    fi
+
+    # Calculate progress for each workstream based on completed tasks
+    local updated=$(jq '
+        .workstreams = [.workstreams[] |
+            . as $ws |
+            ($ws.tasks | map(select(.status == "completed")) | length) as $completed |
+            ($ws.tasks | length) as $total |
+            (if $total > 0 then (($completed / $total) * 100 | floor) else 0 end) as $progress |
+            .progress = $progress |
+            .metrics.progress = $progress |
+            .metrics.tasksCompleted = $completed |
+            .metrics.totalTasks = $total
+        ]
+    ' "$GOVERNANCE_STATE_FILE")
+
+    echo "$updated" > "$GOVERNANCE_STATE_FILE.tmp" && mv "$GOVERNANCE_STATE_FILE.tmp" "$GOVERNANCE_STATE_FILE"
+    log_success "Synced governance workstream progress"
+}
+
+# Append entry to governance sentinel log
+append_sentinel_log() {
+    local log_type="$1"      # INFO, WARN, ERROR, SUCCESS, CRITICAL
+    local message="$2"
+    local category="${3:-governance}"
+    local severity="${4:-low}"
+
+    if [ ! -f "$GOVERNANCE_STATE_FILE" ]; then
+        return 1
+    fi
+
+    if ! command -v jq &> /dev/null; then
+        return 1
+    fi
+
+    local timestamp=$(date +%s)000
+    local log_id="oracle-${timestamp}-$$"
+
+    jq --arg id "$log_id" \
+       --argjson ts "$timestamp" \
+       --arg type "$log_type" \
+       --arg sev "$severity" \
+       --arg cat "$category" \
+       --arg msg "$message" \
+       '.sentinelLog += [{
+           "id": $id,
+           "timestamp": $ts,
+           "type": $type,
+           "severity": $sev,
+           "category": $cat,
+           "source": "forge-oracle",
+           "message": $msg,
+           "context": {},
+           "actionRequired": false
+       }]' "$GOVERNANCE_STATE_FILE" > "$GOVERNANCE_STATE_FILE.tmp" && mv "$GOVERNANCE_STATE_FILE.tmp" "$GOVERNANCE_STATE_FILE"
+}
+
+# Get governance workstream summary
+get_governance_summary() {
+    if [ ! -f "$GOVERNANCE_STATE_FILE" ] || ! command -v jq &> /dev/null; then
+        echo "unknown"
+        return 1
+    fi
+
+    jq -r '.workstreams | map("\(.id): \(.metrics.tasksCompleted)/\(.metrics.totalTasks) (\(.progress)%)") | join(", ")' "$GOVERNANCE_STATE_FILE" 2>/dev/null
+}
+
+# Check if governance progress changed and log it
+check_and_log_governance_progress() {
+    if [ ! -f "$GOVERNANCE_STATE_FILE" ] || ! command -v jq &> /dev/null; then
+        return 1
+    fi
+
+    # Get current progress before sync
+    local before=$(jq '[.workstreams[].progress] | add / length | floor' "$GOVERNANCE_STATE_FILE" 2>/dev/null)
+
+    # Sync progress from tasks
+    sync_governance_progress
+
+    # Get progress after sync
+    local after=$(jq '[.workstreams[].progress] | add / length | floor' "$GOVERNANCE_STATE_FILE" 2>/dev/null)
+
+    # If progress changed significantly (>= 5%), log it
+    if [ -n "$before" ] && [ -n "$after" ]; then
+        local diff=$((after - before))
+        if [ "$diff" -ge 5 ] || [ "$diff" -le -5 ]; then
+            local summary=$(get_governance_summary)
+            append_sentinel_log "INFO" "Governance status update: $summary" "governance" "low"
+            log_info "Governance progress updated: $before% -> $after%"
+        fi
+
+        # Log completion milestone
+        if [ "$after" -eq 100 ] && [ "$before" -lt 100 ]; then
+            append_sentinel_log "SUCCESS" "All workstreams complete - ready to ship" "governance" "low"
+            log_success "All governance workstreams at 100%!"
+        fi
     fi
 }
 
@@ -464,3 +581,7 @@ export -f lint_python_files
 export -f type_check_python
 export -f print_separator
 export -f print_header
+export -f sync_governance_progress
+export -f append_sentinel_log
+export -f get_governance_summary
+export -f check_and_log_governance_progress

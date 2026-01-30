@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "version": "1.0.0",
+  "description": "Governance system configuration and thresholds",
+
+  "thresholds": {
+    "criticalErrorLimit": 3,
+    "blockTimeoutMinutes": 10,
+    "minConfidence": 50,
+    "maxRiskLevel": "high",
+    "warningThreshold": 5
+  },
+
+  "polling": {
+    "enabled": true,
+    "intervalMs": 2000,
+    "timeoutMs": 5000
+  },
+
+  "sentinelLog": {
+    "maxEntries": 1000,
+    "retentionDays": 7,
+    "persistCritical": true,
+    "autoRotate": true
+  },
+
+  "stateManagement": {
+    "backupEnabled": true,
+    "backupIntervalMinutes": 60,
+    "maxBackups": 24,
+    "validationEnabled": true
+  },
+
+  "oracle": {
+    "enabled": true,
+    "confidenceThreshold": 80,
+    "categories": {
+      "scope": { "enabled": true, "severity": "medium" },
+      "drift": { "enabled": true, "severity": "high" },
+      "governance": { "enabled": true, "severity": "critical" }
+    }
+  },
+
+  "ui": {
+    "refreshInterval": 2000,
+    "showDebugInfo": false,
+    "enableAnimations": true,
+    "compactMode": false
+  },
+
+  "notifications": {
+    "enabled": true,
+    "criticalOnly": false,
+    "soundEnabled": false,
+    "desktopNotifications": true
+  }
+}

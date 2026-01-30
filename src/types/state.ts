@@ -136,6 +136,26 @@ export const SituationReportSchema = z.object({
   estimatedCompletion: z.date().optional()
 });
 
+// Task checkpoint schema for progress tracking
+export const TaskCheckpointSchema = z.object({
+  taskId: z.string(),
+  timestamp: z.date(),
+  progress: z.number().min(0).max(100),
+  artifacts: z.object({
+    filesCreated: z.array(z.string()),
+    filesModified: z.array(z.string()),
+    commandsRun: z.array(z.string())
+  }),
+  nextAction: z.string(),
+  status: z.enum(['pending', 'in_progress', 'completed', 'failed'])
+});
+
+// Checkpoint state schema
+export const CheckpointStateSchema = z.object({
+  checkpoints: z.map(z.string(), TaskCheckpointSchema),
+  lastCheckpoint: z.date().nullable()
+});
+
 // Type exports
 export type Task = z.infer<typeof TaskSchema>;
 export type AgentState = z.infer<typeof AgentStateSchema>;
@@ -146,6 +166,8 @@ export type ContextNode = z.infer<typeof ContextNodeSchema>;
 export type ContextEdge = z.infer<typeof ContextEdgeSchema>;
 export type ContextGraph = z.infer<typeof ContextGraphSchema>;
 export type SituationReport = z.infer<typeof SituationReportSchema>;
+export type TaskCheckpoint = z.infer<typeof TaskCheckpointSchema>;
+export type CheckpointState = z.infer<typeof CheckpointStateSchema>;
 
 // Context path for navigation
 export interface ContextPath {

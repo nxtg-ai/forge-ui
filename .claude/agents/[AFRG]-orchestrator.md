@@ -158,11 +158,29 @@ Forge {Agent Name} {action verb}...
 {Phase name} complete
 ```
 
+**Specialist Agents:**
+
+- **forge-detective**: Comprehensive codebase analysis and health checks
+- **forge-planner**: Feature design and task breakdown
+- **forge-builder**: Implementation and code generation
+- **forge-guardian**: Quality gates and security validation
+- **forge-oracle**: Governance monitoring and alignment validation (runs in background)
+
 **Examples:**
 
 - `Forge Planner analyzing requirements...`
 - `Forge Builder implementing changes...`
 - `Forge Guardian running quality checks...`
+- `Forge Oracle monitoring governance...`
+
+**Oracle Integration:**
+
+The Oracle agent runs as a background sentinel during active development (Options 1 and 2). It monitors code changes for:
+- Scope violations (drift from stated directive)
+- Architectural compliance
+- Governance rule adherence
+
+Oracle findings appear in the Governance HUD's Oracle Feed. Unlike other agents, Oracle is non-blocking - it provides warnings and insights but never halts development.
 
 ## Natural Language Understanding
 

@@ -1,0 +1,107 @@
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ [1] HEADER (sticky top-0 z-30)                                                                                 │
+│ ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ [Terminal Icon] Agentic Command Center                                          [Context ON] [Diffs ON]    │ │
+│ │ Class: border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm                                            │ │
+│ │ TestID: "terminal-view-container"                                                                          │ │
+│ └────────────────────────────────────────────────────────────────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ [2] MAIN LAYOUT CONTAINER (flex h-[calc(100vh-73px)])                                                          │
+│                                                                                                                │
+│ ┌───────────────────────────────────────────┬──────────────────────────────────┬─────────────────────────────┐ │
+│ │ [3] LEFT SIDEBAR (Context Window HUD)     │ [4] CENTER - TERMINAL            │ [5] RIGHT SIDEBAR (Diffs)   │ │
+│ │ (Conditional Render)                      │ (Always Visible)                 │ (Conditional Render)        │ │
+│ │                                           │                                  │                             │ │
+│ │ Width: w-80                               │ Width: flex-1 min-w-0            │ Width: w-96                 │ │
+│ │ Class: border-r bg-gray-950               │ Class: bg-black                  │ Class: border-l bg-gray-900 │ │
+│ │ TestID: "context-window-hud"              │                                  │                             │ │
+│ │                                           │                                  │                             │ │
+│ │ ┌───────────────────────────────────────┐ │ ┌──────────────────────────────┐ │ ┌─────────────────────────┐ │ │
+│ │ │ [3a] Header Section                   │ │ │ [4a] ClaudeTerminal          │ │ │ [5a] Diff Visualization │ │ │
+│ │ │ Class: px-4 py-3 border-b border-800  │ │ │                              │ │ │                         │ │ │
+│ │ │ - Brain Icon / Title                  │ │ │ - Terminal Output            │ │ │ - File Tabs             │ │ │
+│ │ │ - Token Usage Bar & %                 │ │ │ - Command Input              │ │ │ - Split View            │ │ │
+│ │ └───────────────────────────────────────┘ │ │ - History                    │ │ │ - Apply / Reject        │ │ │
+│ │                                           │ │                              │ │ └─────────────────────────┘ │ │
+│ │ ┌───────────────────────────────────────┐ │ │                              │ │                             │ │
+│ │ │ [3b] Current Thought (CONDITIONAL)    │ │ │                              │ │                             │ │
+│ │ │ {contextData.currentThought && ...}   │ │ │                              │ │                             │ │
+│ │ │ Class: bg-purple-500/5 border-b       │ │ │                              │ │                             │ │
+│ │ │ - "Claude is thinking..."             │ │ │                              │ │                             │ │
+│ │ └───────────────────────────────────────┘ │ │                              │ │                             │ │
+│ │                                           │ │                              │ │                             │ │
+│ │ ┌───────────────────────────────────────┐ │ │                              │ │                             │ │
+│ │ │ [3c] Memory Section (The Fix Area)    │ │ │                              │ │                             │ │
+│ │ │                                       │ │ │                              │ │                             │ │
+│ │ │ [3c-i] Header: "Memory (7)" + Btn     │ │ │                              │ │                             │ │
+│ │ │ [3c-ii] Add Form (Conditional)        │ │ │                              │ │                             │ │
+│ │ │                                       │ │ │                              │ │                             │ │
+│ │ │ [3c-iii] Memory List Container        │ │ │                              │ │                             │ │
+│ │ │ DYNAMIC CLASS LOGIC:                  │ │ │                              │ │                             │ │
+│ │ │                                       │ │ │                              │ │                             │ │
+│ │ │ IF files.length > 0:                  │ │ │                              │ │                             │ │
+│ │ │   "max-h-64 overflow-y-auto"          │ │ │                              │ │                             │ │
+│ │ │   (Restricted height)                 │ │ │                              │ │                             │ │
+│ │ │                                       │ │ │                              │ │                             │ │
+│ │ │ IF files.length === 0:                │ │ │                              │ │                             │ │
+│ │ │   "flex-1 min-h-0 overflow-y-auto"    │ │ │                              │ │                             │ │
+│ │ │   (Expands to fill remaining space)   │ │ │                              │ │                             │ │
+│ │ └───────────────────────────────────────┘ │ │                              │ │                             │ │
+│ │                                           │ │                              │ │                             │ │
+│ │ ┌───────────────────────────────────────┐ │ │                              │ │                             │ │
+│ │ │ [3d] Files Heat Map (CONDITIONAL)     │ │ │                              │ │                             │ │
+│ │ │ {contextData.files.length > 0 && ...} │ │ │                              │ │                             │ │
+│ │ │                                       │ │ │                              │ │                             │ │
+│ │ │ Class: flex-1 overflow-y-auto min-h-0 │ │ │                              │ │                             │ │
+│ │ │ TestID: "context-window-files-section"│ │ │                              │ │                             │ │
+│ │ │                                       │ │ │                              │ │                             │ │
+│ │ │ *If visible, THIS takes the flex-1* │ │ │                                │ │                             │ │
+│ │ └───────────────────────────────────────┘ │ │                              │ │                             │ │
+│ │                                           │ │                              │ │                             │ │
+│ │ ┌───────────────────────────────────────┐ │ │                              │ │                             │ │
+│ │ │ [3e] Footer Stats (CONDITIONAL)       │ │ │                              │ │                             │ │
+│ │ │ {contextData.files.length > 0 && ...} │ │ │                              │ │                             │ │
+│ │ │                                       │ │ │                              │ │                             │ │
+│ │ │ Class: border-t bg-gray-950/50        │ │ │                              │ │                             │ │
+│ │ │ - Reading / Analyzing / Complete      │ │ │                              │ │                             │ │
+│ │ └───────────────────────────────────────┘ │ └──────────────────────────────┘ │                             │ │
+│ └───────────────────────────────────────────┴──────────────────────────────────┴─────────────────────────────┘ │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ [6] FLOATING ELEMENTS                                                                                          │
+│ ┌────────────────────────────────────────────────────────┐                                                     │
+│ │ [6a] Help Overlay (fixed bottom-4 left-4 z-20)         │                                                     │
+│ │                                                        │                                                     │
+│ │  [Collapsed]: (i) Button                               │                                                     │
+│ │                                                        │                                                     │
+│ │  [Expanded]:  ┌─────────────────────────────────────┐  │                                                     │
+│ │               │ Keyboard Shortcuts              [x] │  │                                                     │
+│ │               │ Ctrl+C  Cancel    Ctrl+L  Clear     │  │                                                     │
+│ │               └─────────────────────────────────────┘  │                                                     │
+│ └────────────────────────────────────────────────────────┘                                                     │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+  NUMBERED SECTION REFERENCE:
+
+  [1] - Header (sticky, toggles for panels)
+  [2] - Main layout container (3-column flex)
+  [3] - Left sidebar (Context Window HUD, conditional)
+  - [3a] - Header section (Brain, title, token usage)
+  - [3b] - Current Thought (conditional, purple bg)
+  - [3c] - Memory Section (dynamic height based on files)
+    - [3c-i] - Memory header with Add button
+    - [3c-ii] - Add memory form (conditional)
+    - [3c-iii] - Memory items list (flex-1 or max-h-64)
+  - [3d] - Files Heat Map (conditional, only if files exist)
+  - [3e] - Footer Stats (conditional, only if files exist)
+  [4] - Center terminal (always visible, flex-1)
+  - [4a] - ClaudeTerminal component
+  [5] - Right sidebar (Diff Visualization, conditional)
+  - [5a] - Diff component with tabs and buttons
+  [6] - Floating elements
+  - [6a] - Help overlay (collapsible)
+    - [6a-i] - Collapsed state (info icon)
+    - [6a-ii] - Expanded state (shortcuts panel)

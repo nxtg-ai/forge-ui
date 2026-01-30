@@ -25,5 +25,41 @@
     "auto_open_files": [],
     "sidebar_visible": true,
     "panel_visible": true
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "description": "Pre-task initialization and state sync",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/pre-task.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "description": "Post-task completion and quality checks",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/post-task.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "description": "Oracle governance monitoring after code changes",
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "After modifying code, the forge-oracle agent monitors for governance compliance. If the changes appear to violate scope, architectural constraints, or governance rules, the oracle will write a warning to the sentinel log that appears in the Governance HUD.\n\nQuick governance check:\n1. Does this change align with the current directive in .claude/governance.json?\n2. Are we touching files outside the stated scope?\n3. Does this introduce architectural drift?\n\nIf any concerns are detected, use the Write tool to append a sentinel log entry to .claude/governance.json following this format:\n\n```json\n{\n  \"id\": \"oracle-<timestamp>-<random>\",\n  \"timestamp\": <current_time_ms>,\n  \"type\": \"WARN\" | \"INFO\" | \"CRITICAL\",\n  \"severity\": \"low\" | \"medium\" | \"high\",\n  \"category\": \"scope\" | \"drift\" | \"governance\",\n  \"source\": \"forge-oracle\",\n  \"message\": \"Clear, actionable message\",\n  \"context\": {\n    \"files\": [\"modified/file/path\"],\n    \"workstream\": \"gov-001\",\n    \"suggestion\": \"Recommended action\"\n  },\n  \"actionRequired\": false\n}\n```\n\nOnly report high-confidence findings. When in doubt, skip. This is non-blocking guidance."
+          }
+        ]
+      }
+    ]
   }
 }

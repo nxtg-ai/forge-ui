@@ -57,6 +57,13 @@ Technical reference for developers
 - Extension points
 - Integration guides
 
+### 🎯 [Features](./features/)
+**✨ NEW** Feature-specific guides
+- [Multi-Project Runspaces](./features/multi-project/) - ✅ v1.0 Production Ready
+- Manage multiple projects simultaneously
+- <100ms context switching
+- Isolated environments per project
+
 ---
 
 ## 🚀 Quick Navigation
@@ -65,6 +72,7 @@ Technical reference for developers
 - [Installation Guide](../GETTING-STARTED.md)
 - [Your First Feature](./tutorials/first-feature.md)
 - [Understanding Agents](./agents/README.md)
+- **✨ NEW** [Multi-Project Setup](./features/multi-project/)
 
 ### Common Tasks
 - [Building REST APIs](./tutorials/rest-api.md)

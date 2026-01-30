@@ -23,8 +23,8 @@ fi
 
 log_info "Post-task hook triggered"
 
-# 1. Update state.json with completion status
-if [ -n "$TASK_ID" ] && has_command jq && [ -f "$STATE_FILE" ]; then
+# 1. Update project.json with completion status
+if [ -n "$TASK_ID" ] && has_command jq && [ -f "$PROJECT_STATE_FILE" ]; then
     CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     STATUS="${TASK_STATUS:-completed}"
 
@@ -33,7 +33,7 @@ if [ -n "$TASK_ID" ] && has_command jq && [ -f "$STATE_FILE" ]; then
        '.last_session.status = $status |
         .last_session.completed = $time |
         .project.last_updated = $time' \
-       "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+       "$PROJECT_STATE_FILE" > "$PROJECT_STATE_FILE.tmp" && mv "$PROJECT_STATE_FILE.tmp" "$PROJECT_STATE_FILE"
 
     if [ "$STATUS" = "success" ]; then
         log_success "Task completed successfully"
@@ -69,8 +69,14 @@ if [ -n "$FILES_MODIFIED" ] && [ "$FILES_MODIFIED" -gt 0 ]; then
     fi
 fi
 
-# 4. Update quality metrics in state.json
-if has_command python && [ -f "$STATE_FILE" ]; then
+# 4. Sync governance progress and log changes
+if [ -f "$GOVERNANCE_STATE_FILE" ]; then
+    log_info "Syncing governance state..."
+    check_and_log_governance_progress
+fi
+
+# 5. Update quality metrics in project.json
+if has_command python && [ -f "$PROJECT_STATE_FILE" ]; then
     # Get test count
     if [ -d "$PROJECT_ROOT/tests" ]; then
         TEST_COUNT=$(find "$PROJECT_ROOT/tests" -name "test_*.py" -type f | wc -l)
@@ -78,12 +84,12 @@ if has_command python && [ -f "$STATE_FILE" ]; then
         if has_command jq; then
             jq --argjson count "$TEST_COUNT" \
                '.quality.tests.unit.total = $count' \
-               "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+               "$PROJECT_STATE_FILE" > "$PROJECT_STATE_FILE.tmp" && mv "$PROJECT_STATE_FILE.tmp" "$PROJECT_STATE_FILE"
         fi
     fi
 fi
 
-# 5. Check safety constraints
+# 6. Check safety constraints
 if [ -n "$FILES_MODIFIED" ] && [ "$FILES_MODIFIED" -gt 0 ]; then
     MAX_CHANGES=$(get_max_file_changes)
     if [ "$FILES_MODIFIED" -gt "$MAX_CHANGES" ]; then
@@ -92,7 +98,7 @@ if [ -n "$FILES_MODIFIED" ] && [ "$FILES_MODIFIED" -gt 0 ]; then
     fi
 fi
 
-# 6. Suggest next steps based on task status
+# 7. Suggest next steps based on task status
 if [ "$TASK_STATUS" = "success" ]; then
     COVERAGE_TARGET=$(get_test_coverage_target)
     log_info "Consider running:"
@@ -101,7 +107,7 @@ if [ "$TASK_STATUS" = "success" ]; then
     echo "  - git status   # Review changes"
 fi
 
-# 7. Create automatic checkpoint for major milestones
+# 8. Create automatic checkpoint for major milestones
 if [ -n "$TASK_ID" ] && [ "$TASK_STATUS" = "success" ]; then
     # Check if this is a significant task (more than 5 files modified)
     if [ -n "$FILES_MODIFIED" ] && [ "$FILES_MODIFIED" -gt 5 ]; then
@@ -110,49 +116,46 @@ if [ -n "$TASK_ID" ] && [ "$TASK_STATUS" = "success" ]; then
     fi
 fi
 
-#!/bin/bash
-# Post-task hook: Documentation check
+# 9. Documentation sync check
+DOC_MAPPING_FILE="$CLAUDE_DIR/config/doc-mapping.json"
 
-# ... other checks ...
+if [ -f "$DOC_MAPPING_FILE" ] && has_command jq; then
+    # Get changed files (staged + unstaged)
+    CHANGED_FILES=$(git diff --name-only HEAD 2>/dev/null || git diff --name-only 2>/dev/null || echo "")
 
-# ============================================
-# DOCUMENTATION SYNC CHECK
-# ============================================
+    if [ -n "$CHANGED_FILES" ]; then
+        DOC_UPDATES_NEEDED=()
 
-echo "📚 Checking documentation sync..."
+        # Check each changed file against doc mappings
+        while IFS= read -r file; do
+            [ -z "$file" ] && continue
 
-# Get changed files
-CHANGED_FILES=$(git diff --cached --name-only)
+            # Get matching docs from mapping (check if file matches any pattern)
+            MATCHED_DOCS=$(jq -r --arg f "$file" '
+                .mappings[] |
+                select(.action == "notify" or .action == "auto_update") |
+                select(
+                    (.code_pattern | gsub("\\*"; ".*") | gsub("/"; "\\/")) as $pattern |
+                    ($f | test($pattern))
+                ) |
+                "[\(.priority)] \(.docs | join(", "))"
+            ' "$DOC_MAPPING_FILE" 2>/dev/null || echo "")
 
-# Check if any changed files have doc mappings
-DOC_UPDATES_NEEDED=()
+            if [ -n "$MATCHED_DOCS" ]; then
+                DOC_UPDATES_NEEDED+=("$file → $MATCHED_DOCS")
+            fi
+        done <<< "$CHANGED_FILES"
 
-for file in $CHANGED_FILES; do
-  # Check against doc mapping
-  MAPPED_DOCS=$(python3 -c "
-import json
-with open('.claude/config/doc-mapping.json') as f:
-    mappings = json.load(f)['mappings']
-    
-for m in mappings:
-    import fnmatch
-    if fnmatch.fnmatch('$file', m['code_pattern']):
-        for doc in m['docs']:
-            print(doc.replace('{filename}', '$file'.split('/')[-1].replace('.ts', '').replace('.tsx', '')))
-")
-  
-  if [ -n "$MAPPED_DOCS" ]; then
-    DOC_UPDATES_NEEDED+=("$file -> $MAPPED_DOCS")
-  fi
-done
-
-if [ ${#DOC_UPDATES_NEEDED[@]} -gt 0 ]; then
-  echo "  ⚠️  Documentation may need updates:"
-  for item in "${DOC_UPDATES_NEEDED[@]}"; do
-    echo "    - $item"
-  done
-  echo ""
-  echo "  Run '/docs-update' to auto-update or '/docs-status' to review"
+        if [ ${#DOC_UPDATES_NEEDED[@]} -gt 0 ]; then
+            echo ""
+            log_warning "Documentation may need updates:"
+            for item in "${DOC_UPDATES_NEEDED[@]}"; do
+                echo "    📄 $item"
+            done
+            echo ""
+            log_info "Run '/docs-status' to review or '/docs-update' to auto-update"
+        fi
+    fi
 fi
 
 log_success "Post-task checks complete"

@@ -20,7 +20,7 @@ import sys
 project_root = Path.cwd()
 
 # Check if forge is initialized
-orchestrator_agent = project_root / ".claude" / "agents" / "agent-forge-orchestrator.md"
+orchestrator_agent = project_root / ".claude" / "agents" / "[AFRG]-orchestrator.md"
 state_file = project_root / ".claude" / "forge" / "state.json"
 
 forge_initialized = orchestrator_agent.exists()
@@ -177,7 +177,7 @@ def main():
         project_root = Path.cwd()
 
         # Quick check for forge initialization
-        orchestrator_agent = project_root / ".claude" / "agents" / "agent-forge-orchestrator.md"
+        orchestrator_agent = project_root / ".claude" / "agents" / "[AFRG]-orchestrator.md"
 
         if not orchestrator_agent.exists():
             # Not installed, exit silently

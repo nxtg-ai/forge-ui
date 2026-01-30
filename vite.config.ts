@@ -16,6 +16,16 @@ export default defineConfig({
   server: {
     port: 5050, // NXTG-Forge dedicated UI port
     open: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5051',
+        changeOrigin: true,
+      },
+      '/ws': {
+        target: 'ws://localhost:5051',
+        ws: true,
+      },
+    },
   },
   build: {
     outDir: 'dist-ui',

@@ -99,5 +99,49 @@ session-*.log
 .claude/*.local.md
 .claude/cache/
 
+# ============================================================
+# DOG-FOODING: Personal Workspace (NEVER commit these!)
+# ============================================================
+
+# Personal workspace and design explorations
+.asif/
+
+# Personal knowledge base and references
+.forge/
+
+# ============================================================
+# RUNTIME FILES (Generated when running NXTG-Forge)
+# Users need a clean slate, not YOUR runtime data!
+# ============================================================
+
+# User's personal vision and history
+.claude/VISION.md
+.claude/vision-events.json
+
+# Runtime state and session data
+.claude/forge/state.json
+.claude/state/*.json
+
+# Runtime generated directories (keep structure, ignore contents)
+.claude/memory/*
+!.claude/memory/.gitkeep
+.claude/checkpoints/*
+!.claude/checkpoints/.gitkeep
+.claude/features/*
+!.claude/features/.gitkeep
+.claude/reports/*
+!.claude/reports/.gitkeep
+
+# Runtime markers and migrations
+.claude/FORGE-ENABLED
+.claude/MIGRATION-COMPLETE.md
+
+# All .local files (user-specific overrides)
+**/*.local.md
+**/*.local.yml
+**/*.local.json
+**/*.local.ts
+**/*.local.tsx
+
 # Zone Identifier files (Windows)
 *.Zone.Identifier

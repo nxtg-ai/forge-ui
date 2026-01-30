@@ -14,10 +14,20 @@ import { StateManager } from '../core/state';
 import { CoordinationService } from '../core/coordination';
 import { BootstrapService } from '../core/bootstrap';
 import { createPTYBridge, cleanupPTYBridge } from './pty-bridge';
+import { MCPSuggestionEngine } from '../orchestration/mcp-suggestion-engine';
+import { RunspaceManager } from '../core/runspace-manager';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import { GovernanceState } from '../types/governance.types';
+import { GovernanceStateManager } from '../services/governance-state-manager';
 
 const app = express();
 const server = createServer(app);
 const wss = new WebSocketServer({ noServer: true });
+
+// Initialize Governance State Manager
+const projectRoot = process.cwd();
+const governanceStateManager = new GovernanceStateManager(projectRoot);
 
 // Middleware
 app.use(cors({
@@ -33,6 +43,10 @@ const coordinationService = new CoordinationService();
 const orchestrator = new ForgeOrchestrator(visionManager, coordinationService);
 const stateManager = new StateManager();
 const bootstrapService = new BootstrapService(stateManager);
+// Use Claude Code CLI (user's Pro Max subscription) - no API key needed
+const mcpSuggestionEngine = new MCPSuggestionEngine();
+// Multi-project runspace manager
+const runspaceManager = new RunspaceManager();
 
 // WebSocket connection management
 const clients = new Set<WebSocket>();
@@ -160,6 +174,102 @@ app.post('/api/vision/capture', async (req, res) => {
     });
   }
 });
+
+// ============= MCP Suggestion Endpoints =============
+
+app.post('/api/mcp/suggestions', async (req, res) => {
+  try {
+    const { vision } = req.body;
+
+    // Transform vision data to VisionContext format
+    const visionContext = {
+      mission: vision.mission || '',
+      goals: vision.goals || [],
+      techStack: {
+        backend: extractTechStack(vision, 'backend'),
+        frontend: extractTechStack(vision, 'frontend'),
+        database: extractTechStack(vision, 'database')
+      },
+      features: vision.goals || [],
+      integrations: [],
+      industry: detectIndustry(vision)
+    };
+
+    console.log('🤖 Generating MCP suggestions for vision:', visionContext.mission);
+    const suggestions = await mcpSuggestionEngine.suggestMCPs(visionContext);
+
+    res.json({
+      success: true,
+      data: suggestions,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('MCP suggestion error:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.post('/api/mcp/configure', async (req, res) => {
+  try {
+    const { selectedServers } = req.body;
+
+    // Generate .claude/mcp.json configuration
+    const mcpConfig = mcpSuggestionEngine.generateMCPConfig(selectedServers);
+    const setupGuide = mcpSuggestionEngine.generateSetupGuide(selectedServers);
+
+    res.json({
+      success: true,
+      data: {
+        config: mcpConfig,
+        setupGuide,
+        selectedServers
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Helper functions
+function extractTechStack(vision: any, category: string): string | undefined {
+  const text = JSON.stringify(vision).toLowerCase();
+  const patterns: Record<string, string[]> = {
+    backend: ['node', 'express', 'fastify', 'python', 'django', 'flask', 'go', 'rust'],
+    frontend: ['react', 'vue', 'angular', 'svelte', 'next', 'nuxt'],
+    database: ['postgres', 'mysql', 'mongodb', 'redis', 'sqlite']
+  };
+
+  for (const tech of patterns[category] || []) {
+    if (text.includes(tech)) return tech;
+  }
+  return undefined;
+}
+
+function detectIndustry(vision: any): string | undefined {
+  const text = JSON.stringify(vision).toLowerCase();
+  const industries: Record<string, string[]> = {
+    healthcare: ['health', 'medical', 'hipaa', 'patient'],
+    fintech: ['finance', 'banking', 'payment', 'crypto'],
+    ecommerce: ['shop', 'store', 'cart', 'checkout', 'product'],
+    saas: ['subscription', 'tenant', 'workspace']
+  };
+
+  for (const [industry, keywords] of Object.entries(industries)) {
+    if (keywords.some(keyword => text.includes(keyword))) {
+      return industry;
+    }
+  }
+  return undefined;
+}
 
 // ============= Project State Endpoints =============
 
@@ -474,6 +584,536 @@ app.get('/api/yolo/history', async (req, res) => {
   }
 });
 
+// ============= Memory Endpoints =============
+
+app.get('/api/memory/seed', async (_req, res) => {
+  try {
+    const seedItems = [
+      {
+        id: crypto.randomUUID(),
+        content: "Dog-Food or Die: Use Claude Code's native capabilities (agents, hooks, commands, skills). DON'T build TypeScript meta-services when agents can do the work.",
+        tags: ["critical", "dog-food", "week-1"],
+        category: "instruction",
+        created: new Date("2026-01-28").toISOString(),
+        updated: new Date("2026-01-28").toISOString()
+      },
+      {
+        id: crypto.randomUUID(),
+        content: "TypeScript IS appropriate for UI abstractions (state-bridge, terminal components). NOT appropriate for meta-orchestration services (plan-executor, builder-service).",
+        tags: ["typescript", "architecture", "ui"],
+        category: "learning",
+        created: new Date("2026-01-29").toISOString(),
+        updated: new Date("2026-01-29").toISOString()
+      },
+      {
+        id: crypto.randomUUID(),
+        content: "Run agents in PARALLEL (up to 20) using multiple Task tool calls in a SINGLE message. Maximizes throughput.",
+        tags: ["agents", "performance", "parallel"],
+        category: "instruction",
+        created: new Date("2026-01-29").toISOString(),
+        updated: new Date("2026-01-29").toISOString()
+      },
+      {
+        id: crypto.randomUUID(),
+        content: "QA agents must see REAL web logs from running servers. No mocked testing data. Real integration tests only.",
+        tags: ["testing", "qa", "real-logs"],
+        category: "instruction",
+        created: new Date("2026-01-29").toISOString(),
+        updated: new Date("2026-01-29").toISOString()
+      },
+      {
+        id: crypto.randomUUID(),
+        content: "CEO-LOOP makes decision → EXECUTE immediately. Don't ask for additional permission unless CRITICAL (Impact: CRITICAL + Risk: CRITICAL).",
+        tags: ["ceo-loop", "autonomous", "execution"],
+        category: "decision",
+        created: new Date("2026-01-28").toISOString(),
+        updated: new Date("2026-01-28").toISOString()
+      },
+      {
+        id: crypto.randomUUID(),
+        content: "Week 1 COMPLETE: 5 critical gaps closed (approval queue, planner agent, CEO-LOOP validation, checkpoints, memory widgets). Foundation for autonomous operation established.",
+        tags: ["week-1", "milestone", "complete"],
+        category: "context",
+        created: new Date("2026-01-29").toISOString(),
+        updated: new Date("2026-01-29").toISOString()
+      },
+      {
+        id: crypto.randomUUID(),
+        content: "OOM crash at 4GB heap during CEO-LOOP invocation. Solution: Increase NODE_OPTIONS to 8GB + use focused, lightweight operations.",
+        tags: ["incident", "memory", "learned"],
+        category: "learning",
+        created: new Date("2026-01-29").toISOString(),
+        updated: new Date("2026-01-29").toISOString()
+      }
+    ];
+
+    res.json({
+      success: true,
+      data: seedItems,
+      count: seedItems.length,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// ============= Governance Endpoints =============
+
+app.get('/api/governance/state', async (req, res) => {
+  try {
+    const projectRoot = process.cwd();
+    const governancePath = path.join(projectRoot, '.claude/governance.json');
+
+    try {
+      const data = await fs.readFile(governancePath, 'utf-8');
+      const state: GovernanceState = JSON.parse(data);
+
+      res.json({
+        success: true,
+        data: state,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      if (error.code === 'ENOENT') {
+        res.status(404).json({
+          success: false,
+          error: 'Governance state not found',
+          message: 'Initialize governance with seed data first',
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        throw error; // Re-throw to be caught by outer catch
+      }
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to read governance state',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.get('/api/governance/config', async (req, res) => {
+  try {
+    const projectRoot = process.cwd();
+    const configPath = path.join(projectRoot, '.claude/governance/config.json');
+
+    try {
+      const data = await fs.readFile(configPath, 'utf-8');
+      const config = JSON.parse(data);
+
+      res.json({
+        success: true,
+        data: config,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error: any) {
+      if (error.code === 'ENOENT') {
+        // Return default config if file doesn't exist
+        const { DEFAULT_GOVERNANCE_CONFIG } = await import('../types/governance.types.js');
+        res.json({
+          success: true,
+          data: DEFAULT_GOVERNANCE_CONFIG,
+          timestamp: new Date().toISOString(),
+          message: 'Using default configuration (config.json not found)'
+        });
+      } else {
+        throw error;
+      }
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to read governance config',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.post('/api/governance/sentinel', async (req, res) => {
+  try {
+    const entry = req.body;
+
+    // Validate required fields
+    if (!entry.type || !entry.source || !entry.message) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: type, source, message',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Append log using state manager (includes automatic rotation)
+    await governanceStateManager.appendSentinelLog(entry);
+
+    res.json({
+      success: true,
+      message: 'Sentinel log entry added',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to append sentinel log',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.get('/api/governance/validate', async (req, res) => {
+  try {
+    const result = await governanceStateManager.validateStateIntegrity();
+
+    res.json({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to validate state',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.get('/api/governance/backup/latest', async (req, res) => {
+  try {
+    const backup = await governanceStateManager.getLatestBackup();
+
+    if (!backup) {
+      return res.status(404).json({
+        success: false,
+        error: 'No backups found',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      data: backup,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve backup',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// ============= Diff Endpoints =============
+
+app.post('/api/diffs/apply', async (req, res) => {
+  try {
+    const { filePath, timestamp } = req.body;
+
+    if (!filePath) {
+      return res.status(400).json({
+        success: false,
+        error: 'filePath is required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // TODO: Implement actual diff application logic
+    // For now, simulate success
+    console.log(`📝 Applying diff to: ${filePath}`);
+
+    // Broadcast diff applied event
+    broadcast('diff.applied', {
+      filePath,
+      timestamp: timestamp || new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      message: `Successfully applied changes to ${filePath}`,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.post('/api/diffs/reject', async (req, res) => {
+  try {
+    const { filePath, timestamp } = req.body;
+
+    if (!filePath) {
+      return res.status(400).json({
+        success: false,
+        error: 'filePath is required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // TODO: Implement actual diff rejection logic
+    console.log(`❌ Rejecting diff for: ${filePath}`);
+
+    // Broadcast diff rejected event
+    broadcast('diff.rejected', {
+      filePath,
+      timestamp: timestamp || new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      message: `Rejected changes to ${filePath}`,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.get('/api/diffs/pending', async (req, res) => {
+  try {
+    // TODO: Implement actual pending diffs retrieval
+    // For now, return empty array
+    const diffs: any[] = [];
+
+    res.json({
+      success: true,
+      data: diffs,
+      count: diffs.length,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// ============= Runspace Endpoints =============
+
+app.post('/api/runspaces', async (req, res) => {
+  try {
+    const config = req.body;
+    const runspace = await runspaceManager.createRunspace(config);
+    broadcast('runspace.created', runspace);
+    res.json({
+      success: true,
+      data: runspace,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.get('/api/runspaces', async (req, res) => {
+  try {
+    const runspaces = runspaceManager.getAllRunspaces();
+    const activeRunspace = runspaceManager.getActiveRunspace();
+    res.json({
+      success: true,
+      data: {
+        runspaces,
+        activeRunspaceId: activeRunspace?.id || null
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.get('/api/runspaces/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const runspace = runspaceManager.getRunspace(id);
+    if (!runspace) {
+      return res.status(404).json({
+        success: false,
+        error: `Runspace not found: ${id}`,
+        timestamp: new Date().toISOString()
+      });
+    }
+    res.json({
+      success: true,
+      data: runspace,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.put('/api/runspaces/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    const runspace = await runspaceManager.updateRunspace(id, updates);
+    broadcast('runspace.updated', runspace);
+    res.json({
+      success: true,
+      data: runspace,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.delete('/api/runspaces/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { deleteFiles } = req.query;
+    await runspaceManager.deleteRunspace(id, deleteFiles === 'true');
+    broadcast('runspace.deleted', { runspaceId: id });
+    res.json({
+      success: true,
+      data: { deleted: true },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.post('/api/runspaces/:id/switch', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await runspaceManager.switchRunspace(id);
+    const runspace = runspaceManager.getActiveRunspace();
+    broadcast('runspace.activated', { runspaceId: id });
+    res.json({
+      success: true,
+      data: runspace,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.post('/api/runspaces/:id/start', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await runspaceManager.startRunspace(id);
+    const runspace = runspaceManager.getRunspace(id);
+    broadcast('runspace.updated', runspace);
+    res.json({
+      success: true,
+      data: runspace,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.post('/api/runspaces/:id/stop', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await runspaceManager.stopRunspace(id);
+    const runspace = runspaceManager.getRunspace(id);
+    broadcast('runspace.updated', runspace);
+    res.json({
+      success: true,
+      data: runspace,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.post('/api/runspaces/:id/suspend', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await runspaceManager.suspendRunspace(id);
+    const runspace = runspaceManager.getRunspace(id);
+    broadcast('runspace.suspended', { runspaceId: id });
+    res.json({
+      success: true,
+      data: runspace,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+app.get('/api/runspaces/:id/health', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const health = await runspaceManager.getRunspaceHealth(id);
+    res.json({
+      success: true,
+      data: health,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // ============= Health Check =============
 
 app.get('/api/health', (req, res) => {
@@ -505,7 +1145,7 @@ server.on('upgrade', (request, socket, head) => {
   // PTY bridge handles /terminal path in createPTYBridge
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`NXTG-Forge API Server running on port ${PORT}`);
   console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
 
@@ -515,16 +1155,24 @@ server.listen(PORT, () => {
   stateManager.initialize();
   coordinationService.initialize();
 
-  // Initialize PTY Bridge for Claude Code Terminal
-  createPTYBridge(server);
+  // Initialize RunspaceManager for multi-project support
+  await runspaceManager.initialize();
+  console.log('RunspaceManager initialized');
+
+  // Initialize PTY Bridge for Claude Code Terminal (with runspace support)
+  createPTYBridge(server, runspaceManager);
   console.log(`PTY Bridge initialized at ws://localhost:${PORT}/terminal`);
 
   console.log('All services initialized successfully');
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('SIGTERM received, closing server...');
+
+  // Shutdown runspace manager
+  await runspaceManager.shutdown();
+  console.log('RunspaceManager shutdown complete');
 
   // Close WebSocket connections
   clients.forEach(client => {

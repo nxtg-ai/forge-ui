@@ -1,0 +1,135 @@
+{
+  "version": "1.0.0",
+  "description": "Maps code changes to documentation that needs updating",
+  "mappings": [
+    {
+      "id": "governance-state",
+      "code_pattern": ".claude/governance.json",
+      "docs": [
+        ".claude/governance/AGENT_PROTOCOL.md",
+        "docs/governance-system.md"
+      ],
+      "action": "notify",
+      "priority": "high",
+      "description": "Governance state structure changes require protocol doc updates"
+    },
+    {
+      "id": "governance-config",
+      "code_pattern": ".claude/governance/config.json",
+      "docs": [
+        ".claude/governance/AGENT_PROTOCOL.md"
+      ],
+      "action": "notify",
+      "priority": "medium",
+      "description": "Config threshold changes should be documented"
+    },
+    {
+      "id": "hooks-lib",
+      "code_pattern": ".claude/hooks/lib.sh",
+      "docs": [
+        "docs/hooks-reference.md",
+        ".claude/governance/AGENT_PROTOCOL.md"
+      ],
+      "action": "notify",
+      "priority": "high",
+      "description": "Hook library changes affect agent reporting"
+    },
+    {
+      "id": "hooks-config",
+      "code_pattern": ".claude/settings.json",
+      "docs": [
+        "docs/hooks-reference.md"
+      ],
+      "action": "notify",
+      "priority": "medium",
+      "description": "Hook configuration changes need documentation"
+    },
+    {
+      "id": "agents",
+      "code_pattern": ".claude/agents/*.md",
+      "docs": [
+        "docs/agents-reference.md",
+        "README.md"
+      ],
+      "action": "notify",
+      "priority": "medium",
+      "description": "Agent definition changes should update reference docs"
+    },
+    {
+      "id": "commands",
+      "code_pattern": ".claude/commands/*.md",
+      "docs": [
+        "docs/commands-reference.md",
+        "README.md"
+      ],
+      "action": "auto_update",
+      "priority": "low",
+      "generator": "extract-command-help",
+      "description": "Command changes can auto-generate help docs"
+    },
+    {
+      "id": "skills",
+      "code_pattern": ".claude/skills/*.md",
+      "docs": [
+        "docs/skills-reference.md"
+      ],
+      "action": "notify",
+      "priority": "low",
+      "description": "Skill changes should update reference"
+    },
+    {
+      "id": "api-server",
+      "code_pattern": "src/server/api-server.ts",
+      "docs": [
+        "docs/api-reference.md"
+      ],
+      "action": "notify",
+      "priority": "high",
+      "description": "API endpoint changes require doc updates"
+    },
+    {
+      "id": "governance-ui",
+      "code_pattern": "src/components/governance/*.tsx",
+      "docs": [
+        "docs/governance-hud.md"
+      ],
+      "action": "notify",
+      "priority": "medium",
+      "description": "HUD component changes may need user guide updates"
+    },
+    {
+      "id": "types",
+      "code_pattern": "src/types/*.ts",
+      "docs": [
+        "docs/type-reference.md"
+      ],
+      "action": "auto_update",
+      "priority": "low",
+      "generator": "extract-types",
+      "description": "Type definitions can auto-generate reference docs"
+    },
+    {
+      "id": "project-state",
+      "code_pattern": ".claude/project.json",
+      "docs": [],
+      "action": "ignore",
+      "priority": "low",
+      "description": "Project state is runtime data, no docs needed"
+    }
+  ],
+  "generators": {
+    "extract-command-help": {
+      "type": "yaml-frontmatter",
+      "fields": ["name", "description", "usage", "examples"]
+    },
+    "extract-types": {
+      "type": "typescript-interfaces",
+      "include_jsdoc": true
+    }
+  },
+  "state_tracking": {
+    "last_audit": null,
+    "pending_updates": [],
+    "coverage_score": null
+  }
+}

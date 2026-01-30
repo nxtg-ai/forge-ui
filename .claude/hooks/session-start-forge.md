@@ -24,7 +24,7 @@ Available Agent Teams:
 📊 Runtime Validation: Monitors logs for Pydantic errors (more valuable than unit tests alone!)
 
 Quick Start:
-- Complex task? Use `/enable-forge` or mention @agent-forge-orchestrator
+- Complex task? Use `/enable-forge` or mention @[AFRG]-orchestrator
 - Bug fix? Invoke @agent-nxtg-master-architect
 - UI work? Call @agent-nxtg-design-vanguard
 

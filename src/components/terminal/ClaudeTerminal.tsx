@@ -319,13 +319,16 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
   return (
     <div className={`flex flex-col ${isExpanded ? 'fixed inset-4 z-50' : 'relative'} ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-900/90 backdrop-blur-sm border-b border-gray-800">
+      <div className="flex items-center justify-between px-4 py-2 bg-gray-900/90 backdrop-blur-sm border-b border-gray-800" data-testid="terminal-header">
         <div className="flex items-center gap-3">
           <TerminalIcon className="w-5 h-5 text-blue-400" />
           <span className="font-semibold text-sm">Claude Code Terminal</span>
-          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs ${
-            isConnected ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
-          }`}>
+          <div
+            className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs ${
+              isConnected ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+            }`}
+            data-testid="terminal-connection-status"
+          >
             <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
             {isConnected ? 'Live' : 'Disconnected'}
           </div>
@@ -333,11 +336,11 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
 
         {/* Cost Ticker */}
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-2 text-xs" data-testid="terminal-tokens-display">
             <Zap className="w-3.5 h-3.5 text-yellow-400" />
             <span className="text-gray-400">{tokensUsed.toLocaleString()} tokens</span>
           </div>
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-2 text-xs" data-testid="terminal-cost-display">
             <DollarSign className="w-3.5 h-3.5 text-green-400" />
             <span className="text-gray-400">${commandCost.toFixed(4)}</span>
           </div>
@@ -347,6 +350,7 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
               onClick={() => setIsExpanded(!isExpanded)}
               className="p-1 hover:bg-gray-800 rounded transition-all"
               title={isExpanded ? 'Minimize' : 'Maximize'}
+              data-testid="terminal-expand-toggle-btn"
             >
               {isExpanded ? (
                 <Minimize2 className="w-4 h-4 text-gray-400" />

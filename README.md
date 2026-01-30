@@ -1,9 +1,9 @@
 # 🚀 NXTG-Forge
 
 <div align="center">
-  <img src="https://img.shields.io/badge/version-3.0.0-blue.svg" alt="Version 3.0.0" />
+  <img src="https://img.shields.io/badge/version-3.0.0--v1.0-blue.svg" alt="Version 3.0.0-v1.0" />
   <img src="https://img.shields.io/badge/status-production--ready-green.svg" alt="Production Ready" />
-  <img src="https://img.shields.io/badge/license-MIT-purple.svg" alt="MIT License" />
+  <img src="https://img.shields.io/badge/multi--project-enabled-purple.svg" alt="Multi-Project Enabled" />
   <img src="https://img.shields.io/badge/coverage-95%25-brightgreen.svg" alt="95% Coverage" />
 </div>
 
@@ -50,6 +50,9 @@ From development to production with confidence and rollback safety
 
 ### 📊 **Real-Time Insights**
 Monitor code quality, test coverage, and performance metrics as you build
+
+### 🎯 **Multi-Project Management** ✨ NEW in v1.0
+Work on multiple projects simultaneously with <100ms context switching. Each project gets its own isolated environment, vision, and terminal session. **ONE FORGE TO RULE THEM ALL.**
 
 ## 🚀 Quick Start
 

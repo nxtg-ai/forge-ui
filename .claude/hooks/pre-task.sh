@@ -26,26 +26,26 @@ log_info "Pre-task hook triggered"
 # 1. Validate config.json
 validate_config || log_warning "Config validation failed"
 
-# 2. Ensure state.json exists
-if [ ! -f "$STATE_FILE" ]; then
-    log_warning "state.json not found, creating from template..."
-    if [ -f "$STATE_FILE.template" ]; then
-        cp "$STATE_FILE.template" "$STATE_FILE"
+# 2. Ensure project.json exists
+if [ ! -f "$PROJECT_STATE_FILE" ]; then
+    log_warning "project.json not found, creating from template..."
+    if [ -f "$PROJECT_STATE_FILE.template" ]; then
+        cp "$PROJECT_STATE_FILE.template" "$PROJECT_STATE_FILE"
         # Update timestamps
         CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
         if has_command jq; then
             jq --arg time "$CURRENT_TIME" \
                 '.project.created_at = $time | .project.last_updated = $time' \
-                "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+                "$PROJECT_STATE_FILE" > "$PROJECT_STATE_FILE.tmp" && mv "$PROJECT_STATE_FILE.tmp" "$PROJECT_STATE_FILE"
         fi
-        log_success "Created state.json from template"
+        log_success "Created project.json from template"
     else
-        log_warning "state.json.template not found"
+        log_warning "project.json.template not found"
     fi
 fi
 
 # 3. Update last session info
-if [ -n "$TASK_ID" ] && has_command jq && [ -f "$STATE_FILE" ]; then
+if [ -n "$TASK_ID" ] && has_command jq && [ -f "$PROJECT_STATE_FILE" ]; then
     CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     jq --arg id "$TASK_ID" \
        --arg time "$CURRENT_TIME" \
@@ -57,9 +57,9 @@ if [ -n "$TASK_ID" ] && has_command jq && [ -f "$STATE_FILE" ]; then
         .last_session.agent = $agent |
         .last_session.status = "in_progress" |
         .project.last_updated = $time' \
-       "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+       "$PROJECT_STATE_FILE" > "$PROJECT_STATE_FILE.tmp" && mv "$PROJECT_STATE_FILE.tmp" "$PROJECT_STATE_FILE"
 
-    log_success "Updated state.json with task info"
+    log_success "Updated project.json with task info"
 fi
 
 # 4. Check for uncommitted changes
