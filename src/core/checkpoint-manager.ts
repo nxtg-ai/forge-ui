@@ -3,13 +3,13 @@
  * Simple file-based task state persistence for recovery
  */
 
-import { promises as fs } from 'fs';
-import * as path from 'path';
-import { Result, Ok, Err } from '../utils/result';
-import { Logger } from '../utils/logger';
-import { Task } from '../types/state';
+import { promises as fs } from "fs";
+import * as path from "path";
+import { Result, Ok, Err } from "../utils/result";
+import { Logger } from "../utils/logger";
+import { Task } from "../types/state";
 
-const logger = new Logger('CheckpointManager');
+const logger = new Logger("CheckpointManager");
 
 /**
  * Task checkpoint for recovery
@@ -36,7 +36,7 @@ export class CheckpointManager {
 
   constructor(projectPath?: string) {
     const basePath = projectPath || process.cwd();
-    this.checkpointDir = path.join(basePath, '.forge', 'checkpoints');
+    this.checkpointDir = path.join(basePath, ".forge", "checkpoints");
   }
 
   /**
@@ -45,7 +45,9 @@ export class CheckpointManager {
   async initialize(): Promise<Result<void, string>> {
     try {
       await fs.mkdir(this.checkpointDir, { recursive: true });
-      logger.info('Checkpoint manager initialized', { dir: this.checkpointDir });
+      logger.info("Checkpoint manager initialized", {
+        dir: this.checkpointDir,
+      });
       return new Ok(undefined);
     } catch (error) {
       const message = `Failed to initialize checkpoint directory: ${error}`;
@@ -59,7 +61,7 @@ export class CheckpointManager {
    */
   async saveCheckpoint(
     taskId: string,
-    checkpoint: TaskCheckpoint
+    checkpoint: TaskCheckpoint,
   ): Promise<Result<void, string>> {
     try {
       // Ensure directory exists
@@ -68,9 +70,9 @@ export class CheckpointManager {
       const filePath = this.getCheckpointPath(taskId);
       const data = JSON.stringify(checkpoint, null, 2);
 
-      await fs.writeFile(filePath, data, 'utf-8');
+      await fs.writeFile(filePath, data, "utf-8");
 
-      logger.debug('Checkpoint saved', { taskId, path: filePath });
+      logger.debug("Checkpoint saved", { taskId, path: filePath });
       return new Ok(undefined);
     } catch (error) {
       const message = `Failed to save checkpoint for task ${taskId}: ${error}`;
@@ -83,12 +85,12 @@ export class CheckpointManager {
    * Restore task checkpoint
    */
   async restoreFromCheckpoint(
-    taskId: string
+    taskId: string,
   ): Promise<Result<TaskCheckpoint, string>> {
     try {
       const filePath = this.getCheckpointPath(taskId);
 
-      const content = await fs.readFile(filePath, 'utf-8');
+      const content = await fs.readFile(filePath, "utf-8");
       const checkpoint = JSON.parse(content) as TaskCheckpoint;
 
       // Parse dates
@@ -103,10 +105,10 @@ export class CheckpointManager {
         checkpoint.task.completedAt = new Date(checkpoint.task.completedAt);
       }
 
-      logger.info('Checkpoint restored', { taskId });
+      logger.info("Checkpoint restored", { taskId });
       return new Ok(checkpoint);
     } catch (error) {
-      if ((error as any).code === 'ENOENT') {
+      if ((error as any).code === "ENOENT") {
         const message = `No checkpoint found for task ${taskId}`;
         logger.debug(message);
         return new Err(message);
@@ -127,11 +129,11 @@ export class CheckpointManager {
       const checkpoints: TaskCheckpoint[] = [];
 
       for (const file of files) {
-        if (!file.endsWith('.json')) continue;
+        if (!file.endsWith(".json")) continue;
 
         const filePath = path.join(this.checkpointDir, file);
         try {
-          const content = await fs.readFile(filePath, 'utf-8');
+          const content = await fs.readFile(filePath, "utf-8");
           const checkpoint = JSON.parse(content) as TaskCheckpoint;
 
           // Parse timestamp
@@ -146,14 +148,14 @@ export class CheckpointManager {
       // Sort by timestamp descending
       checkpoints.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
-      logger.debug('Listed checkpoints', { count: checkpoints.length });
+      logger.debug("Listed checkpoints", { count: checkpoints.length });
       return checkpoints;
     } catch (error) {
-      if ((error as any).code === 'ENOENT') {
+      if ((error as any).code === "ENOENT") {
         return [];
       }
 
-      logger.error('Failed to list checkpoints', error);
+      logger.error("Failed to list checkpoints", error);
       return [];
     }
   }
@@ -165,9 +167,9 @@ export class CheckpointManager {
     try {
       const filePath = this.getCheckpointPath(taskId);
       await fs.unlink(filePath);
-      logger.debug('Checkpoint cleared', { taskId });
+      logger.debug("Checkpoint cleared", { taskId });
     } catch (error) {
-      if ((error as any).code !== 'ENOENT') {
+      if ((error as any).code !== "ENOENT") {
         logger.warn(`Failed to clear checkpoint for task ${taskId}`, error);
       }
     }
@@ -182,7 +184,7 @@ export class CheckpointManager {
       let cleared = 0;
 
       for (const file of files) {
-        if (!file.endsWith('.json')) continue;
+        if (!file.endsWith(".json")) continue;
 
         const filePath = path.join(this.checkpointDir, file);
         try {
@@ -196,7 +198,7 @@ export class CheckpointManager {
       logger.info(`Cleared ${cleared} checkpoints`);
       return new Ok(cleared);
     } catch (error) {
-      if ((error as any).code === 'ENOENT') {
+      if ((error as any).code === "ENOENT") {
         return new Ok(0);
       }
 
@@ -211,7 +213,7 @@ export class CheckpointManager {
    */
   private getCheckpointPath(taskId: string): string {
     // Sanitize taskId for filename
-    const sanitized = taskId.replace(/[^a-zA-Z0-9-_]/g, '_');
+    const sanitized = taskId.replace(/[^a-zA-Z0-9-_]/g, "_");
     return path.join(this.checkpointDir, `${sanitized}.json`);
   }
 
@@ -245,7 +247,9 @@ export class CheckpointManager {
   /**
    * Clean up old checkpoints
    */
-  async cleanupOldCheckpoints(maxAgeMs: number): Promise<Result<number, string>> {
+  async cleanupOldCheckpoints(
+    maxAgeMs: number,
+  ): Promise<Result<number, string>> {
     try {
       const checkpoints = await this.listCheckpoints();
       let cleaned = 0;

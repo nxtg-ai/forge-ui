@@ -3,15 +3,15 @@
  * React hook for command execution and management
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   CommandService,
   CommandResult,
   CommandOptions,
   CommandStreamEvent,
   CommandMetadata,
-  ForgeCommand
-} from '../services/command-service';
+  ForgeCommand,
+} from "../services/command-service";
 
 /**
  * Commands hook options
@@ -28,7 +28,7 @@ export interface UseCommandsOptions {
 export interface CommandExecution {
   commandId: string;
   command: string;
-  status: CommandResult['status'];
+  status: CommandResult["status"];
   output: string[];
   progress?: number;
   startTime: Date;
@@ -44,11 +44,14 @@ export interface UseCommandsReturn {
   loading: boolean;
   error: Error | null;
   connected: boolean;
-  execute: (command: string, options?: CommandOptions) => Promise<CommandResult>;
+  execute: (
+    command: string,
+    options?: CommandOptions,
+  ) => Promise<CommandResult>;
   executeStreaming: (
     command: string,
     onStream: (event: CommandStreamEvent) => void,
-    options?: CommandOptions
+    options?: CommandOptions,
   ) => Promise<CommandResult>;
   cancel: (commandId: string) => Promise<void>;
   getResult: (commandId: string) => CommandResult | null;
@@ -59,11 +62,13 @@ export interface UseCommandsReturn {
  * Hook for command execution
  */
 export function useCommands(
-  options: UseCommandsOptions = {}
+  options: UseCommandsOptions = {},
 ): UseCommandsReturn {
   const [activeCommands, setActiveCommands] = useState<CommandExecution[]>([]);
   const [commandHistory, setCommandHistory] = useState<CommandResult[]>([]);
-  const [availableCommands, setAvailableCommands] = useState<CommandMetadata[]>([]);
+  const [availableCommands, setAvailableCommands] = useState<CommandMetadata[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [connected, setConnected] = useState(false);
@@ -81,8 +86,8 @@ export function useCommands(
 
       // Create service instance
       const service = new CommandService({
-        name: 'CommandsHook',
-        maxConcurrentCommands: options.maxConcurrentCommands ?? 5
+        name: "CommandsHook",
+        maxConcurrentCommands: options.maxConcurrentCommands ?? 5,
       });
 
       serviceRef.current = service;
@@ -98,10 +103,10 @@ export function useCommands(
       setAvailableCommands(commands);
 
       // Subscribe to command events
-      service.on('commandComplete', handleCommandComplete);
-      service.on('commandFailed', handleCommandFailed);
-      service.on('commandCancelled', handleCommandCancelled);
-      service.on('commandStream', handleCommandStream);
+      service.on("commandComplete", handleCommandComplete);
+      service.on("commandFailed", handleCommandFailed);
+      service.on("commandCancelled", handleCommandCancelled);
+      service.on("commandStream", handleCommandStream);
 
       setConnected(true);
     } catch (err) {
@@ -119,41 +124,47 @@ export function useCommands(
    * Handle command complete
    */
   const handleCommandComplete = useCallback((result: CommandResult) => {
-    setActiveCommands(prev => prev.filter(cmd => cmd.commandId !== result.commandId));
-    setCommandHistory(prev => [...prev, result]);
+    setActiveCommands((prev) =>
+      prev.filter((cmd) => cmd.commandId !== result.commandId),
+    );
+    setCommandHistory((prev) => [...prev, result]);
   }, []);
 
   /**
    * Handle command failed
    */
   const handleCommandFailed = useCallback((result: CommandResult) => {
-    setActiveCommands(prev => prev.filter(cmd => cmd.commandId !== result.commandId));
-    setCommandHistory(prev => [...prev, result]);
+    setActiveCommands((prev) =>
+      prev.filter((cmd) => cmd.commandId !== result.commandId),
+    );
+    setCommandHistory((prev) => [...prev, result]);
   }, []);
 
   /**
    * Handle command cancelled
    */
   const handleCommandCancelled = useCallback((result: CommandResult) => {
-    setActiveCommands(prev => prev.filter(cmd => cmd.commandId !== result.commandId));
-    setCommandHistory(prev => [...prev, result]);
+    setActiveCommands((prev) =>
+      prev.filter((cmd) => cmd.commandId !== result.commandId),
+    );
+    setCommandHistory((prev) => [...prev, result]);
   }, []);
 
   /**
    * Handle command stream event
    */
   const handleCommandStream = useCallback((event: CommandStreamEvent) => {
-    setActiveCommands(prev => {
-      const index = prev.findIndex(cmd => cmd.commandId === event.commandId);
+    setActiveCommands((prev) => {
+      const index = prev.findIndex((cmd) => cmd.commandId === event.commandId);
       if (index === -1) return prev;
 
       const updated = [...prev];
       const command = { ...updated[index] };
 
-      if (event.type === 'stdout' || event.type === 'stderr') {
+      if (event.type === "stdout" || event.type === "stderr") {
         command.output = [...command.output, event.data as string];
-      } else if (event.type === 'exit') {
-        command.status = event.data === 0 ? 'completed' : 'failed';
+      } else if (event.type === "exit") {
+        command.status = event.data === 0 ? "completed" : "failed";
       }
 
       updated[index] = command;
@@ -164,120 +175,137 @@ export function useCommands(
   /**
    * Execute command
    */
-  const execute = useCallback(async (
-    command: string,
-    options?: CommandOptions
-  ): Promise<CommandResult> => {
-    if (!serviceRef.current) {
-      throw new Error('Service not initialized');
-    }
-
-    // Add to active commands
-    const execution: CommandExecution = {
-      commandId: '', // Will be set by service
-      command,
-      status: 'pending',
-      output: [],
-      startTime: new Date()
-    };
-
-    setActiveCommands(prev => [...prev, execution]);
-
-    try {
-      const result = await serviceRef.current.execute(command, options);
-      if (result.isErr()) {
-        throw result.error;
+  const execute = useCallback(
+    async (
+      command: string,
+      options?: CommandOptions,
+    ): Promise<CommandResult> => {
+      if (!serviceRef.current) {
+        throw new Error("Service not initialized");
       }
 
-      // Update execution with actual command ID
-      setActiveCommands(prev => {
-        const index = prev.findIndex(cmd => cmd.command === command && !cmd.commandId);
-        if (index >= 0) {
-          const updated = [...prev];
-          updated[index].commandId = result.value.commandId;
-          updated[index].status = result.value.status;
-          return updated;
-        }
-        return prev;
-      });
+      // Add to active commands
+      const execution: CommandExecution = {
+        commandId: "", // Will be set by service
+        command,
+        status: "pending",
+        output: [],
+        startTime: new Date(),
+      };
 
-      return result.value;
-    } catch (error) {
-      // Remove from active commands on error
-      setActiveCommands(prev => prev.filter(cmd => cmd.command !== command || cmd.commandId));
-      throw error;
-    }
-  }, []);
+      setActiveCommands((prev) => [...prev, execution]);
+
+      try {
+        const result = await serviceRef.current.execute(command, options);
+        if (result.isErr()) {
+          throw result.error;
+        }
+
+        // Update execution with actual command ID
+        setActiveCommands((prev) => {
+          const index = prev.findIndex(
+            (cmd) => cmd.command === command && !cmd.commandId,
+          );
+          if (index >= 0) {
+            const updated = [...prev];
+            updated[index].commandId = result.value.commandId;
+            updated[index].status = result.value.status;
+            return updated;
+          }
+          return prev;
+        });
+
+        return result.value;
+      } catch (error) {
+        // Remove from active commands on error
+        setActiveCommands((prev) =>
+          prev.filter((cmd) => cmd.command !== command || cmd.commandId),
+        );
+        throw error;
+      }
+    },
+    [],
+  );
 
   /**
    * Execute command with streaming
    */
-  const executeStreaming = useCallback(async (
-    command: string,
-    onStream: (event: CommandStreamEvent) => void,
-    options?: CommandOptions
-  ): Promise<CommandResult> => {
-    if (!serviceRef.current) {
-      throw new Error('Service not initialized');
-    }
-
-    // Add to active commands
-    const execution: CommandExecution = {
-      commandId: '', // Will be set by service
-      command,
-      status: 'pending',
-      output: [],
-      startTime: new Date()
-    };
-
-    setActiveCommands(prev => [...prev, execution]);
-
-    try {
-      // Execute with streaming
-      const result = await serviceRef.current.execute(command, {
-        ...options,
-        stream: true
-      });
-
-      if (result.isErr()) {
-        throw result.error;
+  const executeStreaming = useCallback(
+    async (
+      command: string,
+      onStream: (event: CommandStreamEvent) => void,
+      options?: CommandOptions,
+    ): Promise<CommandResult> => {
+      if (!serviceRef.current) {
+        throw new Error("Service not initialized");
       }
 
-      // Update execution with actual command ID
-      const commandId = result.value.commandId;
-      setActiveCommands(prev => {
-        const index = prev.findIndex(cmd => cmd.command === command && !cmd.commandId);
-        if (index >= 0) {
-          const updated = [...prev];
-          updated[index].commandId = commandId;
-          updated[index].status = 'running';
-          return updated;
+      // Add to active commands
+      const execution: CommandExecution = {
+        commandId: "", // Will be set by service
+        command,
+        status: "pending",
+        output: [],
+        startTime: new Date(),
+      };
+
+      setActiveCommands((prev) => [...prev, execution]);
+
+      try {
+        // Execute with streaming
+        const result = await serviceRef.current.execute(command, {
+          ...options,
+          stream: true,
+        });
+
+        if (result.isErr()) {
+          throw result.error;
         }
-        return prev;
-      });
 
-      // Subscribe to stream
-      const unsubscribe = serviceRef.current.streamOutput(commandId, (event) => {
-        onStream(event);
-        handleCommandStream(event);
-      });
+        // Update execution with actual command ID
+        const commandId = result.value.commandId;
+        setActiveCommands((prev) => {
+          const index = prev.findIndex(
+            (cmd) => cmd.command === command && !cmd.commandId,
+          );
+          if (index >= 0) {
+            const updated = [...prev];
+            updated[index].commandId = commandId;
+            updated[index].status = "running";
+            return updated;
+          }
+          return prev;
+        });
 
-      streamHandlersRef.current.set(commandId, unsubscribe);
+        // Subscribe to stream
+        const unsubscribe = serviceRef.current.streamOutput(
+          commandId,
+          (event) => {
+            onStream(event);
+            handleCommandStream(event);
+          },
+        );
 
-      return result.value;
-    } catch (error) {
-      // Remove from active commands on error
-      setActiveCommands(prev => prev.filter(cmd => cmd.command !== command || cmd.commandId));
-      throw error;
-    }
-  }, [handleCommandStream]);
+        streamHandlersRef.current.set(commandId, unsubscribe);
+
+        return result.value;
+      } catch (error) {
+        // Remove from active commands on error
+        setActiveCommands((prev) =>
+          prev.filter((cmd) => cmd.command !== command || cmd.commandId),
+        );
+        throw error;
+      }
+    },
+    [handleCommandStream],
+  );
 
   /**
    * Cancel command
    */
   const cancel = useCallback(async (commandId: string) => {
     if (!serviceRef.current) {
-      throw new Error('Service not initialized');
+      throw new Error("Service not initialized");
     }
 
     const result = await serviceRef.current.cancel(commandId);
@@ -326,14 +354,14 @@ export function useCommands(
 
     return () => {
       // Clean up stream handlers
-      streamHandlersRef.current.forEach(unsubscribe => unsubscribe());
+      streamHandlersRef.current.forEach((unsubscribe) => unsubscribe());
       streamHandlersRef.current.clear();
 
       if (serviceRef.current) {
-        serviceRef.current.off('commandComplete', handleCommandComplete);
-        serviceRef.current.off('commandFailed', handleCommandFailed);
-        serviceRef.current.off('commandCancelled', handleCommandCancelled);
-        serviceRef.current.off('commandStream', handleCommandStream);
+        serviceRef.current.off("commandComplete", handleCommandComplete);
+        serviceRef.current.off("commandFailed", handleCommandFailed);
+        serviceRef.current.off("commandCancelled", handleCommandCancelled);
+        serviceRef.current.off("commandStream", handleCommandStream);
         serviceRef.current.dispose();
       }
     };
@@ -350,6 +378,6 @@ export function useCommands(
     executeStreaming,
     cancel,
     getResult,
-    clearHistory
+    clearHistory,
   };
 }

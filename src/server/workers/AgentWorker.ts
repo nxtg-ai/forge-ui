@@ -3,10 +3,10 @@
  * Manages lifecycle and communication with a single worker
  */
 
-import { ChildProcess, fork, spawn } from 'child_process';
-import { EventEmitter } from 'events';
-import * as path from 'path';
-import * as fs from 'fs/promises';
+import { ChildProcess, fork, spawn } from "child_process";
+import { EventEmitter } from "events";
+import * as path from "path";
+import * as fs from "fs/promises";
 import {
   WorkerStatus,
   WorkerInfo,
@@ -20,12 +20,12 @@ import {
   DEFAULT_RESOURCE_LIMITS,
   ENV_WHITELIST,
   BLOCKED_COMMANDS,
-} from './types';
+} from "./types";
 
 export class AgentWorker extends EventEmitter {
   readonly id: string;
   private process: ChildProcess | null = null;
-  private _status: WorkerStatus = 'idle';
+  private _status: WorkerStatus = "idle";
   private _currentTask: AgentTask | null = null;
   private _metrics: WorkerMetrics;
   private context: AgentContext;
@@ -33,9 +33,15 @@ export class AgentWorker extends EventEmitter {
   private taskTimeout: NodeJS.Timeout | null = null;
   private startedAt: Date;
   private lastActivity: Date;
-  private pendingResponses: Map<string, { resolve: Function; reject: Function; timeout: NodeJS.Timeout }> = new Map();
+  private pendingResponses: Map<
+    string,
+    { resolve: Function; reject: Function; timeout: NodeJS.Timeout }
+  > = new Map();
 
-  constructor(id: string, resourceLimits: ResourceLimits = DEFAULT_RESOURCE_LIMITS) {
+  constructor(
+    id: string,
+    resourceLimits: ResourceLimits = DEFAULT_RESOURCE_LIMITS,
+  ) {
     super();
     this.id = id;
     this.startedAt = new Date();
@@ -53,7 +59,12 @@ export class AgentWorker extends EventEmitter {
 
     this.context = {
       workerId: id,
-      workingDirectory: path.join(process.cwd(), '.claude', 'agent-workers', id),
+      workingDirectory: path.join(
+        process.cwd(),
+        ".claude",
+        "agent-workers",
+        id,
+      ),
       environmentVariables: this.filterEnvironment(process.env),
       resourceLimits,
     };
@@ -101,17 +112,20 @@ export class AgentWorker extends EventEmitter {
       throw new Error(`Worker ${this.id} already spawned`);
     }
 
-    this._status = 'starting';
-    this.emit('status', this._status);
+    this._status = "starting";
+    this.emit("status", this._status);
 
     // Create working directory
     await fs.mkdir(this.context.workingDirectory, { recursive: true });
 
     // Fork worker process
-    const workerScript = path.join(__dirname, 'worker-process.js');
+    const workerScript = path.join(__dirname, "worker-process.js");
 
     // Check if compiled JS exists, otherwise use TS with tsx
-    const scriptExists = await fs.access(workerScript).then(() => true).catch(() => false);
+    const scriptExists = await fs
+      .access(workerScript)
+      .then(() => true)
+      .catch(() => false);
 
     if (scriptExists) {
       this.process = fork(workerScript, [], {
@@ -121,11 +135,11 @@ export class AgentWorker extends EventEmitter {
           WORKER_ID: this.id,
           WORKER_DIR: this.context.workingDirectory,
         },
-        stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+        stdio: ["pipe", "pipe", "pipe", "ipc"],
       });
     } else {
       // Development mode - use tsx
-      const tsScript = path.join(__dirname, 'worker-process.ts');
+      const tsScript = path.join(__dirname, "worker-process.ts");
       this.process = fork(tsScript, [], {
         cwd: this.context.workingDirectory,
         env: {
@@ -133,8 +147,8 @@ export class AgentWorker extends EventEmitter {
           WORKER_ID: this.id,
           WORKER_DIR: this.context.workingDirectory,
         },
-        execArgv: ['--import', 'tsx'],
-        stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+        execArgv: ["--import", "tsx"],
+        stdio: ["pipe", "pipe", "pipe", "ipc"],
       });
     }
 
@@ -144,8 +158,8 @@ export class AgentWorker extends EventEmitter {
     // Wait for ready signal
     await this.waitForReady();
 
-    this._status = 'idle';
-    this.emit('status', this._status);
+    this._status = "idle";
+    this.emit("status", this._status);
     this.startHeartbeat();
   }
 
@@ -153,24 +167,29 @@ export class AgentWorker extends EventEmitter {
    * Terminate worker process
    */
   async terminate(): Promise<void> {
-    this._status = 'stopping';
-    this.emit('status', this._status);
+    this._status = "stopping";
+    this.emit("status", this._status);
 
     this.stopHeartbeat();
     this.clearTaskTimeout();
 
     if (this.process) {
       // Send graceful shutdown signal
-      this.sendMessage({ type: 'control', id: 'shutdown', timestamp: Date.now(), payload: 'shutdown' });
+      this.sendMessage({
+        type: "control",
+        id: "shutdown",
+        timestamp: Date.now(),
+        payload: "shutdown",
+      });
 
       // Wait for graceful exit or force kill
       await new Promise<void>((resolve) => {
         const timeout = setTimeout(() => {
-          this.process?.kill('SIGKILL');
+          this.process?.kill("SIGKILL");
           resolve();
         }, 5000);
 
-        this.process?.once('exit', () => {
+        this.process?.once("exit", () => {
           clearTimeout(timeout);
           resolve();
         });
@@ -179,7 +198,7 @@ export class AgentWorker extends EventEmitter {
       this.process = null;
     }
 
-    this._status = 'idle';
+    this._status = "idle";
   }
 
   /**
@@ -194,8 +213,10 @@ export class AgentWorker extends EventEmitter {
    * Execute task
    */
   async execute(task: AgentTask): Promise<TaskResult> {
-    if (this._status !== 'idle') {
-      throw new Error(`Worker ${this.id} is not idle (status: ${this._status})`);
+    if (this._status !== "idle") {
+      throw new Error(
+        `Worker ${this.id} is not idle (status: ${this._status})`,
+      );
     }
 
     // Validate command
@@ -204,18 +225,18 @@ export class AgentWorker extends EventEmitter {
         taskId: task.id,
         success: false,
         exitCode: 1,
-        stdout: '',
-        stderr: 'Command blocked by security policy',
+        stdout: "",
+        stderr: "Command blocked by security policy",
         duration: 0,
-        error: 'BLOCKED_COMMAND',
+        error: "BLOCKED_COMMAND",
       };
     }
 
     this._currentTask = task;
-    this._status = 'busy';
+    this._status = "busy";
     this.lastActivity = new Date();
-    this.emit('status', this._status);
-    this.emit('task.started', task);
+    this.emit("status", this._status);
+    this.emit("task.started", task);
 
     const startTime = Date.now();
 
@@ -235,19 +256,19 @@ export class AgentWorker extends EventEmitter {
       if (result.success) {
         this._metrics.tasksCompleted++;
         this._metrics.avgTaskDuration =
-          (this._metrics.avgTaskDuration * (this._metrics.tasksCompleted - 1) + duration) /
+          (this._metrics.avgTaskDuration * (this._metrics.tasksCompleted - 1) +
+            duration) /
           this._metrics.tasksCompleted;
       } else {
         this._metrics.tasksFailed++;
       }
 
       this._currentTask = null;
-      this._status = 'idle';
-      this.emit('status', this._status);
-      this.emit('task.completed', { taskId: task.id, result });
+      this._status = "idle";
+      this.emit("status", this._status);
+      this.emit("task.completed", { taskId: task.id, result });
 
       return { ...result, duration };
-
     } catch (error) {
       this.clearTaskTimeout();
       this._metrics.tasksFailed++;
@@ -257,16 +278,16 @@ export class AgentWorker extends EventEmitter {
         taskId: task.id,
         success: false,
         exitCode: 1,
-        stdout: '',
+        stdout: "",
         stderr: error instanceof Error ? error.message : String(error),
         duration,
-        error: 'EXECUTION_ERROR',
+        error: "EXECUTION_ERROR",
       };
 
       this._currentTask = null;
-      this._status = 'error';
-      this.emit('status', this._status);
-      this.emit('task.failed', { taskId: task.id, error: result.error });
+      this._status = "error";
+      this.emit("status", this._status);
+      this.emit("task.failed", { taskId: task.id, error: result.error });
 
       return result;
     }
@@ -279,23 +300,23 @@ export class AgentWorker extends EventEmitter {
     if (!this._currentTask) return;
 
     this.sendMessage({
-      type: 'control',
+      type: "control",
       id: `abort-${this._currentTask.id}`,
       timestamp: Date.now(),
-      payload: { action: 'abort', taskId: this._currentTask.id },
+      payload: { action: "abort", taskId: this._currentTask.id },
     });
 
     // Cancel any pending response
     const pending = this.pendingResponses.get(this._currentTask.id);
     if (pending) {
       clearTimeout(pending.timeout);
-      pending.reject(new Error('Task aborted'));
+      pending.reject(new Error("Task aborted"));
       this.pendingResponses.delete(this._currentTask.id);
     }
 
     this._currentTask = null;
-    this._status = 'idle';
-    this.emit('status', this._status);
+    this._status = "idle";
+    this.emit("status", this._status);
   }
 
   /**
@@ -305,16 +326,19 @@ export class AgentWorker extends EventEmitter {
     const issues: string[] = [];
 
     if (!this.process || this.process.exitCode !== null) {
-      issues.push('Process not running');
+      issues.push("Process not running");
     }
 
-    const timeSinceHeartbeat = Date.now() - this._metrics.lastHeartbeat.getTime();
+    const timeSinceHeartbeat =
+      Date.now() - this._metrics.lastHeartbeat.getTime();
     if (timeSinceHeartbeat > 60000) {
       issues.push(`No heartbeat for ${Math.round(timeSinceHeartbeat / 1000)}s`);
     }
 
     if (this._metrics.memoryMB > this.context.resourceLimits.memoryMB) {
-      issues.push(`Memory usage ${this._metrics.memoryMB}MB exceeds limit ${this.context.resourceLimits.memoryMB}MB`);
+      issues.push(
+        `Memory usage ${this._metrics.memoryMB}MB exceeds limit ${this.context.resourceLimits.memoryMB}MB`,
+      );
     }
 
     return {
@@ -334,31 +358,31 @@ export class AgentWorker extends EventEmitter {
   private setupProcessHandlers(): void {
     if (!this.process) return;
 
-    this.process.on('message', (msg: IPCMessage) => {
+    this.process.on("message", (msg: IPCMessage) => {
       this.handleMessage(msg);
     });
 
-    this.process.on('exit', (code, signal) => {
+    this.process.on("exit", (code, signal) => {
       console.log(`Worker ${this.id} exited: code=${code}, signal=${signal}`);
-      this._status = 'crashed';
-      this.emit('status', this._status);
-      this.emit('crashed', { code, signal });
+      this._status = "crashed";
+      this.emit("status", this._status);
+      this.emit("crashed", { code, signal });
     });
 
-    this.process.on('error', (error) => {
+    this.process.on("error", (error) => {
       console.error(`Worker ${this.id} error:`, error);
-      this._status = 'error';
-      this.emit('status', this._status);
-      this.emit('error', error);
+      this._status = "error";
+      this.emit("status", this._status);
+      this.emit("error", error);
     });
 
     // Capture stdout/stderr
-    this.process.stdout?.on('data', (data) => {
-      this.emit('stdout', data.toString());
+    this.process.stdout?.on("data", (data) => {
+      this.emit("stdout", data.toString());
     });
 
-    this.process.stderr?.on('data', (data) => {
-      this.emit('stderr', data.toString());
+    this.process.stderr?.on("data", (data) => {
+      this.emit("stderr", data.toString());
     });
   }
 
@@ -366,20 +390,20 @@ export class AgentWorker extends EventEmitter {
     this.lastActivity = new Date();
 
     switch (msg.type) {
-      case 'ready':
-        this.emit('ready');
+      case "ready":
+        this.emit("ready");
         break;
 
-      case 'heartbeat':
+      case "heartbeat":
         this._metrics.lastHeartbeat = new Date();
-        if (typeof msg.payload === 'object' && msg.payload !== null) {
+        if (typeof msg.payload === "object" && msg.payload !== null) {
           const payload = msg.payload as { cpu?: number; memory?: number };
           this._metrics.cpuPercent = payload.cpu || 0;
           this._metrics.memoryMB = payload.memory || 0;
         }
         break;
 
-      case 'result':
+      case "result":
         const pending = this.pendingResponses.get(msg.id);
         if (pending) {
           clearTimeout(pending.timeout);
@@ -388,12 +412,12 @@ export class AgentWorker extends EventEmitter {
         }
         break;
 
-      case 'log':
-        this.emit('log', msg.payload);
+      case "log":
+        this.emit("log", msg.payload);
         break;
 
-      case 'error':
-        this.emit('workerError', msg.payload);
+      case "error":
+        this.emit("workerError", msg.payload);
         break;
     }
   }
@@ -410,7 +434,7 @@ export class AgentWorker extends EventEmitter {
         reject(new Error(`Worker ${this.id} failed to start within timeout`));
       }, this.context.resourceLimits.timeoutMs);
 
-      this.once('ready', () => {
+      this.once("ready", () => {
         clearTimeout(timeout);
         resolve();
       });
@@ -421,13 +445,13 @@ export class AgentWorker extends EventEmitter {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.pendingResponses.delete(task.id);
-        reject(new Error('Task execution timeout'));
+        reject(new Error("Task execution timeout"));
       }, task.timeout || this.context.resourceLimits.timeoutMs);
 
       this.pendingResponses.set(task.id, { resolve, reject, timeout });
 
       this.sendMessage({
-        type: 'task',
+        type: "task",
         id: task.id,
         timestamp: Date.now(),
         payload: task,
@@ -438,7 +462,7 @@ export class AgentWorker extends EventEmitter {
   private startHeartbeat(): void {
     this.heartbeatTimer = setInterval(() => {
       this.sendMessage({
-        type: 'heartbeat',
+        type: "heartbeat",
         id: `hb-${Date.now()}`,
         timestamp: Date.now(),
         payload: null,
@@ -455,7 +479,7 @@ export class AgentWorker extends EventEmitter {
 
   private setTaskTimeout(taskId: string, timeout: number): void {
     this.taskTimeout = setTimeout(() => {
-      this.emit('task.timeout', taskId);
+      this.emit("task.timeout", taskId);
       this.abort();
     }, timeout);
   }
@@ -473,8 +497,8 @@ export class AgentWorker extends EventEmitter {
     for (const [key, value] of Object.entries(env)) {
       if (value === undefined) continue;
 
-      const allowed = ENV_WHITELIST.some(pattern => {
-        if (typeof pattern === 'string') {
+      const allowed = ENV_WHITELIST.some((pattern) => {
+        if (typeof pattern === "string") {
           return key === pattern;
         }
         return pattern.test(key);
@@ -489,7 +513,7 @@ export class AgentWorker extends EventEmitter {
   }
 
   private isBlockedCommand(command: string): boolean {
-    return BLOCKED_COMMANDS.some(pattern => pattern.test(command));
+    return BLOCKED_COMMANDS.some((pattern) => pattern.test(command));
   }
 }
 

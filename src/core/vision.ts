@@ -3,11 +3,11 @@
  * Manages the strategic vision and alignment checking
  */
 
-import { promises as fs } from 'fs';
-import * as path from 'path';
-import { z } from 'zod';
-import * as crypto from 'crypto';
-import { Logger } from '../utils/logger';
+import { promises as fs } from "fs";
+import * as path from "path";
+import { z } from "zod";
+import * as crypto from "crypto";
+import { Logger } from "../utils/logger";
 import {
   CanonicalVision,
   VisionEvent,
@@ -17,10 +17,10 @@ import {
   PropagationResult,
   CanonicalVisionSchema,
   VisionEventSchema,
-  AlignmentResultSchema
-} from '../types/vision';
+  AlignmentResultSchema,
+} from "../types/vision";
 
-const logger = new Logger('VisionManager');
+const logger = new Logger("VisionManager");
 
 // Vision file metadata
 interface VisionFileMetadata {
@@ -43,8 +43,8 @@ export class VisionManager {
   private subscribers: Set<(vision: CanonicalVision) => void> = new Set();
 
   constructor(projectPath: string) {
-    this.visionPath = path.join(projectPath, '.claude', 'VISION.md');
-    this.eventsPath = path.join(projectPath, '.claude', 'vision-events.json');
+    this.visionPath = path.join(projectPath, ".claude", "VISION.md");
+    this.eventsPath = path.join(projectPath, ".claude", "vision-events.json");
   }
 
   /**
@@ -61,7 +61,7 @@ export class VisionManager {
     // Load event history
     await this.loadEvents();
 
-    logger.info('Vision system initialized');
+    logger.info("Vision system initialized");
   }
 
   /**
@@ -69,7 +69,7 @@ export class VisionManager {
    */
   async loadVision(): Promise<CanonicalVision> {
     try {
-      const content = await fs.readFile(this.visionPath, 'utf-8');
+      const content = await fs.readFile(this.visionPath, "utf-8");
       const visionFile = this.parseVisionFile(content);
 
       // Extract vision from markdown
@@ -78,16 +78,15 @@ export class VisionManager {
       // Validate with schema
       this.currentVision = CanonicalVisionSchema.parse(vision);
 
-      logger.info('Vision loaded successfully', {
-        version: this.currentVision.version
+      logger.info("Vision loaded successfully", {
+        version: this.currentVision.version,
       });
 
       return this.currentVision;
-
     } catch (error) {
-      if ((error as any).code === 'ENOENT') {
+      if ((error as any).code === "ENOENT") {
         // Create default vision
-        logger.info('No vision file found, creating default');
+        logger.info("No vision file found, creating default");
         return await this.createDefaultVision();
       }
       throw error;
@@ -98,14 +97,14 @@ export class VisionManager {
    * Parse vision file with YAML frontmatter
    */
   private parseVisionFile(content: string): VisionFile {
-    const lines = content.split('\n');
+    const lines = content.split("\n");
     let inFrontmatter = false;
     let frontmatterLines: string[] = [];
     let contentLines: string[] = [];
     let frontmatterCount = 0;
 
     for (const line of lines) {
-      if (line.trim() === '---') {
+      if (line.trim() === "---") {
         frontmatterCount++;
         if (frontmatterCount === 1) {
           inFrontmatter = true;
@@ -124,24 +123,24 @@ export class VisionManager {
 
     // Parse YAML frontmatter manually (simplified)
     const metadata: VisionFileMetadata = {
-      version: '1.0',
+      version: "1.0",
       created: new Date().toISOString(),
-      updated: new Date().toISOString()
+      updated: new Date().toISOString(),
     };
 
     for (const line of frontmatterLines) {
-      const [key, ...valueParts] = line.split(':');
+      const [key, ...valueParts] = line.split(":");
       if (key && valueParts.length > 0) {
-        const value = valueParts.join(':').trim();
-        if (key.trim() === 'version') metadata.version = value;
-        if (key.trim() === 'created') metadata.created = value;
-        if (key.trim() === 'updated') metadata.updated = value;
+        const value = valueParts.join(":").trim();
+        if (key.trim() === "version") metadata.version = value;
+        if (key.trim() === "created") metadata.created = value;
+        if (key.trim() === "updated") metadata.updated = value;
       }
     }
 
     return {
       metadata,
-      content: contentLines.join('\n')
+      content: contentLines.join("\n"),
     };
   }
 
@@ -156,12 +155,14 @@ export class VisionManager {
       version: visionFile.metadata.version,
       created: new Date(visionFile.metadata.created),
       updated: new Date(visionFile.metadata.updated),
-      mission: sections['mission'] || '',
-      principles: this.parseList(sections['principles'] || ''),
-      strategicGoals: this.parseStrategicGoals(sections['strategic goals'] || ''),
-      currentFocus: sections['current focus'] || '',
-      successMetrics: this.parseMetrics(sections['success metrics'] || ''),
-      metadata: {}
+      mission: sections["mission"] || "",
+      principles: this.parseList(sections["principles"] || ""),
+      strategicGoals: this.parseStrategicGoals(
+        sections["strategic goals"] || "",
+      ),
+      currentFocus: sections["current focus"] || "",
+      successMetrics: this.parseMetrics(sections["success metrics"] || ""),
+      metadata: {},
     };
 
     return vision;
@@ -172,15 +173,17 @@ export class VisionManager {
    */
   private parseMarkdownSections(content: string): Record<string, string> {
     const sections: Record<string, string> = {};
-    const lines = content.split('\n');
-    let currentSection = '';
+    const lines = content.split("\n");
+    let currentSection = "";
     let sectionContent: string[] = [];
 
     for (const line of lines) {
-      if (line.startsWith('## ')) {
+      if (line.startsWith("## ")) {
         // Save previous section
         if (currentSection) {
-          sections[currentSection.toLowerCase()] = sectionContent.join('\n').trim();
+          sections[currentSection.toLowerCase()] = sectionContent
+            .join("\n")
+            .trim();
         }
         // Start new section
         currentSection = line.substring(3).trim();
@@ -192,7 +195,7 @@ export class VisionManager {
 
     // Save last section
     if (currentSection) {
-      sections[currentSection.toLowerCase()] = sectionContent.join('\n').trim();
+      sections[currentSection.toLowerCase()] = sectionContent.join("\n").trim();
     }
 
     return sections;
@@ -202,13 +205,17 @@ export class VisionManager {
    * Parse a markdown list
    */
   private parseList(content: string): string[] {
-    const lines = content.split('\n');
+    const lines = content.split("\n");
     const items: string[] = [];
 
     for (const line of lines) {
       const trimmed = line.trim();
-      if (trimmed.startsWith('- ') || trimmed.startsWith('* ') || /^\d+\. /.test(trimmed)) {
-        const item = trimmed.replace(/^[-*]\s+/, '').replace(/^\d+\.\s+/, '');
+      if (
+        trimmed.startsWith("- ") ||
+        trimmed.startsWith("* ") ||
+        /^\d+\. /.test(trimmed)
+      ) {
+        const item = trimmed.replace(/^[-*]\s+/, "").replace(/^\d+\.\s+/, "");
         if (item) items.push(item);
       }
     }
@@ -220,7 +227,7 @@ export class VisionManager {
    * Parse strategic goals from markdown
    */
   private parseStrategicGoals(content: string): any[] {
-    const lines = content.split('\n');
+    const lines = content.split("\n");
     const goals: any[] = [];
     let currentGoal: any = null;
 
@@ -233,13 +240,13 @@ export class VisionManager {
         if (currentGoal) goals.push(currentGoal);
 
         currentGoal = {
-          id: crypto.randomBytes(8).toString('hex'),
+          id: crypto.randomBytes(8).toString("hex"),
           title: goalMatch[1],
-          description: '',
-          priority: 'medium' as any,
-          status: 'not-started' as any,
+          description: "",
+          priority: "medium" as any,
+          status: "not-started" as any,
           progress: 0,
-          metrics: []
+          metrics: [],
         };
 
         // Parse metadata from the rest of the line
@@ -255,7 +262,8 @@ export class VisionManager {
         }
       } else if (currentGoal && trimmed) {
         // Add to description
-        currentGoal.description += (currentGoal.description ? ' ' : '') + trimmed;
+        currentGoal.description +=
+          (currentGoal.description ? " " : "") + trimmed;
       }
     }
 
@@ -267,7 +275,7 @@ export class VisionManager {
    * Parse success metrics
    */
   private parseMetrics(content: string): Record<string, string | number> {
-    const lines = content.split('\n');
+    const lines = content.split("\n");
     const metrics: Record<string, string | number> = {};
 
     for (const line of lines) {
@@ -291,51 +299,58 @@ export class VisionManager {
    */
   private async createDefaultVision(): Promise<CanonicalVision> {
     const vision: CanonicalVision = {
-      version: '1.0',
+      version: "1.0",
       created: new Date(),
       updated: new Date(),
-      mission: 'Build the Ultimate Chief of Staff for Developers - an AI-orchestrated system that amplifies developer productivity 10x',
+      mission:
+        "Build the Ultimate Chief of Staff for Developers - an AI-orchestrated system that amplifies developer productivity 10x",
       principles: [
-        'Developer Experience First - Every feature must delight developers',
-        'Intelligence at Scale - Smart automation that learns and adapts',
-        'Enterprise Grade - Production-ready, secure, and reliable',
-        'Open and Extensible - Plugin architecture for infinite possibilities',
-        'Speed is a Feature - Sub-second responses, instant feedback'
+        "Developer Experience First - Every feature must delight developers",
+        "Intelligence at Scale - Smart automation that learns and adapts",
+        "Enterprise Grade - Production-ready, secure, and reliable",
+        "Open and Extensible - Plugin architecture for infinite possibilities",
+        "Speed is a Feature - Sub-second responses, instant feedback",
       ],
       strategicGoals: [
         {
-          id: 'goal-1',
-          title: 'Launch NXTG-Forge v3.0',
-          description: 'Complete core infrastructure and orchestration engine',
-          priority: 'critical' as any,
-          deadline: new Date('2026-02-01'),
-          status: 'in-progress',
+          id: "goal-1",
+          title: "Launch NXTG-Forge v3.0",
+          description: "Complete core infrastructure and orchestration engine",
+          priority: "critical" as any,
+          deadline: new Date("2026-02-01"),
+          status: "in-progress",
           progress: 30,
-          metrics: ['Bootstrap time < 30s', '10+ parallel agents', 'Zero data loss']
+          metrics: [
+            "Bootstrap time < 30s",
+            "10+ parallel agents",
+            "Zero data loss",
+          ],
         },
         {
-          id: 'goal-2',
-          title: 'Build AI Agent Ecosystem',
-          description: 'Create 20+ specialized agents for different development tasks',
-          priority: 'high' as any,
-          deadline: new Date('2026-03-01'),
-          status: 'not-started',
+          id: "goal-2",
+          title: "Build AI Agent Ecosystem",
+          description:
+            "Create 20+ specialized agents for different development tasks",
+          priority: "high" as any,
+          deadline: new Date("2026-03-01"),
+          status: "not-started",
           progress: 0,
-          metrics: ['20+ agents', '95% task success rate', 'Agent marketplace']
-        }
+          metrics: ["20+ agents", "95% task success rate", "Agent marketplace"],
+        },
       ],
-      currentFocus: 'Building core infrastructure and orchestration engine for v3.0 launch',
+      currentFocus:
+        "Building core infrastructure and orchestration engine for v3.0 launch",
       successMetrics: {
-        'Bootstrap Time': '< 30 seconds',
-        'Parallel Agents': '10+',
-        'State Recovery': '< 2 seconds',
-        'User Satisfaction': '> 90%',
-        'Code Coverage': '> 80%'
+        "Bootstrap Time": "< 30 seconds",
+        "Parallel Agents": "10+",
+        "State Recovery": "< 2 seconds",
+        "User Satisfaction": "> 90%",
+        "Code Coverage": "> 80%",
       },
       metadata: {
-        generator: 'VisionManager',
-        environment: 'development'
-      }
+        generator: "VisionManager",
+        environment: "development",
+      },
     };
 
     await this.saveVision(vision);
@@ -343,12 +358,12 @@ export class VisionManager {
 
     // Record creation event
     await this.recordEvent({
-      id: crypto.randomBytes(8).toString('hex'),
+      id: crypto.randomBytes(8).toString("hex"),
       timestamp: new Date(),
-      type: 'created',
-      actor: 'system',
+      type: "created",
+      actor: "system",
       data: vision,
-      newVersion: vision.version
+      newVersion: vision.version,
     });
 
     return vision;
@@ -359,8 +374,8 @@ export class VisionManager {
    */
   private async saveVision(vision: CanonicalVision): Promise<void> {
     const markdown = this.visionToMarkdown(vision);
-    await fs.writeFile(this.visionPath, markdown, 'utf-8');
-    logger.info('Vision saved to file');
+    await fs.writeFile(this.visionPath, markdown, "utf-8");
+    logger.info("Vision saved to file");
   }
 
   /**
@@ -370,49 +385,53 @@ export class VisionManager {
     const lines: string[] = [];
 
     // YAML frontmatter
-    lines.push('---');
+    lines.push("---");
     lines.push(`version: ${vision.version}`);
     lines.push(`created: ${vision.created.toISOString()}`);
     lines.push(`updated: ${vision.updated.toISOString()}`);
-    lines.push('---');
-    lines.push('');
+    lines.push("---");
+    lines.push("");
 
     // Content
-    lines.push('# Canonical Vision');
-    lines.push('');
+    lines.push("# Canonical Vision");
+    lines.push("");
 
-    lines.push('## Mission');
+    lines.push("## Mission");
     lines.push(vision.mission);
-    lines.push('');
+    lines.push("");
 
-    lines.push('## Principles');
+    lines.push("## Principles");
     for (const principle of vision.principles) {
       lines.push(`- ${principle}`);
     }
-    lines.push('');
+    lines.push("");
 
-    lines.push('## Strategic Goals');
+    lines.push("## Strategic Goals");
     for (let i = 0; i < vision.strategicGoals.length; i++) {
       const goal = vision.strategicGoals[i];
-      const deadline = goal.deadline ? `, Deadline: ${goal.deadline.toISOString().split('T')[0]}` : '';
-      lines.push(`${i + 1}. [${goal.title}] - Priority: ${goal.priority}${deadline}`);
+      const deadline = goal.deadline
+        ? `, Deadline: ${goal.deadline.toISOString().split("T")[0]}`
+        : "";
+      lines.push(
+        `${i + 1}. [${goal.title}] - Priority: ${goal.priority}${deadline}`,
+      );
       if (goal.description) {
         lines.push(`   ${goal.description}`);
       }
     }
-    lines.push('');
+    lines.push("");
 
-    lines.push('## Current Focus');
+    lines.push("## Current Focus");
     lines.push(vision.currentFocus);
-    lines.push('');
+    lines.push("");
 
-    lines.push('## Success Metrics');
+    lines.push("## Success Metrics");
     for (const [key, value] of Object.entries(vision.successMetrics)) {
       lines.push(`- ${key}: ${value}`);
     }
-    lines.push('');
+    lines.push("");
 
-    return lines.join('\n');
+    return lines.join("\n");
   }
 
   /**
@@ -420,7 +439,7 @@ export class VisionManager {
    */
   async updateVision(updates: VisionUpdate): Promise<void> {
     if (!this.currentVision) {
-      throw new Error('No vision loaded');
+      throw new Error("No vision loaded");
     }
 
     const previousVersion = this.currentVision.version;
@@ -444,36 +463,38 @@ export class VisionManager {
 
     // Update metadata
     this.currentVision.updated = new Date();
-    this.currentVision.version = this.incrementVersion(this.currentVision.version);
+    this.currentVision.version = this.incrementVersion(
+      this.currentVision.version,
+    );
 
     // Save to file
     await this.saveVision(this.currentVision);
 
     // Record event
     await this.recordEvent({
-      id: crypto.randomBytes(8).toString('hex'),
+      id: crypto.randomBytes(8).toString("hex"),
       timestamp: new Date(),
-      type: 'updated',
-      actor: 'user',
+      type: "updated",
+      actor: "user",
       data: updates,
       previousVersion,
-      newVersion: this.currentVision.version
+      newVersion: this.currentVision.version,
     });
 
     // Propagate to subscribers
     await this.propagateVisionUpdate(this.currentVision);
 
-    logger.info('Vision updated', { version: this.currentVision.version });
+    logger.info("Vision updated", { version: this.currentVision.version });
   }
 
   /**
    * Increment version number
    */
   private incrementVersion(version: string): string {
-    const parts = version.split('.');
+    const parts = version.split(".");
     const patch = parseInt(parts[parts.length - 1]) || 0;
     parts[parts.length - 1] = String(patch + 1);
-    return parts.join('.');
+    return parts.join(".");
   }
 
   /**
@@ -488,13 +509,13 @@ export class VisionManager {
    */
   async checkAlignment(decision: Decision): Promise<AlignmentResult> {
     if (!this.currentVision) {
-      throw new Error('No vision loaded');
+      throw new Error("No vision loaded");
     }
 
     const violations: Array<{
       principle: string;
       reason: string;
-      severity: 'minor' | 'major' | 'critical';
+      severity: "minor" | "major" | "critical";
     }> = [];
 
     const suggestions: string[] = [];
@@ -507,14 +528,17 @@ export class VisionManager {
         violations.push({
           principle,
           reason: alignment.reason,
-          severity: alignment.severity
+          severity: alignment.severity,
         });
         score -= alignment.penalty;
       }
     }
 
     // Check against strategic goals
-    const goalAlignment = this.checkGoalAlignment(decision, this.currentVision.strategicGoals);
+    const goalAlignment = this.checkGoalAlignment(
+      decision,
+      this.currentVision.strategicGoals,
+    );
     if (!goalAlignment.aligned) {
       score -= 0.2;
       suggestions.push(...goalAlignment.suggestions);
@@ -522,15 +546,17 @@ export class VisionManager {
 
     // Generate suggestions based on violations
     if (violations.length > 0) {
-      suggestions.push('Consider reviewing the decision against core principles');
-      suggestions.push('Ensure the decision supports strategic goals');
+      suggestions.push(
+        "Consider reviewing the decision against core principles",
+      );
+      suggestions.push("Ensure the decision supports strategic goals");
     }
 
     return {
       aligned: violations.length === 0,
       score: Math.max(0, Math.min(1, score)),
       violations,
-      suggestions
+      suggestions,
     };
   }
 
@@ -539,43 +565,50 @@ export class VisionManager {
    */
   private checkPrincipleAlignment(
     decision: Decision,
-    principle: string
+    principle: string,
   ): {
     aligned: boolean;
     reason: string;
-    severity: 'minor' | 'major' | 'critical';
+    severity: "minor" | "major" | "critical";
     penalty: number;
   } {
     // Simplified alignment check - in production, use NLP/AI
     const principleKeywords = principle.toLowerCase().split(/\s+/);
-    const decisionText = `${decision.description} ${decision.rationale}`.toLowerCase();
+    const decisionText =
+      `${decision.description} ${decision.rationale}`.toLowerCase();
 
     // Check for conflicting patterns
-    if (principle.includes('Developer Experience') && decision.impact === 'high') {
-      if (!decisionText.includes('developer') && !decisionText.includes('dx')) {
+    if (
+      principle.includes("Developer Experience") &&
+      decision.impact === "high"
+    ) {
+      if (!decisionText.includes("developer") && !decisionText.includes("dx")) {
         return {
           aligned: false,
-          reason: 'High impact decision does not consider developer experience',
-          severity: 'major',
-          penalty: 0.3
+          reason: "High impact decision does not consider developer experience",
+          severity: "major",
+          penalty: 0.3,
         };
       }
     }
 
-    if (principle.includes('Enterprise Grade') && decisionText.includes('prototype')) {
+    if (
+      principle.includes("Enterprise Grade") &&
+      decisionText.includes("prototype")
+    ) {
       return {
         aligned: false,
-        reason: 'Prototype approach conflicts with enterprise-grade principle',
-        severity: 'minor',
-        penalty: 0.1
+        reason: "Prototype approach conflicts with enterprise-grade principle",
+        severity: "minor",
+        penalty: 0.1,
       };
     }
 
     return {
       aligned: true,
-      reason: '',
-      severity: 'minor',
-      penalty: 0
+      reason: "",
+      severity: "minor",
+      penalty: 0,
     };
   }
 
@@ -584,23 +617,26 @@ export class VisionManager {
    */
   private checkGoalAlignment(
     decision: Decision,
-    goals: any[]
+    goals: any[],
   ): {
     aligned: boolean;
     suggestions: string[];
   } {
-    const activeGoals = goals.filter(g => g.status === 'in-progress');
-    const decisionText = `${decision.description} ${decision.rationale}`.toLowerCase();
+    const activeGoals = goals.filter((g) => g.status === "in-progress");
+    const decisionText =
+      `${decision.description} ${decision.rationale}`.toLowerCase();
 
     const suggestions: string[] = [];
     let supportsGoal = false;
 
     for (const goal of activeGoals) {
       const goalText = `${goal.title} ${goal.description}`.toLowerCase();
-      const goalKeywords = goalText.split(/\s+/).filter(w => w.length > 3);
+      const goalKeywords = goalText.split(/\s+/).filter((w) => w.length > 3);
 
       // Check if decision supports any active goal
-      const overlap = goalKeywords.filter(kw => decisionText.includes(kw)).length;
+      const overlap = goalKeywords.filter((kw) =>
+        decisionText.includes(kw),
+      ).length;
       if (overlap > 2) {
         supportsGoal = true;
         break;
@@ -608,44 +644,48 @@ export class VisionManager {
     }
 
     if (!supportsGoal && activeGoals.length > 0) {
-      suggestions.push(`Consider how this decision supports active goal: ${activeGoals[0].title}`);
-      suggestions.push('Align decision rationale with strategic priorities');
+      suggestions.push(
+        `Consider how this decision supports active goal: ${activeGoals[0].title}`,
+      );
+      suggestions.push("Align decision rationale with strategic priorities");
     }
 
     return {
       aligned: supportsGoal || activeGoals.length === 0,
-      suggestions
+      suggestions,
     };
   }
 
   /**
    * Propagate vision updates to agents
    */
-  async propagateVisionUpdate(vision: CanonicalVision): Promise<PropagationResult> {
+  async propagateVisionUpdate(
+    vision: CanonicalVision,
+  ): Promise<PropagationResult> {
     const result: PropagationResult = {
       success: true,
       agentsNotified: [],
-      failures: []
+      failures: [],
     };
 
     // Notify all subscribers
     for (const subscriber of this.subscribers) {
       try {
         subscriber(vision);
-        result.agentsNotified.push('subscriber');
+        result.agentsNotified.push("subscriber");
       } catch (error) {
         result.success = false;
         result.failures.push({
-          agentId: 'subscriber',
-          error: error instanceof Error ? error.message : String(error)
+          agentId: "subscriber",
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }
 
     // In production, would notify actual agents via message queue
-    logger.info('Vision propagated', {
+    logger.info("Vision propagated", {
       notified: result.agentsNotified.length,
-      failures: result.failures.length
+      failures: result.failures.length,
     });
 
     return result;
@@ -672,18 +712,18 @@ export class VisionManager {
    */
   private async loadEvents(): Promise<void> {
     try {
-      const content = await fs.readFile(this.eventsPath, 'utf-8');
+      const content = await fs.readFile(this.eventsPath, "utf-8");
       const events = JSON.parse(content);
 
       // Parse dates
       this.events = events.map((e: any) => ({
         ...e,
-        timestamp: new Date(e.timestamp)
+        timestamp: new Date(e.timestamp),
       }));
 
       logger.info(`Loaded ${this.events.length} vision events`);
     } catch (error) {
-      if ((error as any).code === 'ENOENT') {
+      if ((error as any).code === "ENOENT") {
         this.events = [];
       } else {
         throw error;
@@ -717,7 +757,7 @@ export class VisionManager {
     // Parse vision from text input
     const updates: VisionUpdate = {
       mission: text,
-      currentFocus: text
+      currentFocus: text,
     };
     await this.updateVision(updates);
     return this.currentVision!;

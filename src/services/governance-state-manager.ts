@@ -3,14 +3,14 @@
  * Handles state rotation, validation, and persistence
  */
 
-import { promises as fs } from 'fs';
-import path from 'path';
-import crypto from 'crypto';
+import { promises as fs } from "fs";
+import path from "path";
+import crypto from "crypto";
 import type {
   GovernanceState,
   GovernanceConfig,
   SentinelEntry,
-} from '../types/governance.types.js';
+} from "../types/governance.types.js";
 
 export class GovernanceStateManager {
   private projectRoot: string;
@@ -20,9 +20,9 @@ export class GovernanceStateManager {
 
   constructor(projectRoot: string) {
     this.projectRoot = projectRoot;
-    this.statePath = path.join(projectRoot, '.claude/governance.json');
-    this.configPath = path.join(projectRoot, '.claude/governance/config.json');
-    this.backupDir = path.join(projectRoot, '.claude/governance/backups');
+    this.statePath = path.join(projectRoot, ".claude/governance.json");
+    this.configPath = path.join(projectRoot, ".claude/governance/config.json");
+    this.backupDir = path.join(projectRoot, ".claude/governance/backups");
   }
 
   /**
@@ -30,18 +30,18 @@ export class GovernanceStateManager {
    */
   async readState(): Promise<GovernanceState> {
     try {
-      const data = await fs.readFile(this.statePath, 'utf-8');
+      const data = await fs.readFile(this.statePath, "utf-8");
       const state: GovernanceState = JSON.parse(data);
 
       // Validate state integrity
       if (this.isValidState(state)) {
         return state;
       } else {
-        throw new Error('Invalid state structure');
+        throw new Error("Invalid state structure");
       }
     } catch (error) {
-      if ((error as any).code === 'ENOENT') {
-        throw new Error('Governance state not found');
+      if ((error as any).code === "ENOENT") {
+        throw new Error("Governance state not found");
       }
       throw error;
     }
@@ -66,7 +66,11 @@ export class GovernanceStateManager {
 
     // Atomic write using temp file
     const tempPath = `${this.statePath}.tmp`;
-    await fs.writeFile(tempPath, JSON.stringify(rotatedState, null, 2), 'utf-8');
+    await fs.writeFile(
+      tempPath,
+      JSON.stringify(rotatedState, null, 2),
+      "utf-8",
+    );
     await fs.rename(tempPath, this.statePath);
 
     // Create backup if enabled
@@ -80,7 +84,7 @@ export class GovernanceStateManager {
    */
   private rotateSentinelLogs(
     state: GovernanceState,
-    config: GovernanceConfig
+    config: GovernanceConfig,
   ): GovernanceState {
     const maxEntries = config.sentinelLog.maxEntries;
     const retentionDays = config.sentinelLog.retentionDays;
@@ -92,20 +96,29 @@ export class GovernanceStateManager {
     const cutoffTime = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
     logs = logs.filter((log) => {
       const isRecent = log.timestamp > cutoffTime;
-      const isCritical = persistCritical && (log.type === 'CRITICAL' || log.type === 'ERROR');
+      const isCritical =
+        persistCritical && (log.type === "CRITICAL" || log.type === "ERROR");
       return isRecent || isCritical;
     });
 
     // Limit to max entries (keep most recent)
     if (logs.length > maxEntries) {
       // Always keep critical entries
-      const critical = logs.filter((log) => log.type === 'CRITICAL' || log.type === 'ERROR');
-      const nonCritical = logs.filter((log) => log.type !== 'CRITICAL' && log.type !== 'ERROR');
+      const critical = logs.filter(
+        (log) => log.type === "CRITICAL" || log.type === "ERROR",
+      );
+      const nonCritical = logs.filter(
+        (log) => log.type !== "CRITICAL" && log.type !== "ERROR",
+      );
 
       // Take most recent non-critical entries
-      const recentNonCritical = nonCritical.slice(-(maxEntries - critical.length));
+      const recentNonCritical = nonCritical.slice(
+        -(maxEntries - critical.length),
+      );
 
-      logs = [...critical, ...recentNonCritical].sort((a, b) => a.timestamp - b.timestamp);
+      logs = [...critical, ...recentNonCritical].sort(
+        (a, b) => a.timestamp - b.timestamp,
+      );
     }
 
     return {
@@ -123,17 +136,20 @@ export class GovernanceStateManager {
       await fs.mkdir(this.backupDir, { recursive: true });
 
       // Create backup filename with timestamp
-      const timestamp = new Date().toISOString().replace(/:/g, '-').split('.')[0];
+      const timestamp = new Date()
+        .toISOString()
+        .replace(/:/g, "-")
+        .split(".")[0];
       const backupPath = path.join(this.backupDir, `state-${timestamp}.json`);
 
       // Write backup
-      await fs.writeFile(backupPath, JSON.stringify(state, null, 2), 'utf-8');
+      await fs.writeFile(backupPath, JSON.stringify(state, null, 2), "utf-8");
 
       // Rotate old backups
       await this.rotateBackups();
     } catch (error) {
       // Non-critical error, log but don't throw
-      console.error('Failed to create backup:', error);
+      console.error("Failed to create backup:", error);
     }
   }
 
@@ -147,7 +163,7 @@ export class GovernanceStateManager {
 
       const files = await fs.readdir(this.backupDir);
       const backupFiles = files
-        .filter((f) => f.startsWith('state-') && f.endsWith('.json'))
+        .filter((f) => f.startsWith("state-") && f.endsWith(".json"))
         .sort()
         .reverse(); // Most recent first
 
@@ -155,11 +171,11 @@ export class GovernanceStateManager {
       if (backupFiles.length > maxBackups) {
         const toDelete = backupFiles.slice(maxBackups);
         await Promise.all(
-          toDelete.map((file) => fs.unlink(path.join(this.backupDir, file)))
+          toDelete.map((file) => fs.unlink(path.join(this.backupDir, file))),
         );
       }
     } catch (error) {
-      console.error('Failed to rotate backups:', error);
+      console.error("Failed to rotate backups:", error);
     }
   }
 
@@ -177,9 +193,9 @@ export class GovernanceStateManager {
     };
 
     return crypto
-      .createHash('sha256')
+      .createHash("sha256")
       .update(JSON.stringify(stateForHash))
-      .digest('hex')
+      .digest("hex")
       .substring(0, 16); // Use first 16 chars for brevity
   }
 
@@ -188,14 +204,14 @@ export class GovernanceStateManager {
    */
   private isValidState(state: any): state is GovernanceState {
     return (
-      typeof state === 'object' &&
+      typeof state === "object" &&
       state !== null &&
-      typeof state.version === 'number' &&
-      typeof state.timestamp === 'string' &&
-      typeof state.constitution === 'object' &&
+      typeof state.version === "number" &&
+      typeof state.timestamp === "string" &&
+      typeof state.constitution === "object" &&
       Array.isArray(state.workstreams) &&
       Array.isArray(state.sentinelLog) &&
-      typeof state.metadata === 'object'
+      typeof state.metadata === "object"
     );
   }
 
@@ -204,11 +220,12 @@ export class GovernanceStateManager {
    */
   private async readConfig(): Promise<GovernanceConfig> {
     try {
-      const data = await fs.readFile(this.configPath, 'utf-8');
+      const data = await fs.readFile(this.configPath, "utf-8");
       return JSON.parse(data);
     } catch (error) {
       // Return default config if file doesn't exist
-      const { DEFAULT_GOVERNANCE_CONFIG } = await import('../types/governance.types.js');
+      const { DEFAULT_GOVERNANCE_CONFIG } =
+        await import("../types/governance.types.js");
       return DEFAULT_GOVERNANCE_CONFIG;
     }
   }
@@ -216,7 +233,9 @@ export class GovernanceStateManager {
   /**
    * Append sentinel log entry with automatic rotation
    */
-  async appendSentinelLog(entry: Omit<SentinelEntry, 'id' | 'timestamp'>): Promise<void> {
+  async appendSentinelLog(
+    entry: Omit<SentinelEntry, "id" | "timestamp">,
+  ): Promise<void> {
     const state = await this.readState();
 
     const newEntry: SentinelEntry = {
@@ -237,7 +256,7 @@ export class GovernanceStateManager {
     try {
       const files = await fs.readdir(this.backupDir);
       const backupFiles = files
-        .filter((f) => f.startsWith('state-') && f.endsWith('.json'))
+        .filter((f) => f.startsWith("state-") && f.endsWith(".json"))
         .sort()
         .reverse();
 
@@ -246,7 +265,7 @@ export class GovernanceStateManager {
       }
 
       const latestBackup = path.join(this.backupDir, backupFiles[0]);
-      const data = await fs.readFile(latestBackup, 'utf-8');
+      const data = await fs.readFile(latestBackup, "utf-8");
       return JSON.parse(data);
     } catch (error) {
       return null;
@@ -256,12 +275,15 @@ export class GovernanceStateManager {
   /**
    * Validate state integrity using checksum
    */
-  async validateStateIntegrity(): Promise<{ valid: boolean; message?: string }> {
+  async validateStateIntegrity(): Promise<{
+    valid: boolean;
+    message?: string;
+  }> {
     try {
       const state = await this.readState();
 
       if (!state.metadata.checksum) {
-        return { valid: true, message: 'No checksum available (legacy state)' };
+        return { valid: true, message: "No checksum available (legacy state)" };
       }
 
       const calculatedChecksum = this.calculateChecksum(state);
@@ -277,7 +299,7 @@ export class GovernanceStateManager {
     } catch (error) {
       return {
         valid: false,
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : "Unknown error",
       };
     }
   }

@@ -1,18 +1,34 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  Users, MessageSquare, CheckCircle, XCircle, AlertTriangle,
-  FileCode, GitBranch, Database, Cloud, Shield, Zap,
-  ThumbsUp, ThumbsDown, Brain, ChevronRight, Clock,
-  ArrowRight, Layers, Package, Settings
-} from 'lucide-react';
-import { ProgressBar } from './ui/ProgressBar';
+  Users,
+  MessageSquare,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  FileCode,
+  GitBranch,
+  Database,
+  Cloud,
+  Shield,
+  Zap,
+  ThumbsUp,
+  ThumbsDown,
+  Brain,
+  ChevronRight,
+  Clock,
+  ArrowRight,
+  Layers,
+  Package,
+  Settings,
+} from "lucide-react";
+import { ProgressBar } from "./ui/ProgressBar";
 
 interface ArchitectDiscussionProps {
   topic: string;
   participants: Architect[];
   onDecision: (decision: ArchitectureDecision) => void;
-  humanRole: 'observer' | 'participant' | 'arbiter';
+  humanRole: "observer" | "participant" | "arbiter";
 }
 
 interface Architect {
@@ -27,13 +43,13 @@ interface Message {
   id: string;
   architectId: string;
   content: string;
-  type: 'proposal' | 'concern' | 'agreement' | 'question' | 'decision';
+  type: "proposal" | "concern" | "agreement" | "question" | "decision";
   timestamp: Date;
   attachments?: Attachment[];
 }
 
 interface Attachment {
-  type: 'diagram' | 'code' | 'reference';
+  type: "diagram" | "code" | "reference";
   title: string;
   content: string;
 }
@@ -50,12 +66,14 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
   topic,
   participants,
   onDecision,
-  humanRole
+  humanRole,
 }) => {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [currentPhase, setCurrentPhase] = useState<'analysis' | 'discussion' | 'consensus' | 'signoff'>('analysis');
+  const [currentPhase, setCurrentPhase] = useState<
+    "analysis" | "discussion" | "consensus" | "signoff"
+  >("analysis");
   const [decision, setDecision] = useState<ArchitectureDecision | null>(null);
-  const [humanInput, setHumanInput] = useState('');
+  const [humanInput, setHumanInput] = useState("");
   const [isTyping, setIsTyping] = useState<string | null>(null);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
@@ -64,62 +82,68 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
     const simulateDiscussion = async () => {
       // Phase 1: Analysis
       await addMessage({
-        id: '1',
+        id: "1",
         architectId: participants[0].id,
         content: `I've analyzed the requirements for ${topic}. Based on our constraints, I propose a microservices architecture with event-driven communication.`,
-        type: 'proposal',
+        type: "proposal",
         timestamp: new Date(),
-        attachments: [{
-          type: 'diagram',
-          title: 'System Architecture',
-          content: 'microservices-diagram.svg'
-        }]
+        attachments: [
+          {
+            type: "diagram",
+            title: "System Architecture",
+            content: "microservices-diagram.svg",
+          },
+        ],
       });
 
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       await addMessage({
-        id: '2',
+        id: "2",
         architectId: participants[1].id,
-        content: 'I have concerns about the operational complexity. Have we considered a modular monolith first? We can extract services later.',
-        type: 'concern',
-        timestamp: new Date()
+        content:
+          "I have concerns about the operational complexity. Have we considered a modular monolith first? We can extract services later.",
+        type: "concern",
+        timestamp: new Date(),
       });
 
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setCurrentPhase('discussion');
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      setCurrentPhase("discussion");
 
       await addMessage({
-        id: '3',
+        id: "3",
         architectId: participants[2].id,
-        content: 'The event-driven approach aligns with our scalability requirements. I suggest using CQRS with event sourcing for the critical domains.',
-        type: 'agreement',
+        content:
+          "The event-driven approach aligns with our scalability requirements. I suggest using CQRS with event sourcing for the critical domains.",
+        type: "agreement",
         timestamp: new Date(),
-        attachments: [{
-          type: 'code',
-          title: 'Event Store Interface',
-          content: 'interface EventStore { ... }'
-        }]
+        attachments: [
+          {
+            type: "code",
+            title: "Event Store Interface",
+            content: "interface EventStore { ... }",
+          },
+        ],
       });
 
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setCurrentPhase('consensus');
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      setCurrentPhase("consensus");
 
       // Build consensus
       const finalDecision: ArchitectureDecision = {
-        approach: 'Hybrid: Modular monolith with extraction-ready boundaries',
-        rationale: 'Balances immediate delivery with future scalability',
+        approach: "Hybrid: Modular monolith with extraction-ready boundaries",
+        rationale: "Balances immediate delivery with future scalability",
         tradeoffs: [
-          'Higher initial complexity vs. long-term flexibility',
-          'Performance overhead vs. maintainability',
-          'Team learning curve vs. industry best practices'
+          "Higher initial complexity vs. long-term flexibility",
+          "Performance overhead vs. maintainability",
+          "Team learning curve vs. industry best practices",
         ],
         consensus: 87,
-        signedOffBy: participants.map(p => p.name)
+        signedOffBy: participants.map((p) => p.name),
       };
 
       setDecision(finalDecision);
-      setCurrentPhase('signoff');
+      setCurrentPhase("signoff");
     };
 
     simulateDiscussion();
@@ -127,49 +151,68 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
 
   const addMessage = async (message: Message) => {
     setIsTyping(message.architectId);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setMessages(prev => [...prev, message]);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    setMessages((prev) => [...prev, message]);
     setIsTyping(null);
     scrollToBottom();
   };
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   const handleHumanInput = () => {
-    if (humanInput.trim() && humanRole === 'participant') {
+    if (humanInput.trim() && humanRole === "participant") {
       addMessage({
         id: `human-${Date.now()}`,
-        architectId: 'human',
+        architectId: "human",
         content: humanInput,
-        type: 'question',
-        timestamp: new Date()
+        type: "question",
+        timestamp: new Date(),
       });
-      setHumanInput('');
+      setHumanInput("");
     }
   };
 
   const phaseIndicators = [
-    { phase: 'analysis', label: 'Analysis', icon: <Brain className="w-4 h-4" /> },
-    { phase: 'discussion', label: 'Discussion', icon: <MessageSquare className="w-4 h-4" /> },
-    { phase: 'consensus', label: 'Consensus', icon: <Users className="w-4 h-4" /> },
-    { phase: 'signoff', label: 'Sign-off', icon: <CheckCircle className="w-4 h-4" /> }
+    {
+      phase: "analysis",
+      label: "Analysis",
+      icon: <Brain className="w-4 h-4" />,
+    },
+    {
+      phase: "discussion",
+      label: "Discussion",
+      icon: <MessageSquare className="w-4 h-4" />,
+    },
+    {
+      phase: "consensus",
+      label: "Consensus",
+      icon: <Users className="w-4 h-4" />,
+    },
+    {
+      phase: "signoff",
+      label: "Sign-off",
+      icon: <CheckCircle className="w-4 h-4" />,
+    },
   ];
 
-  const getMessageIcon = (type: Message['type']) => {
+  const getMessageIcon = (type: Message["type"]) => {
     const icons = {
-      'proposal': <FileCode className="w-4 h-4 text-blue-400" />,
-      'concern': <AlertTriangle className="w-4 h-4 text-yellow-400" />,
-      'agreement': <ThumbsUp className="w-4 h-4 text-green-400" />,
-      'question': <MessageSquare className="w-4 h-4 text-purple-400" />,
-      'decision': <CheckCircle className="w-4 h-4 text-green-400" />
+      proposal: <FileCode className="w-4 h-4 text-blue-400" />,
+      concern: <AlertTriangle className="w-4 h-4 text-yellow-400" />,
+      agreement: <ThumbsUp className="w-4 h-4 text-green-400" />,
+      question: <MessageSquare className="w-4 h-4 text-purple-400" />,
+      decision: <CheckCircle className="w-4 h-4 text-green-400" />,
     };
     return icons[type];
   };
 
   return (
-    <div data-testid="architect-discussion-container" className="min-h-screen bg-gray-950 text-gray-100 p-6">
+    <div
+      data-testid="architect-discussion-container"
+      className="min-h-screen bg-gray-950 text-gray-100 p-6"
+    >
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <motion.div
@@ -185,9 +228,11 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
               </h1>
               <p className="text-gray-400">{topic}</p>
             </div>
-            {humanRole === 'arbiter' && (
+            {humanRole === "arbiter" && (
               <div className="px-4 py-2 rounded-lg bg-purple-500/20 border border-purple-500/30">
-                <div className="text-sm font-medium text-purple-300">You have final say</div>
+                <div className="text-sm font-medium text-purple-300">
+                  You have final say
+                </div>
               </div>
             )}
           </div>
@@ -196,24 +241,36 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
           <div className="flex items-center justify-between mb-8">
             {phaseIndicators.map((indicator, idx) => (
               <div key={indicator.phase} className="flex items-center flex-1">
-                <div className={`
+                <div
+                  className={`
                   flex items-center gap-2 px-4 py-2 rounded-lg transition-all
-                  ${currentPhase === indicator.phase
-                    ? 'bg-blue-500/20 border border-blue-500/30 text-blue-400'
-                    : phaseIndicators.findIndex(p => p.phase === currentPhase) > idx
-                    ? 'text-green-400'
-                    : 'text-gray-600'}
-                `}>
+                  ${
+                    currentPhase === indicator.phase
+                      ? "bg-blue-500/20 border border-blue-500/30 text-blue-400"
+                      : phaseIndicators.findIndex(
+                            (p) => p.phase === currentPhase,
+                          ) > idx
+                        ? "text-green-400"
+                        : "text-gray-600"
+                  }
+                `}
+                >
                   {indicator.icon}
                   <span className="text-sm font-medium">{indicator.label}</span>
                 </div>
                 {idx < phaseIndicators.length - 1 && (
-                  <ArrowRight className={`
+                  <ArrowRight
+                    className={`
                     w-4 h-4 mx-2
-                    ${phaseIndicators.findIndex(p => p.phase === currentPhase) > idx
-                      ? 'text-green-400'
-                      : 'text-gray-700'}
-                  `} />
+                    ${
+                      phaseIndicators.findIndex(
+                        (p) => p.phase === currentPhase,
+                      ) > idx
+                        ? "text-green-400"
+                        : "text-gray-700"
+                    }
+                  `}
+                  />
                 )}
               </div>
             ))}
@@ -232,7 +289,10 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
                 <Users className="w-5 h-5 text-blue-400" />
                 Architects
               </h3>
-              <div data-testid="architect-discussion-participants" className="space-y-3">
+              <div
+                data-testid="architect-discussion-participants"
+                className="space-y-3"
+              >
                 {participants.map((architect) => (
                   <div
                     key={architect.id}
@@ -244,8 +304,12 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
                         {architect.avatar}
                       </div>
                       <div>
-                        <div className="font-medium text-sm">{architect.name}</div>
-                        <div className="text-xs text-gray-500">{architect.specialty}</div>
+                        <div className="font-medium text-sm">
+                          {architect.name}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {architect.specialty}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 text-xs">
@@ -256,7 +320,9 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
                         fillColor="bg-gradient-to-r from-blue-500 to-green-500"
                         animated={false}
                       />
-                      <span className="text-gray-400">{architect.confidence}%</span>
+                      <span className="text-gray-400">
+                        {architect.confidence}%
+                      </span>
                     </div>
                     {isTyping === architect.id && (
                       <div className="mt-2 text-xs text-gray-500 italic">
@@ -281,9 +347,12 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
               <div className="space-y-4 max-h-96 overflow-y-auto mb-4">
                 <AnimatePresence>
                   {messages.map((message, idx) => {
-                    const architect = message.architectId === 'human'
-                      ? { name: 'You', avatar: 'H' }
-                      : participants.find(p => p.id === message.architectId);
+                    const architect =
+                      message.architectId === "human"
+                        ? { name: "You", avatar: "H" }
+                        : participants.find(
+                            (p) => p.id === message.architectId,
+                          );
 
                     return (
                       <motion.div
@@ -298,13 +367,17 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-sm">{architect?.name}</span>
+                            <span className="font-medium text-sm">
+                              {architect?.name}
+                            </span>
                             {getMessageIcon(message.type)}
                             <span className="text-xs text-gray-500">
                               {message.timestamp.toLocaleTimeString()}
                             </span>
                           </div>
-                          <div className="text-gray-300 text-sm">{message.content}</div>
+                          <div className="text-gray-300 text-sm">
+                            {message.content}
+                          </div>
 
                           {message.attachments && (
                             <div className="mt-2 flex flex-wrap gap-2">
@@ -313,9 +386,15 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
                                   key={idx}
                                   className="px-3 py-1.5 rounded-lg bg-gray-900 border border-gray-800 text-xs flex items-center gap-1"
                                 >
-                                  {attachment.type === 'diagram' && <Layers className="w-3 h-3" />}
-                                  {attachment.type === 'code' && <FileCode className="w-3 h-3" />}
-                                  {attachment.type === 'reference' && <GitBranch className="w-3 h-3" />}
+                                  {attachment.type === "diagram" && (
+                                    <Layers className="w-3 h-3" />
+                                  )}
+                                  {attachment.type === "code" && (
+                                    <FileCode className="w-3 h-3" />
+                                  )}
+                                  {attachment.type === "reference" && (
+                                    <GitBranch className="w-3 h-3" />
+                                  )}
                                   {attachment.title}
                                 </div>
                               ))}
@@ -330,14 +409,14 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
               </div>
 
               {/* Human Input (if participant) */}
-              {humanRole === 'participant' && (
+              {humanRole === "participant" && (
                 <div className="flex gap-2 pt-4 border-t border-gray-800">
                   <input
                     data-testid="architect-discussion-message-input"
                     type="text"
                     value={humanInput}
                     onChange={(e) => setHumanInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleHumanInput()}
+                    onKeyDown={(e) => e.key === "Enter" && handleHumanInput()}
                     placeholder="Add your thoughts..."
                     className="flex-1 px-4 py-2 bg-gray-900 border border-gray-800 rounded-lg
                              focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none"
@@ -354,7 +433,7 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
             </div>
 
             {/* Decision Summary */}
-            {decision && currentPhase === 'signoff' && (
+            {decision && currentPhase === "signoff" && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -385,7 +464,10 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
                     <div className="text-sm text-gray-400 mb-1">Trade-offs</div>
                     <ul className="space-y-1">
                       {decision.tradeoffs.map((tradeoff, idx) => (
-                        <li key={idx} className="text-sm text-gray-300 flex items-start gap-2">
+                        <li
+                          key={idx}
+                          className="text-sm text-gray-300 flex items-start gap-2"
+                        >
                           <span className="text-gray-600">•</span>
                           {tradeoff}
                         </li>
@@ -394,7 +476,9 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
                   </div>
 
                   <div>
-                    <div className="text-sm text-gray-400 mb-2">Signed off by</div>
+                    <div className="text-sm text-gray-400 mb-2">
+                      Signed off by
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       {decision.signedOffBy.map((name) => (
                         <div
@@ -416,7 +500,7 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
                     >
                       Proceed with Implementation
                     </button>
-                    {humanRole === 'arbiter' && (
+                    {humanRole === "arbiter" && (
                       <button
                         data-testid="architect-discussion-revise-btn"
                         className="px-6 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg font-medium transition-all"

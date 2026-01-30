@@ -3,39 +3,44 @@
  * Ensures no 'any' types and proper Zod coverage
  */
 
-import { describe, it, expect } from 'vitest';
-import { promises as fs } from 'fs';
-import * as path from 'path';
-import { glob } from 'glob';
+import { describe, it, expect } from "vitest";
+import { promises as fs } from "fs";
+import * as path from "path";
+import { glob } from "glob";
 
-describe('Type Safety Validation', () => {
-  describe('No Any Types Policy', () => {
-    it('should not contain explicit any types in core files', async () => {
-      const coreFiles = await glob('src/core/**/*.ts', {
-        ignore: ['**/*.test.ts', '**/*.d.ts']
+describe("Type Safety Validation", () => {
+  describe("No Any Types Policy", () => {
+    it("should not contain explicit any types in core files", async () => {
+      const coreFiles = await glob("src/core/**/*.ts", {
+        ignore: ["**/*.test.ts", "**/*.d.ts"],
       });
 
-      const violations: Array<{ file: string; line: number; content: string }> = [];
+      const violations: Array<{ file: string; line: number; content: string }> =
+        [];
 
       for (const file of coreFiles) {
-        const content = await fs.readFile(file, 'utf-8');
-        const lines = content.split('\n');
+        const content = await fs.readFile(file, "utf-8");
+        const lines = content.split("\n");
 
         lines.forEach((line, index) => {
           // Check for explicit 'any' type (excluding comments and 'any[]')
-          if (/:\s*any\b/.test(line) && !line.trim().startsWith('//') && !line.trim().startsWith('*')) {
+          if (
+            /:\s*any\b/.test(line) &&
+            !line.trim().startsWith("//") &&
+            !line.trim().startsWith("*")
+          ) {
             violations.push({
               file,
               line: index + 1,
-              content: line.trim()
+              content: line.trim(),
             });
           }
         });
       }
 
       if (violations.length > 0) {
-        console.error('\nType Safety Violations:');
-        violations.forEach(v => {
+        console.error("\nType Safety Violations:");
+        violations.forEach((v) => {
           console.error(`  ${v.file}:${v.line}`);
           console.error(`    ${v.content}`);
         });
@@ -44,22 +49,26 @@ describe('Type Safety Validation', () => {
       expect(violations).toHaveLength(0);
     });
 
-    it('should not contain explicit any types in component files', async () => {
-      const componentFiles = await glob('src/components/**/*.{ts,tsx}', {
-        ignore: ['**/*.test.ts', '**/*.test.tsx', '**/*.d.ts']
+    it("should not contain explicit any types in component files", async () => {
+      const componentFiles = await glob("src/components/**/*.{ts,tsx}", {
+        ignore: ["**/*.test.ts", "**/*.test.tsx", "**/*.d.ts"],
       });
 
       const violations: Array<{ file: string; line: number }> = [];
 
       for (const file of componentFiles) {
-        const content = await fs.readFile(file, 'utf-8');
-        const lines = content.split('\n');
+        const content = await fs.readFile(file, "utf-8");
+        const lines = content.split("\n");
 
         lines.forEach((line, index) => {
-          if (/:\s*any\b/.test(line) && !line.includes('//') && !line.includes('Record<string, any>')) {
+          if (
+            /:\s*any\b/.test(line) &&
+            !line.includes("//") &&
+            !line.includes("Record<string, any>")
+          ) {
             violations.push({
               file,
-              line: index + 1
+              line: index + 1,
             });
           }
         });
@@ -69,31 +78,35 @@ describe('Type Safety Validation', () => {
     });
   });
 
-  describe('Zod Schema Coverage', () => {
-    it('should have Zod schemas for all public interfaces', () => {
+  describe("Zod Schema Coverage", () => {
+    it("should have Zod schemas for all public interfaces", () => {
       // Vision types
-      const { CanonicalVisionSchema, VisionEventSchema, AlignmentResultSchema } = require('@types/vision');
+      const {
+        CanonicalVisionSchema,
+        VisionEventSchema,
+        AlignmentResultSchema,
+      } = require("@types/vision");
       expect(CanonicalVisionSchema).toBeDefined();
       expect(VisionEventSchema).toBeDefined();
       expect(AlignmentResultSchema).toBeDefined();
 
       // State types
-      const { SystemStateSchema } = require('@types/state');
+      const { SystemStateSchema } = require("@types/state");
       expect(SystemStateSchema).toBeDefined();
     });
 
-    it('should validate vision data with schemas', () => {
-      const { CanonicalVisionSchema } = require('@types/vision');
+    it("should validate vision data with schemas", () => {
+      const { CanonicalVisionSchema } = require("@types/vision");
 
       const validVision = {
-        version: '1.0',
+        version: "1.0",
         created: new Date(),
         updated: new Date(),
-        mission: 'Test mission',
-        principles: ['Principle 1'],
+        mission: "Test mission",
+        principles: ["Principle 1"],
         strategicGoals: [],
-        currentFocus: 'Focus',
-        successMetrics: {}
+        currentFocus: "Focus",
+        successMetrics: {},
       };
 
       const result = CanonicalVisionSchema.safeParse(validVision);
@@ -101,42 +114,42 @@ describe('Type Safety Validation', () => {
 
       const invalidVision = {
         version: 123, // Should be string
-        created: 'not-a-date',
-        updated: new Date()
+        created: "not-a-date",
+        updated: new Date(),
       };
 
       const invalidResult = CanonicalVisionSchema.safeParse(invalidVision);
       expect(invalidResult.success).toBe(false);
     });
 
-    it('should validate state data with schemas', () => {
-      const { SystemStateSchema } = require('@types/state');
+    it("should validate state data with schemas", () => {
+      const { SystemStateSchema } = require("@types/state");
 
       const validState = {
-        version: '3.0.0',
+        version: "3.0.0",
         timestamp: new Date(),
         vision: {
-          version: '1.0',
+          version: "1.0",
           created: new Date(),
           updated: new Date(),
-          mission: 'Test',
+          mission: "Test",
           principles: [],
           strategicGoals: [],
-          currentFocus: '',
-          successMetrics: {}
+          currentFocus: "",
+          successMetrics: {},
         },
         currentTasks: [],
         agentStates: {},
         conversationContext: {
-          sessionId: 'test',
+          sessionId: "test",
           startedAt: new Date(),
           lastInteraction: new Date(),
           messageCount: 0,
           recentMessages: [],
-          contextTags: []
+          contextTags: [],
         },
         progressGraph: [],
-        metadata: {}
+        metadata: {},
       };
 
       const result = SystemStateSchema.safeParse(validState);
@@ -144,19 +157,15 @@ describe('Type Safety Validation', () => {
     });
   });
 
-  describe('Strict TypeScript Configuration', () => {
-    it('should have strict mode enabled in tsconfig.json', async () => {
-      const tsconfig = JSON.parse(
-        await fs.readFile('tsconfig.json', 'utf-8')
-      );
+  describe("Strict TypeScript Configuration", () => {
+    it("should have strict mode enabled in tsconfig.json", async () => {
+      const tsconfig = JSON.parse(await fs.readFile("tsconfig.json", "utf-8"));
 
       expect(tsconfig.compilerOptions.strict).toBe(true);
     });
 
-    it('should enforce strict null checks', async () => {
-      const tsconfig = JSON.parse(
-        await fs.readFile('tsconfig.json', 'utf-8')
-      );
+    it("should enforce strict null checks", async () => {
+      const tsconfig = JSON.parse(await fs.readFile("tsconfig.json", "utf-8"));
 
       // Either strict: true or strictNullChecks: true
       const hasStrictNullChecks =
@@ -167,40 +176,40 @@ describe('Type Safety Validation', () => {
     });
   });
 
-  describe('Interface Boundary Type Safety', () => {
-    it('should have proper types at UI-Backend boundaries', () => {
+  describe("Interface Boundary Type Safety", () => {
+    it("should have proper types at UI-Backend boundaries", () => {
       // VisionCapture props
-      const visionCaptureFile = require.resolve('@components/VisionCapture');
+      const visionCaptureFile = require.resolve("@components/VisionCapture");
       expect(visionCaptureFile).toBeDefined();
 
       // CommandCenter props
-      const commandCenterFile = require.resolve('@components/CommandCenter');
+      const commandCenterFile = require.resolve("@components/CommandCenter");
       expect(commandCenterFile).toBeDefined();
 
       // All component props should be properly typed
       // This is validated by TypeScript compilation
     });
 
-    it('should validate data crossing boundaries with Zod', () => {
-      const { CanonicalVisionSchema } = require('@types/vision');
+    it("should validate data crossing boundaries with Zod", () => {
+      const { CanonicalVisionSchema } = require("@types/vision");
 
       // Simulate data from UI
       const uiData = {
-        version: '1.0',
+        version: "1.0",
         created: new Date().toISOString(), // String from JSON
         updated: new Date().toISOString(),
-        mission: 'User input mission',
-        principles: ['Principle from UI'],
+        mission: "User input mission",
+        principles: ["Principle from UI"],
         strategicGoals: [],
-        currentFocus: 'UI focus',
-        successMetrics: {}
+        currentFocus: "UI focus",
+        successMetrics: {},
       };
 
       // Should parse and transform dates
       const result = CanonicalVisionSchema.parse({
         ...uiData,
         created: new Date(uiData.created),
-        updated: new Date(uiData.updated)
+        updated: new Date(uiData.updated),
       });
 
       expect(result.created).toBeInstanceOf(Date);
@@ -208,10 +217,10 @@ describe('Type Safety Validation', () => {
     });
   });
 
-  describe('Generic Type Usage', () => {
-    it('should use proper generic constraints', async () => {
+  describe("Generic Type Usage", () => {
+    it("should use proper generic constraints", async () => {
       // Check that generics are properly constrained
-      const utilsContent = await fs.readFile('src/utils/logger.ts', 'utf-8');
+      const utilsContent = await fs.readFile("src/utils/logger.ts", "utf-8");
 
       // Should not have unconstrained generics like <T>
       // Should have proper constraints like <T extends SomeType>
@@ -225,16 +234,16 @@ describe('Type Safety Validation', () => {
     });
   });
 
-  describe('Type Assertion Safety', () => {
-    it('should minimize use of type assertions', async () => {
-      const coreFiles = await glob('src/core/**/*.ts', {
-        ignore: ['**/*.test.ts']
+  describe("Type Assertion Safety", () => {
+    it("should minimize use of type assertions", async () => {
+      const coreFiles = await glob("src/core/**/*.ts", {
+        ignore: ["**/*.test.ts"],
       });
 
       let assertionCount = 0;
 
       for (const file of coreFiles) {
-        const content = await fs.readFile(file, 'utf-8');
+        const content = await fs.readFile(file, "utf-8");
 
         // Count 'as' type assertions (excluding 'as const')
         const assertions = content.match(/\sas\s+(?!const\b)/g);
@@ -250,17 +259,17 @@ describe('Type Safety Validation', () => {
     });
   });
 
-  describe('Unknown vs Any', () => {
-    it('should prefer unknown over any for untyped data', async () => {
-      const coreFiles = await glob('src/core/**/*.ts', {
-        ignore: ['**/*.test.ts']
+  describe("Unknown vs Any", () => {
+    it("should prefer unknown over any for untyped data", async () => {
+      const coreFiles = await glob("src/core/**/*.ts", {
+        ignore: ["**/*.test.ts"],
       });
 
       let anyCount = 0;
       let unknownCount = 0;
 
       for (const file of coreFiles) {
-        const content = await fs.readFile(file, 'utf-8');
+        const content = await fs.readFile(file, "utf-8");
 
         // Count 'any' usage
         const anyMatches = content.match(/:\s*any\b/g);

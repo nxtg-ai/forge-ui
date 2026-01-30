@@ -3,8 +3,8 @@
  * Displayed when a previous session is detected on page load
  */
 
-import React from 'react';
-import { Cloud, History, ArrowRight, X, Clock, Layout } from 'lucide-react';
+import React from "react";
+import { Cloud, History, ArrowRight, X, Clock, Layout } from "lucide-react";
 
 interface StoredSession {
   sessionId: string;
@@ -29,11 +29,11 @@ export const SessionRestoreModal: React.FC<SessionRestoreModalProps> = ({
   onClose,
 }) => {
   const lastAccessDate = new Date(session.lastAccess);
-  const formattedDate = lastAccessDate.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+  const formattedDate = lastAccessDate.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 
   return (
@@ -46,8 +46,12 @@ export const SessionRestoreModal: React.FC<SessionRestoreModalProps> = ({
               <History className="w-5 h-5 text-purple-400" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white">Previous Session Found</h2>
-              <p className="text-sm text-gray-400">Would you like to restore it?</p>
+              <h2 className="text-lg font-semibold text-white">
+                Previous Session Found
+              </h2>
+              <p className="text-sm text-gray-400">
+                Would you like to restore it?
+              </p>
             </div>
           </div>
           <button
@@ -63,7 +67,9 @@ export const SessionRestoreModal: React.FC<SessionRestoreModalProps> = ({
           <div className="bg-gray-800/50 rounded-lg p-4 space-y-3">
             <div className="flex items-center gap-2">
               <Cloud className="w-4 h-4 text-green-400" />
-              <span className="font-mono text-sm text-gray-300">{session.sessionName}</span>
+              <span className="font-mono text-sm text-gray-300">
+                {session.sessionName}
+              </span>
             </div>
 
             <div className="grid grid-cols-2 gap-3 text-xs">
@@ -79,7 +85,8 @@ export const SessionRestoreModal: React.FC<SessionRestoreModalProps> = ({
           </div>
 
           <p className="text-sm text-gray-400">
-            Restoring will reconnect you to your previous terminal session with all history and state intact.
+            Restoring will reconnect you to your previous terminal session with
+            all history and state intact.
           </p>
         </div>
 

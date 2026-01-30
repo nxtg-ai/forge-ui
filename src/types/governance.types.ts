@@ -30,7 +30,7 @@ export interface GovernanceState {
  */
 export interface WorkerPoolState {
   /** Pool operational status */
-  status: 'running' | 'scaling' | 'degraded' | 'stopped' | 'starting';
+  status: "running" | "scaling" | "degraded" | "stopped" | "starting";
   /** Total number of workers in pool */
   totalWorkers: number;
   /** Number of workers actively executing tasks */
@@ -56,7 +56,7 @@ export interface WorkerSummary {
   /** Worker identifier */
   id: string;
   /** Current worker status */
-  status: 'idle' | 'busy' | 'error' | 'crashed';
+  status: "idle" | "busy" | "error" | "crashed";
   /** Current task ID if busy */
   currentTaskId?: string;
   /** Assigned workstream ID if any */
@@ -91,7 +91,13 @@ export interface Constitution {
 /**
  * Constitutional execution phases
  */
-export type ConstitutionStatus = 'PLANNING' | 'EXECUTION' | 'REVIEW' | 'BLOCKED' | 'MONITORING' | 'COMPLETE';
+export type ConstitutionStatus =
+  | "PLANNING"
+  | "EXECUTION"
+  | "REVIEW"
+  | "BLOCKED"
+  | "MONITORING"
+  | "COMPLETE";
 
 /**
  * Workstream definition for parallel execution tracks
@@ -135,7 +141,7 @@ export interface WorkstreamTask {
   /** Task name */
   name: string;
   /** Task status */
-  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  status: "pending" | "in_progress" | "completed" | "failed";
   /** Assigned worker ID */
   workerId?: string;
 }
@@ -143,12 +149,17 @@ export interface WorkstreamTask {
 /**
  * Workstream execution states
  */
-export type WorkstreamStatus = 'pending' | 'active' | 'blocked' | 'completed' | 'failed';
+export type WorkstreamStatus =
+  | "pending"
+  | "active"
+  | "blocked"
+  | "completed"
+  | "failed";
 
 /**
  * Risk assessment levels
  */
-export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
+export type RiskLevel = "low" | "medium" | "high" | "critical";
 
 /**
  * Detailed metrics for workstream progress tracking
@@ -190,12 +201,12 @@ export interface SentinelEntry {
 /**
  * Sentinel event types for classification
  */
-export type SentinelType = 'WARN' | 'ERROR' | 'INFO' | 'CRITICAL' | 'SUCCESS';
+export type SentinelType = "WARN" | "ERROR" | "INFO" | "CRITICAL" | "SUCCESS";
 
 /**
  * Event severity levels for prioritization
  */
-export type SeverityLevel = 'low' | 'medium' | 'high' | 'critical';
+export type SeverityLevel = "low" | "medium" | "high" | "critical";
 
 /**
  * System metadata for governance tracking
@@ -232,7 +243,7 @@ export interface GovernanceApiResponse<T = GovernanceState> {
  */
 export interface GovernanceUpdateRequest {
   /** Type of update being performed */
-  updateType: 'constitution' | 'workstream' | 'sentinel' | 'full';
+  updateType: "constitution" | "workstream" | "sentinel" | "full";
   /** Partial state update data */
   data: Partial<GovernanceState>;
   /** Source of the update request */
@@ -352,13 +363,13 @@ export interface GovernanceStats {
  * Type guards for runtime type checking
  */
 export const isWorkstreamBlocked = (workstream: Workstream): boolean =>
-  workstream.status === 'blocked';
+  workstream.status === "blocked";
 
 export const isHighRisk = (workstream: Workstream): boolean =>
-  workstream.risk === 'high' || workstream.risk === 'critical';
+  workstream.risk === "high" || workstream.risk === "critical";
 
 export const isCriticalEvent = (entry: SentinelEntry): boolean =>
-  entry.type === 'CRITICAL' || entry.type === 'ERROR';
+  entry.type === "CRITICAL" || entry.type === "ERROR";
 
 export const requiresAction = (entry: SentinelEntry): boolean =>
   entry.actionRequired === true;
@@ -374,8 +385,8 @@ export const DEFAULT_GOVERNANCE_STATE: Partial<GovernanceState> = {
 };
 
 export const DEFAULT_WORKSTREAM: Partial<Workstream> = {
-  status: 'pending',
-  risk: 'low',
+  status: "pending",
+  risk: "low",
   progress: 0,
   dependencies: [],
   metrics: {
@@ -454,12 +465,12 @@ export interface NotificationConfig {
  * Default configuration values
  */
 export const DEFAULT_GOVERNANCE_CONFIG: GovernanceConfig = {
-  version: '1.0.0',
+  version: "1.0.0",
   thresholds: {
     criticalErrorLimit: 3,
     blockTimeoutMinutes: 10,
     minConfidence: 50,
-    maxRiskLevel: 'high',
+    maxRiskLevel: "high",
     warningThreshold: 5,
   },
   polling: {
@@ -483,9 +494,9 @@ export const DEFAULT_GOVERNANCE_CONFIG: GovernanceConfig = {
     enabled: true,
     confidenceThreshold: 80,
     categories: {
-      scope: { enabled: true, severity: 'medium' },
-      drift: { enabled: true, severity: 'high' },
-      governance: { enabled: true, severity: 'critical' },
+      scope: { enabled: true, severity: "medium" },
+      drift: { enabled: true, severity: "high" },
+      governance: { enabled: true, severity: "critical" },
     },
   },
   ui: {

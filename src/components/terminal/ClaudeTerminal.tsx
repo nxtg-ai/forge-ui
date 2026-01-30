@@ -3,12 +3,12 @@
  * Embedded xterm.js terminal with PTY bridge to Claude Code CLI
  */
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Terminal } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import { WebLinksAddon } from '@xterm/addon-web-links';
-import { SearchAddon } from '@xterm/addon-search';
-import '@xterm/xterm/css/xterm.css';
+import React, { useEffect, useRef, useState } from "react";
+import { Terminal } from "@xterm/xterm";
+import { FitAddon } from "@xterm/addon-fit";
+import { WebLinksAddon } from "@xterm/addon-web-links";
+import { SearchAddon } from "@xterm/addon-search";
+import "@xterm/xterm/css/xterm.css";
 import {
   Terminal as TerminalIcon,
   Maximize2,
@@ -16,8 +16,8 @@ import {
   X,
   AlertTriangle,
   Zap,
-  DollarSign
-} from 'lucide-react';
+  DollarSign,
+} from "lucide-react";
 
 interface ClaudeTerminalProps {
   onCommandExecute?: (command: string) => void;
@@ -27,7 +27,7 @@ interface ClaudeTerminalProps {
 
 interface CommandInterceptor {
   pattern: RegExp;
-  riskLevel: 'high' | 'medium' | 'low';
+  riskLevel: "high" | "medium" | "low";
   message: string;
 }
 
@@ -35,41 +35,41 @@ interface CommandInterceptor {
 const DANGEROUS_COMMANDS: CommandInterceptor[] = [
   {
     pattern: /rm\s+-rf\s+/,
-    riskLevel: 'high',
-    message: 'This will PERMANENTLY DELETE files. Are you absolutely sure?'
+    riskLevel: "high",
+    message: "This will PERMANENTLY DELETE files. Are you absolutely sure?",
   },
   {
     pattern: /git\s+push\s+.*--force/,
-    riskLevel: 'high',
-    message: 'Force push will rewrite history. This can break others\' work!'
+    riskLevel: "high",
+    message: "Force push will rewrite history. This can break others' work!",
   },
   {
     pattern: /chmod\s+777/,
-    riskLevel: 'medium',
-    message: 'Setting 777 permissions is a security risk!'
+    riskLevel: "medium",
+    message: "Setting 777 permissions is a security risk!",
   },
   {
     pattern: /sudo\s+/,
-    riskLevel: 'medium',
-    message: 'Running with sudo can affect system-wide settings.'
+    riskLevel: "medium",
+    message: "Running with sudo can affect system-wide settings.",
   },
   {
     pattern: /npm\s+publish/,
-    riskLevel: 'high',
-    message: 'This will publish to NPM registry. Ready to go live?'
-  }
+    riskLevel: "high",
+    message: "This will publish to NPM registry. Ready to go live?",
+  },
 ];
 
 export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
   onCommandExecute,
   onDangerousCommand,
-  className = ''
+  className = "",
 }) => {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const commandBufferRef = useRef<string>('');
+  const commandBufferRef = useRef<string>("");
   const initializedRef = useRef(false);
 
   const [isConnected, setIsConnected] = useState(false);
@@ -77,9 +77,11 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
   const [commandCost, setCommandCost] = useState(0);
   const [tokensUsed, setTokensUsed] = useState(0);
   const [showDangerAlert, setShowDangerAlert] = useState(false);
-  const [pendingCommand, setPendingCommand] = useState<string>('');
-  const [dangerMessage, setDangerMessage] = useState<string>('');
-  const [dangerLevel, setDangerLevel] = useState<'high' | 'medium' | 'low'>('medium');
+  const [pendingCommand, setPendingCommand] = useState<string>("");
+  const [dangerMessage, setDangerMessage] = useState<string>("");
+  const [dangerLevel, setDangerLevel] = useState<"high" | "medium" | "low">(
+    "medium",
+  );
 
   // Initialize terminal
   useEffect(() => {
@@ -87,7 +89,7 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
 
     // Prevent duplicate initialization in React Strict Mode
     if (initializedRef.current) {
-      console.log('[Terminal] Already initialized, skipping');
+      console.log("[Terminal] Already initialized, skipping");
       return;
     }
     initializedRef.current = true;
@@ -98,29 +100,29 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
       fontSize: 14,
       fontFamily: '"Cascadia Code", "Fira Code", "Consolas", monospace',
       theme: {
-        background: '#0a0a0a',
-        foreground: '#e5e7eb',
-        cursor: '#818cf8',
-        cursorAccent: '#1e1b4b',
-        selectionBackground: '#3730a3',
-        black: '#1e1b4b',
-        red: '#ef4444',
-        green: '#10b981',
-        yellow: '#f59e0b',
-        blue: '#3b82f6',
-        magenta: '#a855f7',
-        cyan: '#06b6d4',
-        white: '#e5e7eb',
-        brightBlack: '#374151',
-        brightRed: '#f87171',
-        brightGreen: '#34d399',
-        brightYellow: '#fbbf24',
-        brightBlue: '#60a5fa',
-        brightMagenta: '#c084fc',
-        brightCyan: '#22d3ee',
-        brightWhite: '#f3f4f6'
+        background: "#0a0a0a",
+        foreground: "#e5e7eb",
+        cursor: "#818cf8",
+        cursorAccent: "#1e1b4b",
+        selectionBackground: "#3730a3",
+        black: "#1e1b4b",
+        red: "#ef4444",
+        green: "#10b981",
+        yellow: "#f59e0b",
+        blue: "#3b82f6",
+        magenta: "#a855f7",
+        cyan: "#06b6d4",
+        white: "#e5e7eb",
+        brightBlack: "#374151",
+        brightRed: "#f87171",
+        brightGreen: "#34d399",
+        brightYellow: "#fbbf24",
+        brightBlue: "#60a5fa",
+        brightMagenta: "#c084fc",
+        brightCyan: "#22d3ee",
+        brightWhite: "#f3f4f6",
       },
-      allowProposedApi: true
+      allowProposedApi: true,
     });
 
     // Add addons
@@ -141,13 +143,21 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
     fitAddonRef.current = fitAddon;
 
     // Welcome message
-    term.writeln('\x1b[1;36m╔═══════════════════════════════════════════════════════════════╗\x1b[0m');
-    term.writeln('\x1b[1;36m║\x1b[0m \x1b[1;35m🚀 NXTG-Forge Agentic Command Center\x1b[0m                        \x1b[1;36m║\x1b[0m');
-    term.writeln('\x1b[1;36m║\x1b[0m \x1b[36mPowered by Claude Code CLI\x1b[0m                               \x1b[1;36m║\x1b[0m');
-    term.writeln('\x1b[1;36m╚═══════════════════════════════════════════════════════════════╝\x1b[0m');
-    term.writeln('');
-    term.writeln('\x1b[90mConnecting to localhost PTY bridge...\x1b[0m');
-    term.writeln('');
+    term.writeln(
+      "\x1b[1;36m╔═══════════════════════════════════════════════════════════════╗\x1b[0m",
+    );
+    term.writeln(
+      "\x1b[1;36m║\x1b[0m \x1b[1;35m🚀 NXTG-Forge Agentic Command Center\x1b[0m                        \x1b[1;36m║\x1b[0m",
+    );
+    term.writeln(
+      "\x1b[1;36m║\x1b[0m \x1b[36mPowered by Claude Code CLI\x1b[0m                               \x1b[1;36m║\x1b[0m",
+    );
+    term.writeln(
+      "\x1b[1;36m╚═══════════════════════════════════════════════════════════════╝\x1b[0m",
+    );
+    term.writeln("");
+    term.writeln("\x1b[90mConnecting to localhost PTY bridge...\x1b[0m");
+    term.writeln("");
 
     // Connect to WebSocket PTY bridge
     connectToBackend(term);
@@ -159,7 +169,7 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
       }
 
       // Build command buffer for dangerous command checking
-      if (data === '\r') {
+      if (data === "\r") {
         // Enter pressed - check for dangerous commands before sending
         const command = commandBufferRef.current.trim();
 
@@ -170,102 +180,113 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
           setDangerLevel(dangerCheck.riskLevel);
           setPendingCommand(command);
           setShowDangerAlert(true);
-          commandBufferRef.current = '';
+          commandBufferRef.current = "";
           return; // Don't send to PTY
         }
 
         // Clear buffer after Enter
-        commandBufferRef.current = '';
-      } else if (data === '\x7f') {
+        commandBufferRef.current = "";
+      } else if (data === "\x7f") {
         // Backspace - update buffer
         if (commandBufferRef.current.length > 0) {
           commandBufferRef.current = commandBufferRef.current.slice(0, -1);
         }
-      } else if (data >= ' ' && data <= '~') {
+      } else if (data >= " " && data <= "~") {
         // Printable character - add to buffer
         commandBufferRef.current += data;
       }
 
       // Always send raw input to PTY (let bash handle echo)
-      wsRef.current.send(JSON.stringify({
-        type: 'input',
-        data
-      }));
+      wsRef.current.send(
+        JSON.stringify({
+          type: "input",
+          data,
+        }),
+      );
     });
 
     // Handle window resize
     const handleResize = () => {
       fitAddon.fit();
       if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({
-          type: 'resize',
-          cols: term.cols,
-          rows: term.rows
-        }));
+        wsRef.current.send(
+          JSON.stringify({
+            type: "resize",
+            cols: term.cols,
+            rows: term.rows,
+          }),
+        );
       }
     };
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
 
     // Cleanup - Don't cleanup if we're preventing re-init
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener("resize", handleResize);
       // Don't dispose terminal/websocket since we prevent re-initialization
     };
   }, []);
 
   const connectToBackend = (term: Terminal) => {
     // Prevent duplicate connections
-    if (wsRef.current?.readyState === WebSocket.CONNECTING ||
-        wsRef.current?.readyState === WebSocket.OPEN) {
-      console.log('[Terminal] WebSocket already connected, skipping');
+    if (
+      wsRef.current?.readyState === WebSocket.CONNECTING ||
+      wsRef.current?.readyState === WebSocket.OPEN
+    ) {
+      console.log("[Terminal] WebSocket already connected, skipping");
       return;
     }
 
-    const ws = new WebSocket('ws://localhost:5051/terminal');
+    const wsHost = window.location.hostname;
+    const ws = new WebSocket(`ws://${wsHost}:5051/terminal`);
 
     ws.onopen = () => {
       setIsConnected(true);
-      term.writeln('\x1b[32m✓ Connected to Claude Code CLI\x1b[0m');
-      term.writeln('');
-      term.write('$ ');
+      term.writeln("\x1b[32m✓ Connected to Claude Code CLI\x1b[0m");
+      term.writeln("");
+      term.write("$ ");
     };
 
     ws.onmessage = (event) => {
       const message = JSON.parse(event.data);
 
       switch (message.type) {
-        case 'output':
+        case "output":
           term.write(message.data);
           break;
-        case 'cost':
+        case "cost":
           setCommandCost(message.cost);
           setTokensUsed(message.tokens);
           break;
-        case 'diff':
+        case "diff":
           // Intercept diff output - will be handled by DiffVisualization component
-          window.dispatchEvent(new CustomEvent('claude-diff', { detail: message.data }));
+          window.dispatchEvent(
+            new CustomEvent("claude-diff", { detail: message.data }),
+          );
           break;
-        case 'context':
+        case "context":
           // Intercept context info - will be handled by ContextWindow component
-          window.dispatchEvent(new CustomEvent('claude-context', { detail: message.data }));
+          window.dispatchEvent(
+            new CustomEvent("claude-context", { detail: message.data }),
+          );
           break;
       }
     };
 
     ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      term.writeln('\x1b[31m✗ Connection error\x1b[0m');
+      console.error("WebSocket error:", error);
+      term.writeln("\x1b[31m✗ Connection error\x1b[0m");
     };
 
     ws.onclose = () => {
       setIsConnected(false);
-      term.writeln('');
-      term.writeln('\x1b[33m⚠ Disconnected from backend\x1b[0m');
+      term.writeln("");
+      term.writeln("\x1b[33m⚠ Disconnected from backend\x1b[0m");
 
       // Attempt reconnect after 3 seconds
       setTimeout(() => {
-        term.writeln('\x1b[90mReconnecting...\x1b[0m');
+        term.writeln("\x1b[90mReconnecting...\x1b[0m");
         connectToBackend(term);
       }, 3000);
     };
@@ -273,7 +294,9 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
     wsRef.current = ws;
   };
 
-  const checkDangerousCommand = (command: string): CommandInterceptor | null => {
+  const checkDangerousCommand = (
+    command: string,
+  ): CommandInterceptor | null => {
     for (const interceptor of DANGEROUS_COMMANDS) {
       if (interceptor.pattern.test(command)) {
         return interceptor;
@@ -288,10 +311,12 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
     }
 
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: 'execute',
-        command
-      }));
+      wsRef.current.send(
+        JSON.stringify({
+          type: "execute",
+          command,
+        }),
+      );
     }
   };
 
@@ -299,8 +324,8 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
     if (onDangerousCommand) {
       const approved = await onDangerousCommand(pendingCommand);
       if (!approved) {
-        xtermRef.current?.writeln('\x1b[31m✗ Command cancelled by user\x1b[0m');
-        xtermRef.current?.write('$ ');
+        xtermRef.current?.writeln("\x1b[31m✗ Command cancelled by user\x1b[0m");
+        xtermRef.current?.write("$ ");
         setShowDangerAlert(false);
         return;
       }
@@ -311,36 +336,53 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
   };
 
   const handleDangerCancel = () => {
-    xtermRef.current?.writeln('\x1b[33m⚠ Command cancelled\x1b[0m');
-    xtermRef.current?.write('$ ');
+    xtermRef.current?.writeln("\x1b[33m⚠ Command cancelled\x1b[0m");
+    xtermRef.current?.write("$ ");
     setShowDangerAlert(false);
   };
 
   return (
-    <div className={`flex flex-col ${isExpanded ? 'fixed inset-4 z-50' : 'relative'} ${className}`}>
+    <div
+      className={`flex flex-col ${isExpanded ? "fixed inset-4 z-50" : "relative"} ${className}`}
+    >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-900/90 backdrop-blur-sm border-b border-gray-800" data-testid="terminal-header">
+      <div
+        className="flex items-center justify-between px-4 py-2 bg-gray-900/90 backdrop-blur-sm border-b border-gray-800"
+        data-testid="terminal-header"
+      >
         <div className="flex items-center gap-3">
           <TerminalIcon className="w-5 h-5 text-blue-400" />
           <span className="font-semibold text-sm">Claude Code Terminal</span>
           <div
             className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs ${
-              isConnected ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+              isConnected
+                ? "bg-green-500/10 text-green-400"
+                : "bg-red-500/10 text-red-400"
             }`}
             data-testid="terminal-connection-status"
           >
-            <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-            {isConnected ? 'Live' : 'Disconnected'}
+            <div
+              className={`w-1.5 h-1.5 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}
+            />
+            {isConnected ? "Live" : "Disconnected"}
           </div>
         </div>
 
         {/* Cost Ticker */}
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-xs" data-testid="terminal-tokens-display">
+          <div
+            className="flex items-center gap-2 text-xs"
+            data-testid="terminal-tokens-display"
+          >
             <Zap className="w-3.5 h-3.5 text-yellow-400" />
-            <span className="text-gray-400">{tokensUsed.toLocaleString()} tokens</span>
+            <span className="text-gray-400">
+              {tokensUsed.toLocaleString()} tokens
+            </span>
           </div>
-          <div className="flex items-center gap-2 text-xs" data-testid="terminal-cost-display">
+          <div
+            className="flex items-center gap-2 text-xs"
+            data-testid="terminal-cost-display"
+          >
             <DollarSign className="w-3.5 h-3.5 text-green-400" />
             <span className="text-gray-400">${commandCost.toFixed(4)}</span>
           </div>
@@ -349,7 +391,7 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
             <button
               onClick={() => setIsExpanded(!isExpanded)}
               className="p-1 hover:bg-gray-800 rounded transition-all"
-              title={isExpanded ? 'Minimize' : 'Maximize'}
+              title={isExpanded ? "Minimize" : "Maximize"}
               data-testid="terminal-expand-toggle-btn"
             >
               {isExpanded ? (
@@ -366,7 +408,7 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
       <div
         ref={terminalRef}
         className="flex-1 bg-[#0a0a0a] p-2"
-        style={{ minHeight: isExpanded ? 'calc(100vh - 120px)' : '400px' }}
+        style={{ minHeight: isExpanded ? "calc(100vh - 120px)" : "400px" }}
       />
 
       {/* Danger Alert Modal */}
@@ -379,7 +421,9 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
               </div>
               <div className="flex-1">
                 <h3 className="text-xl font-bold text-red-400 mb-2">
-                  {dangerLevel === 'high' ? '⚠️ HIGH RISK COMMAND' : '⚠️ CAUTION REQUIRED'}
+                  {dangerLevel === "high"
+                    ? "⚠️ HIGH RISK COMMAND"
+                    : "⚠️ CAUTION REQUIRED"}
                 </h3>
                 <p className="text-gray-300 mb-4">{dangerMessage}</p>
                 <div className="bg-gray-900/50 p-3 rounded-lg mb-4">

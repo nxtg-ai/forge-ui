@@ -3,8 +3,8 @@
  * Visualizes what files Claude is analyzing and token usage heat map
  */
 
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText,
   Brain,
@@ -12,14 +12,14 @@ import {
   TrendingUp,
   Folder,
   Eye,
-  Layers
-} from 'lucide-react';
-import { MemoryWidget, type MemoryItem } from './MemoryWidget';
+  Layers,
+} from "lucide-react";
+import { MemoryWidget, type MemoryItem } from "./MemoryWidget";
 
 interface ContextFile {
   path: string;
   tokens: number;
-  status: 'reading' | 'analyzing' | 'complete';
+  status: "reading" | "analyzing" | "complete";
   lastAccessed: Date;
 }
 
@@ -35,13 +35,13 @@ interface ContextWindowHUDProps {
 }
 
 export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = ({
-  className = ''
+  className = "",
 }) => {
   const [contextData, setContextData] = useState<ContextData>({
     files: [],
     totalTokens: 0,
     maxTokens: 200000,
-    currentThought: ''
+    currentThought: "",
   });
 
   const [memoryItems, setMemoryItems] = useState<MemoryItem[]>([]);
@@ -49,37 +49,39 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = ({
   // Load memory from localStorage on mount, or fetch seed data
   useEffect(() => {
     const loadMemory = async () => {
-      const stored = localStorage.getItem('forge-memory');
+      const stored = localStorage.getItem("forge-memory");
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
-          setMemoryItems(parsed.map((item: any) => ({
-            ...item,
-            created: new Date(item.created),
-            updated: new Date(item.updated)
-          })));
+          setMemoryItems(
+            parsed.map((item: any) => ({
+              ...item,
+              created: new Date(item.created),
+              updated: new Date(item.updated),
+            })),
+          );
         } catch (e) {
-          console.error('Failed to load memory:', e);
+          console.error("Failed to load memory:", e);
         }
       } else {
         // No memory stored, fetch seed data
         try {
-          const response = await fetch('http://localhost:5051/api/memory/seed');
+          const response = await fetch(`http://${window.location.hostname}:5051/api/memory/seed`);
           if (response.ok) {
             const data = await response.json();
             if (data.success && data.data) {
               const items = data.data.map((item: any) => ({
                 ...item,
                 created: new Date(item.created),
-                updated: new Date(item.updated)
+                updated: new Date(item.updated),
               }));
               setMemoryItems(items);
-              localStorage.setItem('forge-memory', JSON.stringify(data.data));
+              localStorage.setItem("forge-memory", JSON.stringify(data.data));
               console.log(`✅ Loaded ${items.length} seed memory items`);
             }
           }
         } catch (e) {
-          console.warn('Failed to fetch seed memory:', e);
+          console.warn("Failed to fetch seed memory:", e);
         }
       }
     };
@@ -89,31 +91,35 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = ({
   // Save memory to localStorage whenever it changes
   const saveMemory = (items: MemoryItem[]) => {
     setMemoryItems(items);
-    localStorage.setItem('forge-memory', JSON.stringify(items));
+    localStorage.setItem("forge-memory", JSON.stringify(items));
   };
 
-  const handleAddMemory = (content: string, category: MemoryItem['category'], tags: string[]) => {
+  const handleAddMemory = (
+    content: string,
+    category: MemoryItem["category"],
+    tags: string[],
+  ) => {
     const newItem: MemoryItem = {
       id: crypto.randomUUID(),
       content,
       tags,
       category,
       created: new Date(),
-      updated: new Date()
+      updated: new Date(),
     };
     saveMemory([...memoryItems, newItem]);
   };
 
   const handleEditMemory = (id: string, content: string, tags: string[]) => {
-    saveMemory(memoryItems.map(item =>
-      item.id === id
-        ? { ...item, content, tags, updated: new Date() }
-        : item
-    ));
+    saveMemory(
+      memoryItems.map((item) =>
+        item.id === id ? { ...item, content, tags, updated: new Date() } : item,
+      ),
+    );
   };
 
   const handleDeleteMemory = (id: string) => {
-    saveMemory(memoryItems.filter(item => item.id !== id));
+    saveMemory(memoryItems.filter((item) => item.id !== id));
   };
 
   useEffect(() => {
@@ -123,37 +129,41 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = ({
       setContextData(data);
     };
 
-    window.addEventListener('claude-context' as any, handleContext);
+    window.addEventListener("claude-context" as any, handleContext);
 
     return () => {
-      window.removeEventListener('claude-context' as any, handleContext);
+      window.removeEventListener("claude-context" as any, handleContext);
     };
   }, []);
 
-  const tokenPercentage = (contextData.totalTokens / contextData.maxTokens) * 100;
+  const tokenPercentage =
+    (contextData.totalTokens / contextData.maxTokens) * 100;
   const getTokenColor = () => {
-    if (tokenPercentage < 50) return 'bg-green-500';
-    if (tokenPercentage < 75) return 'bg-yellow-500';
-    return 'bg-red-500';
+    if (tokenPercentage < 50) return "bg-green-500";
+    if (tokenPercentage < 75) return "bg-yellow-500";
+    return "bg-red-500";
   };
 
   const getFileIntensity = (tokens: number) => {
-    const maxFileTokens = Math.max(...contextData.files.map(f => f.tokens), 1);
+    const maxFileTokens = Math.max(
+      ...contextData.files.map((f) => f.tokens),
+      1,
+    );
     const intensity = (tokens / maxFileTokens) * 100;
 
-    if (intensity < 25) return 'bg-blue-500/20 border-blue-500/30';
-    if (intensity < 50) return 'bg-yellow-500/20 border-yellow-500/30';
-    if (intensity < 75) return 'bg-orange-500/20 border-orange-500/30';
-    return 'bg-red-500/20 border-red-500/30';
+    if (intensity < 25) return "bg-blue-500/20 border-blue-500/30";
+    if (intensity < 50) return "bg-yellow-500/20 border-yellow-500/30";
+    if (intensity < 75) return "bg-orange-500/20 border-orange-500/30";
+    return "bg-red-500/20 border-red-500/30";
   };
 
-  const getStatusIcon = (status: ContextFile['status']) => {
+  const getStatusIcon = (status: ContextFile["status"]) => {
     switch (status) {
-      case 'reading':
+      case "reading":
         return <Eye className="w-3.5 h-3.5 text-blue-400 animate-pulse" />;
-      case 'analyzing':
+      case "analyzing":
         return <Brain className="w-3.5 h-3.5 text-purple-400 animate-pulse" />;
-      case 'complete':
+      case "complete":
         return <Activity className="w-3.5 h-3.5 text-green-400" />;
     }
   };
@@ -181,7 +191,8 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = ({
           <div className="flex items-center justify-between text-xs">
             <span className="text-gray-400">Token Usage</span>
             <span className="font-mono text-gray-300">
-              {contextData.totalTokens.toLocaleString()} / {contextData.maxTokens.toLocaleString()}
+              {contextData.totalTokens.toLocaleString()} /{" "}
+              {contextData.maxTokens.toLocaleString()}
             </span>
           </div>
           <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
@@ -189,7 +200,7 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = ({
               className={`h-full ${getTokenColor()}`}
               initial={{ width: 0 }}
               animate={{ width: `${tokenPercentage}%` }}
-              transition={{ duration: 0.5, ease: 'easeOut' }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
             />
           </div>
           <div className="text-xs text-gray-500">
@@ -204,8 +215,12 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = ({
           <div className="flex items-start gap-2">
             <TrendingUp className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <div className="text-xs text-purple-400 mb-1">Claude is thinking...</div>
-              <p className="text-sm text-gray-300 italic">{contextData.currentThought}</p>
+              <div className="text-xs text-purple-400 mb-1">
+                Claude is thinking...
+              </div>
+              <p className="text-sm text-gray-300 italic">
+                {contextData.currentThought}
+              </p>
             </div>
           </div>
         </div>
@@ -266,7 +281,9 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = ({
                         >
                           <div
                             className={`h-full ${getTokenColor()}`}
-                            style={{ width: `${(file.tokens / contextData.maxTokens) * 100}%` }}
+                            style={{
+                              width: `${(file.tokens / contextData.maxTokens) * 100}%`,
+                            }}
                           />
                         </div>
                       </div>
@@ -283,19 +300,28 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = ({
               <div>
                 <div className="text-xs text-gray-500 mb-1">Reading</div>
                 <div className="text-sm font-semibold text-blue-400">
-                  {contextData.files.filter(f => f.status === 'reading').length}
+                  {
+                    contextData.files.filter((f) => f.status === "reading")
+                      .length
+                  }
                 </div>
               </div>
               <div>
                 <div className="text-xs text-gray-500 mb-1">Analyzing</div>
                 <div className="text-sm font-semibold text-purple-400">
-                  {contextData.files.filter(f => f.status === 'analyzing').length}
+                  {
+                    contextData.files.filter((f) => f.status === "analyzing")
+                      .length
+                  }
                 </div>
               </div>
               <div>
                 <div className="text-xs text-gray-500 mb-1">Complete</div>
                 <div className="text-sm font-semibold text-green-400">
-                  {contextData.files.filter(f => f.status === 'complete').length}
+                  {
+                    contextData.files.filter((f) => f.status === "complete")
+                      .length
+                  }
                 </div>
               </div>
             </div>

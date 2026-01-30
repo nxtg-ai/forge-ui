@@ -3,31 +3,31 @@
  * Inter-agent communication and coordination schemas
  */
 
-import { z } from 'zod';
-import { Task, TaskSchema } from './state';
+import { z } from "zod";
+import { Task, TaskSchema } from "./state";
 
 // Agent capability types
 export enum Capability {
-  PLANNING = 'planning',
-  ARCHITECTURE = 'architecture',
-  CODING = 'coding',
-  TESTING = 'testing',
-  DEPLOYMENT = 'deployment',
-  MONITORING = 'monitoring',
-  DOCUMENTATION = 'documentation',
-  REVIEW = 'review',
-  OPTIMIZATION = 'optimization',
-  SECURITY = 'security'
+  PLANNING = "planning",
+  ARCHITECTURE = "architecture",
+  CODING = "coding",
+  TESTING = "testing",
+  DEPLOYMENT = "deployment",
+  MONITORING = "monitoring",
+  DOCUMENTATION = "documentation",
+  REVIEW = "review",
+  OPTIMIZATION = "optimization",
+  SECURITY = "security",
 }
 
 // Message types for inter-agent communication
 export enum MessageType {
-  REQUEST = 'request',
-  RESPONSE = 'response',
-  NOTIFICATION = 'notification',
-  SIGN_OFF = 'sign-off',
-  ESCALATION = 'escalation',
-  BROADCAST = 'broadcast'
+  REQUEST = "request",
+  RESPONSE = "response",
+  NOTIFICATION = "notification",
+  SIGN_OFF = "sign-off",
+  ESCALATION = "escalation",
+  BROADCAST = "broadcast",
 }
 
 // Agent schema
@@ -42,9 +42,9 @@ export const AgentSchema = z.object({
   retryPolicy: z.object({
     maxRetries: z.number(),
     retryDelay: z.number(),
-    backoffMultiplier: z.number()
+    backoffMultiplier: z.number(),
   }),
-  metadata: z.record(z.string(), z.any()).optional()
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 // Message schema for inter-agent communication
@@ -59,7 +59,7 @@ export const MessageSchema = z.object({
   correlationId: z.string().optional(),
   replyTo: z.string().optional(),
   ttl: z.number().optional(), // time to live in ms
-  priority: z.number().min(1).max(10).optional()
+  priority: z.number().min(1).max(10).optional(),
 });
 
 // Sign-off request schema
@@ -67,13 +67,15 @@ export const SignOffRequestSchema = z.object({
   artifactId: z.string(),
   artifactType: z.string(),
   description: z.string(),
-  checkpoints: z.array(z.object({
-    name: z.string(),
-    passed: z.boolean(),
-    details: z.string().optional()
-  })),
+  checkpoints: z.array(
+    z.object({
+      name: z.string(),
+      passed: z.boolean(),
+      details: z.string().optional(),
+    }),
+  ),
   requestedBy: z.string(),
-  deadline: z.date().optional()
+  deadline: z.date().optional(),
 });
 
 // Sign-off result schema
@@ -83,7 +85,7 @@ export const SignOffResultSchema = z.object({
   timestamp: z.date(),
   comments: z.string().optional(),
   conditions: z.array(z.string()).optional(),
-  suggestions: z.array(z.string()).optional()
+  suggestions: z.array(z.string()).optional(),
 });
 
 // Coordination request schema
@@ -92,9 +94,9 @@ export const CoordinationRequestSchema = z.object({
   task: z.lazy(() => TaskSchema),
   requiredCapabilities: z.array(z.nativeEnum(Capability)),
   agents: z.array(z.string()),
-  strategy: z.enum(['sequential', 'parallel', 'hierarchical', 'round-robin']),
+  strategy: z.enum(["sequential", "parallel", "hierarchical", "round-robin"]),
   timeout: z.number(),
-  dependencies: z.record(z.string(), z.array(z.string()))
+  dependencies: z.record(z.string(), z.array(z.string())),
 });
 
 // Coordination result schema
@@ -102,20 +104,22 @@ export const CoordinationResultSchema = z.object({
   requestId: z.string(),
   success: z.boolean(),
   duration: z.number(), // milliseconds
-  agentResults: z.array(z.object({
-    agentId: z.string(),
-    status: z.enum(['success', 'failure', 'timeout', 'skipped']),
-    result: z.any().optional(),
-    error: z.string().optional(),
-    duration: z.number()
-  })),
+  agentResults: z.array(
+    z.object({
+      agentId: z.string(),
+      status: z.enum(["success", "failure", "timeout", "skipped"]),
+      result: z.any().optional(),
+      error: z.string().optional(),
+      duration: z.number(),
+    }),
+  ),
   artifacts: z.array(z.string()),
-  metadata: z.record(z.string(), z.any()).optional()
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 // Dependency graph for task coordination
 export const DependencyGraphSchema = z.object({
-  tasks: z.record(z.string(), z.array(z.string()))
+  tasks: z.record(z.string(), z.array(z.string())),
 });
 
 // Parallel execution request
@@ -123,7 +127,7 @@ export const ParallelRequestSchema = z.object({
   tasks: z.array(TaskSchema),
   maxParallel: z.number().optional(),
   failFast: z.boolean().optional(),
-  timeout: z.number().optional()
+  timeout: z.number().optional(),
 });
 
 // Parallel execution result
@@ -132,13 +136,15 @@ export const ParallelResultSchema = z.object({
   succeeded: z.number(),
   failed: z.number(),
   duration: z.number(),
-  results: z.array(z.object({
-    taskId: z.string(),
-    status: z.enum(['success', 'failure', 'timeout']),
-    result: z.any().optional(),
-    error: z.string().optional(),
-    duration: z.number()
-  }))
+  results: z.array(
+    z.object({
+      taskId: z.string(),
+      status: z.enum(["success", "failure", "timeout"]),
+      result: z.any().optional(),
+      error: z.string().optional(),
+      duration: z.number(),
+    }),
+  ),
 });
 
 // Type exports
@@ -155,7 +161,7 @@ export type ParallelResult = z.infer<typeof ParallelResultSchema>;
 // Artifact interface for sign-offs
 export interface Artifact {
   id: string;
-  type: 'code' | 'design' | 'test' | 'documentation' | 'deployment';
+  type: "code" | "design" | "test" | "documentation" | "deployment";
   path: string;
   checksum: string;
   createdBy: string;

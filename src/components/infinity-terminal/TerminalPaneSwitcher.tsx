@@ -3,8 +3,8 @@
  * Allows switching between different terminal panes in the Infinity Terminal
  */
 
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Terminal,
   Eye,
@@ -14,12 +14,12 @@ import {
   Minimize2,
   Plus,
   X,
-} from 'lucide-react';
+} from "lucide-react";
 
 export interface TerminalPane {
   id: string;
   name: string;
-  type: 'claude-code' | 'oracle' | 'hud' | 'custom';
+  type: "claude-code" | "oracle" | "hud" | "custom";
   wsPort?: number;
   active: boolean;
 }
@@ -30,7 +30,7 @@ interface TerminalPaneSwitcherProps {
   onPaneSelect: (paneId: string) => void;
   onPaneClose?: (paneId: string) => void;
   onPaneAdd?: () => void;
-  onLayoutChange?: (layout: 'single' | 'split' | 'grid') => void;
+  onLayoutChange?: (layout: "single" | "split" | "grid") => void;
   className?: string;
 }
 
@@ -41,39 +41,39 @@ export const TerminalPaneSwitcher: React.FC<TerminalPaneSwitcherProps> = ({
   onPaneClose,
   onPaneAdd,
   onLayoutChange,
-  className = '',
+  className = "",
 }) => {
-  const [layout, setLayout] = useState<'single' | 'split' | 'grid'>('single');
+  const [layout, setLayout] = useState<"single" | "split" | "grid">("single");
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const getPaneIcon = (type: TerminalPane['type']) => {
+  const getPaneIcon = (type: TerminalPane["type"]) => {
     switch (type) {
-      case 'claude-code':
+      case "claude-code":
         return <Terminal className="w-3.5 h-3.5" />;
-      case 'oracle':
+      case "oracle":
         return <Eye className="w-3.5 h-3.5" />;
-      case 'hud':
+      case "hud":
         return <Activity className="w-3.5 h-3.5" />;
       default:
         return <Terminal className="w-3.5 h-3.5" />;
     }
   };
 
-  const getPaneColor = (type: TerminalPane['type'], isActive: boolean) => {
-    if (!isActive) return 'text-gray-500 hover:text-gray-300';
+  const getPaneColor = (type: TerminalPane["type"], isActive: boolean) => {
+    if (!isActive) return "text-gray-500 hover:text-gray-300";
     switch (type) {
-      case 'claude-code':
-        return 'text-purple-400';
-      case 'oracle':
-        return 'text-cyan-400';
-      case 'hud':
-        return 'text-green-400';
+      case "claude-code":
+        return "text-purple-400";
+      case "oracle":
+        return "text-cyan-400";
+      case "hud":
+        return "text-green-400";
       default:
-        return 'text-gray-400';
+        return "text-gray-400";
     }
   };
 
-  const handleLayoutChange = (newLayout: 'single' | 'split' | 'grid') => {
+  const handleLayoutChange = (newLayout: "single" | "split" | "grid") => {
     setLayout(newLayout);
     onLayoutChange?.(newLayout);
   };
@@ -89,8 +89,8 @@ export const TerminalPaneSwitcher: React.FC<TerminalPaneSwitcherProps> = ({
               onClick={() => onPaneSelect(pane.id)}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
                 pane.id === activePane
-                  ? 'bg-gray-800 text-white'
-                  : 'text-gray-500 hover:text-gray-300 hover:bg-gray-800/50'
+                  ? "bg-gray-800 text-white"
+                  : "text-gray-500 hover:text-gray-300 hover:bg-gray-800/50"
               }`}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -131,33 +131,33 @@ export const TerminalPaneSwitcher: React.FC<TerminalPaneSwitcherProps> = ({
         {/* Layout Controls */}
         <div className="flex items-center gap-1 ml-2">
           <button
-            onClick={() => handleLayoutChange('single')}
+            onClick={() => handleLayoutChange("single")}
             className={`p-1.5 rounded transition-colors ${
-              layout === 'single'
-                ? 'bg-purple-500/20 text-purple-400'
-                : 'text-gray-500 hover:text-gray-300'
+              layout === "single"
+                ? "bg-purple-500/20 text-purple-400"
+                : "text-gray-500 hover:text-gray-300"
             }`}
             title="Single pane"
           >
             <Maximize2 className="w-3.5 h-3.5" />
           </button>
           <button
-            onClick={() => handleLayoutChange('split')}
+            onClick={() => handleLayoutChange("split")}
             className={`p-1.5 rounded transition-colors ${
-              layout === 'split'
-                ? 'bg-purple-500/20 text-purple-400'
-                : 'text-gray-500 hover:text-gray-300'
+              layout === "split"
+                ? "bg-purple-500/20 text-purple-400"
+                : "text-gray-500 hover:text-gray-300"
             }`}
             title="Split view"
           >
             <Minimize2 className="w-3.5 h-3.5" />
           </button>
           <button
-            onClick={() => handleLayoutChange('grid')}
+            onClick={() => handleLayoutChange("grid")}
             className={`p-1.5 rounded transition-colors ${
-              layout === 'grid'
-                ? 'bg-purple-500/20 text-purple-400'
-                : 'text-gray-500 hover:text-gray-300'
+              layout === "grid"
+                ? "bg-purple-500/20 text-purple-400"
+                : "text-gray-500 hover:text-gray-300"
             }`}
             title="Grid view"
           >
@@ -171,7 +171,7 @@ export const TerminalPaneSwitcher: React.FC<TerminalPaneSwitcherProps> = ({
         {isExpanded && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
+            animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             className="border-t border-gray-800 px-2 py-2"
           >
@@ -181,8 +181,8 @@ export const TerminalPaneSwitcher: React.FC<TerminalPaneSwitcherProps> = ({
                   key={pane.id}
                   className={`p-2 rounded-md border cursor-pointer transition-all ${
                     pane.id === activePane
-                      ? 'bg-gray-800 border-purple-500/50'
-                      : 'bg-gray-900 border-gray-800 hover:border-gray-700'
+                      ? "bg-gray-800 border-purple-500/50"
+                      : "bg-gray-900 border-gray-800 hover:border-gray-700"
                   }`}
                   onClick={() => onPaneSelect(pane.id)}
                 >
@@ -190,13 +190,15 @@ export const TerminalPaneSwitcher: React.FC<TerminalPaneSwitcherProps> = ({
                     <span className={getPaneColor(pane.type, true)}>
                       {getPaneIcon(pane.type)}
                     </span>
-                    <span className="text-xs font-medium truncate">{pane.name}</span>
+                    <span className="text-xs font-medium truncate">
+                      {pane.name}
+                    </span>
                   </div>
                   <p className="text-[10px] text-gray-500">
-                    {pane.type === 'claude-code' && 'Main terminal'}
-                    {pane.type === 'oracle' && 'Oracle monitoring'}
-                    {pane.type === 'hud' && 'Governance HUD'}
-                    {pane.type === 'custom' && 'Custom pane'}
+                    {pane.type === "claude-code" && "Main terminal"}
+                    {pane.type === "oracle" && "Oracle monitoring"}
+                    {pane.type === "hud" && "Governance HUD"}
+                    {pane.type === "custom" && "Custom pane"}
                   </p>
                 </div>
               ))}

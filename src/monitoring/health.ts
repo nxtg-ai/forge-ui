@@ -3,32 +3,32 @@
  * Comprehensive health checks and scoring for NXTG-Forge
  */
 
-import { EventEmitter } from 'events';
-import * as fs from 'fs';
-import * as path from 'path';
-import { performance } from 'perf_hooks';
-import { Logger } from '../utils/logger';
+import { EventEmitter } from "events";
+import * as fs from "fs";
+import * as path from "path";
+import { performance } from "perf_hooks";
+import { Logger } from "../utils/logger";
 
-const logger = new Logger('HealthMonitor');
+const logger = new Logger("HealthMonitor");
 
 // Health check types
 export enum HealthCheckType {
-  UI_RESPONSIVENESS = 'ui_responsiveness',
-  BACKEND_AVAILABILITY = 'backend_availability',
-  STATE_SYNC = 'state_sync',
-  AGENT_EXECUTION = 'agent_execution',
-  FILE_SYSTEM = 'file_system',
-  MEMORY_USAGE = 'memory_usage',
-  COMMAND_PROCESSING = 'command_processing',
-  AUTOMATION_SYSTEM = 'automation_system'
+  UI_RESPONSIVENESS = "ui_responsiveness",
+  BACKEND_AVAILABILITY = "backend_availability",
+  STATE_SYNC = "state_sync",
+  AGENT_EXECUTION = "agent_execution",
+  FILE_SYSTEM = "file_system",
+  MEMORY_USAGE = "memory_usage",
+  COMMAND_PROCESSING = "command_processing",
+  AUTOMATION_SYSTEM = "automation_system",
 }
 
 // Health status levels
 export enum HealthStatus {
-  HEALTHY = 'healthy',
-  DEGRADED = 'degraded',
-  CRITICAL = 'critical',
-  FAILED = 'failed'
+  HEALTHY = "healthy",
+  DEGRADED = "degraded",
+  CRITICAL = "critical",
+  FAILED = "failed",
 }
 
 // Individual health check result
@@ -55,20 +55,20 @@ export interface SystemHealth {
 // Health check weights for scoring
 const HEALTH_WEIGHTS: Record<HealthCheckType, number> = {
   [HealthCheckType.UI_RESPONSIVENESS]: 0.15,
-  [HealthCheckType.BACKEND_AVAILABILITY]: 0.20,
+  [HealthCheckType.BACKEND_AVAILABILITY]: 0.2,
   [HealthCheckType.STATE_SYNC]: 0.15,
   [HealthCheckType.AGENT_EXECUTION]: 0.15,
-  [HealthCheckType.FILE_SYSTEM]: 0.10,
-  [HealthCheckType.MEMORY_USAGE]: 0.10,
-  [HealthCheckType.COMMAND_PROCESSING]: 0.10,
-  [HealthCheckType.AUTOMATION_SYSTEM]: 0.05
+  [HealthCheckType.FILE_SYSTEM]: 0.1,
+  [HealthCheckType.MEMORY_USAGE]: 0.1,
+  [HealthCheckType.COMMAND_PROCESSING]: 0.1,
+  [HealthCheckType.AUTOMATION_SYSTEM]: 0.05,
 };
 
 // Health thresholds
 const HEALTH_THRESHOLDS = {
   healthy: 85,
   degraded: 70,
-  critical: 50
+  critical: 50,
 };
 
 export class HealthMonitor extends EventEmitter {
@@ -89,7 +89,7 @@ export class HealthMonitor extends EventEmitter {
    * Start health monitoring
    */
   async start(intervalMs: number = 30000): Promise<void> {
-    logger.info('Starting health monitoring', { interval: intervalMs });
+    logger.info("Starting health monitoring", { interval: intervalMs });
 
     // Perform initial check
     await this.performHealthCheck();
@@ -107,7 +107,7 @@ export class HealthMonitor extends EventEmitter {
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
-      logger.info('Health monitoring stopped');
+      logger.info("Health monitoring stopped");
     }
   }
 
@@ -127,26 +127,26 @@ export class HealthMonitor extends EventEmitter {
       this.checkFileSystem(),
       this.checkMemoryUsage(),
       this.checkCommandProcessing(),
-      this.checkAutomationSystem()
+      this.checkAutomationSystem(),
     ];
 
     const results = await Promise.allSettled(checkPromises);
 
     // Process results
     for (const result of results) {
-      if (result.status === 'fulfilled') {
+      if (result.status === "fulfilled") {
         checks.push(result.value);
       } else {
         // Handle failed checks
-        logger.error('Health check failed', result.reason);
+        logger.error("Health check failed", result.reason);
         checks.push({
           type: HealthCheckType.BACKEND_AVAILABILITY,
           status: HealthStatus.FAILED,
           score: 0,
           latency: performance.now() - startTime,
-          message: 'Health check failed',
-          details: { error: result.reason?.message || 'Unknown error' },
-          timestamp: new Date()
+          message: "Health check failed",
+          details: { error: result.reason?.message || "Unknown error" },
+          timestamp: new Date(),
         });
       }
     }
@@ -162,7 +162,7 @@ export class HealthMonitor extends EventEmitter {
       checks,
       timestamp: new Date(),
       uptime,
-      recommendations: this.generateRecommendations(checks)
+      recommendations: this.generateRecommendations(checks),
     };
 
     // Update history
@@ -172,14 +172,14 @@ export class HealthMonitor extends EventEmitter {
     }
 
     // Emit health update event
-    this.emit('healthUpdate', health);
+    this.emit("healthUpdate", health);
 
     // Check for degradation
     if (this.lastHealth && health.status !== this.lastHealth.status) {
-      this.emit('statusChange', {
+      this.emit("statusChange", {
         previous: this.lastHealth.status,
         current: health.status,
-        score: health.overallScore
+        score: health.overallScore,
       });
     }
 
@@ -195,11 +195,11 @@ export class HealthMonitor extends EventEmitter {
 
     try {
       // Check if UI components are accessible
-      const uiPath = path.join(this.projectPath, 'src', 'components');
+      const uiPath = path.join(this.projectPath, "src", "components");
       const exists = fs.existsSync(uiPath);
 
       if (!exists) {
-        throw new Error('UI components not found');
+        throw new Error("UI components not found");
       }
 
       // Simulate UI response time check
@@ -213,7 +213,7 @@ export class HealthMonitor extends EventEmitter {
         latency: performance.now() - start,
         message: `UI response time: ${responseTime.toFixed(2)}ms`,
         details: { responseTime },
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     } catch (error) {
       return {
@@ -222,7 +222,7 @@ export class HealthMonitor extends EventEmitter {
         score: 0,
         latency: performance.now() - start,
         message: `UI check failed: ${error instanceof Error ? error.message : String(error)}`,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     }
   }
@@ -235,8 +235,13 @@ export class HealthMonitor extends EventEmitter {
 
     try {
       // Check core systems
-      const corePath = path.join(this.projectPath, 'src', 'core');
-      const coreFiles = ['orchestrator.ts', 'state.ts', 'coordination.ts', 'vision.ts'];
+      const corePath = path.join(this.projectPath, "src", "core");
+      const coreFiles = [
+        "orchestrator.ts",
+        "state.ts",
+        "coordination.ts",
+        "vision.ts",
+      ];
 
       let available = 0;
       for (const file of coreFiles) {
@@ -249,12 +254,17 @@ export class HealthMonitor extends EventEmitter {
 
       return {
         type: HealthCheckType.BACKEND_AVAILABILITY,
-        status: score >= 85 ? HealthStatus.HEALTHY : score >= 50 ? HealthStatus.DEGRADED : HealthStatus.CRITICAL,
+        status:
+          score >= 85
+            ? HealthStatus.HEALTHY
+            : score >= 50
+              ? HealthStatus.DEGRADED
+              : HealthStatus.CRITICAL,
         score,
         latency: performance.now() - start,
         message: `Backend systems: ${available}/${coreFiles.length} available`,
         details: { available, total: coreFiles.length },
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     } catch (error) {
       return {
@@ -263,7 +273,7 @@ export class HealthMonitor extends EventEmitter {
         score: 0,
         latency: performance.now() - start,
         message: `Backend check failed: ${error instanceof Error ? error.message : String(error)}`,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     }
   }
@@ -276,11 +286,11 @@ export class HealthMonitor extends EventEmitter {
 
     try {
       // Check state files
-      const statePath = path.join(this.projectPath, '.claude', 'state');
-      const stateFile = path.join(statePath, 'current.json');
+      const statePath = path.join(this.projectPath, ".claude", "state");
+      const stateFile = path.join(statePath, "current.json");
 
       if (!fs.existsSync(stateFile)) {
-        throw new Error('State file not found');
+        throw new Error("State file not found");
       }
 
       const stats = fs.statSync(stateFile);
@@ -288,16 +298,22 @@ export class HealthMonitor extends EventEmitter {
       const ageMinutes = ageMs / (1000 * 60);
 
       // Score based on state freshness
-      const score = ageMinutes < 1 ? 100 : ageMinutes < 5 ? 85 : ageMinutes < 15 ? 70 : 50;
+      const score =
+        ageMinutes < 1 ? 100 : ageMinutes < 5 ? 85 : ageMinutes < 15 ? 70 : 50;
 
       return {
         type: HealthCheckType.STATE_SYNC,
-        status: score >= 85 ? HealthStatus.HEALTHY : score >= 70 ? HealthStatus.DEGRADED : HealthStatus.CRITICAL,
+        status:
+          score >= 85
+            ? HealthStatus.HEALTHY
+            : score >= 70
+              ? HealthStatus.DEGRADED
+              : HealthStatus.CRITICAL,
         score,
         latency: performance.now() - start,
         message: `State age: ${ageMinutes.toFixed(1)} minutes`,
         details: { ageMinutes, lastModified: stats.mtime },
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     } catch (error) {
       return {
@@ -306,7 +322,7 @@ export class HealthMonitor extends EventEmitter {
         score: 0,
         latency: performance.now() - start,
         message: `State sync check failed: ${error instanceof Error ? error.message : String(error)}`,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     }
   }
@@ -319,8 +335,14 @@ export class HealthMonitor extends EventEmitter {
 
     try {
       // Check agent files
-      const agentsPath = path.join(this.projectPath, '.claude', 'agents');
-      const agentFiles = ['orchestrator.md', 'architect.md', 'developer.md', 'qa.md', 'devops.md'];
+      const agentsPath = path.join(this.projectPath, ".claude", "agents");
+      const agentFiles = [
+        "orchestrator.md",
+        "architect.md",
+        "developer.md",
+        "qa.md",
+        "devops.md",
+      ];
 
       let available = 0;
       for (const file of agentFiles) {
@@ -333,12 +355,17 @@ export class HealthMonitor extends EventEmitter {
 
       return {
         type: HealthCheckType.AGENT_EXECUTION,
-        status: score >= 80 ? HealthStatus.HEALTHY : score >= 60 ? HealthStatus.DEGRADED : HealthStatus.CRITICAL,
+        status:
+          score >= 80
+            ? HealthStatus.HEALTHY
+            : score >= 60
+              ? HealthStatus.DEGRADED
+              : HealthStatus.CRITICAL,
         score,
         latency: performance.now() - start,
         message: `Agents available: ${available}/${agentFiles.length}`,
         details: { available, total: agentFiles.length },
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     } catch (error) {
       return {
@@ -347,7 +374,7 @@ export class HealthMonitor extends EventEmitter {
         score: 0,
         latency: performance.now() - start,
         message: `Agent check failed: ${error instanceof Error ? error.message : String(error)}`,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     }
   }
@@ -359,19 +386,23 @@ export class HealthMonitor extends EventEmitter {
     const start = performance.now();
 
     try {
-      const testPath = path.join(this.projectPath, '.claude', 'health-test.tmp');
+      const testPath = path.join(
+        this.projectPath,
+        ".claude",
+        "health-test.tmp",
+      );
 
       // Test write
-      fs.writeFileSync(testPath, 'health-check');
+      fs.writeFileSync(testPath, "health-check");
 
       // Test read
-      const content = fs.readFileSync(testPath, 'utf-8');
+      const content = fs.readFileSync(testPath, "utf-8");
 
       // Test delete
       fs.unlinkSync(testPath);
 
-      if (content !== 'health-check') {
-        throw new Error('File system read/write mismatch');
+      if (content !== "health-check") {
+        throw new Error("File system read/write mismatch");
       }
 
       return {
@@ -379,8 +410,8 @@ export class HealthMonitor extends EventEmitter {
         status: HealthStatus.HEALTHY,
         score: 100,
         latency: performance.now() - start,
-        message: 'File system access healthy',
-        timestamp: new Date()
+        message: "File system access healthy",
+        timestamp: new Date(),
       };
     } catch (error) {
       return {
@@ -389,7 +420,7 @@ export class HealthMonitor extends EventEmitter {
         score: 0,
         latency: performance.now() - start,
         message: `File system check failed: ${error instanceof Error ? error.message : String(error)}`,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     }
   }
@@ -407,11 +438,23 @@ export class HealthMonitor extends EventEmitter {
       const heapPercentage = (usage.heapUsed / usage.heapTotal) * 100;
 
       // Score based on heap usage percentage
-      const score = heapPercentage < 70 ? 100 : heapPercentage < 85 ? 75 : heapPercentage < 95 ? 50 : 25;
+      const score =
+        heapPercentage < 70
+          ? 100
+          : heapPercentage < 85
+            ? 75
+            : heapPercentage < 95
+              ? 50
+              : 25;
 
       return {
         type: HealthCheckType.MEMORY_USAGE,
-        status: score >= 75 ? HealthStatus.HEALTHY : score >= 50 ? HealthStatus.DEGRADED : HealthStatus.CRITICAL,
+        status:
+          score >= 75
+            ? HealthStatus.HEALTHY
+            : score >= 50
+              ? HealthStatus.DEGRADED
+              : HealthStatus.CRITICAL,
         score,
         latency: performance.now() - start,
         message: `Heap usage: ${heapUsedMB.toFixed(1)}MB / ${heapTotalMB.toFixed(1)}MB (${heapPercentage.toFixed(1)}%)`,
@@ -419,9 +462,9 @@ export class HealthMonitor extends EventEmitter {
           heapUsedMB,
           heapTotalMB,
           heapPercentage,
-          rss: usage.rss / 1024 / 1024
+          rss: usage.rss / 1024 / 1024,
         },
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     } catch (error) {
       return {
@@ -430,7 +473,7 @@ export class HealthMonitor extends EventEmitter {
         score: 0,
         latency: performance.now() - start,
         message: `Memory check failed: ${error instanceof Error ? error.message : String(error)}`,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     }
   }
@@ -443,13 +486,15 @@ export class HealthMonitor extends EventEmitter {
 
     try {
       // Check command files
-      const commandsPath = path.join(this.projectPath, '.claude', 'commands');
+      const commandsPath = path.join(this.projectPath, ".claude", "commands");
 
       if (!fs.existsSync(commandsPath)) {
-        throw new Error('Commands directory not found');
+        throw new Error("Commands directory not found");
       }
 
-      const commands = fs.readdirSync(commandsPath).filter(f => f.endsWith('.md'));
+      const commands = fs
+        .readdirSync(commandsPath)
+        .filter((f) => f.endsWith(".md"));
       const score = commands.length > 0 ? 100 : 0;
 
       return {
@@ -459,7 +504,7 @@ export class HealthMonitor extends EventEmitter {
         latency: performance.now() - start,
         message: `Commands available: ${commands.length}`,
         details: { commandCount: commands.length },
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     } catch (error) {
       return {
@@ -468,7 +513,7 @@ export class HealthMonitor extends EventEmitter {
         score: 0,
         latency: performance.now() - start,
         message: `Command check failed: ${error instanceof Error ? error.message : String(error)}`,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     }
   }
@@ -481,7 +526,7 @@ export class HealthMonitor extends EventEmitter {
 
     try {
       // Check for automation configuration
-      const configPath = path.join(this.projectPath, 'claude.json');
+      const configPath = path.join(this.projectPath, "claude.json");
       const hasConfig = fs.existsSync(configPath);
 
       const score = hasConfig ? 100 : 75; // Automation is optional
@@ -491,9 +536,11 @@ export class HealthMonitor extends EventEmitter {
         status: HealthStatus.HEALTHY,
         score,
         latency: performance.now() - start,
-        message: hasConfig ? 'Automation configured' : 'Automation not configured',
+        message: hasConfig
+          ? "Automation configured"
+          : "Automation not configured",
         details: { configured: hasConfig },
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     } catch (error) {
       return {
@@ -502,7 +549,7 @@ export class HealthMonitor extends EventEmitter {
         score: 50,
         latency: performance.now() - start,
         message: `Automation check warning: ${error instanceof Error ? error.message : String(error)}`,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     }
   }
@@ -540,31 +587,50 @@ export class HealthMonitor extends EventEmitter {
     const recommendations: string[] = [];
 
     for (const check of checks) {
-      if (check.status === HealthStatus.FAILED || check.status === HealthStatus.CRITICAL) {
+      if (
+        check.status === HealthStatus.FAILED ||
+        check.status === HealthStatus.CRITICAL
+      ) {
         switch (check.type) {
           case HealthCheckType.UI_RESPONSIVENESS:
-            recommendations.push('Optimize UI components for better performance');
+            recommendations.push(
+              "Optimize UI components for better performance",
+            );
             break;
           case HealthCheckType.BACKEND_AVAILABILITY:
-            recommendations.push('Verify backend services are running and accessible');
+            recommendations.push(
+              "Verify backend services are running and accessible",
+            );
             break;
           case HealthCheckType.STATE_SYNC:
-            recommendations.push('Check state synchronization - may need to refresh state');
+            recommendations.push(
+              "Check state synchronization - may need to refresh state",
+            );
             break;
           case HealthCheckType.AGENT_EXECUTION:
-            recommendations.push('Ensure all agent files are properly configured');
+            recommendations.push(
+              "Ensure all agent files are properly configured",
+            );
             break;
           case HealthCheckType.FILE_SYSTEM:
-            recommendations.push('Check file system permissions and disk space');
+            recommendations.push(
+              "Check file system permissions and disk space",
+            );
             break;
           case HealthCheckType.MEMORY_USAGE:
-            recommendations.push('High memory usage detected - consider restarting or optimizing');
+            recommendations.push(
+              "High memory usage detected - consider restarting or optimizing",
+            );
             break;
           case HealthCheckType.COMMAND_PROCESSING:
-            recommendations.push('Verify command configurations are properly set up');
+            recommendations.push(
+              "Verify command configurations are properly set up",
+            );
             break;
           case HealthCheckType.AUTOMATION_SYSTEM:
-            recommendations.push('Configure automation system for enhanced functionality');
+            recommendations.push(
+              "Configure automation system for enhanced functionality",
+            );
             break;
         }
       }
@@ -592,41 +658,45 @@ export class HealthMonitor extends EventEmitter {
    */
   getHealthTrends(): {
     averageScore: number;
-    trend: 'improving' | 'stable' | 'degrading';
+    trend: "improving" | "stable" | "degrading";
     criticalCount: number;
   } {
     if (this.healthHistory.length < 2) {
       return {
         averageScore: this.lastHealth?.overallScore || 0,
-        trend: 'stable',
-        criticalCount: 0
+        trend: "stable",
+        criticalCount: 0,
       };
     }
 
-    const scores = this.healthHistory.map(h => h.overallScore);
+    const scores = this.healthHistory.map((h) => h.overallScore);
     const averageScore = scores.reduce((a, b) => a + b, 0) / scores.length;
 
     // Check trend over last 5 measurements
     const recentScores = scores.slice(-5);
-    const firstHalf = recentScores.slice(0, Math.floor(recentScores.length / 2));
+    const firstHalf = recentScores.slice(
+      0,
+      Math.floor(recentScores.length / 2),
+    );
     const secondHalf = recentScores.slice(Math.floor(recentScores.length / 2));
 
     const firstAvg = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
     const secondAvg = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
 
-    let trend: 'improving' | 'stable' | 'degrading';
-    if (secondAvg > firstAvg + 5) trend = 'improving';
-    else if (secondAvg < firstAvg - 5) trend = 'degrading';
-    else trend = 'stable';
+    let trend: "improving" | "stable" | "degrading";
+    if (secondAvg > firstAvg + 5) trend = "improving";
+    else if (secondAvg < firstAvg - 5) trend = "degrading";
+    else trend = "stable";
 
     const criticalCount = this.healthHistory.filter(
-      h => h.status === HealthStatus.CRITICAL || h.status === HealthStatus.FAILED
+      (h) =>
+        h.status === HealthStatus.CRITICAL || h.status === HealthStatus.FAILED,
     ).length;
 
     return {
       averageScore: Math.round(averageScore),
       trend,
-      criticalCount
+      criticalCount,
     };
   }
 }

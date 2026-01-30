@@ -3,36 +3,31 @@
  * Core orchestration system for NXTG-Forge
  */
 
-import { EventEmitter } from 'events';
-import { z } from 'zod';
-import * as crypto from 'crypto';
-import { Logger } from '../utils/logger';
-import {
-  Task,
-  TaskStatus,
-  AgentState,
-  TaskSchema
-} from '../types/state';
+import { EventEmitter } from "events";
+import { z } from "zod";
+import * as crypto from "crypto";
+import { Logger } from "../utils/logger";
+import { Task, TaskStatus, AgentState, TaskSchema } from "../types/state";
 import {
   Agent,
   CoordinationRequest,
   CoordinationResult,
   DependencyGraph,
   ParallelRequest,
-  ParallelResult
-} from '../types/agents';
-import { Decision } from '../types/vision';
-import { VisionManager } from './vision';
-import { AgentCoordinationProtocol } from './coordination';
+  ParallelResult,
+} from "../types/agents";
+import { Decision } from "../types/vision";
+import { VisionManager } from "./vision";
+import { AgentCoordinationProtocol } from "./coordination";
 
-const logger = new Logger('MetaOrchestrator');
+const logger = new Logger("MetaOrchestrator");
 
 // Execution pattern types
 export enum ExecutionPattern {
-  SEQUENTIAL = 'sequential',
-  PARALLEL = 'parallel',
-  ITERATIVE = 'iterative',
-  HIERARCHICAL = 'hierarchical'
+  SEQUENTIAL = "sequential",
+  PARALLEL = "parallel",
+  ITERATIVE = "iterative",
+  HIERARCHICAL = "hierarchical",
 }
 
 // Execution result
@@ -109,15 +104,15 @@ class AgentPool {
     this.agentStates.set(agent.id, {
       id: agent.id,
       name: agent.name,
-      status: 'idle',
+      status: "idle",
       taskQueue: [],
       capabilities: agent.capabilities,
       performance: {
         tasksCompleted: 0,
         averageDuration: 0,
         successRate: 1.0,
-        lastActive: new Date()
-      }
+        lastActive: new Date(),
+      },
     });
     this.taskQueues.set(agent.id, []);
   }
@@ -132,14 +127,14 @@ class AgentPool {
 
   getAvailableAgents(): Agent[] {
     return Array.from(this.agents.values()).filter(
-      agent => this.agentStates.get(agent.id)?.status === 'idle'
+      (agent) => this.agentStates.get(agent.id)?.status === "idle",
     );
   }
 
   assignTask(agentId: string, task: Task): void {
     const state = this.agentStates.get(agentId);
     if (state) {
-      state.status = 'busy';
+      state.status = "busy";
       state.currentTask = task.id;
       state.taskQueue.push(task.id);
     }
@@ -148,9 +143,9 @@ class AgentPool {
   completeTask(agentId: string, taskId: string): void {
     const state = this.agentStates.get(agentId);
     if (state) {
-      state.status = 'idle';
+      state.status = "idle";
       state.currentTask = undefined;
-      state.taskQueue = state.taskQueue.filter(id => id !== taskId);
+      state.taskQueue = state.taskQueue.filter((id) => id !== taskId);
       state.performance.tasksCompleted++;
       state.performance.lastActive = new Date();
     }
@@ -166,11 +161,15 @@ export class MetaOrchestrator extends EventEmitter {
   private workflows: Map<string, Workflow> = new Map();
   private executionQueue: Task[] = [];
   private isProcessing: boolean = false;
-  private commandHistory: Array<{ command: any; result: any; timestamp: Date }> = [];
+  private commandHistory: Array<{
+    command: any;
+    result: any;
+    timestamp: Date;
+  }> = [];
 
   constructor(
     visionManager: VisionManager,
-    coordinationProtocol: AgentCoordinationProtocol
+    coordinationProtocol: AgentCoordinationProtocol,
   ) {
     super();
     this.visionManager = visionManager;
@@ -201,7 +200,7 @@ export class MetaOrchestrator extends EventEmitter {
     try {
       await this.executeTask(task);
     } catch (error) {
-      logger.error('Task execution failed', error);
+      logger.error("Task execution failed", error);
       this.updateTaskStatus(task.id, TaskStatus.FAILED);
     } finally {
       this.isProcessing = false;
@@ -213,7 +212,7 @@ export class MetaOrchestrator extends EventEmitter {
    */
   async execute(
     task: Task,
-    pattern: ExecutionPattern = ExecutionPattern.SEQUENTIAL
+    pattern: ExecutionPattern = ExecutionPattern.SEQUENTIAL,
   ): Promise<ExecutionResult> {
     const startTime = Date.now();
     logger.info(`Executing task ${task.id} with pattern ${pattern}`);
@@ -226,7 +225,7 @@ export class MetaOrchestrator extends EventEmitter {
       taskId: task.id,
       pattern,
       success: false,
-      duration: 0
+      duration: 0,
     };
 
     try {
@@ -249,7 +248,6 @@ export class MetaOrchestrator extends EventEmitter {
 
       this.updateTaskStatus(task.id, TaskStatus.COMPLETED);
       result.success = true;
-
     } catch (error) {
       logger.error(`Task ${task.id} failed`, error);
       this.updateTaskStatus(task.id, TaskStatus.FAILED);
@@ -258,7 +256,7 @@ export class MetaOrchestrator extends EventEmitter {
       result.duration = Date.now() - startTime;
       this.activeTasks.delete(task.id);
       this.taskResults.set(task.id, result);
-      this.emit('taskComplete', result);
+      this.emit("taskComplete", result);
     }
 
     return result;
@@ -292,7 +290,7 @@ export class MetaOrchestrator extends EventEmitter {
       duration: result.duration,
       result: result.result,
       error: result.error,
-      artifacts: result.artifacts
+      artifacts: result.artifacts,
     };
   }
 
@@ -314,11 +312,11 @@ export class MetaOrchestrator extends EventEmitter {
       success: parallelResult.failed === 0,
       duration: parallelResult.duration,
       result: parallelResult,
-      agentResults: parallelResult.results.map(r => ({
-        agentId: 'parallel-agent',
+      agentResults: parallelResult.results.map((r) => ({
+        agentId: "parallel-agent",
         status: r.status,
-        duration: r.duration
-      }))
+        duration: r.duration,
+      })),
     };
   }
 
@@ -338,7 +336,10 @@ export class MetaOrchestrator extends EventEmitter {
       if (!agent) break;
 
       this.agentPool.assignTask(agent.id, task);
-      const iterationResult = await this.coordinationProtocol.executeTask(agent, task);
+      const iterationResult = await this.coordinationProtocol.executeTask(
+        agent,
+        task,
+      );
       this.agentPool.completeTask(agent.id, task.id);
 
       // Check if iteration succeeded
@@ -359,7 +360,7 @@ export class MetaOrchestrator extends EventEmitter {
       success,
       duration: 0,
       result,
-      artifacts: []
+      artifacts: [],
     };
   }
 
@@ -387,10 +388,10 @@ export class MetaOrchestrator extends EventEmitter {
     return {
       taskId: task.id,
       pattern: ExecutionPattern.HIERARCHICAL,
-      success: results.every(r => r.failed === 0),
+      success: results.every((r) => r.failed === 0),
       duration: results.reduce((sum, r) => sum + r.duration, 0),
       result: results,
-      artifacts: []
+      artifacts: [],
     };
   }
 
@@ -399,7 +400,7 @@ export class MetaOrchestrator extends EventEmitter {
    */
   async coordinateAgents(
     agents: Agent[],
-    dependencies: DependencyGraph
+    dependencies: DependencyGraph,
   ): Promise<CoordinationResult> {
     const startTime = Date.now();
     logger.info(`Coordinating ${agents.length} agents`);
@@ -411,19 +412,19 @@ export class MetaOrchestrator extends EventEmitter {
 
     // Create coordination request
     const request: CoordinationRequest = {
-      id: crypto.randomBytes(8).toString('hex'),
+      id: crypto.randomBytes(8).toString("hex"),
       task: this.createCoordinationTask(),
       requiredCapabilities: [],
-      agents: agents.map(a => a.id),
-      strategy: 'parallel',
+      agents: agents.map((a) => a.id),
+      strategy: "parallel",
       timeout: 60000,
-      dependencies: dependencies.tasks
+      dependencies: dependencies.tasks,
     };
 
     // Execute coordination
     const agentResults: Array<{
       agentId: string;
-      status: 'success' | 'failure' | 'timeout' | 'skipped';
+      status: "success" | "failure" | "timeout" | "skipped";
       result?: any;
       error?: string;
       duration: number;
@@ -444,20 +445,20 @@ export class MetaOrchestrator extends EventEmitter {
 
       agentResults.push({
         agentId,
-        status: result.success ? 'success' : 'failure',
+        status: result.success ? "success" : "failure",
         result: result.result,
         error: result.error,
-        duration: result.duration
+        duration: result.duration,
       });
     }
 
     return {
       requestId: request.id,
-      success: agentResults.every(r => r.status === 'success'),
+      success: agentResults.every((r) => r.status === "success"),
       duration: Date.now() - startTime,
       agentResults,
       artifacts: [],
-      metadata: {}
+      metadata: {},
     };
   }
 
@@ -479,18 +480,18 @@ export class MetaOrchestrator extends EventEmitter {
 
         return {
           taskId: task.id,
-          status: 'success' as const,
+          status: "success" as const,
           result: result.result,
           error: undefined,
-          duration: result.duration
+          duration: result.duration,
         };
       } catch (error) {
         return {
           taskId: task.id,
-          status: 'failure' as const,
+          status: "failure" as const,
           result: undefined,
           error: error instanceof Error ? error.message : String(error),
-          duration: 0
+          duration: 0,
         };
       }
     });
@@ -499,10 +500,10 @@ export class MetaOrchestrator extends EventEmitter {
 
     return {
       totalTasks: tasks.length,
-      succeeded: results.filter(r => r.status === 'success').length,
-      failed: results.filter(r => r.status === 'failure').length,
+      succeeded: results.filter((r) => r.status === "success").length,
+      failed: results.filter((r) => r.status === "failure").length,
       duration: Date.now() - startTime,
-      results
+      results,
     };
   }
 
@@ -512,15 +513,22 @@ export class MetaOrchestrator extends EventEmitter {
   async getProgress(): Promise<ProgressState> {
     const tasks = Array.from(this.activeTasks.values());
 
-    const completedTasks = tasks.filter(t => t.status === TaskStatus.COMPLETED).length;
-    const inProgressTasks = tasks.filter(t => t.status === TaskStatus.IN_PROGRESS).length;
-    const failedTasks = tasks.filter(t => t.status === TaskStatus.FAILED).length;
-    const blockedTasks = tasks.filter(t => t.status === TaskStatus.BLOCKED).length;
+    const completedTasks = tasks.filter(
+      (t) => t.status === TaskStatus.COMPLETED,
+    ).length;
+    const inProgressTasks = tasks.filter(
+      (t) => t.status === TaskStatus.IN_PROGRESS,
+    ).length;
+    const failedTasks = tasks.filter(
+      (t) => t.status === TaskStatus.FAILED,
+    ).length;
+    const blockedTasks = tasks.filter(
+      (t) => t.status === TaskStatus.BLOCKED,
+    ).length;
 
     const totalTasks = tasks.length;
-    const overallProgress = totalTasks > 0
-      ? Math.round((completedTasks / totalTasks) * 100)
-      : 0;
+    const overallProgress =
+      totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
     // Estimate completion based on average task duration
     let estimatedCompletion: Date | undefined;
@@ -539,7 +547,7 @@ export class MetaOrchestrator extends EventEmitter {
       blockedTasks,
       estimatedCompletion,
       currentPhase: this.getCurrentPhase(),
-      overallProgress
+      overallProgress,
     };
   }
 
@@ -551,10 +559,10 @@ export class MetaOrchestrator extends EventEmitter {
     const alignment = await this.visionManager.checkAlignment(decision);
 
     // Escalate if low alignment or high impact
-    if (alignment.score < 0.5 || decision.impact === 'high') {
+    if (alignment.score < 0.5 || decision.impact === "high") {
       logger.info(`Escalating decision ${decision.id}`, {
         alignmentScore: alignment.score,
-        impact: decision.impact
+        impact: decision.impact,
       });
       return true;
     }
@@ -565,7 +573,9 @@ export class MetaOrchestrator extends EventEmitter {
   /**
    * Execute workflow with sign-off pattern
    */
-  async executeWorkflowWithSignOff(workflow: Workflow): Promise<WorkflowResult> {
+  async executeWorkflowWithSignOff(
+    workflow: Workflow,
+  ): Promise<WorkflowResult> {
     const startTime = Date.now();
     logger.info(`Executing workflow ${workflow.id} with sign-offs`);
 
@@ -583,33 +593,36 @@ export class MetaOrchestrator extends EventEmitter {
         stepResults.push({
           stepId: step.id,
           status: TaskStatus.FAILED,
-          error: `Agent ${step.agentId} not found`
+          error: `Agent ${step.agentId} not found`,
         });
         continue;
       }
 
-      const result = await this.coordinationProtocol.executeTask(agent, step.task);
+      const result = await this.coordinationProtocol.executeTask(
+        agent,
+        step.task,
+      );
 
       // Request sign-off if required
       if (step.requiresSignOff && result.success) {
         const signOff = await this.coordinationProtocol.requestSignOff(
-          'architect', // Sign-off agent
+          "architect", // Sign-off agent
           {
             id: step.id,
-            type: 'code',
+            type: "code",
             path: workflow.id,
-            checksum: crypto.randomBytes(16).toString('hex'),
+            checksum: crypto.randomBytes(16).toString("hex"),
             createdBy: agent.id,
             createdAt: new Date(),
-            signOffs: []
-          }
+            signOffs: [],
+          },
         );
 
         if (!signOff.approved) {
           stepResults.push({
             stepId: step.id,
             status: TaskStatus.BLOCKED,
-            error: `Sign-off rejected: ${signOff.comments}`
+            error: `Sign-off rejected: ${signOff.comments}`,
           });
           break; // Stop workflow if sign-off rejected
         }
@@ -619,7 +632,7 @@ export class MetaOrchestrator extends EventEmitter {
         stepId: step.id,
         status: result.success ? TaskStatus.COMPLETED : TaskStatus.FAILED,
         result: result.result,
-        error: result.error
+        error: result.error,
       });
 
       // Stop on failure unless retry enabled
@@ -630,9 +643,9 @@ export class MetaOrchestrator extends EventEmitter {
 
     return {
       workflowId: workflow.id,
-      success: stepResults.every(r => r.status === TaskStatus.COMPLETED),
+      success: stepResults.every((r) => r.status === TaskStatus.COMPLETED),
       duration: Date.now() - startTime,
-      steps: stepResults
+      steps: stepResults,
     };
   }
 
@@ -666,7 +679,7 @@ export class MetaOrchestrator extends EventEmitter {
       subtasks.push({
         ...task,
         id: `${task.id}-sub-${i}`,
-        title: `${task.title} - Part ${i + 1}`
+        title: `${task.title} - Part ${i + 1}`,
       });
     }
 
@@ -680,7 +693,7 @@ export class MetaOrchestrator extends EventEmitter {
     // Simplified refinement - in production would use AI
     return {
       ...task,
-      description: `${task.description} (refined based on feedback)`
+      description: `${task.description} (refined based on feedback)`,
     };
   }
 
@@ -729,7 +742,10 @@ export class MetaOrchestrator extends EventEmitter {
   /**
    * Find agent for specific task
    */
-  private findAgentForTask(taskId: string, agents: Agent[]): string | undefined {
+  private findAgentForTask(
+    taskId: string,
+    agents: Agent[],
+  ): string | undefined {
     // Simplified - in production would match capabilities
     return agents[0]?.id;
   }
@@ -742,12 +758,12 @@ export class MetaOrchestrator extends EventEmitter {
     return {
       id: taskId,
       title: `Task ${taskId}`,
-      description: '',
+      description: "",
       status: TaskStatus.PENDING,
       dependencies: [],
       createdAt: new Date(),
       priority: 5,
-      artifacts: []
+      artifacts: [],
     };
   }
 
@@ -756,14 +772,14 @@ export class MetaOrchestrator extends EventEmitter {
    */
   private createCoordinationTask(): Task {
     return {
-      id: crypto.randomBytes(8).toString('hex'),
-      title: 'Coordination Task',
-      description: 'Coordinating multiple agents',
+      id: crypto.randomBytes(8).toString("hex"),
+      title: "Coordination Task",
+      description: "Coordinating multiple agents",
       status: TaskStatus.IN_PROGRESS,
       dependencies: [],
       createdAt: new Date(),
       priority: 10,
-      artifacts: []
+      artifacts: [],
     };
   }
 
@@ -774,7 +790,7 @@ export class MetaOrchestrator extends EventEmitter {
     const task = this.activeTasks.get(taskId);
     if (task) {
       task.status = status;
-      this.emit('taskStatusChanged', { taskId, status });
+      this.emit("taskStatusChanged", { taskId, status });
     }
   }
 
@@ -796,12 +812,15 @@ export class MetaOrchestrator extends EventEmitter {
     // Simplified phase detection
     const progress = Array.from(this.activeTasks.values());
 
-    if (progress.length === 0) return 'idle';
-    if (progress.every(t => t.status === TaskStatus.PENDING)) return 'planning';
-    if (progress.some(t => t.status === TaskStatus.IN_PROGRESS)) return 'executing';
-    if (progress.every(t => t.status === TaskStatus.COMPLETED)) return 'completed';
+    if (progress.length === 0) return "idle";
+    if (progress.every((t) => t.status === TaskStatus.PENDING))
+      return "planning";
+    if (progress.some((t) => t.status === TaskStatus.IN_PROGRESS))
+      return "executing";
+    if (progress.every((t) => t.status === TaskStatus.COMPLETED))
+      return "completed";
 
-    return 'active';
+    return "active";
   }
 
   /**
@@ -828,7 +847,10 @@ export class MetaOrchestrator extends EventEmitter {
    * Execute command (for API compatibility)
    */
   async executeCommand(command: any): Promise<any> {
-    const result = { success: true, output: `Command executed: ${JSON.stringify(command)}` };
+    const result = {
+      success: true,
+      output: `Command executed: ${JSON.stringify(command)}`,
+    };
     this.commandHistory.push({ command, result, timestamp: new Date() });
     return result;
   }
@@ -845,11 +867,11 @@ export class MetaOrchestrator extends EventEmitter {
    */
   async getCommandSuggestions(context: any): Promise<string[]> {
     return [
-      '/[FRG]-init',
-      '/[FRG]-feature',
-      '/[FRG]-test',
-      '/[FRG]-deploy',
-      '/[FRG]-status'
+      "/[FRG]-init",
+      "/[FRG]-feature",
+      "/[FRG]-test",
+      "/[FRG]-deploy",
+      "/[FRG]-status",
     ];
   }
 
@@ -863,7 +885,7 @@ export class MetaOrchestrator extends EventEmitter {
       timesSaved: 180,
       issuesFixed: 12,
       performanceGain: 23,
-      costSaved: 450
+      costSaved: 450,
     };
   }
 
@@ -872,9 +894,9 @@ export class MetaOrchestrator extends EventEmitter {
    */
   async executeYoloAction(action: any): Promise<any> {
     return {
-      actionId: crypto.randomBytes(8).toString('hex'),
+      actionId: crypto.randomBytes(8).toString("hex"),
       success: true,
-      result: 'YOLO action executed successfully'
+      result: "YOLO action executed successfully",
     };
   }
 
@@ -896,7 +918,7 @@ export class MetaOrchestrator extends EventEmitter {
    * Initialize orchestrator
    */
   async initialize(): Promise<void> {
-    logger.info('MetaOrchestrator initialized');
+    logger.info("MetaOrchestrator initialized");
   }
 }
 

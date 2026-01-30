@@ -1,12 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  Command, Sparkles, Brain, Zap, Shield, Activity, Users,
-  Terminal, FileCode, GitBranch, Package, Database, Cloud,
-  Settings, ChevronRight, Search, Plus, Play, Pause,
-  RotateCw, CheckCircle, AlertCircle, Clock, TrendingUp,
-  MessageSquare, Layers, Target, BarChart3
-} from 'lucide-react';
+  Command,
+  Sparkles,
+  Brain,
+  Zap,
+  Shield,
+  Activity,
+  Users,
+  Terminal,
+  FileCode,
+  GitBranch,
+  Package,
+  Database,
+  Cloud,
+  Settings,
+  ChevronRight,
+  Search,
+  Plus,
+  Play,
+  Pause,
+  RotateCw,
+  CheckCircle,
+  AlertCircle,
+  Clock,
+  TrendingUp,
+  MessageSquare,
+  Layers,
+  Target,
+  BarChart3,
+} from "lucide-react";
 
 interface CommandCenterProps {
   onCommandExecute: (command: string, args?: any) => void;
@@ -19,7 +42,7 @@ interface Command {
   id: string;
   name: string;
   description: string;
-  category: 'forge' | 'git' | 'test' | 'deploy' | 'analyze';
+  category: "forge" | "git" | "test" | "deploy" | "analyze";
   hotkey?: string;
   requiresConfirmation?: boolean;
   icon: JSX.Element;
@@ -38,10 +61,10 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
   onCommandExecute,
   availableCommands,
   projectContext,
-  isExecuting
+  isExecuting,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedCommand, setSelectedCommand] = useState<Command | null>(null);
   const [filteredCommands, setFilteredCommands] = useState(availableCommands);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
@@ -50,9 +73,10 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
   // Filter commands based on search
   useEffect(() => {
     if (searchQuery) {
-      const filtered = availableCommands.filter(cmd =>
-        cmd.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        cmd.description.toLowerCase().includes(searchQuery.toLowerCase())
+      const filtered = availableCommands.filter(
+        (cmd) =>
+          cmd.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          cmd.description.toLowerCase().includes(searchQuery.toLowerCase()),
       );
       setFilteredCommands(filtered);
     } else {
@@ -64,73 +88,75 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Cmd/Ctrl + K to open command palette
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         setIsOpen(true);
       }
 
       // Escape to close
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         setIsOpen(false);
-        setSearchQuery('');
+        setSearchQuery("");
       }
 
       // Enter to execute selected command
-      if (e.key === 'Enter' && selectedCommand && isOpen) {
+      if (e.key === "Enter" && selectedCommand && isOpen) {
         handleCommandExecute(selectedCommand);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedCommand, isOpen]);
 
   const handleCommandExecute = (command: Command) => {
     if (command.requiresConfirmation) {
       // Show confirmation dialog
-      const confirmed = window.confirm(`Execute "${command.name}"? ${command.description}`);
+      const confirmed = window.confirm(
+        `Execute "${command.name}"? ${command.description}`,
+      );
       if (!confirmed) return;
     }
 
     onCommandExecute(command.id);
-    setCommandHistory(prev => [command.id, ...prev.slice(0, 9)]);
+    setCommandHistory((prev) => [command.id, ...prev.slice(0, 9)]);
     setIsOpen(false);
-    setSearchQuery('');
+    setSearchQuery("");
   };
 
   const categoryColors = {
-    forge: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
-    git: 'text-green-400 bg-green-500/10 border-green-500/20',
-    test: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
-    deploy: 'text-orange-400 bg-orange-500/10 border-orange-500/20',
-    analyze: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20'
+    forge: "text-purple-400 bg-purple-500/10 border-purple-500/20",
+    git: "text-green-400 bg-green-500/10 border-green-500/20",
+    test: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+    deploy: "text-orange-400 bg-orange-500/10 border-orange-500/20",
+    analyze: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
   };
 
   const quickActions = [
     {
-      id: 'status',
-      label: 'Status',
+      id: "status",
+      label: "Status",
       icon: <Activity className="w-4 h-4" />,
-      color: 'blue'
+      color: "blue",
     },
     {
-      id: 'feature',
-      label: 'New Feature',
+      id: "feature",
+      label: "New Feature",
       icon: <Plus className="w-4 h-4" />,
-      color: 'green'
+      color: "green",
     },
     {
-      id: 'test',
-      label: 'Run Tests',
+      id: "test",
+      label: "Run Tests",
       icon: <Play className="w-4 h-4" />,
-      color: 'purple'
+      color: "purple",
     },
     {
-      id: 'deploy',
-      label: 'Deploy',
+      id: "deploy",
+      label: "Deploy",
       icon: <Cloud className="w-4 h-4" />,
-      color: 'orange'
-    }
+      color: "orange",
+    },
   ];
 
   return (
@@ -181,9 +207,11 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                 disabled={isExecuting}
                 className={`
                   px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5
-                  ${isExecuting
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'hover:bg-gray-800 active:scale-95'}
+                  ${
+                    isExecuting
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-gray-800 active:scale-95"
+                  }
                 `}
                 data-testid={`command-center-quick-${action.id}-btn`}
               >
@@ -213,13 +241,19 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
               initial={{ opacity: 0, scale: 0.95, y: -20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -20 }}
-              transition={{ type: 'spring', duration: 0.3 }}
+              transition={{ type: "spring", duration: 0.3 }}
               className="fixed inset-x-0 top-20 mx-auto w-full max-w-2xl z-50 px-4"
               data-testid="command-center-modal"
             >
-              <div className="bg-gray-900 rounded-2xl border border-gray-800 shadow-2xl overflow-hidden" data-testid="command-center-palette">
+              <div
+                className="bg-gray-900 rounded-2xl border border-gray-800 shadow-2xl overflow-hidden"
+                data-testid="command-center-palette"
+              >
                 {/* Search Header */}
-                <div className="p-4 border-b border-gray-800" data-testid="command-center-search-header">
+                <div
+                  className="p-4 border-b border-gray-800"
+                  data-testid="command-center-search-header"
+                >
                   <div className="flex items-center gap-3">
                     <Search className="w-5 h-5 text-gray-400" />
                     <input
@@ -238,7 +272,9 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                           Executing...
                         </div>
                       )}
-                      <kbd className="px-2 py-1 bg-gray-800 rounded text-xs text-gray-400">ESC</kbd>
+                      <kbd className="px-2 py-1 bg-gray-800 rounded text-xs text-gray-400">
+                        ESC
+                      </kbd>
                     </div>
                   </div>
                 </div>
@@ -250,28 +286,38 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                       <div className="flex items-center gap-1">
                         <Target className="w-3 h-3 text-purple-400" />
                         <span className="text-gray-400">Project:</span>
-                        <span className="text-gray-200 font-medium">{projectContext.name}</span>
+                        <span className="text-gray-200 font-medium">
+                          {projectContext.name}
+                        </span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Activity className="w-3 h-3 text-blue-400" />
                         <span className="text-gray-400">Phase:</span>
-                        <span className="text-gray-200 font-medium">{projectContext.phase}</span>
+                        <span className="text-gray-200 font-medium">
+                          {projectContext.phase}
+                        </span>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-1">
                         <Users className="w-3 h-3 text-green-400" />
-                        <span className="text-gray-200">{projectContext.activeAgents}</span>
+                        <span className="text-gray-200">
+                          {projectContext.activeAgents}
+                        </span>
                         <span className="text-gray-400">agents</span>
                       </div>
-                      <div className={`
+                      <div
+                        className={`
                         px-2 py-0.5 rounded-full text-xs
-                        ${projectContext.healthScore >= 80
-                          ? 'bg-green-500/20 text-green-400'
-                          : projectContext.healthScore >= 60
-                          ? 'bg-yellow-500/20 text-yellow-400'
-                          : 'bg-red-500/20 text-red-400'}
-                      `}>
+                        ${
+                          projectContext.healthScore >= 80
+                            ? "bg-green-500/20 text-green-400"
+                            : projectContext.healthScore >= 60
+                              ? "bg-yellow-500/20 text-yellow-400"
+                              : "bg-red-500/20 text-red-400"
+                        }
+                      `}
+                      >
                         {projectContext.healthScore}% health
                       </div>
                     </div>
@@ -279,17 +325,27 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                 </div>
 
                 {/* Commands List */}
-                <div className="max-h-96 overflow-y-auto" data-testid="command-center-commands-list">
+                <div
+                  className="max-h-96 overflow-y-auto"
+                  data-testid="command-center-commands-list"
+                >
                   {filteredCommands.length > 0 ? (
                     <div className="p-2">
                       {Object.entries(
-                        filteredCommands.reduce((acc, cmd) => {
-                          if (!acc[cmd.category]) acc[cmd.category] = [];
-                          acc[cmd.category].push(cmd);
-                          return acc;
-                        }, {} as Record<string, Command[]>)
+                        filteredCommands.reduce(
+                          (acc, cmd) => {
+                            if (!acc[cmd.category]) acc[cmd.category] = [];
+                            acc[cmd.category].push(cmd);
+                            return acc;
+                          },
+                          {} as Record<string, Command[]>,
+                        ),
                       ).map(([category, commands]) => (
-                        <div key={category} className="mb-4" data-testid={`command-center-category-${category}`}>
+                        <div
+                          key={category}
+                          className="mb-4"
+                          data-testid={`command-center-category-${category}`}
+                        >
                           <div className="px-3 py-1 mb-2">
                             <span className="text-xs font-medium text-gray-500 uppercase">
                               {category}
@@ -302,16 +358,20 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                               onMouseEnter={() => setSelectedCommand(command)}
                               className={`
                                 w-full px-3 py-2.5 rounded-lg flex items-center gap-3 transition-all
-                                ${selectedCommand?.id === command.id
-                                  ? 'bg-gray-800 text-gray-100'
-                                  : 'hover:bg-gray-800/50 text-gray-300'}
+                                ${
+                                  selectedCommand?.id === command.id
+                                    ? "bg-gray-800 text-gray-100"
+                                    : "hover:bg-gray-800/50 text-gray-300"
+                                }
                               `}
                               data-testid={`command-center-command-${command.id}`}
                             >
-                              <div className={`
+                              <div
+                                className={`
                                 w-8 h-8 rounded-lg flex items-center justify-center border
                                 ${categoryColors[command.category]}
-                              `}>
+                              `}
+                              >
                                 {command.icon}
                               </div>
                               <div className="flex-1 text-left">
@@ -323,7 +383,9 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                                     </kbd>
                                   )}
                                 </div>
-                                <div className="text-xs text-gray-500">{command.description}</div>
+                                <div className="text-xs text-gray-500">
+                                  {command.description}
+                                </div>
                               </div>
                               <ChevronRight className="w-4 h-4 text-gray-600" />
                             </button>
@@ -337,7 +399,9 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                         <Search className="w-8 h-8 text-gray-600" />
                       </div>
                       <p className="text-gray-400 mb-2">No commands found</p>
-                      <p className="text-sm text-gray-500">Try a different search term</p>
+                      <p className="text-sm text-gray-500">
+                        Try a different search term
+                      </p>
                     </div>
                   )}
                 </div>
@@ -351,7 +415,9 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {commandHistory.slice(0, 5).map((cmdId) => {
-                        const cmd = availableCommands.find(c => c.id === cmdId);
+                        const cmd = availableCommands.find(
+                          (c) => c.id === cmdId,
+                        );
                         if (!cmd) return null;
                         return (
                           <button

@@ -3,7 +3,12 @@
  * Chief of Staff dashboard and metrics types
  */
 
-export type DashboardMode = 'overview' | 'health' | 'blockers' | 'activity' | 'progress';
+export type DashboardMode =
+  | "overview"
+  | "health"
+  | "blockers"
+  | "activity"
+  | "progress";
 
 export interface ProjectHealth {
   overall: HealthStatus;
@@ -16,11 +21,11 @@ export interface ProjectHealth {
     security: HealthStatus;
   };
   score: number; // 0-100
-  trend: 'improving' | 'stable' | 'declining';
+  trend: "improving" | "stable" | "declining";
 }
 
 export interface HealthStatus {
-  status: 'excellent' | 'good' | 'warning' | 'critical';
+  status: "excellent" | "good" | "warning" | "critical";
   score: number; // 0-100
   issues: HealthIssue[];
   lastChecked: Date;
@@ -28,11 +33,11 @@ export interface HealthStatus {
 
 export interface HealthIssue {
   id: string;
-  type: 'error' | 'warning' | 'info';
+  type: "error" | "warning" | "info";
   category: string;
   title: string;
   description: string;
-  severity: 'critical' | 'high' | 'medium' | 'low';
+  severity: "critical" | "high" | "medium" | "low";
   suggestion?: string;
   autoFixAvailable: boolean;
 }
@@ -41,11 +46,11 @@ export interface Blocker {
   id: string;
   title: string;
   description: string;
-  type: 'technical' | 'dependency' | 'resource' | 'decision' | 'external';
-  priority: 'critical' | 'high' | 'medium' | 'low';
-  status: 'active' | 'investigating' | 'resolved';
+  type: "technical" | "dependency" | "resource" | "decision" | "external";
+  priority: "critical" | "high" | "medium" | "low";
+  status: "active" | "investigating" | "resolved";
   blockedItems: Array<{
-    type: 'goal' | 'task' | 'agent' | 'feature';
+    type: "goal" | "task" | "agent" | "feature";
     id: string;
     name: string;
   }>;
@@ -59,7 +64,7 @@ export interface Blocker {
 export interface AgentActivity {
   agentId: string;
   agentName: string;
-  status: 'idle' | 'working' | 'blocked' | 'error' | 'offline';
+  status: "idle" | "working" | "blocked" | "error" | "offline";
   currentTask?: {
     id: string;
     title: string;
@@ -79,16 +84,26 @@ export interface AgentActivity {
 export interface AgentAction {
   id: string;
   timestamp: Date;
-  type: 'task_started' | 'task_completed' | 'error' | 'decision' | 'collaboration';
+  type:
+    | "task_started"
+    | "task_completed"
+    | "error"
+    | "decision"
+    | "collaboration";
   description: string;
   details?: Record<string, any>;
-  impact?: 'low' | 'medium' | 'high';
+  impact?: "low" | "medium" | "high";
 }
 
 export interface ProgressMetric {
   id: string;
   name: string;
-  category: 'development' | 'testing' | 'deployment' | 'documentation' | 'custom';
+  category:
+    | "development"
+    | "testing"
+    | "deployment"
+    | "documentation"
+    | "custom";
   value: number;
   target: number;
   unit: string;
@@ -106,24 +121,24 @@ export interface ProgressMetric {
 export interface DependencyGraph {
   nodes: Array<{
     id: string;
-    type: 'goal' | 'task' | 'milestone' | 'deliverable';
+    type: "goal" | "task" | "milestone" | "deliverable";
     name: string;
-    status: 'pending' | 'in-progress' | 'completed' | 'blocked';
+    status: "pending" | "in-progress" | "completed" | "blocked";
     progress: number;
   }>;
   edges: Array<{
     from: string;
     to: string;
-    type: 'blocks' | 'requires' | 'influences';
-    strength: 'strong' | 'weak';
+    type: "blocks" | "requires" | "influences";
+    strength: "strong" | "weak";
   }>;
 }
 
 export interface DashboardCard {
   id: string;
-  type: 'metric' | 'chart' | 'list' | 'graph' | 'alert' | 'activity';
+  type: "metric" | "chart" | "list" | "graph" | "alert" | "activity";
   title: string;
-  size: 'small' | 'medium' | 'large' | 'full';
+  size: "small" | "medium" | "large" | "full";
   position: {
     x: number;
     y: number;
@@ -137,11 +152,11 @@ export interface DashboardCard {
 
 export interface DashboardNotification {
   id: string;
-  type: 'success' | 'warning' | 'error' | 'info';
+  type: "success" | "warning" | "error" | "info";
   title: string;
   message: string;
   timestamp: Date;
-  source: 'agent' | 'system' | 'user';
+  source: "agent" | "system" | "user";
   actionable: boolean;
   actions?: Array<{
     label: string;
@@ -152,10 +167,10 @@ export interface DashboardNotification {
 }
 
 export interface DashboardFilter {
-  timeRange: 'hour' | 'day' | 'week' | 'month' | 'all';
+  timeRange: "hour" | "day" | "week" | "month" | "all";
   agents?: string[];
   categories?: string[];
-  priorities?: Array<'critical' | 'high' | 'medium' | 'low'>;
+  priorities?: Array<"critical" | "high" | "medium" | "low">;
   statuses?: string[];
 }
 

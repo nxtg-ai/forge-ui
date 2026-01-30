@@ -1,11 +1,23 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  Target, Sparkles, CheckCircle, Clock, TrendingUp,
-  AlertTriangle, Edit3, Lock, Unlock, GitBranch,
-  Flag, Compass, Mountain, Trophy, Zap
-} from 'lucide-react';
-import { ProgressBar } from './ui/ProgressBar';
+  Target,
+  Sparkles,
+  CheckCircle,
+  Clock,
+  TrendingUp,
+  AlertTriangle,
+  Edit3,
+  Lock,
+  Unlock,
+  GitBranch,
+  Flag,
+  Compass,
+  Mountain,
+  Trophy,
+  Zap,
+} from "lucide-react";
+import { ProgressBar } from "./ui/ProgressBar";
 
 interface VisionDisplayProps {
   vision: VisionData;
@@ -30,7 +42,7 @@ interface Goal {
   id: string;
   title: string;
   description: string;
-  status: 'pending' | 'in-progress' | 'completed' | 'blocked';
+  status: "pending" | "in-progress" | "completed" | "blocked";
   progress: number;
   dependencies: string[];
 }
@@ -41,7 +53,7 @@ interface Metric {
   current: number;
   target: number;
   unit: string;
-  trend: 'up' | 'down' | 'stable';
+  trend: "up" | "down" | "stable";
 }
 
 interface ProgressData {
@@ -58,45 +70,50 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
   progress,
   onVisionUpdate,
   isLocked = false,
-  compactMode = false
+  compactMode = false,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [editedMission, setEditedMission] = useState('');
+  const [editedMission, setEditedMission] = useState("");
   const [expandedGoal, setExpandedGoal] = useState<string | null>(null);
   const [showMetrics, setShowMetrics] = useState(!compactMode);
 
   // Handle case where vision is undefined
   if (!vision) {
     return (
-      <div className="p-6 rounded-2xl bg-gray-900/50 border border-gray-800" data-testid="vision-display-empty">
+      <div
+        className="p-6 rounded-2xl bg-gray-900/50 border border-gray-800"
+        data-testid="vision-display-empty"
+      >
         <div className="text-center text-gray-500">
           <p className="text-lg font-medium mb-2">No Vision Defined</p>
-          <p className="text-sm">Click "Update Vision" to create your canonical vision</p>
+          <p className="text-sm">
+            Click "Update Vision" to create your canonical vision
+          </p>
         </div>
       </div>
     );
   }
 
-  const getGoalStatusColor = (status: Goal['status']) => {
+  const getGoalStatusColor = (status: Goal["status"]) => {
     const colors = {
-      'pending': 'text-gray-400 bg-gray-500/10 border-gray-500/20',
-      'in-progress': 'text-blue-400 bg-blue-500/10 border-blue-500/20',
-      'completed': 'text-green-400 bg-green-500/10 border-green-500/20',
-      'blocked': 'text-red-400 bg-red-500/10 border-red-500/20'
+      pending: "text-gray-400 bg-gray-500/10 border-gray-500/20",
+      "in-progress": "text-blue-400 bg-blue-500/10 border-blue-500/20",
+      completed: "text-green-400 bg-green-500/10 border-green-500/20",
+      blocked: "text-red-400 bg-red-500/10 border-red-500/20",
     };
     return colors[status];
   };
 
-  const getTrendIcon = (trend: Metric['trend']) => {
-    if (trend === 'up') return '↑';
-    if (trend === 'down') return '↓';
-    return '→';
+  const getTrendIcon = (trend: Metric["trend"]) => {
+    if (trend === "up") return "↑";
+    if (trend === "down") return "↓";
+    return "→";
   };
 
-  const getTrendColor = (trend: Metric['trend']) => {
-    if (trend === 'up') return 'text-green-400';
-    if (trend === 'down') return 'text-red-400';
-    return 'text-gray-400';
+  const getTrendColor = (trend: Metric["trend"]) => {
+    if (trend === "up") return "text-green-400";
+    if (trend === "down") return "text-red-400";
+    return "text-gray-400";
   };
 
   if (compactMode) {
@@ -109,15 +126,25 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div data-testid="vision-display-compact-icon" className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+            <div
+              data-testid="vision-display-compact-icon"
+              className="w-8 h-8 rounded-lg bg-purple-500/20 flex items-center justify-center"
+            >
               <Compass className="w-4 h-4 text-purple-400" />
             </div>
             <div>
-              <div data-testid="vision-display-compact-mission" className="text-sm font-medium text-gray-200 line-clamp-1">
+              <div
+                data-testid="vision-display-compact-mission"
+                className="text-sm font-medium text-gray-200 line-clamp-1"
+              >
                 {vision.mission}
               </div>
-              <div data-testid="vision-display-compact-progress" className="text-xs text-gray-500">
-                {progress.overallProgress}% complete • {vision.goals.length} goals
+              <div
+                data-testid="vision-display-compact-progress"
+                className="text-xs text-gray-500"
+              >
+                {progress.overallProgress}% complete • {vision.goals.length}{" "}
+                goals
               </div>
             </div>
           </div>
@@ -126,7 +153,7 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
             onClick={() => setShowMetrics(!showMetrics)}
             className="text-xs text-gray-400 hover:text-gray-200 transition-colors"
           >
-            {showMetrics ? 'Hide' : 'Show'} Details
+            {showMetrics ? "Hide" : "Show"} Details
           </button>
         </div>
       </motion.div>
@@ -141,24 +168,40 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
       className="space-y-6"
     >
       {/* Mission Statement */}
-      <div data-testid="vision-display-mission-section" className="p-6 rounded-2xl bg-gradient-to-br from-purple-900/20 via-blue-900/10 to-cyan-900/10 border border-purple-500/20">
+      <div
+        data-testid="vision-display-mission-section"
+        className="p-6 rounded-2xl bg-gradient-to-br from-purple-900/20 via-blue-900/10 to-cyan-900/10 border border-purple-500/20"
+      >
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div data-testid="vision-display-mission-icon" className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+            <div
+              data-testid="vision-display-mission-icon"
+              className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center"
+            >
               <Mountain className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 data-testid="vision-display-mission-title" className="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+              <h2
+                data-testid="vision-display-mission-title"
+                className="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent"
+              >
                 North Star Vision
               </h2>
-              <div data-testid="vision-display-mission-version" className="text-xs text-gray-500">
-                v{vision.version} • Updated {new Date(vision.lastUpdated).toLocaleDateString()}
+              <div
+                data-testid="vision-display-mission-version"
+                className="text-xs text-gray-500"
+              >
+                v{vision.version} • Updated{" "}
+                {new Date(vision.lastUpdated).toLocaleDateString()}
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {isLocked ? (
-              <div data-testid="vision-display-lock-status" className="px-3 py-1 rounded-lg bg-gray-800 text-gray-400 text-xs flex items-center gap-1">
+              <div
+                data-testid="vision-display-lock-status"
+                className="px-3 py-1 rounded-lg bg-gray-800 text-gray-400 text-xs flex items-center gap-1"
+              >
                 <Lock className="w-3 h-3" />
                 Locked
               </div>
@@ -172,7 +215,7 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
                 className="px-3 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs flex items-center gap-1 transition-all"
               >
                 <Edit3 className="w-3 h-3" />
-                {isEditing ? 'Cancel Edit' : 'Edit Vision'}
+                {isEditing ? "Cancel Edit" : "Edit Vision"}
               </button>
             )}
           </div>
@@ -197,7 +240,7 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
                       ...vision,
                       mission: editedMission,
                       lastUpdated: new Date(),
-                      version: (vision.version || 0) + 1
+                      version: (vision.version || 0) + 1,
                     });
                   }
                   setIsEditing(false);
@@ -219,7 +262,10 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
             </div>
           </div>
         ) : (
-          <p data-testid="vision-display-mission-text" className="text-lg text-gray-200 leading-relaxed mb-4">
+          <p
+            data-testid="vision-display-mission-text"
+            className="text-lg text-gray-200 leading-relaxed mb-4"
+          >
             {vision.mission}
           </p>
         )}
@@ -228,43 +274,59 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
           <div className="flex items-center gap-1">
             <Clock className="w-4 h-4 text-gray-500" />
             <span className="text-gray-400">Timeframe:</span>
-            <span className="text-gray-200 font-medium">{vision.timeframe}</span>
+            <span className="text-gray-200 font-medium">
+              {vision.timeframe}
+            </span>
           </div>
           <div className="flex items-center gap-1">
             <TrendingUp className="w-4 h-4 text-gray-500" />
             <span className="text-gray-400">Progress:</span>
-            <span className="text-gray-200 font-medium">{progress.overallProgress}%</span>
+            <span className="text-gray-200 font-medium">
+              {progress.overallProgress}%
+            </span>
           </div>
           <div className="flex items-center gap-1">
             <Zap className="w-4 h-4 text-gray-500" />
             <span className="text-gray-400">Velocity:</span>
-            <span className="text-gray-200 font-medium">{progress.velocity}x</span>
+            <span className="text-gray-200 font-medium">
+              {progress.velocity}x
+            </span>
           </div>
         </div>
       </div>
 
       {/* Goals Grid */}
       <div data-testid="vision-display-goals-section">
-        <h3 data-testid="vision-display-goals-title" className="text-lg font-semibold mb-4 flex items-center gap-2">
+        <h3
+          data-testid="vision-display-goals-title"
+          className="text-lg font-semibold mb-4 flex items-center gap-2"
+        >
           <Target className="w-5 h-5 text-blue-400" />
           Strategic Goals
         </h3>
-        <div data-testid="vision-display-goals-grid" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div
+          data-testid="vision-display-goals-grid"
+          className="grid grid-cols-1 md:grid-cols-2 gap-4"
+        >
           {(Array.isArray(vision.goals) ? vision.goals : []).map((goal) => (
             <motion.div
               key={goal.id}
               data-testid={`vision-display-goal-item-${goal.id}`}
               layout
               className="p-4 rounded-xl bg-gray-900/50 border border-gray-800 hover:border-gray-700 transition-all cursor-pointer"
-              onClick={() => setExpandedGoal(expandedGoal === goal.id ? null : goal.id)}
+              onClick={() =>
+                setExpandedGoal(expandedGoal === goal.id ? null : goal.id)
+              }
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <div className={`
+                  <div
+                    className={`
                     px-2 py-1 rounded-lg text-xs font-medium
                     ${getGoalStatusColor(goal.status)}
-                  `}>
-                    {goal.status.replace('-', ' ')}
+                  `}
+                  >
+                    {goal.status.replace("-", " ")}
                   </div>
                   {goal.dependencies.length > 0 && (
                     <div className="px-2 py-1 rounded-lg bg-gray-800 text-gray-500 text-xs flex items-center gap-1">
@@ -279,7 +341,9 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
               </div>
 
               <h4 className="font-medium text-gray-200 mb-1">{goal.title}</h4>
-              <p className="text-sm text-gray-400 line-clamp-2">{goal.description}</p>
+              <p className="text-sm text-gray-400 line-clamp-2">
+                {goal.description}
+              </p>
 
               {/* Progress Bar */}
               <ProgressBar
@@ -293,16 +357,21 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
                 {expandedGoal === goal.id && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
+                    animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     className="mt-4 pt-4 border-t border-gray-800"
                   >
                     {goal.dependencies.length > 0 && (
                       <div className="mb-3">
-                        <div className="text-xs text-gray-500 mb-2">Dependencies</div>
+                        <div className="text-xs text-gray-500 mb-2">
+                          Dependencies
+                        </div>
                         <div className="flex flex-wrap gap-2">
-                          {goal.dependencies.map(dep => (
-                            <div key={dep} className="px-2 py-1 rounded bg-gray-800 text-xs text-gray-400">
+                          {goal.dependencies.map((dep) => (
+                            <div
+                              key={dep}
+                              className="px-2 py-1 rounded bg-gray-800 text-xs text-gray-400"
+                            >
                               {dep}
                             </div>
                           ))}
@@ -319,12 +388,21 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
 
       {/* Success Metrics */}
       <div data-testid="vision-display-metrics-section">
-        <h3 data-testid="vision-display-metrics-title" className="text-lg font-semibold mb-4 flex items-center gap-2">
+        <h3
+          data-testid="vision-display-metrics-title"
+          className="text-lg font-semibold mb-4 flex items-center gap-2"
+        >
           <Trophy className="w-5 h-5 text-yellow-400" />
           Success Metrics
         </h3>
-        <div data-testid="vision-display-metrics-grid" className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {(Array.isArray(vision.successMetrics) ? vision.successMetrics : []).map((metric) => (
+        <div
+          data-testid="vision-display-metrics-grid"
+          className="grid grid-cols-1 md:grid-cols-3 gap-4"
+        >
+          {(Array.isArray(vision.successMetrics)
+            ? vision.successMetrics
+            : []
+          ).map((metric) => (
             <div
               key={metric.id}
               data-testid={`vision-display-metric-item-${metric.id}`}
@@ -332,15 +410,19 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-gray-400">{metric.name}</span>
-                <span className={`text-lg font-bold ${getTrendColor(metric.trend)}`}>
+                <span
+                  className={`text-lg font-bold ${getTrendColor(metric.trend)}`}
+                >
                   {getTrendIcon(metric.trend)}
                 </span>
               </div>
               <div className="text-2xl font-bold text-gray-200 mb-1">
-                {metric.current}{metric.unit}
+                {metric.current}
+                {metric.unit}
               </div>
               <div className="text-xs text-gray-500">
-                Target: {metric.target}{metric.unit}
+                Target: {metric.target}
+                {metric.unit}
               </div>
               <ProgressBar
                 value={metric.current}
@@ -379,10 +461,13 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-blue-400" />
-            <span className="text-sm font-medium text-gray-300">Timeline Progress</span>
+            <span className="text-sm font-medium text-gray-300">
+              Timeline Progress
+            </span>
           </div>
           <div className="text-sm text-gray-400">
-            Day {progress.daysElapsed} of estimated {progress.daysElapsed + progress.estimatedDaysRemaining}
+            Day {progress.daysElapsed} of estimated{" "}
+            {progress.daysElapsed + progress.estimatedDaysRemaining}
           </div>
         </div>
         <ProgressBar
@@ -410,7 +495,8 @@ export const VisionDisplay: React.FC<VisionDisplayProps> = ({
             </div>
             <div>
               <div className="font-medium text-red-400">
-                {progress.blockers} Blocker{progress.blockers !== 1 ? 's' : ''} Detected
+                {progress.blockers} Blocker{progress.blockers !== 1 ? "s" : ""}{" "}
+                Detected
               </div>
               <div className="text-xs text-gray-400">
                 Your Chief of Staff is working to resolve these issues

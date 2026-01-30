@@ -1,5 +1,5 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React from "react";
+import { motion } from "framer-motion";
 
 interface ProgressBarProps {
   value: number;
@@ -15,19 +15,25 @@ interface ProgressBarProps {
 export const ProgressBar: React.FC<ProgressBarProps> = ({
   value,
   max = 100,
-  className = '',
-  bgColor = 'bg-gray-800',
-  fillColor = 'bg-gradient-to-r from-blue-500 to-purple-500',
+  className = "",
+  bgColor = "bg-gray-800",
+  fillColor = "bg-gradient-to-r from-blue-500 to-purple-500",
   animated = true,
   showPercentage = false,
-  testIdPrefix = 'progress-bar'
+  testIdPrefix = "progress-bar",
 }) => {
   const percentage = Math.min((value / max) * 100, 100);
 
   if (animated) {
     return (
-      <div className={`relative ${className}`} data-testid={`${testIdPrefix}-container`}>
-        <div className={`h-full ${bgColor} rounded-full overflow-hidden`} data-testid={`${testIdPrefix}-track`}>
+      <div
+        className={`relative ${className}`}
+        data-testid={`${testIdPrefix}-container`}
+      >
+        <div
+          className={`h-full ${bgColor} rounded-full overflow-hidden`}
+          data-testid={`${testIdPrefix}-track`}
+        >
           <motion.div
             className={`h-full ${fillColor}`}
             initial={{ width: 0 }}
@@ -37,7 +43,10 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
           />
         </div>
         {showPercentage && (
-          <span className="absolute inset-0 flex items-center justify-center text-xs font-medium" data-testid={`${testIdPrefix}-value`}>
+          <span
+            className="absolute inset-0 flex items-center justify-center text-xs font-medium"
+            data-testid={`${testIdPrefix}-value`}
+          >
             {percentage.toFixed(0)}%
           </span>
         )}
@@ -46,16 +55,27 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   }
 
   return (
-    <div className={`relative ${className}`} data-testid={`${testIdPrefix}-container`}>
-      <div className={`h-full ${bgColor} rounded-full overflow-hidden`} data-testid={`${testIdPrefix}-track`}>
+    <div
+      className={`relative ${className}`}
+      data-testid={`${testIdPrefix}-container`}
+    >
+      <div
+        className={`h-full ${bgColor} rounded-full overflow-hidden`}
+        data-testid={`${testIdPrefix}-track`}
+      >
         <div
           className={`h-full ${fillColor} transition-all duration-300`}
-          style={{ '--progress-width': `${percentage}%` } as React.CSSProperties}
+          style={
+            { "--progress-width": `${percentage}%` } as React.CSSProperties
+          }
           data-testid={`${testIdPrefix}-fill`}
         />
       </div>
       {showPercentage && (
-        <span className="absolute inset-0 flex items-center justify-center text-xs font-medium" data-testid={`${testIdPrefix}-value`}>
+        <span
+          className="absolute inset-0 flex items-center justify-center text-xs font-medium"
+          data-testid={`${testIdPrefix}-value`}
+        >
           {percentage.toFixed(0)}%
         </span>
       )}

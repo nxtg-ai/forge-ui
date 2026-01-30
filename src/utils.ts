@@ -23,7 +23,7 @@ export class Logger {
 }
 
 export function formatDate(date: string | Date): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = typeof date === "string" ? new Date(date) : date;
   return d.toLocaleString();
 }
 
@@ -33,7 +33,7 @@ export function generateId(): string {
 
 export async function fileExists(path: string): Promise<boolean> {
   try {
-    await require('fs').promises.access(path);
+    await require("fs").promises.access(path);
     return true;
   } catch {
     return false;

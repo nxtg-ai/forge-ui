@@ -1,20 +1,27 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Shield, Target, Activity } from 'lucide-react';
-import type { Constitution } from '../../types/governance.types';
+import React from "react";
+import { motion } from "framer-motion";
+import { Shield, Target, Activity } from "lucide-react";
+import type { Constitution } from "../../types/governance.types";
 
 interface ConstitutionCardProps {
   constitution: Constitution;
 }
 
-export const ConstitutionCard: React.FC<ConstitutionCardProps> = ({ constitution }) => {
+export const ConstitutionCard: React.FC<ConstitutionCardProps> = ({
+  constitution,
+}) => {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'PLANNING': return 'bg-violet-500/20 text-violet-400 border-violet-500/30';
-      case 'EXECUTION': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-      case 'REVIEW': return 'bg-green-500/20 text-green-400 border-green-500/30';
-      case 'BLOCKED': return 'bg-red-500/20 text-red-400 border-red-500/30';
-      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+      case "PLANNING":
+        return "bg-violet-500/20 text-violet-400 border-violet-500/30";
+      case "EXECUTION":
+        return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+      case "REVIEW":
+        return "bg-green-500/20 text-green-400 border-green-500/30";
+      case "BLOCKED":
+        return "bg-red-500/20 text-red-400 border-red-500/30";
+      default:
+        return "bg-gray-500/20 text-gray-400 border-gray-500/30";
     }
   };
 
@@ -31,7 +38,9 @@ export const ConstitutionCard: React.FC<ConstitutionCardProps> = ({ constitution
           <Shield className="w-5 h-5 text-purple-400" />
           <h3 className="font-semibold text-sm">Constitution</h3>
         </div>
-        <div className={`px-2 py-0.5 rounded text-xs border ${getStatusColor(constitution.status)}`}>
+        <div
+          className={`px-2 py-0.5 rounded text-xs border ${getStatusColor(constitution.status)}`}
+        >
           {constitution.status}
         </div>
       </div>
@@ -39,7 +48,9 @@ export const ConstitutionCard: React.FC<ConstitutionCardProps> = ({ constitution
       {/* Directive */}
       <div className="mb-4 p-3 bg-gray-950/50 rounded-md border-l-2 border-purple-500">
         <p className="text-xs text-gray-400 mb-1">Current Directive</p>
-        <p className="text-sm font-medium text-gray-200">{constitution.directive}</p>
+        <p className="text-sm font-medium text-gray-200">
+          {constitution.directive}
+        </p>
       </div>
 
       {/* Vision Points */}

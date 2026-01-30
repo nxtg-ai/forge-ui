@@ -6,14 +6,14 @@ export interface ForgeState {
   version: string;
   initialized: string;
   features: Feature[];
-  status: 'ready' | 'busy' | 'error';
+  status: "ready" | "busy" | "error";
 }
 
 export interface Feature {
   id: string;
   name: string;
   description: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'blocked';
+  status: "pending" | "in_progress" | "completed" | "blocked";
   createdAt: string;
   updatedAt?: string;
   tasks: Task[];
@@ -23,7 +23,7 @@ export interface Task {
   id: string;
   name: string;
   description: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  status: "pending" | "in_progress" | "completed" | "failed";
   createdAt: string;
   updatedAt?: string;
   assignedTo?: string;
@@ -34,7 +34,7 @@ export interface Agent {
   name: string;
   role: string;
   capabilities: string[];
-  status: 'idle' | 'working' | 'blocked';
+  status: "idle" | "working" | "blocked";
 }
 
 export interface Command {

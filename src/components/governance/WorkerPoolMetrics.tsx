@@ -3,8 +3,8 @@
  * Displays pool utilization, queue depth, and worker health
  */
 
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Cpu,
   Activity,
@@ -18,7 +18,7 @@ import {
   Pause,
   Plus,
   Minus,
-} from 'lucide-react';
+} from "lucide-react";
 
 interface PoolMetrics {
   totalWorkers: number;
@@ -42,12 +42,12 @@ interface WorkerPoolMetricsProps {
 }
 
 export const WorkerPoolMetrics: React.FC<WorkerPoolMetricsProps> = ({
-  className = '',
+  className = "",
   onScaleUp,
   onScaleDown,
 }) => {
   const [metrics, setMetrics] = useState<PoolMetrics | null>(null);
-  const [poolStatus, setPoolStatus] = useState<string>('stopped');
+  const [poolStatus, setPoolStatus] = useState<string>("stopped");
   const [isExpanded, setIsExpanded] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,19 +56,19 @@ export const WorkerPoolMetrics: React.FC<WorkerPoolMetricsProps> = ({
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        const res = await fetch('/api/workers');
-        if (!res.ok) throw new Error('Failed to fetch worker status');
+        const res = await fetch("/api/workers");
+        if (!res.ok) throw new Error("Failed to fetch worker status");
 
         const data = await res.json();
         if (data.success && data.data) {
-          setPoolStatus(data.data.status || 'stopped');
+          setPoolStatus(data.data.status || "stopped");
           if (data.data.metrics) {
             setMetrics(data.data.metrics);
           }
           setError(null);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
         setIsLoading(false);
       }
@@ -83,14 +83,14 @@ export const WorkerPoolMetrics: React.FC<WorkerPoolMetricsProps> = ({
   const handleInitPool = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch('/api/workers/init', { method: 'POST' });
+      const res = await fetch("/api/workers/init", { method: "POST" });
       const data = await res.json();
       if (data.success) {
         setPoolStatus(data.data.status);
         setMetrics(data.data.metrics);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to initialize');
+      setError(err instanceof Error ? err.message : "Failed to initialize");
     } finally {
       setIsLoading(false);
     }
@@ -99,47 +99,55 @@ export const WorkerPoolMetrics: React.FC<WorkerPoolMetricsProps> = ({
   // Scale handlers
   const handleScaleUp = async () => {
     try {
-      await fetch('/api/workers/scale/up', { method: 'POST' });
+      await fetch("/api/workers/scale/up", { method: "POST" });
       onScaleUp?.();
     } catch (err) {
-      console.error('Scale up failed:', err);
+      console.error("Scale up failed:", err);
     }
   };
 
   const handleScaleDown = async () => {
     try {
-      await fetch('/api/workers/scale/down', { method: 'POST' });
+      await fetch("/api/workers/scale/down", { method: "POST" });
       onScaleDown?.();
     } catch (err) {
-      console.error('Scale down failed:', err);
+      console.error("Scale down failed:", err);
     }
   };
 
   const getStatusColor = () => {
     switch (poolStatus) {
-      case 'running': return 'text-green-400';
-      case 'scaling': return 'text-yellow-400';
-      case 'degraded': return 'text-orange-400';
-      case 'stopped': return 'text-gray-400';
-      default: return 'text-gray-400';
+      case "running":
+        return "text-green-400";
+      case "scaling":
+        return "text-yellow-400";
+      case "degraded":
+        return "text-orange-400";
+      case "stopped":
+        return "text-gray-400";
+      default:
+        return "text-gray-400";
     }
   };
 
   const getHealthStatus = () => {
-    if (!metrics) return { status: 'unknown', color: 'text-gray-400' };
-    const errorRate = metrics.totalWorkers > 0
-      ? metrics.errorWorkers / metrics.totalWorkers
-      : 0;
+    if (!metrics) return { status: "unknown", color: "text-gray-400" };
+    const errorRate =
+      metrics.totalWorkers > 0
+        ? metrics.errorWorkers / metrics.totalWorkers
+        : 0;
 
-    if (errorRate > 0.5) return { status: 'unhealthy', color: 'text-red-400' };
-    if (errorRate > 0) return { status: 'degraded', color: 'text-yellow-400' };
-    return { status: 'healthy', color: 'text-green-400' };
+    if (errorRate > 0.5) return { status: "unhealthy", color: "text-red-400" };
+    if (errorRate > 0) return { status: "degraded", color: "text-yellow-400" };
+    return { status: "healthy", color: "text-green-400" };
   };
 
   const health = getHealthStatus();
 
   return (
-    <div className={`bg-gray-900/50 rounded-lg border border-gray-800 ${className}`}>
+    <div
+      className={`bg-gray-900/50 rounded-lg border border-gray-800 ${className}`}
+    >
       {/* Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
@@ -148,12 +156,10 @@ export const WorkerPoolMetrics: React.FC<WorkerPoolMetricsProps> = ({
         <div className="flex items-center gap-2">
           <Cpu className="w-4 h-4 text-purple-400" />
           <span className="text-sm font-medium">Worker Pool</span>
-          <span className={`text-xs ${getStatusColor()}`}>
-            {poolStatus}
-          </span>
+          <span className={`text-xs ${getStatusColor()}`}>{poolStatus}</span>
         </div>
         <ChevronDown
-          className={`w-4 h-4 text-gray-500 transition-transform ${isExpanded ? '' : '-rotate-90'}`}
+          className={`w-4 h-4 text-gray-500 transition-transform ${isExpanded ? "" : "-rotate-90"}`}
         />
       </button>
 
@@ -161,14 +167,16 @@ export const WorkerPoolMetrics: React.FC<WorkerPoolMetricsProps> = ({
         {isExpanded && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
+            animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="border-t border-gray-800"
           >
-            {poolStatus === 'stopped' ? (
+            {poolStatus === "stopped" ? (
               <div className="p-4 text-center">
-                <p className="text-sm text-gray-400 mb-3">Worker pool not running</p>
+                <p className="text-sm text-gray-400 mb-3">
+                  Worker pool not running
+                </p>
                 <button
                   onClick={handleInitPool}
                   disabled={isLoading}
@@ -197,8 +205,11 @@ export const WorkerPoolMetrics: React.FC<WorkerPoolMetricsProps> = ({
                       initial={{ width: 0 }}
                       animate={{ width: `${metrics.utilization * 100}%` }}
                       className={`h-full rounded-full ${
-                        metrics.utilization > 0.8 ? 'bg-red-500' :
-                        metrics.utilization > 0.5 ? 'bg-yellow-500' : 'bg-green-500'
+                        metrics.utilization > 0.8
+                          ? "bg-red-500"
+                          : metrics.utilization > 0.5
+                            ? "bg-yellow-500"
+                            : "bg-green-500"
                       }`}
                     />
                   </div>
@@ -292,7 +303,9 @@ export const WorkerPoolMetrics: React.FC<WorkerPoolMetricsProps> = ({
               </div>
             ) : (
               <div className="p-4 text-center text-gray-500 text-sm">
-                {isLoading ? 'Loading metrics...' : error || 'No data available'}
+                {isLoading
+                  ? "Loading metrics..."
+                  : error || "No data available"}
               </div>
             )}
           </motion.div>
@@ -310,7 +323,9 @@ const StatBox: React.FC<{
   color: string;
 }> = ({ icon, label, value, color }) => (
   <div className="bg-gray-800/50 rounded p-2 text-center">
-    <div className={`flex items-center justify-center gap-1 text-xs ${color} mb-1`}>
+    <div
+      className={`flex items-center justify-center gap-1 text-xs ${color} mb-1`}
+    >
       {icon}
     </div>
     <p className="text-sm font-semibold text-white">{value}</p>

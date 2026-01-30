@@ -1,12 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  Brain, Users, Target, Activity, AlertCircle, CheckCircle,
-  Clock, TrendingUp, Zap, MessageSquare, GitBranch, Shield,
-  Sparkles, Command, ChevronRight, BarChart3, Eye, EyeOff,
-  Cpu, Database, Network, Terminal, Code2, Layers
-} from 'lucide-react';
-import { ProgressBar } from './ui/ProgressBar';
+  Brain,
+  Users,
+  Target,
+  Activity,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  TrendingUp,
+  Zap,
+  MessageSquare,
+  GitBranch,
+  Shield,
+  Sparkles,
+  Command,
+  ChevronRight,
+  BarChart3,
+  Eye,
+  EyeOff,
+  Cpu,
+  Database,
+  Network,
+  Terminal,
+  Code2,
+  Layers,
+} from "lucide-react";
+import { ProgressBar } from "./ui/ProgressBar";
 
 interface DashboardProps {
   visionData: VisionData;
@@ -25,7 +45,7 @@ interface VisionData {
 }
 
 interface ProjectState {
-  phase: 'planning' | 'architecting' | 'building' | 'testing' | 'deploying';
+  phase: "planning" | "architecting" | "building" | "testing" | "deploying";
   progress: number;
   blockers: Blocker[];
   recentDecisions: Decision[];
@@ -35,7 +55,7 @@ interface ProjectState {
 
 interface Blocker {
   id: string;
-  severity: 'critical' | 'high' | 'medium' | 'low';
+  severity: "critical" | "high" | "medium" | "low";
   title: string;
   agent: string;
   needsHuman: boolean;
@@ -43,18 +63,18 @@ interface Blocker {
 
 interface Decision {
   id: string;
-  type: 'architecture' | 'implementation' | 'deployment';
+  type: "architecture" | "implementation" | "deployment";
   title: string;
   madeBy: string;
   timestamp: Date;
-  impact: 'high' | 'medium' | 'low';
+  impact: "high" | "medium" | "low";
 }
 
 interface Agent {
   id: string;
   name: string;
   role: string;
-  status: 'idle' | 'thinking' | 'working' | 'blocked' | 'discussing';
+  status: "idle" | "thinking" | "working" | "blocked" | "discussing";
   currentTask: string;
   confidence: number;
 }
@@ -63,124 +83,155 @@ interface AgentActivity {
   agentId: string;
   action: string;
   timestamp: Date;
-  visibility: 'ceo' | 'vp' | 'engineer' | 'builder' | 'founder';
+  visibility: "ceo" | "vp" | "engineer" | "builder" | "founder";
 }
 
-type EngagementMode = 'ceo' | 'vp' | 'engineer' | 'builder' | 'founder';
+type EngagementMode = "ceo" | "vp" | "engineer" | "builder" | "founder";
 
 export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
   visionData,
   projectState,
   agentActivity,
   onModeChange,
-  currentMode
+  currentMode,
 }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [autoMode, setAutoMode] = useState(true);
 
   // Filter activities based on current engagement mode
-  const visibleActivities = agentActivity.filter(activity => {
+  const visibleActivities = agentActivity.filter((activity) => {
     const visibilityLevels: Record<EngagementMode, EngagementMode[]> = {
-      'ceo': ['ceo'],
-      'vp': ['ceo', 'vp'],
-      'engineer': ['ceo', 'vp', 'engineer'],
-      'builder': ['ceo', 'vp', 'engineer', 'builder'],
-      'founder': ['ceo', 'vp', 'engineer', 'builder', 'founder']
+      ceo: ["ceo"],
+      vp: ["ceo", "vp"],
+      engineer: ["ceo", "vp", "engineer"],
+      builder: ["ceo", "vp", "engineer", "builder"],
+      founder: ["ceo", "vp", "engineer", "builder", "founder"],
     };
     return visibilityLevels[currentMode].includes(activity.visibility);
   });
 
-  const modeConfig: Record<EngagementMode, { label: string; icon: JSX.Element; color: string; description: string }> = {
-    'ceo': {
-      label: 'CEO',
+  const modeConfig: Record<
+    EngagementMode,
+    { label: string; icon: JSX.Element; color: string; description: string }
+  > = {
+    ceo: {
+      label: "CEO",
       icon: <Target className="w-4 h-4" />,
-      color: 'purple',
-      description: 'High-level progress only'
+      color: "purple",
+      description: "High-level progress only",
     },
-    'vp': {
-      label: 'VP',
+    vp: {
+      label: "VP",
       icon: <BarChart3 className="w-4 h-4" />,
-      color: 'blue',
-      description: 'Strategic oversight'
+      color: "blue",
+      description: "Strategic oversight",
     },
-    'engineer': {
-      label: 'Engineer',
+    engineer: {
+      label: "Engineer",
       icon: <Code2 className="w-4 h-4" />,
-      color: 'green',
-      description: 'Technical details'
+      color: "green",
+      description: "Technical details",
     },
-    'builder': {
-      label: 'Builder',
+    builder: {
+      label: "Builder",
       icon: <Terminal className="w-4 h-4" />,
-      color: 'orange',
-      description: 'Implementation focus'
+      color: "orange",
+      description: "Implementation focus",
     },
-    'founder': {
-      label: 'Founder',
+    founder: {
+      label: "Founder",
       icon: <Brain className="w-4 h-4" />,
-      color: 'red',
-      description: 'Complete visibility'
-    }
+      color: "red",
+      description: "Complete visibility",
+    },
   };
 
   const phaseProgress = {
-    'planning': 20,
-    'architecting': 40,
-    'building': 60,
-    'testing': 80,
-    'deploying': 100
+    planning: 20,
+    architecting: 40,
+    building: 60,
+    testing: 80,
+    deploying: 100,
   };
 
   const getHealthColor = (score: number) => {
-    if (score >= 80) return 'text-green-400 bg-green-500/10 border-green-500/20';
-    if (score >= 60) return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20';
-    return 'text-red-400 bg-red-500/10 border-red-500/20';
+    if (score >= 80)
+      return "text-green-400 bg-green-500/10 border-green-500/20";
+    if (score >= 60)
+      return "text-yellow-400 bg-yellow-500/10 border-yellow-500/20";
+    return "text-red-400 bg-red-500/10 border-red-500/20";
   };
 
-  const getAgentStatusColor = (status: Agent['status']) => {
+  const getAgentStatusColor = (status: Agent["status"]) => {
     const colors = {
-      'idle': 'bg-gray-500',
-      'thinking': 'bg-yellow-500',
-      'working': 'bg-green-500',
-      'blocked': 'bg-red-500',
-      'discussing': 'bg-blue-500'
+      idle: "bg-gray-500",
+      thinking: "bg-yellow-500",
+      working: "bg-green-500",
+      blocked: "bg-red-500",
+      discussing: "bg-blue-500",
     };
     return colors[status];
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100" data-testid="dashboard-container">
+    <div
+      className="min-h-screen bg-gray-950 text-gray-100"
+      data-testid="dashboard-container"
+    >
       {/* Header Bar */}
-      <div className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-50" data-testid="dashboard-header">
+      <div
+        className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-50"
+        data-testid="dashboard-header"
+      >
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2" data-testid="dashboard-logo">
+              <div
+                className="flex items-center gap-2"
+                data-testid="dashboard-logo"
+              >
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
                   <Sparkles className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold" data-testid="dashboard-title">NXTG Chief of Staff</h1>
-                  <p className="text-xs text-gray-400" data-testid="dashboard-subtitle">Orchestrating your vision</p>
+                  <h1
+                    className="text-xl font-bold"
+                    data-testid="dashboard-title"
+                  >
+                    NXTG Chief of Staff
+                  </h1>
+                  <p
+                    className="text-xs text-gray-400"
+                    data-testid="dashboard-subtitle"
+                  >
+                    Orchestrating your vision
+                  </p>
                 </div>
               </div>
             </div>
 
             {/* Mode Selector */}
-            <div className="flex items-center gap-4" data-testid="dashboard-mode-selector">
+            <div
+              className="flex items-center gap-4"
+              data-testid="dashboard-mode-selector"
+            >
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-900 border border-gray-800">
                 <span className="text-xs text-gray-400">Engagement Mode:</span>
-                <div className="flex gap-1" data-testid="dashboard-engagement-modes">
+                <div
+                  className="flex gap-1"
+                  data-testid="dashboard-engagement-modes"
+                >
                   {Object.entries(modeConfig).map(([mode, config]) => (
                     <button
                       key={mode}
                       onClick={() => onModeChange(mode as EngagementMode)}
                       className={`
                         px-3 py-1 rounded-md text-xs font-medium transition-all
-                        ${currentMode === mode
-                          ? `bg-${config.color}-500/20 text-${config.color}-400 border border-${config.color}-500/30`
-                          : 'text-gray-500 hover:text-gray-300'
+                        ${
+                          currentMode === mode
+                            ? `bg-${config.color}-500/20 text-${config.color}-400 border border-${config.color}-500/30`
+                            : "text-gray-500 hover:text-gray-300"
                         }
                       `}
                       title={config.description}
@@ -199,16 +250,17 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
                 onClick={() => setAutoMode(!autoMode)}
                 className={`
                   px-3 py-1.5 rounded-lg text-xs font-medium transition-all
-                  ${autoMode
-                    ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                    : 'bg-gray-900 text-gray-500 border border-gray-800'
+                  ${
+                    autoMode
+                      ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                      : "bg-gray-900 text-gray-500 border border-gray-800"
                   }
                 `}
                 data-testid="dashboard-yolo-toggle-btn"
               >
                 <div className="flex items-center gap-1">
                   <Zap className="w-3 h-3" />
-                  YOLO Mode {autoMode ? 'ON' : 'OFF'}
+                  YOLO Mode {autoMode ? "ON" : "OFF"}
                 </div>
               </button>
             </div>
@@ -229,22 +281,38 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
               <Target className="w-6 h-6 text-purple-400" />
             </div>
             <div className="flex-1">
-              <h2 className="text-lg font-semibold mb-2 text-purple-100" data-testid="dashboard-mission-title">Mission</h2>
-              <p className="text-gray-300 mb-4" data-testid="dashboard-mission-text">{visionData.mission}</p>
+              <h2
+                className="text-lg font-semibold mb-2 text-purple-100"
+                data-testid="dashboard-mission-title"
+              >
+                Mission
+              </h2>
+              <p
+                className="text-gray-300 mb-4"
+                data-testid="dashboard-mission-text"
+              >
+                {visionData.mission}
+              </p>
 
-              {(currentMode === 'founder' || currentMode === 'ceo') && (
+              {(currentMode === "founder" || currentMode === "ceo") && (
                 <div className="flex gap-6 text-sm">
                   <div>
                     <span className="text-gray-500">Timeframe:</span>
-                    <span className="ml-2 text-gray-300">{visionData.timeframe}</span>
+                    <span className="ml-2 text-gray-300">
+                      {visionData.timeframe}
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-500">Goals:</span>
-                    <span className="ml-2 text-gray-300">{visionData.goals.length} defined</span>
+                    <span className="ml-2 text-gray-300">
+                      {visionData.goals.length} defined
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-500">Metrics:</span>
-                    <span className="ml-2 text-gray-300">{visionData.successMetrics.length} tracked</span>
+                    <span className="ml-2 text-gray-300">
+                      {visionData.successMetrics.length} tracked
+                    </span>
                   </div>
                 </div>
               )}
@@ -263,11 +331,17 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
             data-testid="dashboard-progress-card"
           >
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold flex items-center gap-2" data-testid="dashboard-progress-title">
+              <h3
+                className="text-lg font-semibold flex items-center gap-2"
+                data-testid="dashboard-progress-title"
+              >
                 <Activity className="w-5 h-5 text-blue-400" />
                 Project Progress
               </h3>
-              <div className="text-2xl font-bold text-blue-400" data-testid="dashboard-progress-value">
+              <div
+                className="text-2xl font-bold text-blue-400"
+                data-testid="dashboard-progress-value"
+              >
                 {projectState.progress}%
               </div>
             </div>
@@ -280,7 +354,7 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
                     key={phase}
                     className={`
                       text-xs font-medium capitalize
-                      ${projectState.phase === phase ? 'text-blue-400' : 'text-gray-500'}
+                      ${projectState.phase === phase ? "text-blue-400" : "text-gray-500"}
                     `}
                   >
                     {phase}
@@ -292,15 +366,20 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
                   className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
                   initial={{ width: 0 }}
                   animate={{ width: `${phaseProgress[projectState.phase]}%` }}
-                  transition={{ duration: 1, ease: 'easeOut' }}
+                  transition={{ duration: 1, ease: "easeOut" }}
                 />
               </div>
             </div>
 
             {/* Active Agents */}
-            {(currentMode !== 'ceo') && (
+            {currentMode !== "ceo" && (
               <div className="space-y-3" data-testid="dashboard-active-agents">
-                <h4 className="text-sm font-medium text-gray-400" data-testid="dashboard-agents-title">Active Agents</h4>
+                <h4
+                  className="text-sm font-medium text-gray-400"
+                  data-testid="dashboard-agents-title"
+                >
+                  Active Agents
+                </h4>
                 {(projectState.activeAgents || []).map((agent) => (
                   <div
                     key={agent.id}
@@ -309,10 +388,14 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
                     data-testid={`dashboard-agent-card-${agent.id}`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-full ${getAgentStatusColor(agent.status)} animate-pulse`} />
+                      <div
+                        className={`w-2 h-2 rounded-full ${getAgentStatusColor(agent.status)} animate-pulse`}
+                      />
                       <div>
                         <div className="font-medium text-sm">{agent.name}</div>
-                        <div className="text-xs text-gray-500">{agent.currentTask}</div>
+                        <div className="text-xs text-gray-500">
+                          {agent.currentTask}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -335,46 +418,78 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
             className="space-y-6"
           >
             {/* Health Score */}
-            <div className={`p-6 rounded-2xl border ${getHealthColor(projectState.healthScore)}`} data-testid="dashboard-health-card">
+            <div
+              className={`p-6 rounded-2xl border ${getHealthColor(projectState.healthScore)}`}
+              data-testid="dashboard-health-card"
+            >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold" data-testid="dashboard-health-title">System Health</h3>
+                <h3
+                  className="text-lg font-semibold"
+                  data-testid="dashboard-health-title"
+                >
+                  System Health
+                </h3>
                 <Shield className="w-5 h-5" />
               </div>
-              <div className="text-4xl font-bold mb-2" data-testid="dashboard-health-score">
+              <div
+                className="text-4xl font-bold mb-2"
+                data-testid="dashboard-health-score"
+              >
                 {projectState.healthScore}%
               </div>
               <div className="text-sm opacity-75">
-                {projectState.healthScore >= 80 ? 'All systems optimal' :
-                 projectState.healthScore >= 60 ? 'Minor issues detected' :
-                 'Attention required'}
+                {projectState.healthScore >= 80
+                  ? "All systems optimal"
+                  : projectState.healthScore >= 60
+                    ? "Minor issues detected"
+                    : "Attention required"}
               </div>
             </div>
 
             {/* Blockers */}
             {(projectState.blockers || []).length > 0 && (
-              <div className="p-6 rounded-2xl bg-red-900/10 border border-red-500/20" data-testid="dashboard-blockers-card">
+              <div
+                className="p-6 rounded-2xl bg-red-900/10 border border-red-500/20"
+                data-testid="dashboard-blockers-card"
+              >
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-red-400" data-testid="dashboard-blockers-title">Blockers</h3>
+                  <h3
+                    className="text-lg font-semibold text-red-400"
+                    data-testid="dashboard-blockers-title"
+                  >
+                    Blockers
+                  </h3>
                   <AlertCircle className="w-5 h-5 text-red-400" />
                 </div>
-                <div className="space-y-2" data-testid="dashboard-blockers-list">
-                  {(projectState.blockers || []).slice(0, currentMode === 'ceo' ? 1 : 3).map((blocker) => (
-                    <div key={blocker.id} className="p-3 rounded-lg bg-gray-900/50 border border-gray-800" data-testid={`dashboard-blocker-${blocker.id}`}>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="text-sm font-medium">{blocker.title}</div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {blocker.agent} • {blocker.severity}
+                <div
+                  className="space-y-2"
+                  data-testid="dashboard-blockers-list"
+                >
+                  {(projectState.blockers || [])
+                    .slice(0, currentMode === "ceo" ? 1 : 3)
+                    .map((blocker) => (
+                      <div
+                        key={blocker.id}
+                        className="p-3 rounded-lg bg-gray-900/50 border border-gray-800"
+                        data-testid={`dashboard-blocker-${blocker.id}`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="text-sm font-medium">
+                              {blocker.title}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {blocker.agent} • {blocker.severity}
+                            </div>
                           </div>
+                          {blocker.needsHuman && (
+                            <div className="px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-400 text-xs">
+                              Needs input
+                            </div>
+                          )}
                         </div>
-                        {blocker.needsHuman && (
-                          <div className="px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-400 text-xs">
-                            Needs input
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               </div>
             )}
@@ -382,7 +497,7 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Activity Stream (varies by mode) */}
-        {currentMode !== 'ceo' && (
+        {currentMode !== "ceo" && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -391,7 +506,10 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
             data-testid="dashboard-activity-stream"
           >
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold flex items-center gap-2" data-testid="dashboard-activity-title">
+              <h3
+                className="text-lg font-semibold flex items-center gap-2"
+                data-testid="dashboard-activity-title"
+              >
                 <MessageSquare className="w-5 h-5 text-green-400" />
                 Agent Activity
               </h3>
@@ -400,87 +518,113 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
                 className="text-sm text-gray-400 hover:text-gray-300 flex items-center gap-1"
                 data-testid="dashboard-toggle-details-btn"
               >
-                {showDetails ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                {showDetails ? 'Hide' : 'Show'} Details
+                {showDetails ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
+                {showDetails ? "Hide" : "Show"} Details
               </button>
             </div>
 
             <div className="space-y-2 max-h-96 overflow-y-auto">
               <AnimatePresence>
-                {visibleActivities.slice(0, showDetails ? undefined : 5).map((activity, idx) => (
-                  <motion.div
-                    key={`${activity.agentId}-${idx}`}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    transition={{ delay: idx * 0.05 }}
-                    className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-900 transition-all"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0">
-                      <Users className="w-4 h-4 text-gray-400" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm">
-                        <span className="font-medium text-blue-400">{activity.agentId}</span>
-                        <span className="text-gray-400 mx-2">•</span>
-                        <span className="text-gray-300">{activity.action}</span>
+                {visibleActivities
+                  .slice(0, showDetails ? undefined : 5)
+                  .map((activity, idx) => (
+                    <motion.div
+                      key={`${activity.agentId}-${idx}`}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ delay: idx * 0.05 }}
+                      className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-900 transition-all"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center flex-shrink-0">
+                        <Users className="w-4 h-4 text-gray-400" />
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {new Date(activity.timestamp).toLocaleTimeString()}
+                      <div className="flex-1">
+                        <div className="text-sm">
+                          <span className="font-medium text-blue-400">
+                            {activity.agentId}
+                          </span>
+                          <span className="text-gray-400 mx-2">•</span>
+                          <span className="text-gray-300">
+                            {activity.action}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {new Date(activity.timestamp).toLocaleTimeString()}
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  ))}
               </AnimatePresence>
             </div>
           </motion.div>
         )}
 
         {/* Recent Decisions (for VP and above) */}
-        {(currentMode === 'vp' || currentMode === 'founder') && (projectState.recentDecisions || []).length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="mt-6 p-6 rounded-2xl bg-gray-900/50 border border-gray-800"
-          >
-            <h3 className="text-lg font-semibold flex items-center gap-2 mb-6">
-              <Layers className="w-5 h-5 text-purple-400" />
-              Recent Strategic Decisions
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {(projectState.recentDecisions || []).slice(0, 4).map((decision) => (
-                <div
-                  key={decision.id}
-                  className="p-4 rounded-xl bg-gray-900 border border-gray-800"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className={`
+        {(currentMode === "vp" || currentMode === "founder") &&
+          (projectState.recentDecisions || []).length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="mt-6 p-6 rounded-2xl bg-gray-900/50 border border-gray-800"
+            >
+              <h3 className="text-lg font-semibold flex items-center gap-2 mb-6">
+                <Layers className="w-5 h-5 text-purple-400" />
+                Recent Strategic Decisions
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(projectState.recentDecisions || [])
+                  .slice(0, 4)
+                  .map((decision) => (
+                    <div
+                      key={decision.id}
+                      className="p-4 rounded-xl bg-gray-900 border border-gray-800"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div
+                          className={`
                       px-2 py-1 rounded-full text-xs font-medium
-                      ${decision.type === 'architecture' ? 'bg-purple-500/20 text-purple-400' :
-                        decision.type === 'implementation' ? 'bg-green-500/20 text-green-400' :
-                        'bg-blue-500/20 text-blue-400'}
-                    `}>
-                      {decision.type}
-                    </div>
-                    <div className={`
+                      ${
+                        decision.type === "architecture"
+                          ? "bg-purple-500/20 text-purple-400"
+                          : decision.type === "implementation"
+                            ? "bg-green-500/20 text-green-400"
+                            : "bg-blue-500/20 text-blue-400"
+                      }
+                    `}
+                        >
+                          {decision.type}
+                        </div>
+                        <div
+                          className={`
                       text-xs
-                      ${decision.impact === 'high' ? 'text-red-400' :
-                        decision.impact === 'medium' ? 'text-yellow-400' :
-                        'text-gray-400'}
-                    `}>
-                      {decision.impact} impact
+                      ${
+                        decision.impact === "high"
+                          ? "text-red-400"
+                          : decision.impact === "medium"
+                            ? "text-yellow-400"
+                            : "text-gray-400"
+                      }
+                    `}
+                        >
+                          {decision.impact} impact
+                        </div>
+                      </div>
+                      <h4 className="font-medium mb-1">{decision.title}</h4>
+                      <div className="text-xs text-gray-500">
+                        by {decision.madeBy} •{" "}
+                        {new Date(decision.timestamp).toLocaleTimeString()}
+                      </div>
                     </div>
-                  </div>
-                  <h4 className="font-medium mb-1">{decision.title}</h4>
-                  <div className="text-xs text-gray-500">
-                    by {decision.madeBy} • {new Date(decision.timestamp).toLocaleTimeString()}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-        )}
+                  ))}
+              </div>
+            </motion.div>
+          )}
       </div>
 
       {/* Agent Detail Modal */}
@@ -502,7 +646,9 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
             >
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${getAgentStatusColor(selectedAgent.status)}`} />
+                  <div
+                    className={`w-3 h-3 rounded-full ${getAgentStatusColor(selectedAgent.status)}`}
+                  />
                   <h2 className="text-2xl font-bold">{selectedAgent.name}</h2>
                   <div className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-sm">
                     {selectedAgent.role}
@@ -519,14 +665,18 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
               <div className="space-y-4">
                 <div>
                   <div className="text-sm text-gray-400 mb-1">Current Task</div>
-                  <div className="p-3 rounded-lg bg-gray-800">{selectedAgent.currentTask}</div>
+                  <div className="p-3 rounded-lg bg-gray-800">
+                    {selectedAgent.currentTask}
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm text-gray-400 mb-1">Status</div>
                   <div className="capitalize">{selectedAgent.status}</div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-400 mb-1">Confidence Level</div>
+                  <div className="text-sm text-gray-400 mb-1">
+                    Confidence Level
+                  </div>
                   <div className="flex items-center gap-3">
                     <ProgressBar
                       value={selectedAgent.confidence}
@@ -535,7 +685,9 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
                       fillColor="bg-gradient-to-r from-blue-500 to-green-500"
                       animated={false}
                     />
-                    <span className="text-sm font-medium">{selectedAgent.confidence}%</span>
+                    <span className="text-sm font-medium">
+                      {selectedAgent.confidence}%
+                    </span>
                   </div>
                 </div>
               </div>

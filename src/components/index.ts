@@ -1,13 +1,13 @@
 // Main components for NXTG-Forge Meta-Orchestration System
-export { VisionCapture } from './VisionCapture';
-export { ChiefOfStaffDashboard } from './ChiefOfStaffDashboard';
-export { ArchitectDiscussion } from './ArchitectDiscussion';
-export { CommandCenter } from './CommandCenter';
-export { VisionDisplay } from './VisionDisplay';
-export { YoloMode } from './YoloMode';
-export { ProjectSwitcher } from './ProjectSwitcher';
-export { ProjectsManagement } from './ProjectsManagement';
-export { ErrorBoundary } from './ErrorBoundary';
+export { VisionCapture } from "./VisionCapture";
+export { ChiefOfStaffDashboard } from "./ChiefOfStaffDashboard";
+export { ArchitectDiscussion } from "./ArchitectDiscussion";
+export { CommandCenter } from "./CommandCenter";
+export { VisionDisplay } from "./VisionDisplay";
+export { YoloMode } from "./YoloMode";
+export { ProjectSwitcher } from "./ProjectSwitcher";
+export { ProjectsManagement } from "./ProjectsManagement";
+export { ErrorBoundary } from "./ErrorBoundary";
 
 // Type exports
 export type {
@@ -24,5 +24,5 @@ export type {
   ProgressData,
   AutomationLevel,
   AutomatedAction,
-  YoloStatistics
-} from './types';
+  YoloStatistics,
+} from "./types";

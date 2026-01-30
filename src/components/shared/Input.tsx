@@ -3,54 +3,55 @@
  * Form input with validation states and icons
  */
 
-import React, { forwardRef } from 'react';
-import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '../../utils/cn';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import React, { forwardRef } from "react";
+import { cva, type VariantProps } from "class-variance-authority";
+import { cn } from "../../utils/cn";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 const inputVariants = cva(
   [
-    'w-full rounded-lg bg-surface-1 text-nxtg-gray-100 placeholder:text-nxtg-gray-600',
-    'border transition-all duration-200',
-    'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-0',
-    'disabled:cursor-not-allowed disabled:opacity-50',
+    "w-full rounded-lg bg-surface-1 text-nxtg-gray-100 placeholder:text-nxtg-gray-600",
+    "border transition-all duration-200",
+    "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-0",
+    "disabled:cursor-not-allowed disabled:opacity-50",
   ],
   {
     variants: {
       variant: {
         default: [
-          'border-surface-4',
-          'hover:border-nxtg-gray-600',
-          'focus:border-nxtg-purple-600',
-          'focus:ring-nxtg-purple-600',
+          "border-surface-4",
+          "hover:border-nxtg-gray-600",
+          "focus:border-nxtg-purple-600",
+          "focus:ring-nxtg-purple-600",
         ],
         error: [
-          'border-nxtg-error-DEFAULT',
-          'focus:border-nxtg-error-light',
-          'focus:ring-nxtg-error-light',
-          'text-nxtg-error-light',
+          "border-nxtg-error-DEFAULT",
+          "focus:border-nxtg-error-light",
+          "focus:ring-nxtg-error-light",
+          "text-nxtg-error-light",
         ],
         success: [
-          'border-nxtg-success-DEFAULT',
-          'focus:border-nxtg-success-light',
-          'focus:ring-nxtg-success-light',
+          "border-nxtg-success-DEFAULT",
+          "focus:border-nxtg-success-light",
+          "focus:ring-nxtg-success-light",
         ],
       },
       inputSize: {
-        sm: 'h-8 px-3 text-sm',
-        md: 'h-10 px-4 text-base',
-        lg: 'h-12 px-5 text-lg',
+        sm: "h-8 px-3 text-sm",
+        md: "h-10 px-4 text-base",
+        lg: "h-12 px-5 text-lg",
       },
     },
     defaultVariants: {
-      variant: 'default',
-      inputSize: 'md',
+      variant: "default",
+      inputSize: "md",
     },
-  }
+  },
 );
 
 export interface InputProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'>,
+  extends
+    Omit<React.InputHTMLAttributes<HTMLInputElement>, "size">,
     VariantProps<typeof inputVariants> {
   label?: string;
   error?: string;
@@ -64,7 +65,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
   (
     {
       className,
-      type = 'text',
+      type = "text",
       variant,
       inputSize,
       label,
@@ -76,9 +77,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       disabled,
       ...props
     },
-    ref
+    ref,
   ) => {
-    const finalVariant = error ? 'error' : success ? 'success' : variant;
+    const finalVariant = error ? "error" : success ? "success" : variant;
 
     return (
       <div className="w-full space-y-1.5">
@@ -97,14 +98,20 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             type={type}
             className={cn(
               inputVariants({ variant: finalVariant, inputSize, className }),
-              leftIcon && 'pl-10',
-              rightIcon && 'pr-10'
+              leftIcon && "pl-10",
+              rightIcon && "pr-10",
             )}
             ref={ref}
             disabled={disabled}
             aria-invalid={!!error}
             aria-describedby={
-              error ? 'error-message' : success ? 'success-message' : helperText ? 'helper-text' : undefined
+              error
+                ? "error-message"
+                : success
+                  ? "success-message"
+                  : helperText
+                    ? "helper-text"
+                    : undefined
             }
             {...props}
           />
@@ -137,9 +144,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         )}
       </div>
     );
-  }
+  },
 );
 
-Input.displayName = 'Input';
+Input.displayName = "Input";
 
 export { Input, inputVariants };

@@ -3,41 +3,41 @@
  * Manages alerts and notifications for system health issues
  */
 
-import { EventEmitter } from 'events';
-import * as fs from 'fs';
-import * as path from 'path';
-import { Logger } from '../utils/logger';
-import { HealthStatus } from './health';
-import { ErrorSeverity } from './errors';
+import { EventEmitter } from "events";
+import * as fs from "fs";
+import * as path from "path";
+import { Logger } from "../utils/logger";
+import { HealthStatus } from "./health";
+import { ErrorSeverity } from "./errors";
 
-const logger = new Logger('AlertingSystem');
+const logger = new Logger("AlertingSystem");
 
 // Alert severity levels
 export enum AlertSeverity {
-  INFO = 'info',
-  WARNING = 'warning',
-  ERROR = 'error',
-  CRITICAL = 'critical'
+  INFO = "info",
+  WARNING = "warning",
+  ERROR = "error",
+  CRITICAL = "critical",
 }
 
 // Alert types
 export enum AlertType {
-  HEALTH_DEGRADATION = 'health_degradation',
-  STATE_SYNC_FAILURE = 'state_sync_failure',
-  AGENT_FAILURE = 'agent_failure',
-  AUTOMATION_ROLLBACK = 'automation_rollback',
-  HIGH_ERROR_RATE = 'high_error_rate',
-  PERFORMANCE_DEGRADATION = 'performance_degradation',
-  MEMORY_PRESSURE = 'memory_pressure',
-  DISK_SPACE_LOW = 'disk_space_low',
-  CUSTOM = 'custom'
+  HEALTH_DEGRADATION = "health_degradation",
+  STATE_SYNC_FAILURE = "state_sync_failure",
+  AGENT_FAILURE = "agent_failure",
+  AUTOMATION_ROLLBACK = "automation_rollback",
+  HIGH_ERROR_RATE = "high_error_rate",
+  PERFORMANCE_DEGRADATION = "performance_degradation",
+  MEMORY_PRESSURE = "memory_pressure",
+  DISK_SPACE_LOW = "disk_space_low",
+  CUSTOM = "custom",
 }
 
 // Alert condition
 export interface AlertCondition {
   type: AlertType;
   threshold: number;
-  operator: 'gt' | 'lt' | 'eq' | 'gte' | 'lte';
+  operator: "gt" | "lt" | "eq" | "gte" | "lte";
   window?: number; // Time window in seconds
   consecutive?: number; // Number of consecutive violations
 }
@@ -58,7 +58,7 @@ export interface Alert {
 
 // Alert action
 export interface AlertAction {
-  type: 'rollback' | 'restart' | 'notify' | 'execute' | 'log';
+  type: "rollback" | "restart" | "notify" | "execute" | "log";
   target?: string;
   params?: Record<string, any>;
   executed: boolean;
@@ -90,65 +90,87 @@ export interface AlertStats {
 // Default alert rules
 const DEFAULT_RULES: AlertRule[] = [
   {
-    id: 'health-critical',
-    name: 'Critical Health Status',
-    condition: { type: AlertType.HEALTH_DEGRADATION, threshold: 50, operator: 'lt' },
+    id: "health-critical",
+    name: "Critical Health Status",
+    condition: {
+      type: AlertType.HEALTH_DEGRADATION,
+      threshold: 50,
+      operator: "lt",
+    },
     severity: AlertSeverity.CRITICAL,
     actions: [
-      { type: 'notify', executed: false },
-      { type: 'log', executed: false }
+      { type: "notify", executed: false },
+      { type: "log", executed: false },
     ],
     enabled: true,
-    cooldown: 300
+    cooldown: 300,
   },
   {
-    id: 'state-sync-failure',
-    name: 'State Sync Failure',
-    condition: { type: AlertType.STATE_SYNC_FAILURE, threshold: 3, operator: 'gte', consecutive: 3 },
+    id: "state-sync-failure",
+    name: "State Sync Failure",
+    condition: {
+      type: AlertType.STATE_SYNC_FAILURE,
+      threshold: 3,
+      operator: "gte",
+      consecutive: 3,
+    },
     severity: AlertSeverity.ERROR,
     actions: [
-      { type: 'notify', executed: false },
-      { type: 'restart', target: 'state-manager', executed: false }
+      { type: "notify", executed: false },
+      { type: "restart", target: "state-manager", executed: false },
     ],
     enabled: true,
-    cooldown: 600
+    cooldown: 600,
   },
   {
-    id: 'high-error-rate',
-    name: 'High Error Rate',
-    condition: { type: AlertType.HIGH_ERROR_RATE, threshold: 10, operator: 'gt', window: 60 },
+    id: "high-error-rate",
+    name: "High Error Rate",
+    condition: {
+      type: AlertType.HIGH_ERROR_RATE,
+      threshold: 10,
+      operator: "gt",
+      window: 60,
+    },
     severity: AlertSeverity.WARNING,
     actions: [
-      { type: 'notify', executed: false },
-      { type: 'log', executed: false }
+      { type: "notify", executed: false },
+      { type: "log", executed: false },
     ],
     enabled: true,
-    cooldown: 300
+    cooldown: 300,
   },
   {
-    id: 'memory-pressure',
-    name: 'Memory Pressure',
-    condition: { type: AlertType.MEMORY_PRESSURE, threshold: 90, operator: 'gt' },
+    id: "memory-pressure",
+    name: "Memory Pressure",
+    condition: {
+      type: AlertType.MEMORY_PRESSURE,
+      threshold: 90,
+      operator: "gt",
+    },
     severity: AlertSeverity.WARNING,
     actions: [
-      { type: 'notify', executed: false },
-      { type: 'execute', target: 'gc', executed: false }
+      { type: "notify", executed: false },
+      { type: "execute", target: "gc", executed: false },
     ],
     enabled: true,
-    cooldown: 600
+    cooldown: 600,
   },
   {
-    id: 'disk-space-low',
-    name: 'Low Disk Space',
-    condition: { type: AlertType.DISK_SPACE_LOW, threshold: 10, operator: 'lt' },
+    id: "disk-space-low",
+    name: "Low Disk Space",
+    condition: {
+      type: AlertType.DISK_SPACE_LOW,
+      threshold: 10,
+      operator: "lt",
+    },
     severity: AlertSeverity.ERROR,
     actions: [
-      { type: 'notify', executed: false },
-      { type: 'log', executed: false }
+      { type: "notify", executed: false },
+      { type: "log", executed: false },
     ],
     enabled: true,
-    cooldown: 3600
-  }
+    cooldown: 3600,
+  },
 ];
 
 export class AlertingSystem extends EventEmitter {
@@ -162,7 +184,12 @@ export class AlertingSystem extends EventEmitter {
 
   constructor(projectPath?: string) {
     super();
-    this.persistPath = path.join(projectPath || process.cwd(), '.claude', 'monitoring', 'alerts.json');
+    this.persistPath = path.join(
+      projectPath || process.cwd(),
+      ".claude",
+      "monitoring",
+      "alerts.json",
+    );
     this.loadPersistedAlerts();
     this.initializeRules();
   }
@@ -180,7 +207,7 @@ export class AlertingSystem extends EventEmitter {
    * Start alert monitoring
    */
   start(intervalMs: number = 30000): void {
-    logger.info('Starting alert monitoring', { interval: intervalMs });
+    logger.info("Starting alert monitoring", { interval: intervalMs });
 
     this.checkInterval = setInterval(() => {
       this.evaluateRules();
@@ -197,7 +224,7 @@ export class AlertingSystem extends EventEmitter {
     }
 
     this.persistAlerts();
-    logger.info('Alert monitoring stopped');
+    logger.info("Alert monitoring stopped");
   }
 
   /**
@@ -208,7 +235,7 @@ export class AlertingSystem extends EventEmitter {
     severity: AlertSeverity,
     title: string,
     message: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, any>,
   ): Alert {
     const alert: Alert = {
       id: this.generateAlertId(),
@@ -220,7 +247,7 @@ export class AlertingSystem extends EventEmitter {
       acknowledged: false,
       resolved: false,
       metadata,
-      actions: []
+      actions: [],
     };
 
     this.alerts.set(alert.id, alert);
@@ -234,7 +261,7 @@ export class AlertingSystem extends EventEmitter {
     this.logAlert(alert);
 
     // Emit alert event
-    this.emit('alert', alert);
+    this.emit("alert", alert);
 
     // Check if any rules should trigger actions
     this.checkRuleActions(alert);
@@ -249,8 +276,8 @@ export class AlertingSystem extends EventEmitter {
     const alert = this.alerts.get(alertId);
     if (alert && !alert.acknowledged) {
       alert.acknowledged = true;
-      this.emit('alertAcknowledged', alert);
-      logger.info('Alert acknowledged', { alertId, type: alert.type });
+      this.emit("alertAcknowledged", alert);
+      logger.info("Alert acknowledged", { alertId, type: alert.type });
     }
   }
 
@@ -262,8 +289,8 @@ export class AlertingSystem extends EventEmitter {
     if (alert && !alert.resolved) {
       alert.resolved = true;
       alert.acknowledged = true;
-      this.emit('alertResolved', alert);
-      logger.info('Alert resolved', { alertId, type: alert.type });
+      this.emit("alertResolved", alert);
+      logger.info("Alert resolved", { alertId, type: alert.type });
 
       // Remove from active alerts after a delay
       setTimeout(() => {
@@ -277,7 +304,7 @@ export class AlertingSystem extends EventEmitter {
    */
   addRule(rule: AlertRule): void {
     this.rules.set(rule.id, rule);
-    logger.info('Alert rule added', { ruleId: rule.id, name: rule.name });
+    logger.info("Alert rule added", { ruleId: rule.id, name: rule.name });
   }
 
   /**
@@ -287,7 +314,7 @@ export class AlertingSystem extends EventEmitter {
     const rule = this.rules.get(ruleId);
     if (rule) {
       Object.assign(rule, updates);
-      logger.info('Alert rule updated', { ruleId });
+      logger.info("Alert rule updated", { ruleId });
     }
   }
 
@@ -298,7 +325,7 @@ export class AlertingSystem extends EventEmitter {
     const rule = this.rules.get(ruleId);
     if (rule) {
       rule.enabled = enabled;
-      logger.info(`Alert rule ${enabled ? 'enabled' : 'disabled'}`, { ruleId });
+      logger.info(`Alert rule ${enabled ? "enabled" : "disabled"}`, { ruleId });
     }
   }
 
@@ -311,7 +338,9 @@ export class AlertingSystem extends EventEmitter {
 
       // Check cooldown
       if (rule.lastTriggered) {
-        const cooldownExpiry = new Date(rule.lastTriggered.getTime() + (rule.cooldown || 0) * 1000);
+        const cooldownExpiry = new Date(
+          rule.lastTriggered.getTime() + (rule.cooldown || 0) * 1000,
+        );
         if (cooldownExpiry > new Date()) {
           continue;
         }
@@ -337,7 +366,7 @@ export class AlertingSystem extends EventEmitter {
           rule.severity,
           rule.name,
           `Alert rule "${rule.name}" triggered`,
-          { ruleId: rule.id }
+          { ruleId: rule.id },
         );
 
         // Execute actions
@@ -376,39 +405,42 @@ export class AlertingSystem extends EventEmitter {
   /**
    * Execute alert actions
    */
-  private async executeActions(alert: Alert, actions: AlertAction[]): Promise<void> {
+  private async executeActions(
+    alert: Alert,
+    actions: AlertAction[],
+  ): Promise<void> {
     for (const action of actions) {
       if (action.executed) continue;
 
       try {
         switch (action.type) {
-          case 'notify':
+          case "notify":
             await this.executeNotify(alert);
             break;
-          case 'log':
+          case "log":
             await this.executeLog(alert);
             break;
-          case 'rollback':
+          case "rollback":
             await this.executeRollback(alert, action);
             break;
-          case 'restart':
+          case "restart":
             await this.executeRestart(alert, action);
             break;
-          case 'execute':
+          case "execute":
             await this.executeCustom(alert, action);
             break;
         }
 
         action.executed = true;
-        logger.info('Alert action executed', {
-          alertId: alert.id,
-          actionType: action.type
-        });
-      } catch (error) {
-        logger.error('Failed to execute alert action', {
+        logger.info("Alert action executed", {
           alertId: alert.id,
           actionType: action.type,
-          error: error instanceof Error ? error.message : String(error)
+        });
+      } catch (error) {
+        logger.error("Failed to execute alert action", {
+          alertId: alert.id,
+          actionType: action.type,
+          error: error instanceof Error ? error.message : String(error),
         });
       }
     }
@@ -422,12 +454,12 @@ export class AlertingSystem extends EventEmitter {
    * Execute notify action
    */
   private async executeNotify(alert: Alert): Promise<void> {
-    this.emit('notification', {
-      type: 'alert',
+    this.emit("notification", {
+      type: "alert",
       severity: alert.severity,
       title: alert.title,
       message: alert.message,
-      timestamp: alert.timestamp
+      timestamp: alert.timestamp,
     });
   }
 
@@ -442,57 +474,66 @@ export class AlertingSystem extends EventEmitter {
       title: alert.title,
       message: alert.message,
       timestamp: alert.timestamp,
-      metadata: alert.metadata
+      metadata: alert.metadata,
     };
 
     // Log to file
     const logPath = path.join(
       path.dirname(this.persistPath),
-      `alert-log-${new Date().toISOString().split('T')[0]}.json`
+      `alert-log-${new Date().toISOString().split("T")[0]}.json`,
     );
 
     try {
       const existing = fs.existsSync(logPath)
-        ? JSON.parse(fs.readFileSync(logPath, 'utf-8'))
+        ? JSON.parse(fs.readFileSync(logPath, "utf-8"))
         : [];
 
       existing.push(logEntry);
       fs.writeFileSync(logPath, JSON.stringify(existing, null, 2));
     } catch (error) {
-      logger.error('Failed to write alert log', error as Error);
+      logger.error("Failed to write alert log", error as Error);
     }
   }
 
   /**
    * Execute rollback action
    */
-  private async executeRollback(alert: Alert, action: AlertAction): Promise<void> {
-    this.emit('rollback', {
+  private async executeRollback(
+    alert: Alert,
+    action: AlertAction,
+  ): Promise<void> {
+    this.emit("rollback", {
       alertId: alert.id,
       target: action.target,
-      params: action.params
+      params: action.params,
     });
   }
 
   /**
    * Execute restart action
    */
-  private async executeRestart(alert: Alert, action: AlertAction): Promise<void> {
-    this.emit('restart', {
+  private async executeRestart(
+    alert: Alert,
+    action: AlertAction,
+  ): Promise<void> {
+    this.emit("restart", {
       alertId: alert.id,
       target: action.target,
-      params: action.params
+      params: action.params,
     });
   }
 
   /**
    * Execute custom action
    */
-  private async executeCustom(alert: Alert, action: AlertAction): Promise<void> {
-    this.emit('customAction', {
+  private async executeCustom(
+    alert: Alert,
+    action: AlertAction,
+  ): Promise<void> {
+    this.emit("customAction", {
       alertId: alert.id,
       target: action.target,
-      params: action.params
+      params: action.params,
     });
   }
 
@@ -512,21 +553,21 @@ export class AlertingSystem extends EventEmitter {
       type: alert.type,
       title: alert.title,
       message: alert.message,
-      metadata: alert.metadata
+      metadata: alert.metadata,
     };
 
     switch (alert.severity) {
       case AlertSeverity.CRITICAL:
-        logger.error('CRITICAL ALERT', logData);
+        logger.error("CRITICAL ALERT", logData);
         break;
       case AlertSeverity.ERROR:
-        logger.error('ERROR ALERT', logData);
+        logger.error("ERROR ALERT", logData);
         break;
       case AlertSeverity.WARNING:
-        logger.warn('WARNING ALERT', logData);
+        logger.warn("WARNING ALERT", logData);
         break;
       case AlertSeverity.INFO:
-        logger.info('INFO ALERT', logData);
+        logger.info("INFO ALERT", logData);
         break;
     }
   }
@@ -537,7 +578,7 @@ export class AlertingSystem extends EventEmitter {
   private loadPersistedAlerts(): void {
     try {
       if (fs.existsSync(this.persistPath)) {
-        const data = JSON.parse(fs.readFileSync(this.persistPath, 'utf-8'));
+        const data = JSON.parse(fs.readFileSync(this.persistPath, "utf-8"));
 
         for (const alert of data.alerts) {
           alert.timestamp = new Date(alert.timestamp);
@@ -547,10 +588,10 @@ export class AlertingSystem extends EventEmitter {
           this.alertHistory.push(alert);
         }
 
-        logger.info('Loaded persisted alerts', { count: this.alerts.size });
+        logger.info("Loaded persisted alerts", { count: this.alerts.size });
       }
     } catch (error) {
-      logger.error('Failed to load persisted alerts', error);
+      logger.error("Failed to load persisted alerts", error);
     }
   }
 
@@ -567,12 +608,12 @@ export class AlertingSystem extends EventEmitter {
       const data = {
         timestamp: new Date(),
         alerts: Array.from(this.alerts.values()),
-        history: this.alertHistory.slice(-100) // Keep last 100 for history
+        history: this.alertHistory.slice(-100), // Keep last 100 for history
       };
 
       fs.writeFileSync(this.persistPath, JSON.stringify(data, null, 2));
     } catch (error) {
-      logger.error('Failed to persist alerts', error);
+      logger.error("Failed to persist alerts", error);
     }
   }
 
@@ -580,21 +621,23 @@ export class AlertingSystem extends EventEmitter {
    * Get active alerts
    */
   getActiveAlerts(): Alert[] {
-    return Array.from(this.alerts.values()).filter(a => !a.resolved);
+    return Array.from(this.alerts.values()).filter((a) => !a.resolved);
   }
 
   /**
    * Get alerts by type
    */
   getAlertsByType(type: AlertType): Alert[] {
-    return Array.from(this.alerts.values()).filter(a => a.type === type);
+    return Array.from(this.alerts.values()).filter((a) => a.type === type);
   }
 
   /**
    * Get alerts by severity
    */
   getAlertsBySeverity(severity: AlertSeverity): Alert[] {
-    return Array.from(this.alerts.values()).filter(a => a.severity === severity);
+    return Array.from(this.alerts.values()).filter(
+      (a) => a.severity === severity,
+    );
   }
 
   /**
@@ -609,12 +652,12 @@ export class AlertingSystem extends EventEmitter {
         [AlertSeverity.INFO]: 0,
         [AlertSeverity.WARNING]: 0,
         [AlertSeverity.ERROR]: 0,
-        [AlertSeverity.CRITICAL]: 0
+        [AlertSeverity.CRITICAL]: 0,
       },
       byType: {} as Record<AlertType, number>,
       acknowledged: 0,
       resolved: 0,
-      active: 0
+      active: 0,
     };
 
     for (const alert of alerts) {

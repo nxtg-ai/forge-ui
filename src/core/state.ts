@@ -3,12 +3,12 @@
  * Context continuity and state persistence system
  */
 
-import { promises as fs } from 'fs';
-import * as path from 'path';
-import * as crypto from 'crypto';
-import { EventEmitter } from 'events';
-import { z } from 'zod';
-import { Logger } from '../utils/logger';
+import { promises as fs } from "fs";
+import * as path from "path";
+import * as crypto from "crypto";
+import { EventEmitter } from "events";
+import { z } from "zod";
+import { Logger } from "../utils/logger";
 import {
   SystemState,
   SystemStateSchema,
@@ -20,13 +20,13 @@ import {
   Task,
   AgentState,
   ConversationContext,
-  ProgressNode
-} from '../types/state';
-import { CanonicalVision } from '../types/vision';
-import { CheckpointManager, TaskCheckpoint } from './checkpoint-manager';
-import { Result, Ok, Err } from '../utils/result';
+  ProgressNode,
+} from "../types/state";
+import { CanonicalVision } from "../types/vision";
+import { CheckpointManager, TaskCheckpoint } from "./checkpoint-manager";
+import { Result, Ok, Err } from "../utils/result";
 
-const logger = new Logger('StateManager');
+const logger = new Logger("StateManager");
 
 // State file paths
 interface StatePaths {
@@ -74,12 +74,12 @@ export class StateManager extends EventEmitter {
    * Initialize file paths
    */
   private initializePaths(): StatePaths {
-    const stateDir = path.join(this.projectPath, '.claude', 'state');
+    const stateDir = path.join(this.projectPath, ".claude", "state");
     return {
-      current: path.join(stateDir, 'current.json'),
-      backup: path.join(stateDir, 'backup.json'),
-      events: path.join(stateDir, 'events.jsonl'),
-      graph: path.join(stateDir, 'context-graph.json')
+      current: path.join(stateDir, "current.json"),
+      backup: path.join(stateDir, "backup.json"),
+      events: path.join(stateDir, "events.jsonl"),
+      graph: path.join(stateDir, "context-graph.json"),
     };
   }
 
@@ -111,7 +111,7 @@ export class StateManager extends EventEmitter {
     // Start auto-save
     this.startAutoSave();
 
-    logger.info('State manager initialized');
+    logger.info("State manager initialized");
   }
 
   /**
@@ -119,7 +119,7 @@ export class StateManager extends EventEmitter {
    */
   private async createInitialState(): Promise<void> {
     const initialState: SystemState = {
-      version: '3.0.0',
+      version: "3.0.0",
       timestamp: new Date(),
       vision: this.createDefaultVision(),
       currentTasks: [],
@@ -127,20 +127,20 @@ export class StateManager extends EventEmitter {
       conversationContext: this.createDefaultContext(),
       progressGraph: [],
       metadata: {
-        sessionId: crypto.randomBytes(8).toString('hex'),
-        environment: process.env.NODE_ENV || 'development',
-        projectPath: this.projectPath
-      }
+        sessionId: crypto.randomBytes(8).toString("hex"),
+        environment: process.env.NODE_ENV || "development",
+        projectPath: this.projectPath,
+      },
     };
 
     this.currentState = initialState;
     await this.saveState(initialState);
 
     this.recordEvent({
-      id: crypto.randomBytes(8).toString('hex'),
+      id: crypto.randomBytes(8).toString("hex"),
       timestamp: new Date(),
-      type: 'state-initialized',
-      data: initialState
+      type: "state-initialized",
+      data: initialState,
     });
   }
 
@@ -149,14 +149,14 @@ export class StateManager extends EventEmitter {
    */
   private createDefaultVision(): CanonicalVision {
     return {
-      version: '1.0',
+      version: "1.0",
       created: new Date(),
       updated: new Date(),
-      mission: 'Build amazing software',
+      mission: "Build amazing software",
       principles: [],
       strategicGoals: [],
-      currentFocus: '',
-      successMetrics: {}
+      currentFocus: "",
+      successMetrics: {},
     };
   }
 
@@ -165,12 +165,12 @@ export class StateManager extends EventEmitter {
    */
   private createDefaultContext(): ConversationContext {
     return {
-      sessionId: crypto.randomBytes(8).toString('hex'),
+      sessionId: crypto.randomBytes(8).toString("hex"),
       startedAt: new Date(),
       lastInteraction: new Date(),
       messageCount: 0,
       recentMessages: [],
-      contextTags: []
+      contextTags: [],
     };
   }
 
@@ -180,7 +180,7 @@ export class StateManager extends EventEmitter {
   async saveState(state?: SystemState): Promise<void> {
     const stateToSave = state || this.currentState;
     if (!stateToSave) {
-      throw new Error('No state to save');
+      throw new Error("No state to save");
     }
 
     try {
@@ -199,23 +199,22 @@ export class StateManager extends EventEmitter {
         state: stateToSave,
         timestamp: new Date(),
         checksum,
-        compressed: false
+        compressed: false,
       };
 
       // Save to file
       await fs.writeFile(
         this.paths.current,
         JSON.stringify(snapshot, null, 2),
-        'utf-8'
+        "utf-8",
       );
 
       this.isDirty = false;
-      logger.debug('State saved', { checksum });
+      logger.debug("State saved", { checksum });
 
-      this.emit('stateSaved', stateToSave);
-
+      this.emit("stateSaved", stateToSave);
     } catch (error) {
-      logger.error('Failed to save state', error);
+      logger.error("Failed to save state", error);
       throw error;
     }
   }
@@ -227,13 +226,13 @@ export class StateManager extends EventEmitter {
     const startTime = Date.now();
 
     try {
-      const content = await fs.readFile(this.paths.current, 'utf-8');
+      const content = await fs.readFile(this.paths.current, "utf-8");
       const snapshot = JSON.parse(content) as StateSnapshot;
 
       // Verify checksum
       const calculatedChecksum = this.calculateChecksum(snapshot.state);
       if (calculatedChecksum !== snapshot.checksum) {
-        logger.warn('State checksum mismatch, trying backup');
+        logger.warn("State checksum mismatch, trying backup");
         return await this.restoreFromBackup();
       }
 
@@ -251,17 +250,16 @@ export class StateManager extends EventEmitter {
       const duration = Date.now() - startTime;
       logger.info(`State restored in ${duration}ms`);
 
-      this.emit('stateRestored', validatedState);
+      this.emit("stateRestored", validatedState);
 
       return validatedState;
-
     } catch (error) {
-      if ((error as any).code === 'ENOENT') {
-        logger.info('No existing state found');
+      if ((error as any).code === "ENOENT") {
+        logger.info("No existing state found");
         return null;
       }
 
-      logger.error('Failed to restore state', error);
+      logger.error("Failed to restore state", error);
       return await this.restoreFromBackup();
     }
   }
@@ -271,19 +269,18 @@ export class StateManager extends EventEmitter {
    */
   private async restoreFromBackup(): Promise<SystemState | null> {
     try {
-      const content = await fs.readFile(this.paths.backup, 'utf-8');
+      const content = await fs.readFile(this.paths.backup, "utf-8");
       const snapshot = JSON.parse(content) as StateSnapshot;
 
       this.parseDates(snapshot.state);
       const validatedState = SystemStateSchema.parse(snapshot.state);
 
       this.currentState = validatedState;
-      logger.info('State restored from backup');
+      logger.info("State restored from backup");
 
       return validatedState;
-
     } catch (error) {
-      logger.error('Failed to restore from backup', error);
+      logger.error("Failed to restore from backup", error);
       return null;
     }
   }
@@ -293,7 +290,7 @@ export class StateManager extends EventEmitter {
    */
   async buildContextGraph(): Promise<ContextGraph> {
     if (!this.currentState) {
-      throw new Error('No state available');
+      throw new Error("No state available");
     }
 
     const nodes: ContextNode[] = [];
@@ -301,25 +298,25 @@ export class StateManager extends EventEmitter {
 
     // Add vision as root node
     nodes.push({
-      id: 'vision',
-      type: 'vision',
-      title: 'Canonical Vision',
-      data: this.currentState.vision
+      id: "vision",
+      type: "vision",
+      title: "Canonical Vision",
+      data: this.currentState.vision,
     });
 
     // Add goals
     for (const goal of this.currentState.vision.strategicGoals) {
       nodes.push({
         id: `goal-${goal.id}`,
-        type: 'goal',
+        type: "goal",
         title: goal.title,
-        data: goal
+        data: goal,
       });
 
       edges.push({
-        from: 'vision',
+        from: "vision",
         to: `goal-${goal.id}`,
-        type: 'implements'
+        type: "implements",
       });
     }
 
@@ -327,9 +324,9 @@ export class StateManager extends EventEmitter {
     for (const task of this.currentState.currentTasks) {
       nodes.push({
         id: `task-${task.id}`,
-        type: 'task',
+        type: "task",
         title: task.title,
-        data: task
+        data: task,
       });
 
       // Link tasks to goals (simplified)
@@ -337,7 +334,7 @@ export class StateManager extends EventEmitter {
         edges.push({
           from: `goal-${this.currentState.vision.strategicGoals[0].id}`,
           to: `task-${task.id}`,
-          type: 'implements'
+          type: "implements",
         });
       }
 
@@ -346,7 +343,7 @@ export class StateManager extends EventEmitter {
         edges.push({
           from: `task-${depId}`,
           to: `task-${task.id}`,
-          type: 'depends-on'
+          type: "depends-on",
         });
       }
     }
@@ -357,10 +354,12 @@ export class StateManager extends EventEmitter {
     await fs.writeFile(
       this.paths.graph,
       JSON.stringify(this.contextGraph, null, 2),
-      'utf-8'
+      "utf-8",
     );
 
-    logger.info(`Context graph built with ${nodes.length} nodes and ${edges.length} edges`);
+    logger.info(
+      `Context graph built with ${nodes.length} nodes and ${edges.length} edges`,
+    );
 
     return this.contextGraph;
   }
@@ -370,38 +369,40 @@ export class StateManager extends EventEmitter {
    */
   async getSituation(): Promise<SituationReport> {
     if (!this.currentState) {
-      throw new Error('No state available');
+      throw new Error("No state available");
     }
 
     const tasks = this.currentState.currentTasks;
-    const tasksInProgress = tasks.filter(t => t.status === 'in_progress').length;
-    const tasksCompleted = tasks.filter(t => t.status === 'completed').length;
+    const tasksInProgress = tasks.filter(
+      (t) => t.status === "in_progress",
+    ).length;
+    const tasksCompleted = tasks.filter((t) => t.status === "completed").length;
 
     const blockingIssues = tasks
-      .filter(t => t.status === 'blocked')
-      .map(t => ({
+      .filter((t) => t.status === "blocked")
+      .map((t) => ({
         id: t.id,
         description: `Task ${t.title} is blocked`,
-        impact: 'medium' as const,
-        suggestedAction: 'Review dependencies and unblock'
+        impact: "medium" as const,
+        suggestedAction: "Review dependencies and unblock",
       }));
 
     const nextActions = tasks
-      .filter(t => t.status === 'pending')
+      .filter((t) => t.status === "pending")
       .slice(0, 3)
-      .map(t => `Start task: ${t.title}`);
+      .map((t) => `Start task: ${t.title}`);
 
     return {
       timestamp: new Date(),
       summary: `${tasksInProgress} tasks in progress, ${tasksCompleted} completed`,
       activeGoals: this.currentState.vision.strategicGoals
-        .filter(g => g.status === 'in-progress')
-        .map(g => g.id),
+        .filter((g) => g.status === "in-progress")
+        .map((g) => g.id),
       tasksInProgress,
       tasksCompleted,
       blockingIssues,
       nextActions,
-      estimatedCompletion: this.estimateCompletion()
+      estimatedCompletion: this.estimateCompletion(),
     };
   }
 
@@ -417,7 +418,9 @@ export class StateManager extends EventEmitter {
     const relationships: Array<{ from: string; to: string; type: string }> = [];
 
     // Simplified path finding - in production use graph algorithms
-    const taskNode = this.contextGraph.nodes.find(n => n.id === `task-${taskId}`);
+    const taskNode = this.contextGraph.nodes.find(
+      (n) => n.id === `task-${taskId}`,
+    );
     if (!taskNode) {
       return null;
     }
@@ -425,49 +428,53 @@ export class StateManager extends EventEmitter {
     path.push(taskNode.id);
 
     // Find edges leading to this task
-    const incomingEdges = this.contextGraph.edges.filter(e => e.to === taskNode.id);
+    const incomingEdges = this.contextGraph.edges.filter(
+      (e) => e.to === taskNode.id,
+    );
 
     for (const edge of incomingEdges) {
       relationships.push({
         from: edge.from,
         to: edge.to,
-        type: edge.type
+        type: edge.type,
       });
 
       // Add parent node to path
-      const parentNode = this.contextGraph.nodes.find(n => n.id === edge.from);
+      const parentNode = this.contextGraph.nodes.find(
+        (n) => n.id === edge.from,
+      );
       if (parentNode) {
         path.push(parentNode.id);
       }
     }
 
-    path.push('vision');
+    path.push("vision");
 
     return {
       path: path.reverse(),
-      relationships
+      relationships,
     };
   }
 
   /**
    * Update task status
    */
-  updateTaskStatus(taskId: string, status: Task['status']): void {
+  updateTaskStatus(taskId: string, status: Task["status"]): void {
     if (!this.currentState) return;
 
-    const task = this.currentState.currentTasks.find(t => t.id === taskId);
+    const task = this.currentState.currentTasks.find((t) => t.id === taskId);
     if (task) {
       task.status = status;
       this.isDirty = true;
 
       this.recordEvent({
-        id: crypto.randomBytes(8).toString('hex'),
+        id: crypto.randomBytes(8).toString("hex"),
         timestamp: new Date(),
-        type: 'task-status-changed',
-        data: { taskId, status }
+        type: "task-status-changed",
+        data: { taskId, status },
       });
 
-      this.emit('taskStatusChanged', { taskId, status });
+      this.emit("taskStatusChanged", { taskId, status });
     }
   }
 
@@ -483,13 +490,13 @@ export class StateManager extends EventEmitter {
       this.isDirty = true;
 
       this.recordEvent({
-        id: crypto.randomBytes(8).toString('hex'),
+        id: crypto.randomBytes(8).toString("hex"),
         timestamp: new Date(),
-        type: 'agent-state-changed',
-        data: { agentId, state }
+        type: "agent-state-changed",
+        data: { agentId, state },
       });
 
-      this.emit('agentStateChanged', { agentId, state });
+      this.emit("agentStateChanged", { agentId, state });
     }
   }
 
@@ -500,9 +507,9 @@ export class StateManager extends EventEmitter {
     this.events.push(event);
 
     // Append to event log (async, non-blocking)
-    const eventLine = JSON.stringify(event) + '\n';
-    fs.appendFile(this.paths.events, eventLine).catch(error => {
-      logger.error('Failed to write event', error);
+    const eventLine = JSON.stringify(event) + "\n";
+    fs.appendFile(this.paths.events, eventLine).catch((error) => {
+      logger.error("Failed to write event", error);
     });
   }
 
@@ -510,9 +517,9 @@ export class StateManager extends EventEmitter {
    * Calculate checksum for state
    */
   private calculateChecksum(state: SystemState): string {
-    const hash = crypto.createHash('sha256');
+    const hash = crypto.createHash("sha256");
     hash.update(JSON.stringify(state));
-    return hash.digest('hex');
+    return hash.digest("hex");
   }
 
   /**
@@ -521,19 +528,27 @@ export class StateManager extends EventEmitter {
   private parseDates(obj: any): void {
     if (obj === null || obj === undefined) return;
 
-    if (typeof obj === 'string' && this.isISODate(obj)) {
+    if (typeof obj === "string" && this.isISODate(obj)) {
       return;
     }
 
     if (Array.isArray(obj)) {
-      obj.forEach(item => this.parseDates(item));
-    } else if (typeof obj === 'object') {
+      obj.forEach((item) => this.parseDates(item));
+    } else if (typeof obj === "object") {
       for (const key in obj) {
-        if (key === 'createdAt' || key === 'updatedAt' || key === 'timestamp' ||
-            key === 'created' || key === 'updated' || key === 'deadline' ||
-            key === 'startedAt' || key === 'completedAt' || key === 'lastInteraction' ||
-            key === 'lastActive') {
-          if (typeof obj[key] === 'string') {
+        if (
+          key === "createdAt" ||
+          key === "updatedAt" ||
+          key === "timestamp" ||
+          key === "created" ||
+          key === "updated" ||
+          key === "deadline" ||
+          key === "startedAt" ||
+          key === "completedAt" ||
+          key === "lastInteraction" ||
+          key === "lastActive"
+        ) {
+          if (typeof obj[key] === "string") {
             obj[key] = new Date(obj[key]);
           }
         } else {
@@ -557,7 +572,7 @@ export class StateManager extends EventEmitter {
     if (!this.currentState) return undefined;
 
     const pendingTasks = this.currentState.currentTasks.filter(
-      t => t.status === 'pending' || t.status === 'in_progress'
+      (t) => t.status === "pending" || t.status === "in_progress",
     );
 
     if (pendingTasks.length === 0) return undefined;
@@ -575,8 +590,8 @@ export class StateManager extends EventEmitter {
   private startAutoSave(): void {
     this.autoSaveInterval = setInterval(() => {
       if (this.isDirty) {
-        this.saveState().catch(error => {
-          logger.error('Auto-save failed', error);
+        this.saveState().catch((error) => {
+          logger.error("Auto-save failed", error);
         });
       }
     }, 60000); // Save every minute if dirty
@@ -620,7 +635,7 @@ export class StateManager extends EventEmitter {
 
   async updateState(updates: Partial<SystemState>): Promise<SystemState> {
     if (!this.currentState) {
-      throw new Error('No state to update');
+      throw new Error("No state to update");
     }
 
     // Apply updates
@@ -635,13 +650,13 @@ export class StateManager extends EventEmitter {
 
   async updatePhase(phase: string): Promise<SystemState> {
     if (!this.currentState) {
-      throw new Error('No state available');
+      throw new Error("No state available");
     }
 
     // Update metadata with phase
     this.currentState.metadata = {
       ...this.currentState.metadata,
-      currentPhase: phase
+      currentPhase: phase,
     };
 
     await this.saveState(this.currentState);
@@ -650,8 +665,8 @@ export class StateManager extends EventEmitter {
 
   async getHealthMetrics(): Promise<any> {
     const tasks = this.currentState?.currentTasks || [];
-    const completed = tasks.filter(t => t.status === 'completed').length;
-    const failed = tasks.filter(t => t.status === 'failed').length;
+    const completed = tasks.filter((t) => t.status === "completed").length;
+    const failed = tasks.filter((t) => t.status === "failed").length;
     const total = tasks.length;
 
     return {
@@ -659,7 +674,7 @@ export class StateManager extends EventEmitter {
       taskCompletion: total > 0 ? completed / total : 0,
       failedTasks: failed,
       totalTasks: total,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
   }
 
@@ -672,14 +687,19 @@ export class StateManager extends EventEmitter {
   /**
    * Save task checkpoint
    */
-  async saveCheckpoint(taskId: string, checkpoint: TaskCheckpoint): Promise<Result<void, string>> {
+  async saveCheckpoint(
+    taskId: string,
+    checkpoint: TaskCheckpoint,
+  ): Promise<Result<void, string>> {
     return await this.checkpointManager.saveCheckpoint(taskId, checkpoint);
   }
 
   /**
    * Restore task from checkpoint
    */
-  async restoreFromCheckpoint(taskId: string): Promise<Result<TaskCheckpoint, string>> {
+  async restoreFromCheckpoint(
+    taskId: string,
+  ): Promise<Result<TaskCheckpoint, string>> {
     return await this.checkpointManager.restoreFromCheckpoint(taskId);
   }
 
@@ -714,7 +734,9 @@ export class StateManager extends EventEmitter {
   /**
    * Clean up old checkpoints
    */
-  async cleanupOldCheckpoints(maxAgeMs: number): Promise<Result<number, string>> {
+  async cleanupOldCheckpoints(
+    maxAgeMs: number,
+  ): Promise<Result<number, string>> {
     return await this.checkpointManager.cleanupOldCheckpoints(maxAgeMs);
   }
 }

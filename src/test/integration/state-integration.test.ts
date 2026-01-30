@@ -3,94 +3,100 @@
  * Tests Dashboard -> StateManager -> state persistence
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { StateManager } from '@core/state';
-import { promises as fs } from 'fs';
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { StateManager } from "@core/state";
+import { promises as fs } from "fs";
 
-describe('State Integration: Dashboard -> StateManager -> File System', () => {
+describe("State Integration: Dashboard -> StateManager -> File System", () => {
   let stateManager: StateManager;
   let mockProjectPath: string;
 
   beforeEach(() => {
-    mockProjectPath = '/test/project';
+    mockProjectPath = "/test/project";
     stateManager = new StateManager(mockProjectPath);
     vi.clearAllMocks();
   });
 
-  describe('State persistence workflow', () => {
-    it('should initialize and restore state from file', async () => {
+  describe("State persistence workflow", () => {
+    it("should initialize and restore state from file", async () => {
       const mockState = {
-        version: '3.0.0',
+        version: "3.0.0",
         timestamp: new Date(),
         vision: {
-          version: '1.0',
+          version: "1.0",
           created: new Date(),
           updated: new Date(),
-          mission: 'Test mission',
+          mission: "Test mission",
           principles: [],
           strategicGoals: [],
-          currentFocus: '',
-          successMetrics: {}
+          currentFocus: "",
+          successMetrics: {},
         },
         currentTasks: [],
         agentStates: {},
         conversationContext: {
-          sessionId: 'test-session',
+          sessionId: "test-session",
           startedAt: new Date(),
           lastInteraction: new Date(),
           messageCount: 0,
           recentMessages: [],
-          contextTags: []
+          contextTags: [],
         },
         progressGraph: [],
         metadata: {
-          sessionId: 'test-session',
-          environment: 'test',
-          projectPath: mockProjectPath
-        }
+          sessionId: "test-session",
+          environment: "test",
+          projectPath: mockProjectPath,
+        },
       };
 
-      (fs.readFile as any).mockResolvedValue(JSON.stringify({
-        state: mockState,
-        timestamp: new Date(),
-        checksum: 'test-checksum',
-        compressed: false
-      }));
+      (fs.readFile as any).mockResolvedValue(
+        JSON.stringify({
+          state: mockState,
+          timestamp: new Date(),
+          checksum: "test-checksum",
+          compressed: false,
+        }),
+      );
 
       // Mock checksum validation
-      vi.spyOn(stateManager as any, 'calculateChecksum').mockReturnValue('test-checksum');
+      vi.spyOn(stateManager as any, "calculateChecksum").mockReturnValue(
+        "test-checksum",
+      );
 
       const restored = await stateManager.restoreState();
 
       expect(restored).toBeTruthy();
-      expect(restored?.version).toBe('3.0.0');
+      expect(restored?.version).toBe("3.0.0");
     });
 
-    it('should save state updates with checksum verification', async () => {
+    it("should save state updates with checksum verification", async () => {
       await stateManager.initialize(mockProjectPath);
 
       await stateManager.saveState();
 
       expect(fs.writeFile).toHaveBeenCalledWith(
-        expect.stringContaining('current.json'),
+        expect.stringContaining("current.json"),
         expect.stringContaining('"checksum"'),
-        'utf-8'
+        "utf-8",
       );
     });
 
-    it('should detect and handle corrupted state files', async () => {
+    it("should detect and handle corrupted state files", async () => {
       const corruptedState = {
-        state: { invalid: 'data' },
+        state: { invalid: "data" },
         timestamp: new Date(),
-        checksum: 'wrong-checksum',
-        compressed: false
+        checksum: "wrong-checksum",
+        compressed: false,
       };
 
       (fs.readFile as any)
         .mockResolvedValueOnce(JSON.stringify(corruptedState))
         .mockResolvedValueOnce(JSON.stringify(corruptedState)); // backup
 
-      vi.spyOn(stateManager as any, 'calculateChecksum').mockReturnValue('correct-checksum');
+      vi.spyOn(stateManager as any, "calculateChecksum").mockReturnValue(
+        "correct-checksum",
+      );
 
       const restored = await stateManager.restoreState();
 
@@ -98,134 +104,140 @@ describe('State Integration: Dashboard -> StateManager -> File System', () => {
       expect(fs.readFile).toHaveBeenCalledTimes(2);
     });
 
-    it('should create backup before saving new state', async () => {
+    it("should create backup before saving new state", async () => {
       await stateManager.initialize(mockProjectPath);
 
       await stateManager.saveState();
 
       expect(fs.copyFile).toHaveBeenCalledWith(
-        expect.stringContaining('current.json'),
-        expect.stringContaining('backup.json')
+        expect.stringContaining("current.json"),
+        expect.stringContaining("backup.json"),
       );
     });
   });
 
-  describe('Context graph building', () => {
-    it('should build context graph from state', async () => {
-      await stateManager.initialize(mockProjectPath);
-
-      const currentState = stateManager.getCurrentState();
-      if (currentState) {
-        currentState.currentTasks = [{
-          id: 'task-1',
-          title: 'Test Task',
-          description: 'Test',
-          status: 'in_progress',
-          priority: 5,
-          dependencies: [],
-          assignedTo: 'developer',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }];
-      }
-
-      const graph = await stateManager.buildContextGraph();
-
-      expect(graph.nodes).toContainEqual(
-        expect.objectContaining({
-          id: 'vision',
-          type: 'vision'
-        })
-      );
-
-      expect(graph.nodes).toContainEqual(
-        expect.objectContaining({
-          id: 'task-task-1',
-          type: 'task'
-        })
-      );
-    });
-
-    it('should create edges between related nodes', async () => {
-      await stateManager.initialize(mockProjectPath);
-
-      const currentState = stateManager.getCurrentState();
-      if (currentState) {
-        currentState.vision.strategicGoals = [{
-          id: 'goal-1',
-          title: 'Test Goal',
-          description: 'Test',
-          priority: 'high' as const,
-          status: 'in-progress' as const,
-          progress: 50,
-          metrics: []
-        }];
-
-        currentState.currentTasks = [{
-          id: 'task-1',
-          title: 'Test Task',
-          description: 'Test',
-          status: 'in_progress',
-          priority: 5,
-          dependencies: [],
-          assignedTo: 'developer',
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }];
-      }
-
-      const graph = await stateManager.buildContextGraph();
-
-      expect(graph.edges).toContainEqual(
-        expect.objectContaining({
-          from: 'vision',
-          to: 'goal-goal-1',
-          type: 'implements'
-        })
-      );
-    });
-  });
-
-  describe('Situation reporting', () => {
-    it('should generate accurate situation report', async () => {
+  describe("Context graph building", () => {
+    it("should build context graph from state", async () => {
       await stateManager.initialize(mockProjectPath);
 
       const currentState = stateManager.getCurrentState();
       if (currentState) {
         currentState.currentTasks = [
           {
-            id: 'task-1',
-            title: 'Task 1',
-            description: 'Test',
-            status: 'in_progress',
+            id: "task-1",
+            title: "Test Task",
+            description: "Test",
+            status: "in_progress",
             priority: 5,
             dependencies: [],
-            assignedTo: 'dev1',
+            assignedTo: "developer",
             createdAt: new Date(),
-            updatedAt: new Date()
+            updatedAt: new Date(),
+          },
+        ];
+      }
+
+      const graph = await stateManager.buildContextGraph();
+
+      expect(graph.nodes).toContainEqual(
+        expect.objectContaining({
+          id: "vision",
+          type: "vision",
+        }),
+      );
+
+      expect(graph.nodes).toContainEqual(
+        expect.objectContaining({
+          id: "task-task-1",
+          type: "task",
+        }),
+      );
+    });
+
+    it("should create edges between related nodes", async () => {
+      await stateManager.initialize(mockProjectPath);
+
+      const currentState = stateManager.getCurrentState();
+      if (currentState) {
+        currentState.vision.strategicGoals = [
+          {
+            id: "goal-1",
+            title: "Test Goal",
+            description: "Test",
+            priority: "high" as const,
+            status: "in-progress" as const,
+            progress: 50,
+            metrics: [],
+          },
+        ];
+
+        currentState.currentTasks = [
+          {
+            id: "task-1",
+            title: "Test Task",
+            description: "Test",
+            status: "in_progress",
+            priority: 5,
+            dependencies: [],
+            assignedTo: "developer",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ];
+      }
+
+      const graph = await stateManager.buildContextGraph();
+
+      expect(graph.edges).toContainEqual(
+        expect.objectContaining({
+          from: "vision",
+          to: "goal-goal-1",
+          type: "implements",
+        }),
+      );
+    });
+  });
+
+  describe("Situation reporting", () => {
+    it("should generate accurate situation report", async () => {
+      await stateManager.initialize(mockProjectPath);
+
+      const currentState = stateManager.getCurrentState();
+      if (currentState) {
+        currentState.currentTasks = [
+          {
+            id: "task-1",
+            title: "Task 1",
+            description: "Test",
+            status: "in_progress",
+            priority: 5,
+            dependencies: [],
+            assignedTo: "dev1",
+            createdAt: new Date(),
+            updatedAt: new Date(),
           },
           {
-            id: 'task-2',
-            title: 'Task 2',
-            description: 'Test',
-            status: 'completed',
+            id: "task-2",
+            title: "Task 2",
+            description: "Test",
+            status: "completed",
             priority: 5,
             dependencies: [],
-            assignedTo: 'dev2',
+            assignedTo: "dev2",
             createdAt: new Date(),
-            updatedAt: new Date()
+            updatedAt: new Date(),
           },
           {
-            id: 'task-3',
-            title: 'Task 3',
-            description: 'Test',
-            status: 'blocked',
+            id: "task-3",
+            title: "Task 3",
+            description: "Test",
+            status: "blocked",
             priority: 5,
             dependencies: [],
-            assignedTo: 'dev3',
+            assignedTo: "dev3",
             createdAt: new Date(),
-            updatedAt: new Date()
-          }
+            updatedAt: new Date(),
+          },
         ];
       }
 
@@ -235,72 +247,72 @@ describe('State Integration: Dashboard -> StateManager -> File System', () => {
       expect(sitrep.tasksCompleted).toBe(1);
       expect(sitrep.blockingIssues).toHaveLength(1);
       expect(sitrep.blockingIssues[0]).toMatchObject({
-        id: 'task-3',
-        impact: 'medium'
+        id: "task-3",
+        impact: "medium",
       });
     });
 
-    it('should provide next actions based on pending tasks', async () => {
+    it("should provide next actions based on pending tasks", async () => {
       await stateManager.initialize(mockProjectPath);
 
       const currentState = stateManager.getCurrentState();
       if (currentState) {
         currentState.currentTasks = [
           {
-            id: 'task-1',
-            title: 'Pending Task 1',
-            description: 'Test',
-            status: 'pending',
+            id: "task-1",
+            title: "Pending Task 1",
+            description: "Test",
+            status: "pending",
             priority: 5,
             dependencies: [],
-            assignedTo: 'dev1',
+            assignedTo: "dev1",
             createdAt: new Date(),
-            updatedAt: new Date()
-          }
+            updatedAt: new Date(),
+          },
         ];
       }
 
       const sitrep = await stateManager.getSituation();
 
-      expect(sitrep.nextActions).toContain('Start task: Pending Task 1');
+      expect(sitrep.nextActions).toContain("Start task: Pending Task 1");
     });
   });
 
-  describe('Event sourcing', () => {
-    it('should record all state changes as events', async () => {
+  describe("Event sourcing", () => {
+    it("should record all state changes as events", async () => {
       await stateManager.initialize(mockProjectPath);
 
-      stateManager.updateTaskStatus('task-1', 'completed');
+      stateManager.updateTaskStatus("task-1", "completed");
 
       const events = stateManager.getEvents();
 
       expect(events).toContainEqual(
         expect.objectContaining({
-          type: 'task-status-changed',
+          type: "task-status-changed",
           data: {
-            taskId: 'task-1',
-            status: 'completed'
-          }
-        })
+            taskId: "task-1",
+            status: "completed",
+          },
+        }),
       );
     });
 
-    it('should write events to append-only log', async () => {
+    it("should write events to append-only log", async () => {
       await stateManager.initialize(mockProjectPath);
 
-      stateManager.updateTaskStatus('task-1', 'in_progress');
+      stateManager.updateTaskStatus("task-1", "in_progress");
 
       await vi.waitFor(() => {
         expect(fs.appendFile).toHaveBeenCalledWith(
-          expect.stringContaining('events.jsonl'),
-          expect.stringContaining('task-status-changed'),
+          expect.stringContaining("events.jsonl"),
+          expect.stringContaining("task-status-changed"),
         );
       });
     });
   });
 
-  describe('Performance requirements', () => {
-    it('should restore state in less than 2 seconds', async () => {
+  describe("Performance requirements", () => {
+    it("should restore state in less than 2 seconds", async () => {
       const start = Date.now();
       await stateManager.restoreState();
       const duration = Date.now() - start;
@@ -308,47 +320,47 @@ describe('State Integration: Dashboard -> StateManager -> File System', () => {
       expect(duration).toBeLessThan(2000);
     });
 
-    it('should update state with latency < 100ms', async () => {
+    it("should update state with latency < 100ms", async () => {
       await stateManager.initialize(mockProjectPath);
 
       const start = Date.now();
-      stateManager.updateTaskStatus('task-1', 'completed');
+      stateManager.updateTaskStatus("task-1", "completed");
       const duration = Date.now() - start;
 
       expect(duration).toBeLessThan(100);
     });
 
-    it('should handle auto-save without blocking', async () => {
+    it("should handle auto-save without blocking", async () => {
       await stateManager.initialize(mockProjectPath);
 
-      stateManager.updateTaskStatus('task-1', 'in_progress');
+      stateManager.updateTaskStatus("task-1", "in_progress");
 
       // Should not block
       const start = Date.now();
-      stateManager.updateTaskStatus('task-2', 'completed');
+      stateManager.updateTaskStatus("task-2", "completed");
       const duration = Date.now() - start;
 
       expect(duration).toBeLessThan(10);
     });
   });
 
-  describe('Memory leak prevention', () => {
-    it('should clean up auto-save interval on stop', async () => {
+  describe("Memory leak prevention", () => {
+    it("should clean up auto-save interval on stop", async () => {
       await stateManager.initialize(mockProjectPath);
 
-      const intervalSpy = vi.spyOn(global, 'clearInterval');
+      const intervalSpy = vi.spyOn(global, "clearInterval");
 
       stateManager.stopAutoSave();
 
       expect(intervalSpy).toHaveBeenCalled();
     });
 
-    it('should not accumulate events indefinitely', async () => {
+    it("should not accumulate events indefinitely", async () => {
       await stateManager.initialize(mockProjectPath);
 
       // Generate many events
       for (let i = 0; i < 1000; i++) {
-        stateManager.updateTaskStatus(`task-${i}`, 'completed');
+        stateManager.updateTaskStatus(`task-${i}`, "completed");
       }
 
       const events = stateManager.getEvents();

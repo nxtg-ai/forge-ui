@@ -3,11 +3,12 @@
  * Handles apply/reject diff commands via backend API
  */
 
-const API_BASE = 'http://localhost:5051';
+const getApiBase = () => `http://${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:5051`;
+const API_BASE = getApiBase();
 
 export interface DiffOperation {
   filePath: string;
-  action: 'apply' | 'reject';
+  action: "apply" | "reject";
   timestamp: string;
 }
 
@@ -24,9 +25,9 @@ export interface DiffResult {
 export async function applyDiff(filePath: string): Promise<DiffResult> {
   try {
     const response = await fetch(`${API_BASE}/api/diffs/apply`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filePath, timestamp: new Date().toISOString() })
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filePath, timestamp: new Date().toISOString() }),
     });
 
     if (!response.ok) {
@@ -34,8 +35,8 @@ export async function applyDiff(filePath: string): Promise<DiffResult> {
       return {
         success: false,
         filePath,
-        message: `Failed to apply diff: ${error.error || 'Unknown error'}`,
-        error: error.error
+        message: `Failed to apply diff: ${error.error || "Unknown error"}`,
+        error: error.error,
       };
     }
 
@@ -43,14 +44,14 @@ export async function applyDiff(filePath: string): Promise<DiffResult> {
     return {
       success: true,
       filePath,
-      message: `Successfully applied changes to ${filePath}`
+      message: `Successfully applied changes to ${filePath}`,
     };
   } catch (error) {
     return {
       success: false,
       filePath,
-      message: `Network error: ${error instanceof Error ? error.message : 'Unknown'}`,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: `Network error: ${error instanceof Error ? error.message : "Unknown"}`,
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -61,9 +62,9 @@ export async function applyDiff(filePath: string): Promise<DiffResult> {
 export async function rejectDiff(filePath: string): Promise<DiffResult> {
   try {
     const response = await fetch(`${API_BASE}/api/diffs/reject`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filePath, timestamp: new Date().toISOString() })
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filePath, timestamp: new Date().toISOString() }),
     });
 
     if (!response.ok) {
@@ -71,22 +72,22 @@ export async function rejectDiff(filePath: string): Promise<DiffResult> {
       return {
         success: false,
         filePath,
-        message: `Failed to reject diff: ${error.error || 'Unknown error'}`,
-        error: error.error
+        message: `Failed to reject diff: ${error.error || "Unknown error"}`,
+        error: error.error,
       };
     }
 
     return {
       success: true,
       filePath,
-      message: `Rejected changes to ${filePath}`
+      message: `Rejected changes to ${filePath}`,
     };
   } catch (error) {
     return {
       success: false,
       filePath,
-      message: `Network error: ${error instanceof Error ? error.message : 'Unknown'}`,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: `Network error: ${error instanceof Error ? error.message : "Unknown"}`,
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -94,7 +95,11 @@ export async function rejectDiff(filePath: string): Promise<DiffResult> {
 /**
  * Get pending diffs
  */
-export async function getPendingDiffs(): Promise<{ success: boolean; diffs: any[]; error?: string }> {
+export async function getPendingDiffs(): Promise<{
+  success: boolean;
+  diffs: any[];
+  error?: string;
+}> {
   try {
     const response = await fetch(`${API_BASE}/api/diffs/pending`);
 
@@ -103,20 +108,20 @@ export async function getPendingDiffs(): Promise<{ success: boolean; diffs: any[
       return {
         success: false,
         diffs: [],
-        error: error.error || 'Failed to fetch diffs'
+        error: error.error || "Failed to fetch diffs",
       };
     }
 
     const data = await response.json();
     return {
       success: true,
-      diffs: data.data || []
+      diffs: data.data || [],
     };
   } catch (error) {
     return {
       success: false,
       diffs: [],
-      error: error instanceof Error ? error.message : 'Network error'
+      error: error instanceof Error ? error.message : "Network error",
     };
   }
 }

@@ -3,8 +3,8 @@
  * VS Code-style side-by-side diff viewer for Claude Code output
  */
 
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText,
   Check,
@@ -12,8 +12,8 @@ import {
   ChevronDown,
   ChevronRight,
   AlertCircle,
-  Zap
-} from 'lucide-react';
+  Zap,
+} from "lucide-react";
 
 interface DiffData {
   filePath: string;
@@ -25,7 +25,7 @@ interface DiffData {
 
 interface DiffChange {
   lineNumber: number;
-  type: 'added' | 'removed' | 'modified';
+  type: "added" | "removed" | "modified";
   oldLine?: string;
   newLine?: string;
 }
@@ -37,7 +37,7 @@ interface DiffVisualizationProps {
 
 export const DiffVisualization: React.FC<DiffVisualizationProps> = ({
   onApply,
-  onReject
+  onReject,
 }) => {
   const [diffs, setDiffs] = useState<DiffData[]>([]);
   const [expandedFiles, setExpandedFiles] = useState<Set<string>>(new Set());
@@ -47,22 +47,22 @@ export const DiffVisualization: React.FC<DiffVisualizationProps> = ({
     // Listen for diff events from ClaudeTerminal
     const handleDiff = (event: CustomEvent) => {
       const diffData = event.detail as DiffData;
-      setDiffs(prev => [...prev, diffData]);
+      setDiffs((prev) => [...prev, diffData]);
       setSelectedDiff(diffData.filePath);
 
       // Auto-expand the new diff
-      setExpandedFiles(prev => new Set(prev).add(diffData.filePath));
+      setExpandedFiles((prev) => new Set(prev).add(diffData.filePath));
     };
 
-    window.addEventListener('claude-diff' as any, handleDiff);
+    window.addEventListener("claude-diff" as any, handleDiff);
 
     return () => {
-      window.removeEventListener('claude-diff' as any, handleDiff);
+      window.removeEventListener("claude-diff" as any, handleDiff);
     };
   }, []);
 
   const toggleFileExpand = (filePath: string) => {
-    setExpandedFiles(prev => {
+    setExpandedFiles((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(filePath)) {
         newSet.delete(filePath);
@@ -78,7 +78,7 @@ export const DiffVisualization: React.FC<DiffVisualizationProps> = ({
       onApply(filePath);
     }
     // Remove from list
-    setDiffs(prev => prev.filter(d => d.filePath !== filePath));
+    setDiffs((prev) => prev.filter((d) => d.filePath !== filePath));
     if (selectedDiff === filePath) {
       setSelectedDiff(null);
     }
@@ -89,7 +89,7 @@ export const DiffVisualization: React.FC<DiffVisualizationProps> = ({
       onReject(filePath);
     }
     // Remove from list
-    setDiffs(prev => prev.filter(d => d.filePath !== filePath));
+    setDiffs((prev) => prev.filter((d) => d.filePath !== filePath));
     if (selectedDiff === filePath) {
       setSelectedDiff(null);
     }
@@ -99,7 +99,8 @@ export const DiffVisualization: React.FC<DiffVisualizationProps> = ({
     return null;
   }
 
-  const currentDiff = diffs.find(d => d.filePath === selectedDiff) || diffs[0];
+  const currentDiff =
+    diffs.find((d) => d.filePath === selectedDiff) || diffs[0];
 
   return (
     <motion.div
@@ -115,7 +116,7 @@ export const DiffVisualization: React.FC<DiffVisualizationProps> = ({
           <h3 className="font-semibold">Claude Code Changes</h3>
         </div>
         <div className="text-xs text-gray-500">
-          {diffs.length} file{diffs.length !== 1 ? 's' : ''} modified
+          {diffs.length} file{diffs.length !== 1 ? "s" : ""} modified
         </div>
       </div>
 
@@ -125,7 +126,7 @@ export const DiffVisualization: React.FC<DiffVisualizationProps> = ({
           <div
             key={diff.filePath}
             className={`border-b border-gray-800 last:border-b-0 ${
-              selectedDiff === diff.filePath ? 'bg-blue-500/10' : ''
+              selectedDiff === diff.filePath ? "bg-blue-500/10" : ""
             }`}
           >
             <button
@@ -146,10 +147,10 @@ export const DiffVisualization: React.FC<DiffVisualizationProps> = ({
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-green-400">
-                  +{diff.changes.filter(c => c.type === 'added').length}
+                  +{diff.changes.filter((c) => c.type === "added").length}
                 </span>
                 <span className="text-xs text-red-400">
-                  -{diff.changes.filter(c => c.type === 'removed').length}
+                  -{diff.changes.filter((c) => c.type === "removed").length}
                 </span>
               </div>
             </button>
@@ -163,23 +164,31 @@ export const DiffVisualization: React.FC<DiffVisualizationProps> = ({
           <div className="grid grid-cols-2 gap-px bg-gray-800">
             {/* Old Content */}
             <div className="bg-gray-950 p-4">
-              <div className="text-xs text-gray-500 mb-2 font-semibold">BEFORE</div>
+              <div className="text-xs text-gray-500 mb-2 font-semibold">
+                BEFORE
+              </div>
               <pre className="text-xs font-mono leading-relaxed">
-                {currentDiff.oldContent.split('\n').map((line, idx) => {
-                  const change = currentDiff.changes.find(c => c.lineNumber === idx + 1);
-                  const isRemoved = change?.type === 'removed';
-                  const isModified = change?.type === 'modified';
+                {currentDiff.oldContent.split("\n").map((line, idx) => {
+                  const change = currentDiff.changes.find(
+                    (c) => c.lineNumber === idx + 1,
+                  );
+                  const isRemoved = change?.type === "removed";
+                  const isModified = change?.type === "modified";
 
                   return (
                     <div
                       key={idx}
                       className={`${
-                        isRemoved ? 'bg-red-500/20 text-red-300' :
-                        isModified ? 'bg-yellow-500/20 text-yellow-300' :
-                        'text-gray-400'
+                        isRemoved
+                          ? "bg-red-500/20 text-red-300"
+                          : isModified
+                            ? "bg-yellow-500/20 text-yellow-300"
+                            : "text-gray-400"
                       } px-2 py-0.5`}
                     >
-                      <span className="text-gray-600 mr-4 select-none">{idx + 1}</span>
+                      <span className="text-gray-600 mr-4 select-none">
+                        {idx + 1}
+                      </span>
                       {line}
                     </div>
                   );
@@ -189,23 +198,31 @@ export const DiffVisualization: React.FC<DiffVisualizationProps> = ({
 
             {/* New Content */}
             <div className="bg-gray-950 p-4">
-              <div className="text-xs text-gray-500 mb-2 font-semibold">AFTER</div>
+              <div className="text-xs text-gray-500 mb-2 font-semibold">
+                AFTER
+              </div>
               <pre className="text-xs font-mono leading-relaxed">
-                {currentDiff.newContent.split('\n').map((line, idx) => {
-                  const change = currentDiff.changes.find(c => c.lineNumber === idx + 1);
-                  const isAdded = change?.type === 'added';
-                  const isModified = change?.type === 'modified';
+                {currentDiff.newContent.split("\n").map((line, idx) => {
+                  const change = currentDiff.changes.find(
+                    (c) => c.lineNumber === idx + 1,
+                  );
+                  const isAdded = change?.type === "added";
+                  const isModified = change?.type === "modified";
 
                   return (
                     <div
                       key={idx}
                       className={`${
-                        isAdded ? 'bg-green-500/20 text-green-300' :
-                        isModified ? 'bg-yellow-500/20 text-yellow-300' :
-                        'text-gray-400'
+                        isAdded
+                          ? "bg-green-500/20 text-green-300"
+                          : isModified
+                            ? "bg-yellow-500/20 text-yellow-300"
+                            : "text-gray-400"
                       } px-2 py-0.5`}
                     >
-                      <span className="text-gray-600 mr-4 select-none">{idx + 1}</span>
+                      <span className="text-gray-600 mr-4 select-none">
+                        {idx + 1}
+                      </span>
                       {line}
                     </div>
                   );

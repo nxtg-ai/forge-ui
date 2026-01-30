@@ -3,8 +3,8 @@
  * Editable memory items for persistent context storage
  */
 
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from "react";
+import { motion } from "framer-motion";
 import {
   Brain,
   Edit2,
@@ -13,8 +13,8 @@ import {
   Save,
   X,
   Calendar,
-  Tag
-} from 'lucide-react';
+  Tag,
+} from "lucide-react";
 
 export interface MemoryItem {
   id: string;
@@ -22,12 +22,16 @@ export interface MemoryItem {
   tags: string[];
   created: Date;
   updated: Date;
-  category: 'decision' | 'instruction' | 'learning' | 'context' | 'other';
+  category: "decision" | "instruction" | "learning" | "context" | "other";
 }
 
 interface MemoryWidgetProps {
   items: MemoryItem[];
-  onAdd: (content: string, category: MemoryItem['category'], tags: string[]) => void;
+  onAdd: (
+    content: string,
+    category: MemoryItem["category"],
+    tags: string[],
+  ) => void;
   onEdit: (id: string, content: string, tags: string[]) => void;
   onDelete: (id: string) => void;
   className?: string;
@@ -39,27 +43,31 @@ export const MemoryWidget: React.FC<MemoryWidgetProps> = ({
   onAdd,
   onEdit,
   onDelete,
-  className = '',
-  hasFiles = false
+  className = "",
+  hasFiles = false,
 }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [newContent, setNewContent] = useState('');
-  const [newCategory, setNewCategory] = useState<MemoryItem['category']>('context');
-  const [newTags, setNewTags] = useState('');
-  const [editContent, setEditContent] = useState('');
-  const [editTags, setEditTags] = useState('');
+  const [newContent, setNewContent] = useState("");
+  const [newCategory, setNewCategory] =
+    useState<MemoryItem["category"]>("context");
+  const [newTags, setNewTags] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editTags, setEditTags] = useState("");
 
   const handleAdd = () => {
     if (newContent.trim()) {
       onAdd(
         newContent.trim(),
         newCategory,
-        newTags.split(',').map(t => t.trim()).filter(Boolean)
+        newTags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
       );
-      setNewContent('');
-      setNewTags('');
-      setNewCategory('context');
+      setNewContent("");
+      setNewTags("");
+      setNewCategory("context");
       setIsAdding(false);
     }
   };
@@ -69,33 +77,41 @@ export const MemoryWidget: React.FC<MemoryWidgetProps> = ({
       onEdit(
         id,
         editContent.trim(),
-        editTags.split(',').map(t => t.trim()).filter(Boolean)
+        editTags
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean),
       );
       setEditingId(null);
-      setEditContent('');
-      setEditTags('');
+      setEditContent("");
+      setEditTags("");
     }
   };
 
   const startEdit = (item: MemoryItem) => {
     setEditingId(item.id);
     setEditContent(item.content);
-    setEditTags(item.tags.join(', '));
+    setEditTags(item.tags.join(", "));
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setEditContent('');
-    setEditTags('');
+    setEditContent("");
+    setEditTags("");
   };
 
-  const getCategoryColor = (category: MemoryItem['category']) => {
+  const getCategoryColor = (category: MemoryItem["category"]) => {
     switch (category) {
-      case 'decision': return 'text-purple-400 bg-purple-500/10 border-purple-500/20';
-      case 'instruction': return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
-      case 'learning': return 'text-green-400 bg-green-500/10 border-green-500/20';
-      case 'context': return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20';
-      default: return 'text-gray-400 bg-gray-500/10 border-gray-500/20';
+      case "decision":
+        return "text-purple-400 bg-purple-500/10 border-purple-500/20";
+      case "instruction":
+        return "text-blue-400 bg-blue-500/10 border-blue-500/20";
+      case "learning":
+        return "text-green-400 bg-green-500/10 border-green-500/20";
+      case "context":
+        return "text-yellow-400 bg-yellow-500/10 border-yellow-500/20";
+      default:
+        return "text-gray-400 bg-gray-500/10 border-gray-500/20";
     }
   };
 
@@ -126,13 +142,15 @@ export const MemoryWidget: React.FC<MemoryWidgetProps> = ({
       {isAdding && (
         <motion.div
           initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
+          animate={{ opacity: 1, height: "auto" }}
           exit={{ opacity: 0, height: 0 }}
           className="bg-gray-800/50 border border-gray-700 rounded-lg p-3 space-y-2"
         >
           <select
             value={newCategory}
-            onChange={(e) => setNewCategory(e.target.value as MemoryItem['category'])}
+            onChange={(e) =>
+              setNewCategory(e.target.value as MemoryItem["category"])
+            }
             className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1.5 text-xs text-gray-300
                      focus:outline-none focus:border-purple-500/50"
           >
@@ -174,8 +192,8 @@ export const MemoryWidget: React.FC<MemoryWidgetProps> = ({
             <button
               onClick={() => {
                 setIsAdding(false);
-                setNewContent('');
-                setNewTags('');
+                setNewContent("");
+                setNewTags("");
               }}
               className="px-3 py-1.5 bg-gray-700/50 hover:bg-gray-700 border border-gray-600
                        rounded text-xs text-gray-400 transition-all"
@@ -187,10 +205,13 @@ export const MemoryWidget: React.FC<MemoryWidgetProps> = ({
       )}
 
       {/* Memory Items */}
-      <div className={hasFiles
-        ? "space-y-2 max-h-64 overflow-y-auto"
-        : "space-y-2 flex-1 min-h-0 overflow-y-auto"
-      }>
+      <div
+        className={
+          hasFiles
+            ? "space-y-2 max-h-64 overflow-y-auto"
+            : "space-y-2 flex-1 min-h-0 overflow-y-auto"
+        }
+      >
         {items.length === 0 ? (
           <div className="text-center py-8 text-gray-500 text-xs">
             <Brain className="w-8 h-8 mx-auto mb-2 opacity-20" />
@@ -250,7 +271,9 @@ export const MemoryWidget: React.FC<MemoryWidgetProps> = ({
                 <>
                   {/* Category Badge */}
                   <div className="flex items-center justify-between">
-                    <span className={`px-2 py-0.5 rounded text-xs font-medium border ${getCategoryColor(item.category)}`}>
+                    <span
+                      className={`px-2 py-0.5 rounded text-xs font-medium border ${getCategoryColor(item.category)}`}
+                    >
                       {item.category}
                     </span>
                     <div className="flex gap-1">
@@ -295,11 +318,11 @@ export const MemoryWidget: React.FC<MemoryWidgetProps> = ({
                   {/* Timestamp */}
                   <div className="flex items-center gap-1 text-xs text-gray-600">
                     <Calendar className="w-3 h-3" />
-                    {new Date(item.updated).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
+                    {new Date(item.updated).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
                     })}
                   </div>
                 </>

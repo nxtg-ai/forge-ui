@@ -3,10 +3,10 @@
  * Inter-agent communication and coordination system
  */
 
-import { EventEmitter } from 'events';
-import * as crypto from 'crypto';
-import { Logger } from '../utils/logger';
-import { Task } from '../types/state';
+import { EventEmitter } from "events";
+import * as crypto from "crypto";
+import { Logger } from "../utils/logger";
+import { Task } from "../types/state";
 import {
   Agent,
   Message,
@@ -14,33 +14,33 @@ import {
   SignOffRequest,
   SignOffResult,
   Artifact,
-  AgentResponse
-} from '../types/agents';
-import { approvalQueue } from '../services/approval-queue';
+  AgentResponse,
+} from "../types/agents";
+import { approvalQueue } from "../services/approval-queue";
 import {
   DecisionImpact,
   DecisionRisk,
   ApproverRole,
-  ApprovalStatus
-} from '../types/approval';
+  ApprovalStatus,
+} from "../types/approval";
 
-const logger = new Logger('AgentCoordination');
+const logger = new Logger("AgentCoordination");
 
 // Message priority levels
 export enum MessagePriority {
   LOW = 1,
   NORMAL = 5,
   HIGH = 8,
-  CRITICAL = 10
+  CRITICAL = 10,
 }
 
 // Coordination status
 export enum CoordinationStatus {
-  IDLE = 'idle',
-  COORDINATING = 'coordinating',
-  WAITING = 'waiting',
-  COMPLETE = 'complete',
-  ERROR = 'error'
+  IDLE = "idle",
+  COORDINATING = "coordinating",
+  WAITING = "waiting",
+  COMPLETE = "complete",
+  ERROR = "error",
 }
 
 // Message queue entry
@@ -58,7 +58,8 @@ export class AgentCoordinationProtocol extends EventEmitter {
   private approvalRequestIds: Map<string, string> = new Map(); // artifactId -> approvalRequestId
   private agentRegistry: Map<string, Agent> = new Map();
   private status: CoordinationStatus = CoordinationStatus.IDLE;
-  private messageHandlers: Map<string, (message: Message) => Promise<any>> = new Map();
+  private messageHandlers: Map<string, (message: Message) => Promise<any>> =
+    new Map();
 
   constructor() {
     super();
@@ -95,7 +96,10 @@ export class AgentCoordinationProtocol extends EventEmitter {
   /**
    * Register an agent with the protocol
    */
-  registerAgent(agent: Agent, handler?: (message: Message) => Promise<any>): void {
+  registerAgent(
+    agent: Agent,
+    handler?: (message: Message) => Promise<any>,
+  ): void {
     this.agentRegistry.set(agent.id, agent);
     if (handler) {
       this.messageHandlers.set(agent.id, handler);
@@ -118,16 +122,16 @@ export class AgentCoordinationProtocol extends EventEmitter {
       message,
       priority: message.priority || MessagePriority.NORMAL,
       timestamp: new Date(),
-      retries: 0
+      retries: 0,
     });
     this.messageQueue.set(agentId, queue);
 
     logger.debug(`Message queued for agent ${agentId}`, {
       messageId: message.id,
-      type: message.type
+      type: message.type,
     });
 
-    this.emit('messageSent', message);
+    this.emit("messageSent", message);
   }
 
   /**
@@ -136,34 +140,37 @@ export class AgentCoordinationProtocol extends EventEmitter {
   async broadcast(message: Message): Promise<void> {
     const broadcastMessage = {
       ...message,
-      type: MessageType.BROADCAST as MessageType
+      type: MessageType.BROADCAST as MessageType,
     };
 
-    const promises = Array.from(this.agentRegistry.keys()).map(agentId =>
-      this.sendMessage(agentId, { ...broadcastMessage, to: agentId })
+    const promises = Array.from(this.agentRegistry.keys()).map((agentId) =>
+      this.sendMessage(agentId, { ...broadcastMessage, to: agentId }),
     );
 
     await Promise.all(promises);
 
-    logger.info('Message broadcast to all agents', {
+    logger.info("Message broadcast to all agents", {
       messageId: message.id,
-      agentCount: this.agentRegistry.size
+      agentCount: this.agentRegistry.size,
     });
 
-    this.emit('messageBroadcast', broadcastMessage);
+    this.emit("messageBroadcast", broadcastMessage);
   }
 
   /**
    * Request sign-off from agent
    */
-  async requestSignOff(agentId: string, artifact: Artifact): Promise<SignOffResult> {
+  async requestSignOff(
+    agentId: string,
+    artifact: Artifact,
+  ): Promise<SignOffResult> {
     const request: SignOffRequest = {
       artifactId: artifact.id,
       artifactType: artifact.type,
       description: `Sign-off request for ${artifact.type} artifact`,
       checkpoints: [],
-      requestedBy: 'orchestrator',
-      deadline: new Date(Date.now() + 300000) // 5 minutes
+      requestedBy: "orchestrator",
+      deadline: new Date(Date.now() + 300000), // 5 minutes
     };
 
     // Store request
@@ -176,7 +183,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
     const approvalRequest = await approvalQueue.requestApproval(
       {
         taskId: artifact.id,
-        agentId: 'orchestrator',
+        agentId: "orchestrator",
         action: `Sign-off for ${artifact.type}`,
         rationale: request.description,
         filesAffected: artifact.files || [],
@@ -186,7 +193,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
       {
         requiredApprover: approverRole,
         timeoutMinutes: 5,
-      }
+      },
     );
 
     // Track the approval request ID
@@ -194,14 +201,14 @@ export class AgentCoordinationProtocol extends EventEmitter {
 
     // Create sign-off message
     const message: Message = {
-      id: crypto.randomBytes(8).toString('hex'),
-      from: 'orchestrator',
+      id: crypto.randomBytes(8).toString("hex"),
+      from: "orchestrator",
       to: agentId,
       type: MessageType.SIGN_OFF,
-      subject: 'Sign-off Request',
+      subject: "Sign-off Request",
       payload: request,
       timestamp: new Date(),
-      priority: MessagePriority.HIGH
+      priority: MessagePriority.HIGH,
     };
 
     // Send message to notify agent
@@ -215,11 +222,11 @@ export class AgentCoordinationProtocol extends EventEmitter {
    * Map agent ID to approver role
    */
   private mapAgentToApproverRole(agentId: string): ApproverRole | undefined {
-    if (agentId.includes('architect')) {
+    if (agentId.includes("architect")) {
       return ApproverRole.ARCHITECT;
-    } else if (agentId.includes('designer') || agentId.includes('vanguard')) {
+    } else if (agentId.includes("designer") || agentId.includes("vanguard")) {
       return ApproverRole.DESIGNER;
-    } else if (agentId.includes('ceo') || agentId.includes('CEO-LOOP')) {
+    } else if (agentId.includes("ceo") || agentId.includes("CEO-LOOP")) {
       return ApproverRole.CEO;
     }
     // Default: no specific approver required
@@ -229,7 +236,10 @@ export class AgentCoordinationProtocol extends EventEmitter {
   /**
    * Wait for sign-off response
    */
-  private async waitForSignOff(artifactId: string, timeout: number): Promise<SignOffResult> {
+  private async waitForSignOff(
+    artifactId: string,
+    timeout: number,
+  ): Promise<SignOffResult> {
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         reject(new Error(`Sign-off timeout for artifact ${artifactId}`));
@@ -273,34 +283,34 @@ export class AgentCoordinationProtocol extends EventEmitter {
     if (approvalRequest.status === ApprovalStatus.APPROVED) {
       return {
         approved: true,
-        reviewer: approvalRequest.approver || 'unknown',
+        reviewer: approvalRequest.approver || "unknown",
         timestamp: approvalRequest.approvedAt || new Date(),
-        comments: approvalRequest.feedback || 'Approved',
-        suggestions: []
+        comments: approvalRequest.feedback || "Approved",
+        suggestions: [],
       };
     } else if (approvalRequest.status === ApprovalStatus.REJECTED) {
       return {
         approved: false,
-        reviewer: approvalRequest.approver || 'unknown',
+        reviewer: approvalRequest.approver || "unknown",
         timestamp: approvalRequest.approvedAt || new Date(),
-        comments: approvalRequest.feedback || 'Rejected',
-        suggestions: []
+        comments: approvalRequest.feedback || "Rejected",
+        suggestions: [],
       };
     } else if (approvalRequest.status === ApprovalStatus.TIMEOUT) {
       return {
         approved: false,
-        reviewer: 'system',
+        reviewer: "system",
         timestamp: approvalRequest.approvedAt || new Date(),
-        comments: 'Request timed out without decision',
-        suggestions: []
+        comments: "Request timed out without decision",
+        suggestions: [],
       };
     } else if (approvalRequest.status === ApprovalStatus.CANCELLED) {
       return {
         approved: false,
-        reviewer: 'system',
+        reviewer: "system",
         timestamp: new Date(),
-        comments: 'Request was cancelled',
-        suggestions: []
+        comments: "Request was cancelled",
+        suggestions: [],
       };
     }
 
@@ -316,7 +326,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
 
     const subtasks = this.divideTask(task, agents.length);
     const promises = agents.map((agent, index) =>
-      this.assignTaskToAgent(agent, subtasks[index])
+      this.assignTaskToAgent(agent, subtasks[index]),
     );
 
     try {
@@ -325,7 +335,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
       return {
         success: true,
         results,
-        duration: 0 // Would calculate actual duration
+        duration: 0, // Would calculate actual duration
       };
     } catch (error) {
       this.status = CoordinationStatus.ERROR;
@@ -342,14 +352,14 @@ export class AgentCoordinationProtocol extends EventEmitter {
 
     // Create task message
     const message: Message = {
-      id: crypto.randomBytes(8).toString('hex'),
-      from: 'orchestrator',
+      id: crypto.randomBytes(8).toString("hex"),
+      from: "orchestrator",
       to: agent.id,
       type: MessageType.REQUEST,
       subject: `Execute task: ${task.title}`,
       payload: task,
       timestamp: new Date(),
-      priority: task.priority
+      priority: task.priority,
     };
 
     // Send to agent
@@ -362,7 +372,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
       success: true,
       result: { taskCompleted: task.id },
       artifacts: [`artifact-${task.id}`],
-      duration: Date.now() - startTime
+      duration: Date.now() - startTime,
     };
   }
 
@@ -383,7 +393,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
     } else {
       // Default handling
       logger.debug(`No handler for agent ${message.to}, using default`);
-      this.emit('messageReceived', message);
+      this.emit("messageReceived", message);
     }
   }
 
@@ -393,9 +403,9 @@ export class AgentCoordinationProtocol extends EventEmitter {
   private handleMessageResponse(originalMessage: Message, response: any): void {
     if (originalMessage.replyTo) {
       // This is a response to another message
-      this.emit('responseReceived', {
+      this.emit("responseReceived", {
         originalId: originalMessage.replyTo,
-        response
+        response,
       });
     }
 
@@ -408,7 +418,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
    */
   private retryMessage(message: Message): void {
     const queue = this.messageQueue.get(message.to) || [];
-    const entry = queue.find(e => e.message.id === message.id);
+    const entry = queue.find((e) => e.message.id === message.id);
 
     if (entry && entry.retries < 3) {
       entry.retries++;
@@ -416,7 +426,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
       logger.info(`Retrying message ${message.id} (attempt ${entry.retries})`);
     } else {
       logger.error(`Message ${message.id} failed after max retries`);
-      this.emit('messageFailed', message);
+      this.emit("messageFailed", message);
     }
   }
 
@@ -429,7 +439,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
       subtasks.push({
         ...task,
         id: `${task.id}-sub-${i}`,
-        title: `${task.title} (Part ${i + 1}/${count})`
+        title: `${task.title} (Part ${i + 1}/${count})`,
       });
     }
     return subtasks;
@@ -440,13 +450,13 @@ export class AgentCoordinationProtocol extends EventEmitter {
    */
   private async assignTaskToAgent(agent: Agent, task: Task): Promise<any> {
     const message: Message = {
-      id: crypto.randomBytes(8).toString('hex'),
-      from: 'orchestrator',
+      id: crypto.randomBytes(8).toString("hex"),
+      from: "orchestrator",
       to: agent.id,
       type: MessageType.REQUEST,
-      subject: 'Task Assignment',
+      subject: "Task Assignment",
       payload: task,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     await this.sendMessage(agent.id, message);
@@ -461,13 +471,13 @@ export class AgentCoordinationProtocol extends EventEmitter {
   private async simulateAgentExecution(agent: Agent, task: Task): Promise<any> {
     // Simulate processing time based on task complexity
     const processingTime = Math.random() * 2000 + 1000; // 1-3 seconds
-    await new Promise(resolve => setTimeout(resolve, processingTime));
+    await new Promise((resolve) => setTimeout(resolve, processingTime));
 
     return {
       agentId: agent.id,
       taskId: task.id,
-      status: 'completed',
-      result: `Task ${task.id} completed by ${agent.name}`
+      status: "completed",
+      result: `Task ${task.id} completed by ${agent.name}`,
     };
   }
 
@@ -484,7 +494,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
   getQueueStats(): Record<string, any> {
     const stats: Record<string, any> = {
       totalQueued: 0,
-      byAgent: {}
+      byAgent: {},
     };
 
     for (const [agentId, queue] of this.messageQueue.entries()) {
@@ -507,7 +517,9 @@ export class AgentCoordinationProtocol extends EventEmitter {
         this.messageQueue.set(id, []);
       }
     }
-    logger.info(`Message queue cleared ${agentId ? `for ${agentId}` : 'for all agents'}`);
+    logger.info(
+      `Message queue cleared ${agentId ? `for ${agentId}` : "for all agents"}`,
+    );
   }
 
   // API compatibility methods
@@ -533,18 +545,18 @@ export class AgentCoordinationProtocol extends EventEmitter {
 
   async proposeArchitectureDecision(decision: any): Promise<any> {
     return {
-      id: crypto.randomBytes(8).toString('hex'),
+      id: crypto.randomBytes(8).toString("hex"),
       ...decision,
-      status: 'proposed',
-      timestamp: new Date()
+      status: "proposed",
+      timestamp: new Date(),
     };
   }
 
   async approveArchitectureDecision(decisionId: string): Promise<any> {
     return {
       id: decisionId,
-      status: 'approved',
-      timestamp: new Date()
+      status: "approved",
+      timestamp: new Date(),
     };
   }
 
@@ -553,7 +565,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
   }
 
   async initialize(): Promise<void> {
-    logger.info('AgentCoordinationProtocol initialized');
+    logger.info("AgentCoordinationProtocol initialized");
   }
 }
 

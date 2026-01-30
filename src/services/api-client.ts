@@ -3,7 +3,7 @@
  * Central service for all backend communication
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 import type {
   VisionData,
   ProjectState,
@@ -11,12 +11,25 @@ import type {
   Command,
   ArchitectureDecision,
   AutomatedAction,
-  YoloStatistics
-} from '../components/types';
+  YoloStatistics,
+} from "../components/types";
 
-// API Configuration (Vite uses import.meta.env, not process.env)
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5051/api';
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:5051/ws';
+// API Configuration - use current hostname for multi-device access
+const getApiHost = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+  return `http://${host}:5051/api`;
+};
+
+const getWsHost = () => {
+  if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL;
+  const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+  const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${host}:5051/ws`;
+};
+
+const API_BASE_URL = getApiHost();
+const WS_URL = getWsHost();
 
 // Response schemas for type safety
 const ApiResponseSchema = <T extends z.ZodType>(dataSchema: T) =>
@@ -24,7 +37,7 @@ const ApiResponseSchema = <T extends z.ZodType>(dataSchema: T) =>
     success: z.boolean(),
     data: dataSchema.optional(),
     error: z.string().optional(),
-    timestamp: z.string()
+    timestamp: z.string(),
   });
 
 // Request/Response types
@@ -39,17 +52,17 @@ export interface PaginationParams {
   page?: number;
   limit?: number;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 // WebSocket message types
 export type WSMessageType =
-  | 'agent.activity'
-  | 'state.update'
-  | 'vision.change'
-  | 'command.executed'
-  | 'decision.made'
-  | 'yolo.action';
+  | "agent.activity"
+  | "state.update"
+  | "vision.change"
+  | "command.executed"
+  | "decision.made"
+  | "yolo.action";
 
 export interface WSMessage<T = any> {
   type: WSMessageType;
@@ -66,7 +79,8 @@ export class ApiClient {
   private wsReconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000; // Start with 1 second
-  private eventHandlers: Map<WSMessageType, Set<(data: any) => void>> = new Map();
+  private eventHandlers: Map<WSMessageType, Set<(data: any) => void>> =
+    new Map();
   private requestQueue: Array<() => Promise<void>> = [];
   private isProcessingQueue = false;
 
@@ -78,22 +92,24 @@ export class ApiClient {
 
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<ApiResponse<T>> {
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         ...options,
         headers: {
-          'Content-Type': 'application/json',
-          ...options.headers
+          "Content-Type": "application/json",
+          ...options.headers,
         },
-        credentials: 'include' // For session management
+        credentials: "include", // For session management
       });
 
       const data: any = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || `HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(
+          data.error || `HTTP ${response.status}: ${response.statusText}`,
+        );
       }
 
       return data as ApiResponse<T>;
@@ -101,8 +117,8 @@ export class ApiClient {
       console.error(`API Request failed: ${endpoint}`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString()
+        error: error instanceof Error ? error.message : "Unknown error",
+        timestamp: new Date().toISOString(),
       };
     }
   }
@@ -110,125 +126,138 @@ export class ApiClient {
   // ============= Vision Management =============
 
   async getVision(): Promise<ApiResponse<VisionData>> {
-    return this.request<VisionData>('/vision');
+    return this.request<VisionData>("/vision");
   }
 
-  async updateVision(vision: Partial<VisionData>): Promise<ApiResponse<VisionData>> {
-    return this.request<VisionData>('/vision', {
-      method: 'PUT',
-      body: JSON.stringify(vision)
+  async updateVision(
+    vision: Partial<VisionData>,
+  ): Promise<ApiResponse<VisionData>> {
+    return this.request<VisionData>("/vision", {
+      method: "PUT",
+      body: JSON.stringify(vision),
     });
   }
 
   async captureVision(visionText: string): Promise<ApiResponse<VisionData>> {
-    return this.request<VisionData>('/vision/capture', {
-      method: 'POST',
-      body: JSON.stringify({ text: visionText })
+    return this.request<VisionData>("/vision/capture", {
+      method: "POST",
+      body: JSON.stringify({ text: visionText }),
     });
   }
 
   // ============= Project State =============
 
   async getProjectState(): Promise<ApiResponse<ProjectState>> {
-    return this.request<ProjectState>('/state');
+    return this.request<ProjectState>("/state");
   }
 
-  async updateProjectPhase(phase: ProjectState['phase']): Promise<ApiResponse<ProjectState>> {
-    return this.request<ProjectState>('/state/phase', {
-      method: 'PATCH',
-      body: JSON.stringify({ phase })
+  async updateProjectPhase(
+    phase: ProjectState["phase"],
+  ): Promise<ApiResponse<ProjectState>> {
+    return this.request<ProjectState>("/state/phase", {
+      method: "PATCH",
+      body: JSON.stringify({ phase }),
     });
   }
 
-  async getHealthMetrics(): Promise<ApiResponse<ProjectState['healthScore']>> {
-    return this.request<ProjectState['healthScore']>('/state/health');
+  async getHealthMetrics(): Promise<ApiResponse<ProjectState["healthScore"]>> {
+    return this.request<ProjectState["healthScore"]>("/state/health");
   }
 
   // ============= Agent Management =============
 
   async getAgentActivities(
-    params?: PaginationParams
+    params?: PaginationParams,
   ): Promise<ApiResponse<AgentActivity[]>> {
     const queryString = new URLSearchParams(
-      params as Record<string, string>
+      params as Record<string, string>,
     ).toString();
     return this.request<AgentActivity[]>(`/agents/activities?${queryString}`);
   }
 
-  async getActiveAgents(): Promise<ApiResponse<ProjectState['activeAgents']>> {
-    return this.request<ProjectState['activeAgents']>('/agents/active');
+  async getActiveAgents(): Promise<ApiResponse<ProjectState["activeAgents"]>> {
+    return this.request<ProjectState["activeAgents"]>("/agents/active");
   }
 
   async assignAgentTask(
     agentId: string,
-    task: any
+    task: any,
   ): Promise<ApiResponse<{ taskId: string }>> {
     return this.request<{ taskId: string }>(`/agents/${agentId}/tasks`, {
-      method: 'POST',
-      body: JSON.stringify(task)
+      method: "POST",
+      body: JSON.stringify(task),
     });
   }
 
   // ============= Command Execution =============
 
-  async executeCommand(command: Command): Promise<ApiResponse<{ result: any }>> {
-    return this.request<{ result: any }>('/commands/execute', {
-      method: 'POST',
-      body: JSON.stringify(command)
+  async executeCommand(
+    command: Command,
+  ): Promise<ApiResponse<{ result: any }>> {
+    return this.request<{ result: any }>("/commands/execute", {
+      method: "POST",
+      body: JSON.stringify(command),
     });
   }
 
   async getCommandHistory(): Promise<ApiResponse<Command[]>> {
-    return this.request<Command[]>('/commands/history');
+    return this.request<Command[]>("/commands/history");
   }
 
-  async getCommandSuggestions(context: string): Promise<ApiResponse<Command[]>> {
-    return this.request<Command[]>('/commands/suggestions', {
-      method: 'POST',
-      body: JSON.stringify({ context })
+  async getCommandSuggestions(
+    context: string,
+  ): Promise<ApiResponse<Command[]>> {
+    return this.request<Command[]>("/commands/suggestions", {
+      method: "POST",
+      body: JSON.stringify({ context }),
     });
   }
 
   // ============= Architecture Decisions =============
 
-  async getArchitectureDecisions(): Promise<ApiResponse<ArchitectureDecision[]>> {
-    return this.request<ArchitectureDecision[]>('/architecture/decisions');
+  async getArchitectureDecisions(): Promise<
+    ApiResponse<ArchitectureDecision[]>
+  > {
+    return this.request<ArchitectureDecision[]>("/architecture/decisions");
   }
 
   async proposeArchitecture(
-    decision: Partial<ArchitectureDecision>
+    decision: Partial<ArchitectureDecision>,
   ): Promise<ApiResponse<ArchitectureDecision>> {
-    return this.request<ArchitectureDecision>('/architecture/propose', {
-      method: 'POST',
-      body: JSON.stringify(decision)
+    return this.request<ArchitectureDecision>("/architecture/propose", {
+      method: "POST",
+      body: JSON.stringify(decision),
     });
   }
 
   async approveArchitectureDecision(
-    decisionId: string
+    decisionId: string,
   ): Promise<ApiResponse<ArchitectureDecision>> {
-    return this.request<ArchitectureDecision>(`/architecture/decisions/${decisionId}/approve`, {
-      method: 'POST'
-    });
+    return this.request<ArchitectureDecision>(
+      `/architecture/decisions/${decisionId}/approve`,
+      {
+        method: "POST",
+      },
+    );
   }
 
   // ============= YOLO Mode =============
 
   async getYoloStatistics(): Promise<ApiResponse<YoloStatistics>> {
-    return this.request<YoloStatistics>('/yolo/statistics');
+    return this.request<YoloStatistics>("/yolo/statistics");
   }
 
   async executeYoloAction(
-    action: AutomatedAction
+    action: AutomatedAction,
   ): Promise<ApiResponse<{ actionId: string }>> {
-    return this.request<{ actionId: string }>('/yolo/execute', {
-      method: 'POST',
-      body: JSON.stringify(action)
+    return this.request<{ actionId: string }>("/yolo/execute", {
+      method: "POST",
+      body: JSON.stringify(action),
     });
   }
 
   async getYoloHistory(): Promise<ApiResponse<AutomatedAction[]>> {
-    return this.request<AutomatedAction[]>('/yolo/history');
+    return this.request<AutomatedAction[]>("/yolo/history");
   }
 
   // ============= WebSocket Management =============
@@ -242,7 +271,7 @@ export class ApiClient {
       this.wsConnection = new WebSocket(WS_URL);
 
       this.wsConnection.onopen = () => {
-        console.log('WebSocket connected');
+        console.log("WebSocket connected");
         this.wsReconnectAttempts = 0;
         this.reconnectDelay = 1000;
         this.processQueuedRequests();
@@ -253,34 +282,39 @@ export class ApiClient {
           const message: WSMessage = JSON.parse(event.data);
           this.handleWSMessage(message);
         } catch (error) {
-          console.error('Failed to parse WebSocket message:', error);
+          console.error("Failed to parse WebSocket message:", error);
         }
       };
 
       this.wsConnection.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        console.error("WebSocket error:", error);
       };
 
       this.wsConnection.onclose = () => {
-        console.log('WebSocket closed');
+        console.log("WebSocket closed");
         this.attemptReconnect();
       };
     } catch (error) {
-      console.error('Failed to initialize WebSocket:', error);
+      console.error("Failed to initialize WebSocket:", error);
       this.attemptReconnect();
     }
   }
 
   private attemptReconnect() {
     if (this.wsReconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('Max WebSocket reconnection attempts reached');
+      console.error("Max WebSocket reconnection attempts reached");
       return;
     }
 
     this.wsReconnectAttempts++;
-    const delay = Math.min(this.reconnectDelay * Math.pow(2, this.wsReconnectAttempts - 1), 30000);
+    const delay = Math.min(
+      this.reconnectDelay * Math.pow(2, this.wsReconnectAttempts - 1),
+      30000,
+    );
 
-    console.log(`Attempting WebSocket reconnection ${this.wsReconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`);
+    console.log(
+      `Attempting WebSocket reconnection ${this.wsReconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`,
+    );
 
     setTimeout(() => {
       this.initializeWebSocket();
@@ -290,11 +324,14 @@ export class ApiClient {
   private handleWSMessage(message: WSMessage) {
     const handlers = this.eventHandlers.get(message.type);
     if (handlers) {
-      handlers.forEach(handler => {
+      handlers.forEach((handler) => {
         try {
           handler(message.payload);
         } catch (error) {
-          console.error(`Error in WebSocket handler for ${message.type}:`, error);
+          console.error(
+            `Error in WebSocket handler for ${message.type}:`,
+            error,
+          );
         }
       });
     }
@@ -302,7 +339,7 @@ export class ApiClient {
 
   public subscribe(
     eventType: WSMessageType,
-    handler: (data: any) => void
+    handler: (data: any) => void,
   ): () => void {
     if (!this.eventHandlers.has(eventType)) {
       this.eventHandlers.set(eventType, new Set());
@@ -325,7 +362,7 @@ export class ApiClient {
         type,
         payload,
         timestamp: new Date().toISOString(),
-        correlationId: crypto.randomUUID()
+        correlationId: crypto.randomUUID(),
       };
 
       this.wsConnection.send(JSON.stringify(message));
@@ -350,7 +387,7 @@ export class ApiClient {
         try {
           await request();
         } catch (error) {
-          console.error('Failed to process queued request:', error);
+          console.error("Failed to process queued request:", error);
         }
       }
     }

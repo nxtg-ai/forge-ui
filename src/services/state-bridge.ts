@@ -3,9 +3,9 @@
  * Real-time state synchronization between backend and UI
  */
 
-import { z } from 'zod';
-import { BaseService, ServiceConfig } from './base-service';
-import { Result, StateError, IntegrationError } from '../utils/result';
+import { z } from "zod";
+import { BaseService, ServiceConfig } from "./base-service";
+import { Result, StateError, IntegrationError } from "../utils/result";
 import {
   ProjectState,
   ProjectContext,
@@ -13,20 +13,20 @@ import {
   Decision,
   Agent,
   AgentActivity,
-  EngagementMode
-} from '../components/types';
+  EngagementMode,
+} from "../components/types";
 
 /**
  * State update event types
  */
 export enum StateUpdateType {
-  PROJECT_STATE = 'project_state',
-  AGENT_STATE = 'agent_state',
-  BLOCKER_ADDED = 'blocker_added',
-  BLOCKER_RESOLVED = 'blocker_resolved',
-  DECISION_MADE = 'decision_made',
-  PHASE_CHANGED = 'phase_changed',
-  PROGRESS_UPDATE = 'progress_update'
+  PROJECT_STATE = "project_state",
+  AGENT_STATE = "agent_state",
+  BLOCKER_ADDED = "blocker_added",
+  BLOCKER_RESOLVED = "blocker_resolved",
+  DECISION_MADE = "decision_made",
+  PHASE_CHANGED = "phase_changed",
+  PROGRESS_UPDATE = "progress_update",
 }
 
 /**
@@ -79,18 +79,18 @@ export class StateBridgeService extends BaseService {
   private pollingTimer?: NodeJS.Timer;
   private stateVersion = 0;
 
-  constructor(config: StateBridgeConfig = { name: 'StateBridge' }) {
+  constructor(config: StateBridgeConfig = { name: "StateBridge" }) {
     super({
       ...config,
-      debounceMs: config.debounceMs ?? 100
+      debounceMs: config.debounceMs ?? 100,
     });
 
     this.config = {
       pollingInterval: 1000,
       maxBufferSize: 100,
       persistenceEnabled: true,
-      statePath: '.claude/state.json',
-      ...config
+      statePath: ".claude/state.json",
+      ...config,
     };
   }
 
@@ -127,9 +127,7 @@ export class StateBridgeService extends BaseService {
    */
   getProjectState(): Result<ProjectState, StateError> {
     if (!this.currentState) {
-      return Result.err(
-        new StateError('No project state available')
-      );
+      return Result.err(new StateError("No project state available"));
     }
     return Result.ok(this.currentState);
   }
@@ -139,9 +137,7 @@ export class StateBridgeService extends BaseService {
    */
   getProjectContext(): Result<ProjectContext, StateError> {
     if (!this.projectContext) {
-      return Result.err(
-        new StateError('No project context available')
-      );
+      return Result.err(new StateError("No project context available"));
     }
     return Result.ok(this.projectContext);
   }
@@ -150,19 +146,17 @@ export class StateBridgeService extends BaseService {
    * Update project state
    */
   async updateProjectState(
-    update: Partial<ProjectState>
+    update: Partial<ProjectState>,
   ): Promise<Result<ProjectState, IntegrationError>> {
     if (!this.currentState) {
-      return Result.err(
-        new StateError('No current state to update')
-      );
+      return Result.err(new StateError("No current state to update"));
     }
 
     try {
       // Merge update with current state
       const newState: ProjectState = {
         ...this.currentState,
-        ...update
+        ...update,
       };
 
       // Validate the new state
@@ -179,7 +173,7 @@ export class StateBridgeService extends BaseService {
       this.emitStateUpdate({
         type: StateUpdateType.PROJECT_STATE,
         timestamp: new Date(),
-        data: newState
+        data: newState,
       });
 
       // Persist if enabled
@@ -192,8 +186,8 @@ export class StateBridgeService extends BaseService {
       return Result.err(
         new IntegrationError(
           `Failed to update state: ${error instanceof Error ? error.message : String(error)}`,
-          'STATE_UPDATE_ERROR'
-        )
+          "STATE_UPDATE_ERROR",
+        ),
       );
     }
   }
@@ -204,21 +198,23 @@ export class StateBridgeService extends BaseService {
   async addBlocker(blocker: Blocker): Promise<Result<void, IntegrationError>> {
     const stateResult = this.getProjectState();
     if (stateResult.isErr()) {
-      return Result.err(new IntegrationError(stateResult.error.message, 'STATE_ERROR'));
+      return Result.err(
+        new IntegrationError(stateResult.error.message, "STATE_ERROR"),
+      );
     }
 
     const state = stateResult.value;
     const newBlockers = [...state.blockers, blocker];
 
     const updateResult = await this.updateProjectState({
-      blockers: newBlockers
+      blockers: newBlockers,
     });
 
     if (updateResult.isOk()) {
       this.emitStateUpdate({
         type: StateUpdateType.BLOCKER_ADDED,
         timestamp: new Date(),
-        data: blocker
+        data: blocker,
       });
     }
 
@@ -228,24 +224,28 @@ export class StateBridgeService extends BaseService {
   /**
    * Resolve a blocker
    */
-  async resolveBlocker(blockerId: string): Promise<Result<void, IntegrationError>> {
+  async resolveBlocker(
+    blockerId: string,
+  ): Promise<Result<void, IntegrationError>> {
     const stateResult = this.getProjectState();
     if (stateResult.isErr()) {
-      return Result.err(new IntegrationError(stateResult.error.message, 'STATE_ERROR'));
+      return Result.err(
+        new IntegrationError(stateResult.error.message, "STATE_ERROR"),
+      );
     }
 
     const state = stateResult.value;
-    const newBlockers = state.blockers.filter(b => b.id !== blockerId);
+    const newBlockers = state.blockers.filter((b) => b.id !== blockerId);
 
     const updateResult = await this.updateProjectState({
-      blockers: newBlockers
+      blockers: newBlockers,
     });
 
     if (updateResult.isOk()) {
       this.emitStateUpdate({
         type: StateUpdateType.BLOCKER_RESOLVED,
         timestamp: new Date(),
-        data: { blockerId }
+        data: { blockerId },
       });
     }
 
@@ -255,24 +255,28 @@ export class StateBridgeService extends BaseService {
   /**
    * Record a decision
    */
-  async recordDecision(decision: Decision): Promise<Result<void, IntegrationError>> {
+  async recordDecision(
+    decision: Decision,
+  ): Promise<Result<void, IntegrationError>> {
     const stateResult = this.getProjectState();
     if (stateResult.isErr()) {
-      return Result.err(new IntegrationError(stateResult.error.message, 'STATE_ERROR'));
+      return Result.err(
+        new IntegrationError(stateResult.error.message, "STATE_ERROR"),
+      );
     }
 
     const state = stateResult.value;
     const newDecisions = [decision, ...state.recentDecisions].slice(0, 10); // Keep last 10
 
     const updateResult = await this.updateProjectState({
-      recentDecisions: newDecisions
+      recentDecisions: newDecisions,
     });
 
     if (updateResult.isOk()) {
       this.emitStateUpdate({
         type: StateUpdateType.DECISION_MADE,
         timestamp: new Date(),
-        data: decision
+        data: decision,
       });
     }
 
@@ -282,20 +286,24 @@ export class StateBridgeService extends BaseService {
   /**
    * Update agent state
    */
-  async updateAgentState(agent: Agent): Promise<Result<void, IntegrationError>> {
+  async updateAgentState(
+    agent: Agent,
+  ): Promise<Result<void, IntegrationError>> {
     const stateResult = this.getProjectState();
     if (stateResult.isErr()) {
-      return Result.err(new IntegrationError(stateResult.error.message, 'STATE_ERROR'));
+      return Result.err(
+        new IntegrationError(stateResult.error.message, "STATE_ERROR"),
+      );
     }
 
     const state = stateResult.value;
-    const agentIndex = state.activeAgents.findIndex(a => a.id === agent.id);
+    const agentIndex = state.activeAgents.findIndex((a) => a.id === agent.id);
 
     if (agentIndex === -1) {
       // Add new agent
       const newAgents = [...state.activeAgents, agent];
       const updateResult = await this.updateProjectState({
-        activeAgents: newAgents
+        activeAgents: newAgents,
       });
 
       return updateResult.map(() => undefined);
@@ -305,14 +313,14 @@ export class StateBridgeService extends BaseService {
       newAgents[agentIndex] = agent;
 
       const updateResult = await this.updateProjectState({
-        activeAgents: newAgents
+        activeAgents: newAgents,
       });
 
       if (updateResult.isOk()) {
         this.emitStateUpdate({
           type: StateUpdateType.AGENT_STATE,
           timestamp: new Date(),
-          data: agent
+          data: agent,
         });
       }
 
@@ -326,7 +334,7 @@ export class StateBridgeService extends BaseService {
   subscribe(
     id: string,
     callback: (update: StateUpdate) => void,
-    options?: SubscriptionOptions
+    options?: SubscriptionOptions,
   ): () => void {
     const wrappedCallback = options?.debounceMs
       ? this.debounce(callback, options.debounceMs)
@@ -374,7 +382,7 @@ export class StateBridgeService extends BaseService {
       projectState: this.currentState,
       projectContext: this.projectContext,
       timestamp: new Date(),
-      version: this.stateVersion
+      version: this.stateVersion,
     };
   }
 
@@ -382,7 +390,7 @@ export class StateBridgeService extends BaseService {
    * Restore from snapshot
    */
   async restoreFromSnapshot(
-    snapshot: StateSnapshot
+    snapshot: StateSnapshot,
   ): Promise<Result<void, IntegrationError>> {
     try {
       // Validate snapshot
@@ -401,7 +409,7 @@ export class StateBridgeService extends BaseService {
         type: StateUpdateType.PROJECT_STATE,
         timestamp: new Date(),
         data: snapshot.projectState,
-        metadata: { restored: true, version: snapshot.version }
+        metadata: { restored: true, version: snapshot.version },
       });
 
       return Result.ok(undefined);
@@ -409,8 +417,8 @@ export class StateBridgeService extends BaseService {
       return Result.err(
         new IntegrationError(
           `Failed to restore snapshot: ${error instanceof Error ? error.message : String(error)}`,
-          'RESTORE_ERROR'
-        )
+          "RESTORE_ERROR",
+        ),
       );
     }
   }
@@ -423,21 +431,21 @@ export class StateBridgeService extends BaseService {
       // TODO: Load from actual backend state manager
       // For now, create default state
       this.currentState = {
-        phase: 'planning',
+        phase: "planning",
         progress: 0,
         blockers: [],
         recentDecisions: [],
         activeAgents: [],
-        healthScore: 100
+        healthScore: 100,
       };
 
       this.projectContext = {
-        name: 'NXTG-Forge',
-        phase: 'planning',
+        name: "NXTG-Forge",
+        phase: "planning",
         activeAgents: 0,
         pendingTasks: 0,
         healthScore: 100,
-        lastActivity: new Date()
+        lastActivity: new Date(),
       };
 
       return Result.ok(undefined);
@@ -445,8 +453,8 @@ export class StateBridgeService extends BaseService {
       return Result.err(
         new IntegrationError(
           `Failed to load initial state: ${error instanceof Error ? error.message : String(error)}`,
-          'LOAD_ERROR'
-        )
+          "LOAD_ERROR",
+        ),
       );
     }
   }
@@ -501,31 +509,37 @@ export class StateBridgeService extends BaseService {
     }
 
     // Notify subscribers
-    this.subscribers.forEach(callback => {
+    this.subscribers.forEach((callback) => {
       try {
         callback(update);
       } catch (error) {
-        console.error('Subscriber callback error:', error);
+        console.error("Subscriber callback error:", error);
       }
     });
 
     // Emit event
-    this.emit('stateUpdate', update);
+    this.emit("stateUpdate", update);
   }
 
   /**
    * Validate project state
    */
   private validateProjectState(
-    state: ProjectState
+    state: ProjectState,
   ): Result<void, IntegrationError> {
     const ProjectStateSchema = z.object({
-      phase: z.enum(['planning', 'architecting', 'building', 'testing', 'deploying']),
+      phase: z.enum([
+        "planning",
+        "architecting",
+        "building",
+        "testing",
+        "deploying",
+      ]),
       progress: z.number().min(0).max(100),
       blockers: z.array(z.any()),
       recentDecisions: z.array(z.any()),
       activeAgents: z.array(z.any()),
-      healthScore: z.number().min(0).max(100)
+      healthScore: z.number().min(0).max(100),
     });
 
     const result = this.validate(state, ProjectStateSchema);
@@ -533,9 +547,9 @@ export class StateBridgeService extends BaseService {
       return Result.err(
         new IntegrationError(
           `Invalid project state: ${result.error.message}`,
-          'VALIDATION_ERROR',
-          result.error.details
-        )
+          "VALIDATION_ERROR",
+          result.error.details,
+        ),
       );
     }
 

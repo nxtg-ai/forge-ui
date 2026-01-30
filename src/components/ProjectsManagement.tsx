@@ -3,8 +3,8 @@
  * Full-featured runspace management interface
  */
 
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   FolderOpen,
   X,
@@ -16,10 +16,10 @@ import {
   Activity,
   Clock,
   HardDrive,
-  RefreshCw
-} from 'lucide-react';
-import type { Runspace } from '../core/runspace';
-import { useToast } from './feedback/ToastSystem';
+  RefreshCw,
+} from "lucide-react";
+import type { Runspace } from "../core/runspace";
+import { useToast } from "./feedback/ToastSystem";
 
 interface ProjectsManagementProps {
   isOpen: boolean;
@@ -42,7 +42,7 @@ export const ProjectsManagement: React.FC<ProjectsManagementProps> = ({
   onSwitch,
   onStart,
   onStop,
-  onDelete
+  onDelete,
 }) => {
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
@@ -50,25 +50,25 @@ export const ProjectsManagement: React.FC<ProjectsManagementProps> = ({
 
   if (!isOpen) return null;
 
-  const getStatusColor = (status: Runspace['status']) => {
+  const getStatusColor = (status: Runspace["status"]) => {
     switch (status) {
-      case 'active':
-        return 'bg-green-500';
-      case 'suspended':
-        return 'bg-yellow-500';
-      case 'stopped':
-        return 'bg-gray-500';
+      case "active":
+        return "bg-green-500";
+      case "suspended":
+        return "bg-yellow-500";
+      case "stopped":
+        return "bg-gray-500";
     }
   };
 
-  const getStatusLabel = (status: Runspace['status']) => {
+  const getStatusLabel = (status: Runspace["status"]) => {
     switch (status) {
-      case 'active':
-        return 'Active';
-      case 'suspended':
-        return 'Suspended';
-      case 'stopped':
-        return 'Stopped';
+      case "active":
+        return "Active";
+      case "suspended":
+        return "Suspended";
+      case "stopped":
+        return "Stopped";
     }
   };
 
@@ -76,15 +76,15 @@ export const ProjectsManagement: React.FC<ProjectsManagementProps> = ({
     setIsDeleting(runspaceId);
     try {
       await onDelete(runspaceId);
-      toast.success('Project deleted', {
+      toast.success("Project deleted", {
         message: `Successfully deleted ${runspaceName}`,
-        duration: 3000
+        duration: 3000,
       });
       setSelectedProject(null);
     } catch (error) {
-      toast.error('Failed to delete project', {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        duration: 5000
+      toast.error("Failed to delete project", {
+        message: error instanceof Error ? error.message : "Unknown error",
+        duration: 5000,
       });
     } finally {
       setIsDeleting(null);
@@ -105,7 +105,9 @@ export const ProjectsManagement: React.FC<ProjectsManagementProps> = ({
             <div className="flex items-center gap-3">
               <FolderOpen className="w-6 h-6 text-purple-400" />
               <h2 className="text-xl font-bold text-white">Manage Projects</h2>
-              <span className="text-sm text-gray-500">{runspaces.length} projects</span>
+              <span className="text-sm text-gray-500">
+                {runspaces.length} projects
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -129,8 +131,12 @@ export const ProjectsManagement: React.FC<ProjectsManagementProps> = ({
             {runspaces.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16">
                 <FolderOpen className="w-16 h-16 text-gray-600 mb-4" />
-                <h3 className="text-lg font-semibold text-gray-400 mb-2">No Projects Yet</h3>
-                <p className="text-sm text-gray-500 mb-4">Create your first project to get started</p>
+                <h3 className="text-lg font-semibold text-gray-400 mb-2">
+                  No Projects Yet
+                </h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Create your first project to get started
+                </p>
                 <button className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg flex items-center gap-2">
                   <Plus className="w-4 h-4" />
                   New Project
@@ -144,14 +150,16 @@ export const ProjectsManagement: React.FC<ProjectsManagementProps> = ({
                     layout
                     className={`
                       relative bg-gray-800/50 border rounded-lg p-4 hover:bg-gray-800/70 transition-all
-                      ${activeRunspaceId === runspace.id ? 'border-purple-500' : 'border-gray-700'}
-                      ${selectedProject === runspace.id ? 'ring-2 ring-purple-500' : ''}
+                      ${activeRunspaceId === runspace.id ? "border-purple-500" : "border-gray-700"}
+                      ${selectedProject === runspace.id ? "ring-2 ring-purple-500" : ""}
                     `}
                     onClick={() => setSelectedProject(runspace.id)}
                   >
                     {/* Status Indicator */}
                     <div className="absolute top-3 right-3">
-                      <div className={`w-3 h-3 rounded-full ${getStatusColor(runspace.status)}`} />
+                      <div
+                        className={`w-3 h-3 rounded-full ${getStatusColor(runspace.status)}`}
+                      />
                     </div>
 
                     {/* Icon/Color */}
@@ -169,8 +177,12 @@ export const ProjectsManagement: React.FC<ProjectsManagementProps> = ({
                     </div>
 
                     {/* Name & Path */}
-                    <h3 className="font-semibold text-white mb-1 truncate">{runspace.displayName}</h3>
-                    <p className="text-xs text-gray-500 mb-3 truncate">{runspace.path}</p>
+                    <h3 className="font-semibold text-white mb-1 truncate">
+                      {runspace.displayName}
+                    </h3>
+                    <p className="text-xs text-gray-500 mb-3 truncate">
+                      {runspace.path}
+                    </p>
 
                     {/* Metadata */}
                     <div className="space-y-2 mb-3">
@@ -180,7 +192,10 @@ export const ProjectsManagement: React.FC<ProjectsManagementProps> = ({
                       </div>
                       <div className="flex items-center gap-2 text-xs text-gray-400">
                         <Clock className="w-3 h-3" />
-                        <span>Last active: {runspace.lastActive.toLocaleDateString()}</span>
+                        <span>
+                          Last active:{" "}
+                          {runspace.lastActive.toLocaleDateString()}
+                        </span>
                       </div>
                     </div>
 
@@ -205,7 +220,7 @@ export const ProjectsManagement: React.FC<ProjectsManagementProps> = ({
 
                     {/* Actions */}
                     <div className="flex items-center gap-2">
-                      {runspace.status === 'stopped' ? (
+                      {runspace.status === "stopped" ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -231,7 +246,11 @@ export const ProjectsManagement: React.FC<ProjectsManagementProps> = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (confirm(`Are you sure you want to delete "${runspace.displayName}"?`)) {
+                          if (
+                            confirm(
+                              `Are you sure you want to delete "${runspace.displayName}"?`,
+                            )
+                          ) {
                             handleDelete(runspace.id, runspace.displayName);
                           }
                         }}
@@ -239,7 +258,7 @@ export const ProjectsManagement: React.FC<ProjectsManagementProps> = ({
                         className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded text-xs flex items-center justify-center gap-1 disabled:opacity-50"
                       >
                         <Trash2 className="w-3 h-3" />
-                        {isDeleting === runspace.id ? 'Deleting...' : 'Delete'}
+                        {isDeleting === runspace.id ? "Deleting..." : "Delete"}
                       </button>
                     </div>
 
@@ -258,7 +277,8 @@ export const ProjectsManagement: React.FC<ProjectsManagementProps> = ({
           {/* Footer */}
           <div className="px-6 py-4 border-t border-gray-800 flex items-center justify-between">
             <div className="text-sm text-gray-500">
-              {runspaces.length} project{runspaces.length !== 1 ? 's' : ''} total
+              {runspaces.length} project{runspaces.length !== 1 ? "s" : ""}{" "}
+              total
             </div>
             <div className="flex items-center gap-2">
               <button

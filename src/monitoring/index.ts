@@ -3,22 +3,31 @@
  * Unified API for health monitoring, performance tracking, and alerting
  */
 
-export * from './health';
-export * from './performance';
-export * from './errors';
-export * from './alerts';
-export * from './diagnostics';
+export * from "./health";
+export * from "./performance";
+export * from "./errors";
+export * from "./alerts";
+export * from "./diagnostics";
 // export { MetricsDashboard } from './dashboard'; // Disabled until JSX is configured
 
-import { EventEmitter } from 'events';
-import { HealthMonitor, SystemHealth, HealthStatus } from './health';
-import { PerformanceMonitor, PerformanceReport, MetricType } from './performance';
-import { ErrorTracker, ErrorReport, ErrorCategory, ErrorSeverity } from './errors';
-import { AlertingSystem, AlertType, AlertSeverity } from './alerts';
-import { DiagnosticTools, DiagnosticReport } from './diagnostics';
-import { Logger } from '../utils/logger';
+import { EventEmitter } from "events";
+import { HealthMonitor, SystemHealth, HealthStatus } from "./health";
+import {
+  PerformanceMonitor,
+  PerformanceReport,
+  MetricType,
+} from "./performance";
+import {
+  ErrorTracker,
+  ErrorReport,
+  ErrorCategory,
+  ErrorSeverity,
+} from "./errors";
+import { AlertingSystem, AlertType, AlertSeverity } from "./alerts";
+import { DiagnosticTools, DiagnosticReport } from "./diagnostics";
+import { Logger } from "../utils/logger";
 
-const logger = new Logger('MonitoringSystem');
+const logger = new Logger("MonitoringSystem");
 
 // Monitoring configuration
 export interface MonitoringConfig {
@@ -77,7 +86,7 @@ export class MonitoringSystem extends EventEmitter {
       enableAutoRecovery: true,
       enableAlerts: true,
       persistMetrics: true,
-      ...config
+      ...config,
     };
 
     // Initialize monitors
@@ -95,50 +104,53 @@ export class MonitoringSystem extends EventEmitter {
    */
   private setupEventHandlers(): void {
     // Health monitor events
-    this.healthMonitor.on('healthUpdate', (health: SystemHealth) => {
+    this.healthMonitor.on("healthUpdate", (health: SystemHealth) => {
       this.handleHealthUpdate(health);
     });
 
-    this.healthMonitor.on('statusChange', (change: any) => {
+    this.healthMonitor.on("statusChange", (change: any) => {
       this.handleStatusChange(change);
     });
 
     // Performance monitor events
-    this.performanceMonitor.on('performanceReport', (report: PerformanceReport) => {
-      this.handlePerformanceReport(report);
-    });
+    this.performanceMonitor.on(
+      "performanceReport",
+      (report: PerformanceReport) => {
+        this.handlePerformanceReport(report);
+      },
+    );
 
-    this.performanceMonitor.on('performanceAlert', (alert: any) => {
+    this.performanceMonitor.on("performanceAlert", (alert: any) => {
       this.handlePerformanceAlert(alert);
     });
 
     // Error tracker events
-    this.errorTracker.on('errorTracked', (error: any) => {
+    this.errorTracker.on("errorTracked", (error: any) => {
       this.handleErrorTracked(error);
     });
 
-    this.errorTracker.on('errorRecovered', (error: any) => {
+    this.errorTracker.on("errorRecovered", (error: any) => {
       this.handleErrorRecovered(error);
     });
 
-    this.errorTracker.on('errorReport', (report: ErrorReport) => {
+    this.errorTracker.on("errorReport", (report: ErrorReport) => {
       this.handleErrorReport(report);
     });
 
     // Alerting system events
-    this.alertingSystem.on('alert', (alert: any) => {
+    this.alertingSystem.on("alert", (alert: any) => {
       this.handleAlert(alert);
     });
 
-    this.alertingSystem.on('notification', (notification: any) => {
-      this.emit('notification', notification);
+    this.alertingSystem.on("notification", (notification: any) => {
+      this.emit("notification", notification);
     });
 
-    this.alertingSystem.on('rollback', (rollback: any) => {
+    this.alertingSystem.on("rollback", (rollback: any) => {
       this.handleRollback(rollback);
     });
 
-    this.alertingSystem.on('restart', (restart: any) => {
+    this.alertingSystem.on("restart", (restart: any) => {
       this.handleRestart(restart);
     });
   }
@@ -148,11 +160,11 @@ export class MonitoringSystem extends EventEmitter {
    */
   async start(): Promise<void> {
     if (this.running) {
-      logger.warn('Monitoring system already running');
+      logger.warn("Monitoring system already running");
       return;
     }
 
-    logger.info('Starting monitoring system', this.config);
+    logger.info("Starting monitoring system", this.config);
 
     // Start all monitors
     await this.healthMonitor.start(this.config.healthCheckInterval);
@@ -168,12 +180,12 @@ export class MonitoringSystem extends EventEmitter {
 
     // Perform initial health check
     const initialHealth = await this.healthMonitor.performHealthCheck();
-    this.emit('started', {
+    this.emit("started", {
       health: initialHealth,
-      timestamp: this.startedAt
+      timestamp: this.startedAt,
     });
 
-    logger.info('Monitoring system started successfully');
+    logger.info("Monitoring system started successfully");
   }
 
   /**
@@ -181,11 +193,11 @@ export class MonitoringSystem extends EventEmitter {
    */
   stop(): void {
     if (!this.running) {
-      logger.warn('Monitoring system not running');
+      logger.warn("Monitoring system not running");
       return;
     }
 
-    logger.info('Stopping monitoring system');
+    logger.info("Stopping monitoring system");
 
     // Stop all monitors
     this.healthMonitor.stop();
@@ -194,9 +206,9 @@ export class MonitoringSystem extends EventEmitter {
     this.alertingSystem.stop();
 
     this.running = false;
-    this.emit('stopped', { timestamp: new Date() });
+    this.emit("stopped", { timestamp: new Date() });
 
-    logger.info('Monitoring system stopped');
+    logger.info("Monitoring system stopped");
   }
 
   /**
@@ -209,14 +221,16 @@ export class MonitoringSystem extends EventEmitter {
       health: this.healthMonitor.getCurrentHealth() || undefined,
       performance: this.performanceMonitor.generateReport(),
       errors: this.errorTracker.generateReport(),
-      activeAlerts: this.alertingSystem.getActiveAlerts().length
+      activeAlerts: this.alertingSystem.getActiveAlerts().length,
     };
   }
 
   /**
    * Generate comprehensive report
    */
-  async generateReport(includeDiagnostics: boolean = false): Promise<MonitoringReport> {
+  async generateReport(
+    includeDiagnostics: boolean = false,
+  ): Promise<MonitoringReport> {
     const health = await this.healthMonitor.performHealthCheck();
     const performance = this.performanceMonitor.generateReport();
     const errors = this.errorTracker.generateReport();
@@ -227,7 +241,7 @@ export class MonitoringSystem extends EventEmitter {
       health,
       performance,
       errors,
-      alerts
+      alerts,
     };
 
     if (includeDiagnostics) {
@@ -247,27 +261,43 @@ export class MonitoringSystem extends EventEmitter {
   /**
    * Track custom metric
    */
-  trackMetric(type: MetricType, name: string, duration: number, success: boolean = true): void {
+  trackMetric(
+    type: MetricType,
+    name: string,
+    duration: number,
+    success: boolean = true,
+  ): void {
     this.performanceMonitor.recordMetric({
       type,
       name,
       duration,
       timestamp: new Date(),
-      success
+      success,
     });
   }
 
   /**
    * Track error
    */
-  trackError(error: Error | string, category?: ErrorCategory, severity?: ErrorSeverity, context?: any): void {
+  trackError(
+    error: Error | string,
+    category?: ErrorCategory,
+    severity?: ErrorSeverity,
+    context?: any,
+  ): void {
     this.errorTracker.trackError(error, category, severity, context);
   }
 
   /**
    * Create alert
    */
-  createAlert(type: AlertType, severity: AlertSeverity, title: string, message: string, metadata?: any): void {
+  createAlert(
+    type: AlertType,
+    severity: AlertSeverity,
+    title: string,
+    message: string,
+    metadata?: any,
+  ): void {
     if (this.config.enableAlerts) {
       this.alertingSystem.createAlert(type, severity, title, message, metadata);
     }
@@ -278,36 +308,39 @@ export class MonitoringSystem extends EventEmitter {
    */
   private handleHealthUpdate(health: SystemHealth): void {
     // Check for critical health
-    if (health.status === HealthStatus.CRITICAL || health.status === HealthStatus.FAILED) {
+    if (
+      health.status === HealthStatus.CRITICAL ||
+      health.status === HealthStatus.FAILED
+    ) {
       this.createAlert(
         AlertType.HEALTH_DEGRADATION,
         AlertSeverity.CRITICAL,
-        'System Health Critical',
+        "System Health Critical",
         `System health score: ${health.overallScore}%`,
-        { health }
+        { health },
       );
     }
 
-    this.emit('healthUpdate', health);
+    this.emit("healthUpdate", health);
   }
 
   /**
    * Handle status change
    */
   private handleStatusChange(change: any): void {
-    logger.info('Health status changed', change);
+    logger.info("Health status changed", change);
 
     if (change.current === HealthStatus.FAILED) {
       this.createAlert(
         AlertType.HEALTH_DEGRADATION,
         AlertSeverity.CRITICAL,
-        'System Health Failed',
-        'System health has failed',
-        { change }
+        "System Health Failed",
+        "System health has failed",
+        { change },
       );
     }
 
-    this.emit('statusChange', change);
+    this.emit("statusChange", change);
   }
 
   /**
@@ -319,9 +352,9 @@ export class MonitoringSystem extends EventEmitter {
       this.createAlert(
         AlertType.PERFORMANCE_DEGRADATION,
         AlertSeverity.WARNING,
-        'High Error Rate',
+        "High Error Rate",
         `Error rate: ${report.errorRate.toFixed(1)}%`,
-        { report }
+        { report },
       );
     }
 
@@ -330,13 +363,13 @@ export class MonitoringSystem extends EventEmitter {
       this.createAlert(
         AlertType.PERFORMANCE_DEGRADATION,
         AlertSeverity.WARNING,
-        'Performance Degradation',
+        "Performance Degradation",
         `Average latency: ${report.averageLatency.toFixed(0)}ms`,
-        { report }
+        { report },
       );
     }
 
-    this.emit('performanceReport', report);
+    this.emit("performanceReport", report);
   }
 
   /**
@@ -345,10 +378,12 @@ export class MonitoringSystem extends EventEmitter {
   private handlePerformanceAlert(alert: any): void {
     this.createAlert(
       AlertType.PERFORMANCE_DEGRADATION,
-      alert.severity === 'critical' ? AlertSeverity.ERROR : AlertSeverity.WARNING,
-      'Performance Alert',
+      alert.severity === "critical"
+        ? AlertSeverity.ERROR
+        : AlertSeverity.WARNING,
+      "Performance Alert",
       alert.message,
-      { performanceAlert: alert }
+      { performanceAlert: alert },
     );
   }
 
@@ -358,19 +393,19 @@ export class MonitoringSystem extends EventEmitter {
   private handleErrorTracked(error: any): void {
     // Auto-recovery if enabled
     if (this.config.enableAutoRecovery && error.recoveryAttempts === 0) {
-      logger.info('Attempting auto-recovery', { errorId: error.id });
+      logger.info("Attempting auto-recovery", { errorId: error.id });
       // Recovery logic would go here
     }
 
-    this.emit('errorTracked', error);
+    this.emit("errorTracked", error);
   }
 
   /**
    * Handle error recovered
    */
   private handleErrorRecovered(error: any): void {
-    logger.info('Error recovered', { errorId: error.id });
-    this.emit('errorRecovered', error);
+    logger.info("Error recovered", { errorId: error.id });
+    this.emit("errorRecovered", error);
   }
 
   /**
@@ -382,37 +417,37 @@ export class MonitoringSystem extends EventEmitter {
       this.createAlert(
         AlertType.HIGH_ERROR_RATE,
         AlertSeverity.ERROR,
-        'High Error Rate',
+        "High Error Rate",
         `${report.errorRate.toFixed(2)} errors per minute`,
-        { report }
+        { report },
       );
     }
 
-    this.emit('errorReport', report);
+    this.emit("errorReport", report);
   }
 
   /**
    * Handle alert
    */
   private handleAlert(alert: any): void {
-    logger.info('Alert created', {
+    logger.info("Alert created", {
       type: alert.type,
       severity: alert.severity,
-      title: alert.title
+      title: alert.title,
     });
 
-    this.emit('alert', alert);
+    this.emit("alert", alert);
   }
 
   /**
    * Handle rollback request
    */
   private handleRollback(rollback: any): void {
-    logger.warn('Rollback requested', rollback);
+    logger.warn("Rollback requested", rollback);
 
     if (this.config.enableAutoRecovery) {
       // Implement rollback logic
-      this.emit('rollback', rollback);
+      this.emit("rollback", rollback);
     }
   }
 
@@ -420,11 +455,11 @@ export class MonitoringSystem extends EventEmitter {
    * Handle restart request
    */
   private handleRestart(restart: any): void {
-    logger.warn('Restart requested', restart);
+    logger.warn("Restart requested", restart);
 
     if (this.config.enableAutoRecovery) {
       // Implement restart logic
-      this.emit('restart', restart);
+      this.emit("restart", restart);
     }
   }
 

@@ -3,9 +3,9 @@
  * Global test configuration and utilities
  */
 
-import { expect, afterEach, vi } from 'vitest';
-import { cleanup } from '@testing-library/react';
-import '@testing-library/jest-dom';
+import { expect, afterEach, vi } from "vitest";
+import { cleanup } from "@testing-library/react";
+import "@testing-library/jest-dom";
 
 // Cleanup after each test
 afterEach(() => {
@@ -14,10 +14,10 @@ afterEach(() => {
 });
 
 // Mock environment variables
-process.env.NODE_ENV = 'test';
+process.env.NODE_ENV = "test";
 
 // Mock file system paths for tests
-vi.mock('fs', () => ({
+vi.mock("fs", () => ({
   default: {},
   promises: {
     mkdir: vi.fn(),
@@ -28,8 +28,8 @@ vi.mock('fs', () => ({
     access: vi.fn(),
     unlink: vi.fn(),
     readdir: vi.fn(),
-    rm: vi.fn()
-  }
+    rm: vi.fn(),
+  },
 }));
 
 // Extend expect matchers
@@ -38,9 +38,10 @@ expect.extend({
     const result = schema.safeParse(value);
     return {
       pass: result.success,
-      message: () => result.success
-        ? `Expected value not to match schema`
-        : `Expected value to match schema: ${JSON.stringify(result.error?.errors, null, 2)}`
+      message: () =>
+        result.success
+          ? `Expected value not to match schema`
+          : `Expected value to match schema: ${JSON.stringify(result.error?.errors, null, 2)}`,
     };
   },
 
@@ -48,11 +49,12 @@ expect.extend({
     const hasAny = /:\s*any\b/.test(content);
     return {
       pass: !hasAny,
-      message: () => hasAny
-        ? `File ${filePath} contains 'any' types which are not allowed`
-        : `File ${filePath} has proper type safety`
+      message: () =>
+        hasAny
+          ? `File ${filePath} contains 'any' types which are not allowed`
+          : `File ${filePath} has proper type safety`,
     };
-  }
+  },
 });
 
 // Global test helpers
@@ -60,12 +62,12 @@ global.testHelpers = {
   // Mock Date.now for consistent timestamps
   mockDate: (date: string | Date) => {
     const mockDate = new Date(date);
-    vi.spyOn(global.Date, 'now').mockReturnValue(mockDate.getTime());
+    vi.spyOn(global.Date, "now").mockReturnValue(mockDate.getTime());
     return () => vi.restoreAllMocks();
   },
 
   // Wait for async operations
-  waitFor: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
+  waitFor: (ms: number) => new Promise((resolve) => setTimeout(resolve, ms)),
 
   // Create mock file system
   createMockFS: () => ({
@@ -76,9 +78,11 @@ global.testHelpers = {
     }),
     readFile: vi.fn((path) => {
       const content = global.testHelpers.createMockFS().files.get(path);
-      return content ? Promise.resolve(content) : Promise.reject(new Error('ENOENT'));
-    })
-  })
+      return content
+        ? Promise.resolve(content)
+        : Promise.reject(new Error("ENOENT"));
+    }),
+  }),
 };
 
 // Type declarations

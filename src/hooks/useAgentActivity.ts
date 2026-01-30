@@ -3,15 +3,15 @@
  * React hook for live agent activity feed
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Agent, AgentActivity, EngagementMode } from '../components/types';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Agent, AgentActivity, EngagementMode } from "../components/types";
 import {
   ActivityService,
   ActivityEvent,
   ActivityFilter,
   ActivityStatistics,
-  AgentPerformance
-} from '../services/activity-service';
+  AgentPerformance,
+} from "../services/activity-service";
 
 /**
  * Agent activity hook options
@@ -34,7 +34,9 @@ export interface UseAgentActivityReturn {
   loading: boolean;
   error: Error | null;
   connected: boolean;
-  recordActivity: (activity: Omit<ActivityEvent, 'id' | 'timestamp'>) => Promise<void>;
+  recordActivity: (
+    activity: Omit<ActivityEvent, "id" | "timestamp">,
+  ) => Promise<void>;
   updateAgentStatus: (agent: Agent) => Promise<void>;
   clearHistory: () => void;
   refresh: () => Promise<void>;
@@ -44,12 +46,14 @@ export interface UseAgentActivityReturn {
  * Hook for managing agent activity
  */
 export function useAgentActivity(
-  options: UseAgentActivityOptions = {}
+  options: UseAgentActivityOptions = {},
 ): UseAgentActivityReturn {
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [activeAgents, setActiveAgents] = useState<Agent[]>([]);
   const [statistics, setStatistics] = useState<ActivityStatistics | null>(null);
-  const [performances, setPerformances] = useState<Map<string, AgentPerformance>>(new Map());
+  const [performances, setPerformances] = useState<
+    Map<string, AgentPerformance>
+  >(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [connected, setConnected] = useState(false);
@@ -67,8 +71,8 @@ export function useAgentActivity(
 
       // Create service instance
       const service = new ActivityService({
-        name: 'AgentActivityHook',
-        maxEventHistory: options.maxEvents ?? 100
+        name: "AgentActivityHook",
+        maxEventHistory: options.maxEvents ?? 100,
       });
 
       serviceRef.current = service;
@@ -91,7 +95,7 @@ export function useAgentActivity(
 
       // Load performances
       const perfMap = new Map<string, AgentPerformance>();
-      agents.forEach(agent => {
+      agents.forEach((agent) => {
         const perfResult = service.getAgentPerformance(agent.id);
         if (perfResult.isOk()) {
           perfMap.set(agent.id, perfResult.value);
@@ -101,9 +105,9 @@ export function useAgentActivity(
 
       // Subscribe to activity stream
       unsubscribeRef.current = service.subscribeToStream(
-        'useAgentActivity',
+        "useAgentActivity",
         handleActivityEvent,
-        options.filter
+        options.filter,
       );
 
       setConnected(true);
@@ -121,43 +125,47 @@ export function useAgentActivity(
   /**
    * Handle activity event from service
    */
-  const handleActivityEvent = useCallback((event: ActivityEvent) => {
-    // Add new event to the beginning
-    setEvents(prev => {
-      const maxEvents = options.maxEvents ?? 100;
-      const updated = [event, ...prev];
-      return updated.slice(0, maxEvents);
-    });
+  const handleActivityEvent = useCallback(
+    (event: ActivityEvent) => {
+      // Add new event to the beginning
+      setEvents((prev) => {
+        const maxEvents = options.maxEvents ?? 100;
+        const updated = [event, ...prev];
+        return updated.slice(0, maxEvents);
+      });
 
-    // Update statistics
-    if (serviceRef.current) {
-      const stats = serviceRef.current.getStatistics(options.filter);
-      setStatistics(stats);
-    }
-  }, [options.maxEvents, options.filter]);
+      // Update statistics
+      if (serviceRef.current) {
+        const stats = serviceRef.current.getStatistics(options.filter);
+        setStatistics(stats);
+      }
+    },
+    [options.maxEvents, options.filter],
+  );
 
   /**
    * Record activity
    */
-  const recordActivity = useCallback(async (
-    activity: Omit<ActivityEvent, 'id' | 'timestamp'>
-  ) => {
-    if (!serviceRef.current) {
-      throw new Error('Service not initialized');
-    }
+  const recordActivity = useCallback(
+    async (activity: Omit<ActivityEvent, "id" | "timestamp">) => {
+      if (!serviceRef.current) {
+        throw new Error("Service not initialized");
+      }
 
-    const result = await serviceRef.current.recordActivity(activity);
-    if (result.isErr()) {
-      throw result.error;
-    }
-  }, []);
+      const result = await serviceRef.current.recordActivity(activity);
+      if (result.isErr()) {
+        throw result.error;
+      }
+    },
+    [],
+  );
 
   /**
    * Update agent status
    */
   const updateAgentStatus = useCallback(async (agent: Agent) => {
     if (!serviceRef.current) {
-      throw new Error('Service not initialized');
+      throw new Error("Service not initialized");
     }
 
     const result = await serviceRef.current.updateAgentStatus(agent);
@@ -166,8 +174,8 @@ export function useAgentActivity(
     }
 
     // Update active agents list
-    setActiveAgents(prev => {
-      const index = prev.findIndex(a => a.id === agent.id);
+    setActiveAgents((prev) => {
+      const index = prev.findIndex((a) => a.id === agent.id);
       if (index >= 0) {
         const updated = [...prev];
         updated[index] = agent;
@@ -180,7 +188,7 @@ export function useAgentActivity(
     // Update performance
     const perfResult = serviceRef.current.getAgentPerformance(agent.id);
     if (perfResult.isOk()) {
-      setPerformances(prev => {
+      setPerformances((prev) => {
         const updated = new Map(prev);
         updated.set(agent.id, perfResult.value);
         return updated;
@@ -220,7 +228,7 @@ export function useAgentActivity(
 
     // Refresh performances
     const perfMap = new Map<string, AgentPerformance>();
-    agents.forEach(agent => {
+    agents.forEach((agent) => {
       const perfResult = serviceRef.current!.getAgentPerformance(agent.id);
       if (perfResult.isOk()) {
         perfMap.set(agent.id, perfResult.value);
@@ -258,6 +266,6 @@ export function useAgentActivity(
     recordActivity,
     updateAgentStatus,
     clearHistory,
-    refresh
+    refresh,
   };
 }

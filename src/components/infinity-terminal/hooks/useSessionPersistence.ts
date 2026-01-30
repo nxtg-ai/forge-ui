@@ -3,7 +3,7 @@
  * Manages persistent terminal sessions with Zellij + ttyd
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from "react";
 
 export interface SessionState {
   sessionId: string;
@@ -34,9 +34,9 @@ export interface SessionConfig {
 const DEFAULT_CONFIG: SessionConfig = {
   // Use the existing PTY bridge running on the API server
   wsPort: 5051,
-  wsHost: 'localhost',
-  wsPath: '/terminal',
-  sessionPrefix: 'forge',
+  wsHost: typeof window !== 'undefined' ? window.location.hostname : 'localhost',
+  wsPath: "/terminal",
+  sessionPrefix: "forge",
   autoReconnect: true,
   maxReconnectAttempts: 3,
   reconnectDelay: 2000,
@@ -60,12 +60,14 @@ interface StoredSession {
   lastAccess: string;
 }
 
-const STORAGE_KEY = 'infinity-terminal-sessions';
+const STORAGE_KEY = "infinity-terminal-sessions";
 
-export function useSessionPersistence(options: UseSessionPersistenceOptions = {}) {
+export function useSessionPersistence(
+  options: UseSessionPersistenceOptions = {},
+) {
   const {
-    projectName = 'nxtg-forge',
-    layout = 'default',
+    projectName = "nxtg-forge",
+    layout = "default",
     config: userConfig = {},
     onSessionRestore,
     onConnectionChange,
@@ -75,13 +77,13 @@ export function useSessionPersistence(options: UseSessionPersistenceOptions = {}
   const config = { ...DEFAULT_CONFIG, ...userConfig };
 
   const [state, setState] = useState<SessionState>({
-    sessionId: '',
-    sessionName: '',
+    sessionId: "",
+    sessionName: "",
     connected: false,
     connecting: false,
     error: null,
     layout,
-    projectRoot: '',
+    projectRoot: "",
     createdAt: null,
     lastActivity: null,
     reconnectAttempts: 0,
@@ -96,9 +98,9 @@ export function useSessionPersistence(options: UseSessionPersistenceOptions = {}
   const generateSessionName = useCallback(() => {
     const sanitized = projectName
       .toLowerCase()
-      .replace(/[^a-z0-9]/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
+      .replace(/[^a-z0-9]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
     return `${config.sessionPrefix}-${sanitized}`;
   }, [projectName, config.sessionPrefix]);
 
@@ -118,42 +120,50 @@ export function useSessionPersistence(options: UseSessionPersistenceOptions = {}
   }, []);
 
   // Save session to localStorage
-  const saveSession = useCallback((session: Partial<StoredSession>) => {
-    const sessions = getStoredSessions();
-    const existing = sessions.findIndex(s => s.sessionName === session.sessionName);
+  const saveSession = useCallback(
+    (session: Partial<StoredSession>) => {
+      const sessions = getStoredSessions();
+      const existing = sessions.findIndex(
+        (s) => s.sessionName === session.sessionName,
+      );
 
-    const updated: StoredSession = {
-      sessionId: session.sessionId || generateSessionId(),
-      sessionName: session.sessionName || generateSessionName(),
-      layout: session.layout || layout,
-      projectRoot: session.projectRoot || '',
-      createdAt: session.createdAt || new Date().toISOString(),
-      lastAccess: new Date().toISOString(),
-    };
+      const updated: StoredSession = {
+        sessionId: session.sessionId || generateSessionId(),
+        sessionName: session.sessionName || generateSessionName(),
+        layout: session.layout || layout,
+        projectRoot: session.projectRoot || "",
+        createdAt: session.createdAt || new Date().toISOString(),
+        lastAccess: new Date().toISOString(),
+      };
 
-    if (existing >= 0) {
-      sessions[existing] = updated;
-    } else {
-      sessions.push(updated);
-    }
+      if (existing >= 0) {
+        sessions[existing] = updated;
+      } else {
+        sessions.push(updated);
+      }
 
-    // Keep only last 10 sessions
-    const trimmed = sessions.slice(-10);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+      // Keep only last 10 sessions
+      const trimmed = sessions.slice(-10);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
 
-    return updated;
-  }, [getStoredSessions, generateSessionId, generateSessionName, layout]);
+      return updated;
+    },
+    [getStoredSessions, generateSessionId, generateSessionName, layout],
+  );
 
   // Remove session from localStorage
-  const removeSession = useCallback((sessionName: string) => {
-    const sessions = getStoredSessions();
-    const filtered = sessions.filter(s => s.sessionName !== sessionName);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-  }, [getStoredSessions]);
+  const removeSession = useCallback(
+    (sessionName: string) => {
+      const sessions = getStoredSessions();
+      const filtered = sessions.filter((s) => s.sessionName !== sessionName);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    },
+    [getStoredSessions],
+  );
 
   // Get terminal WebSocket URL
   const getWsUrl = useCallback(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     return `${protocol}//${config.wsHost}:${config.wsPort}${config.wsPath}`;
   }, [config.wsHost, config.wsPort, config.wsPath]);
 
@@ -162,36 +172,43 @@ export function useSessionPersistence(options: UseSessionPersistenceOptions = {}
 
   // Connect to ttyd
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.CONNECTING ||
-        wsRef.current?.readyState === WebSocket.OPEN) {
-      console.log('[InfinityTerminal] Already connected');
+    if (
+      wsRef.current?.readyState === WebSocket.CONNECTING ||
+      wsRef.current?.readyState === WebSocket.OPEN
+    ) {
+      console.log("[InfinityTerminal] Already connected");
       return;
     }
 
     // Check if we've exceeded max reconnect attempts
     if (reconnectAttemptsRef.current >= config.maxReconnectAttempts) {
-      console.log('[InfinityTerminal] Max reconnect attempts reached, stopping');
-      const errorMsg = 'Terminal service unavailable. Is the API server running? (npm run dev)';
-      setState(prev => ({ ...prev, error: errorMsg, connecting: false }));
+      console.log(
+        "[InfinityTerminal] Max reconnect attempts reached, stopping",
+      );
+      const errorMsg =
+        "Terminal service unavailable. Is the API server running? (npm run dev)";
+      setState((prev) => ({ ...prev, error: errorMsg, connecting: false }));
       return;
     }
 
     isManualDisconnectRef.current = false;
-    setState(prev => ({ ...prev, connecting: true, error: null }));
+    setState((prev) => ({ ...prev, connecting: true, error: null }));
 
     const sessionName = generateSessionName();
     const sessionId = generateSessionId();
     const url = getWsUrl();
 
-    console.log(`[InfinityTerminal] Connecting to ${url} (attempt ${reconnectAttemptsRef.current + 1}/${config.maxReconnectAttempts})`);
+    console.log(
+      `[InfinityTerminal] Connecting to ${url} (attempt ${reconnectAttemptsRef.current + 1}/${config.maxReconnectAttempts})`,
+    );
 
     try {
       const ws = new WebSocket(url);
 
-      ws.binaryType = 'arraybuffer';
+      ws.binaryType = "arraybuffer";
 
       ws.onopen = () => {
-        console.log('[InfinityTerminal] Connected');
+        console.log("[InfinityTerminal] Connected");
         reconnectAttemptsRef.current = 0;
 
         const session = saveSession({
@@ -201,7 +218,7 @@ export function useSessionPersistence(options: UseSessionPersistenceOptions = {}
           projectRoot: window.location.pathname,
         });
 
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           sessionId: session.sessionId,
           sessionName: session.sessionName,
@@ -219,7 +236,7 @@ export function useSessionPersistence(options: UseSessionPersistenceOptions = {}
       ws.onclose = (event) => {
         console.log(`[InfinityTerminal] Disconnected: ${event.code}`);
 
-        setState(prev => ({ ...prev, connected: false, connecting: false }));
+        setState((prev) => ({ ...prev, connected: false, connecting: false }));
         onConnectionChange?.(false);
 
         // Don't auto-reconnect if manually disconnected or max attempts reached
@@ -228,30 +245,42 @@ export function useSessionPersistence(options: UseSessionPersistenceOptions = {}
         }
 
         // Auto-reconnect if enabled and under max attempts
-        if (config.autoReconnect && reconnectAttemptsRef.current < config.maxReconnectAttempts) {
-          const delay = config.reconnectDelay * Math.pow(2, reconnectAttemptsRef.current);
-          console.log(`[InfinityTerminal] Reconnecting in ${delay}ms... (attempt ${reconnectAttemptsRef.current + 1}/${config.maxReconnectAttempts})`);
+        if (
+          config.autoReconnect &&
+          reconnectAttemptsRef.current < config.maxReconnectAttempts
+        ) {
+          const delay =
+            config.reconnectDelay * Math.pow(2, reconnectAttemptsRef.current);
+          console.log(
+            `[InfinityTerminal] Reconnecting in ${delay}ms... (attempt ${reconnectAttemptsRef.current + 1}/${config.maxReconnectAttempts})`,
+          );
 
           reconnectTimeoutRef.current = setTimeout(() => {
             reconnectAttemptsRef.current += 1;
-            setState(prev => ({ ...prev, reconnectAttempts: reconnectAttemptsRef.current }));
+            setState((prev) => ({
+              ...prev,
+              reconnectAttempts: reconnectAttemptsRef.current,
+            }));
             connect();
           }, delay);
-        } else if (reconnectAttemptsRef.current >= config.maxReconnectAttempts) {
-          const errorMsg = 'Terminal service unavailable. Is the API server running? (npm run dev)';
-          setState(prev => ({ ...prev, error: errorMsg }));
+        } else if (
+          reconnectAttemptsRef.current >= config.maxReconnectAttempts
+        ) {
+          const errorMsg =
+            "Terminal service unavailable. Is the API server running? (npm run dev)";
+          setState((prev) => ({ ...prev, error: errorMsg }));
         }
       };
 
       ws.onerror = (error) => {
-        console.error('[InfinityTerminal] WebSocket error:', error);
+        console.error("[InfinityTerminal] WebSocket error:", error);
         // Don't set error here - let onclose handle the state
       };
 
       wsRef.current = ws;
     } catch (error) {
       const errorMsg = `Failed to connect: ${error}`;
-      setState(prev => ({ ...prev, error: errorMsg, connecting: false }));
+      setState((prev) => ({ ...prev, error: errorMsg, connecting: false }));
       onError?.(errorMsg);
     }
   }, [
@@ -282,7 +311,7 @@ export function useSessionPersistence(options: UseSessionPersistenceOptions = {}
       wsRef.current = null;
     }
 
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       connected: false,
       connecting: false,
@@ -294,41 +323,45 @@ export function useSessionPersistence(options: UseSessionPersistenceOptions = {}
   const resetReconnect = useCallback(() => {
     reconnectAttemptsRef.current = 0;
     isManualDisconnectRef.current = false;
-    setState(prev => ({ ...prev, reconnectAttempts: 0, error: null }));
+    setState((prev) => ({ ...prev, reconnectAttempts: 0, error: null }));
   }, []);
 
   // Restore session
-  const restoreSession = useCallback((sessionName: string) => {
-    const sessions = getStoredSessions();
-    const session = sessions.find(s => s.sessionName === sessionName);
+  const restoreSession = useCallback(
+    (sessionName: string) => {
+      const sessions = getStoredSessions();
+      const session = sessions.find((s) => s.sessionName === sessionName);
 
-    if (session) {
-      console.log(`[InfinityTerminal] Restoring session: ${sessionName}`);
+      if (session) {
+        console.log(`[InfinityTerminal] Restoring session: ${sessionName}`);
 
-      setState(prev => ({
-        ...prev,
-        sessionId: session.sessionId,
-        sessionName: session.sessionName,
-        layout: session.layout,
-        projectRoot: session.projectRoot,
-        createdAt: new Date(session.createdAt),
-      }));
+        setState((prev) => ({
+          ...prev,
+          sessionId: session.sessionId,
+          sessionName: session.sessionName,
+          layout: session.layout,
+          projectRoot: session.projectRoot,
+          createdAt: new Date(session.createdAt),
+        }));
 
-      onSessionRestore?.(session.sessionId);
-      connect();
-    }
-  }, [getStoredSessions, connect, onSessionRestore]);
+        onSessionRestore?.(session.sessionId);
+        connect();
+      }
+    },
+    [getStoredSessions, connect, onSessionRestore],
+  );
 
   // Get available sessions
   const getAvailableSessions = useCallback(() => {
     return getStoredSessions().sort(
-      (a, b) => new Date(b.lastAccess).getTime() - new Date(a.lastAccess).getTime()
+      (a, b) =>
+        new Date(b.lastAccess).getTime() - new Date(a.lastAccess).getTime(),
     );
   }, [getStoredSessions]);
 
   // Update last activity timestamp
   const updateActivity = useCallback(() => {
-    setState(prev => ({ ...prev, lastActivity: new Date() }));
+    setState((prev) => ({ ...prev, lastActivity: new Date() }));
   }, []);
 
   // Cleanup on unmount
@@ -360,4 +393,6 @@ export function useSessionPersistence(options: UseSessionPersistenceOptions = {}
   };
 }
 
-export type UseSessionPersistenceReturn = ReturnType<typeof useSessionPersistence>;
+export type UseSessionPersistenceReturn = ReturnType<
+  typeof useSessionPersistence
+>;

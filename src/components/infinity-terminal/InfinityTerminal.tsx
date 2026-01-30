@@ -9,11 +9,11 @@
  * - Connection status indicators
  */
 
-import React, { useEffect, useRef, useCallback, useState } from 'react';
-import { Terminal } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import { WebLinksAddon } from '@xterm/addon-web-links';
-import '@xterm/xterm/css/xterm.css';
+import React, { useEffect, useRef, useCallback, useState } from "react";
+import { Terminal } from "@xterm/xterm";
+import { FitAddon } from "@xterm/addon-fit";
+import { WebLinksAddon } from "@xterm/addon-web-links";
+import "@xterm/xterm/css/xterm.css";
 import {
   Terminal as TerminalIcon,
   Maximize2,
@@ -25,9 +25,12 @@ import {
   CloudOff,
   Settings,
   History,
-} from 'lucide-react';
+} from "lucide-react";
 
-import { useSessionPersistence, SessionState } from './hooks/useSessionPersistence';
+import {
+  useSessionPersistence,
+  SessionState,
+} from "./hooks/useSessionPersistence";
 
 interface InfinityTerminalProps {
   projectName?: string;
@@ -40,11 +43,11 @@ interface InfinityTerminalProps {
 }
 
 export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
-  projectName = 'nxtg-forge',
-  layout = 'default',
+  projectName = "nxtg-forge",
+  layout = "default",
   ttydPort = 7681,
-  ttydHost = '127.0.0.1',
-  className = '',
+  ttydHost = "127.0.0.1",
+  className = "",
   onSessionRestore,
   onConnectionChange,
 }) => {
@@ -84,27 +87,27 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
       fontSize: 14,
       fontFamily: '"Cascadia Code", "Fira Code", "Consolas", monospace',
       theme: {
-        background: '#0a0a0a',
-        foreground: '#e5e7eb',
-        cursor: '#818cf8',
-        cursorAccent: '#1e1b4b',
-        selectionBackground: '#3730a3',
-        black: '#1e1b4b',
-        red: '#ef4444',
-        green: '#10b981',
-        yellow: '#f59e0b',
-        blue: '#3b82f6',
-        magenta: '#a855f7',
-        cyan: '#06b6d4',
-        white: '#e5e7eb',
-        brightBlack: '#374151',
-        brightRed: '#f87171',
-        brightGreen: '#34d399',
-        brightYellow: '#fbbf24',
-        brightBlue: '#60a5fa',
-        brightMagenta: '#c084fc',
-        brightCyan: '#22d3ee',
-        brightWhite: '#f3f4f6',
+        background: "#0a0a0a",
+        foreground: "#e5e7eb",
+        cursor: "#818cf8",
+        cursorAccent: "#1e1b4b",
+        selectionBackground: "#3730a3",
+        black: "#1e1b4b",
+        red: "#ef4444",
+        green: "#10b981",
+        yellow: "#f59e0b",
+        blue: "#3b82f6",
+        magenta: "#a855f7",
+        cyan: "#06b6d4",
+        white: "#e5e7eb",
+        brightBlack: "#374151",
+        brightRed: "#f87171",
+        brightGreen: "#34d399",
+        brightYellow: "#fbbf24",
+        brightBlue: "#60a5fa",
+        brightMagenta: "#c084fc",
+        brightCyan: "#22d3ee",
+        brightWhite: "#f3f4f6",
       },
       allowProposedApi: true,
     });
@@ -122,23 +125,31 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
     fitAddonRef.current = fitAddon;
 
     // Welcome message
-    term.writeln('\x1b[1;36m╔═══════════════════════════════════════════════════════════════╗\x1b[0m');
-    term.writeln('\x1b[1;36m║\x1b[0m \x1b[1;35m♾️  INFINITY TERMINAL - Persistent Sessions\x1b[0m               \x1b[1;36m║\x1b[0m');
-    term.writeln('\x1b[1;36m║\x1b[0m \x1b[36mPowered by Zellij + ttyd\x1b[0m                                  \x1b[1;36m║\x1b[0m');
-    term.writeln('\x1b[1;36m╚═══════════════════════════════════════════════════════════════╝\x1b[0m');
-    term.writeln('');
-    term.writeln('\x1b[90mConnecting to persistent session...\x1b[0m');
-    term.writeln('');
+    term.writeln(
+      "\x1b[1;36m╔═══════════════════════════════════════════════════════════════╗\x1b[0m",
+    );
+    term.writeln(
+      "\x1b[1;36m║\x1b[0m \x1b[1;35m♾️  INFINITY TERMINAL - Persistent Sessions\x1b[0m               \x1b[1;36m║\x1b[0m",
+    );
+    term.writeln(
+      "\x1b[1;36m║\x1b[0m \x1b[36mPowered by Zellij + ttyd\x1b[0m                                  \x1b[1;36m║\x1b[0m",
+    );
+    term.writeln(
+      "\x1b[1;36m╚═══════════════════════════════════════════════════════════════╝\x1b[0m",
+    );
+    term.writeln("");
+    term.writeln("\x1b[90mConnecting to persistent session...\x1b[0m");
+    term.writeln("");
 
     // Handle resize
     const handleResize = () => {
       fitAddon.fit();
     };
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener("resize", handleResize);
     };
   }, []);
 
@@ -164,16 +175,16 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
       try {
         const message = JSON.parse(event.data);
         switch (message.type) {
-          case 'output':
+          case "output":
             term.write(message.data);
             break;
-          case 'cost':
+          case "cost":
             // Could display cost info if needed
             break;
         }
       } catch (err) {
         // If not JSON, write raw data (fallback)
-        if (typeof event.data === 'string') {
+        if (typeof event.data === "string") {
           term.write(event.data);
         }
       }
@@ -182,34 +193,36 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
     // Send terminal input as JSON
     const handleData = term.onData((data) => {
       if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'input', data }));
+        ws.send(JSON.stringify({ type: "input", data }));
       }
     });
 
     // Send resize events as JSON
     const handleResize = term.onResize(({ cols, rows }) => {
       if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'resize', cols, rows }));
+        ws.send(JSON.stringify({ type: "resize", cols, rows }));
       }
     });
 
-    ws.addEventListener('message', handleMessage);
+    ws.addEventListener("message", handleMessage);
 
-    term.writeln('\x1b[32m✓ Connected to persistent session\x1b[0m');
+    term.writeln("\x1b[32m✓ Connected to persistent session\x1b[0m");
     term.writeln(`\x1b[90mSession: ${sessionState.sessionName}\x1b[0m`);
-    term.writeln('');
-    term.write('$ ');
+    term.writeln("");
+    term.write("$ ");
 
     // Send initial resize
     if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
+      ws.send(
+        JSON.stringify({ type: "resize", cols: term.cols, rows: term.rows }),
+      );
     }
 
     // Fit after connection
     fitAddonRef.current?.fit();
 
     return () => {
-      ws.removeEventListener('message', handleMessage);
+      ws.removeEventListener("message", handleMessage);
       handleData.dispose();
       handleResize.dispose();
       wsListenerAttached.current = false;
@@ -222,25 +235,30 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
     setTimeout(() => {
       connect();
       if (xtermRef.current) {
-        xtermRef.current.writeln('\x1b[33m⟳ Reconnecting...\x1b[0m');
+        xtermRef.current.writeln("\x1b[33m⟳ Reconnecting...\x1b[0m");
       }
     }, 500);
   }, [connect, disconnect]);
 
   // Handle session restore
-  const handleRestoreSession = useCallback((sessionName: string) => {
-    setShowSessionHistory(false);
-    restoreSession(sessionName);
-    if (xtermRef.current) {
-      xtermRef.current.writeln(`\x1b[33m⟳ Restoring session: ${sessionName}\x1b[0m`);
-    }
-  }, [restoreSession]);
+  const handleRestoreSession = useCallback(
+    (sessionName: string) => {
+      setShowSessionHistory(false);
+      restoreSession(sessionName);
+      if (xtermRef.current) {
+        xtermRef.current.writeln(
+          `\x1b[33m⟳ Restoring session: ${sessionName}\x1b[0m`,
+        );
+      }
+    },
+    [restoreSession],
+  );
 
   const availableSessions = getAvailableSessions();
 
   return (
     <div
-      className={`flex flex-col ${isExpanded ? 'fixed inset-4 z-50' : 'relative'} ${className}`}
+      className={`flex flex-col ${isExpanded ? "fixed inset-4 z-50" : "relative"} ${className}`}
       data-testid="infinity-terminal"
     >
       {/* Header */}
@@ -292,7 +310,7 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
             disabled={sessionState.connecting}
           >
             <RefreshCw
-              className={`w-4 h-4 text-gray-400 ${sessionState.connecting ? 'animate-spin' : ''}`}
+              className={`w-4 h-4 text-gray-400 ${sessionState.connecting ? "animate-spin" : ""}`}
             />
           </button>
 
@@ -300,7 +318,7 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
           <button
             onClick={() => setIsExpanded(!isExpanded)}
             className="p-1.5 hover:bg-gray-800 rounded transition-all"
-            title={isExpanded ? 'Minimize' : 'Maximize'}
+            title={isExpanded ? "Minimize" : "Maximize"}
           >
             {isExpanded ? (
               <Minimize2 className="w-4 h-4 text-gray-400" />
@@ -315,7 +333,7 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
       <div
         ref={terminalRef}
         className="flex-1 bg-[#0a0a0a] p-2"
-        style={{ minHeight: isExpanded ? 'calc(100vh - 120px)' : '400px' }}
+        style={{ minHeight: isExpanded ? "calc(100vh - 120px)" : "400px" }}
         data-testid="infinity-terminal-container"
       />
 
@@ -346,7 +364,7 @@ const ConnectionBadge: React.FC<{ state: SessionState }> = ({ state }) => {
     return (
       <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs bg-yellow-500/10 text-yellow-400">
         <RefreshCw className="w-3 h-3 animate-spin" />
-        Connecting{reconnectAttempts > 0 ? ` (${reconnectAttempts})` : ''}
+        Connecting{reconnectAttempts > 0 ? ` (${reconnectAttempts})` : ""}
       </div>
     );
   }
@@ -407,7 +425,7 @@ const SessionHistoryDropdown: React.FC<SessionHistoryDropdownProps> = ({
               key={session.sessionId}
               onClick={() => onSelect(session.sessionName)}
               className={`w-full px-3 py-2 text-left hover:bg-gray-800 transition-colors ${
-                session.sessionName === currentSession ? 'bg-purple-500/10' : ''
+                session.sessionName === currentSession ? "bg-purple-500/10" : ""
               }`}
             >
               <div className="flex items-center justify-between">
@@ -439,7 +457,7 @@ function formatRelativeTime(date: Date): string {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return 'Just now';
+  if (diffMins < 1) return "Just now";
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   return `${diffDays}d ago`;

@@ -3,10 +3,10 @@
  * Responsive layout wrapper that adapts to different screen sizes
  */
 
-import React, { ReactNode, useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Layers, Settings } from 'lucide-react';
-import { useResponsiveLayout, Breakpoint } from '../hooks/useResponsiveLayout';
+import React, { ReactNode, useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Menu, X, Layers, Settings } from "lucide-react";
+import { useResponsiveLayout, Breakpoint } from "../hooks/useResponsiveLayout";
 
 interface InfinityTerminalLayoutProps {
   children: ReactNode;
@@ -21,15 +21,10 @@ export const InfinityTerminalLayout: React.FC<InfinityTerminalLayoutProps> = ({
   hud,
   onBreakpointChange,
 }) => {
-  const {
-    layout,
-    hudVisible,
-    sidebarVisible,
-    toggleHUD,
-    toggleSidebar,
-  } = useResponsiveLayout({
-    onBreakpointChange,
-  });
+  const { layout, hudVisible, sidebarVisible, toggleHUD, toggleSidebar } =
+    useResponsiveLayout({
+      onBreakpointChange,
+    });
 
   const { isMobile, isTablet, isDesktop } = layout;
 
@@ -48,7 +43,9 @@ export const InfinityTerminalLayout: React.FC<InfinityTerminalLayoutProps> = ({
       )}
 
       {/* Main Layout */}
-      <div className={`flex flex-1 ${isMobile ? 'flex-col' : 'flex-row'} overflow-hidden`}>
+      <div
+        className={`flex flex-1 ${isMobile ? "flex-col" : "flex-row"} overflow-hidden`}
+      >
         {/* Sidebar - Desktop/Tablet only */}
         {!isMobile && sidebar && sidebarVisible && (
           <motion.aside
@@ -85,9 +82,7 @@ export const InfinityTerminalLayout: React.FC<InfinityTerminalLayoutProps> = ({
 
       {/* Mobile Bottom Sheet for HUD */}
       {isMobile && hud && hudVisible && (
-        <MobileBottomSheet onClose={toggleHUD}>
-          {hud}
-        </MobileBottomSheet>
+        <MobileBottomSheet onClose={toggleHUD}>{hud}</MobileBottomSheet>
       )}
     </div>
   );
@@ -118,20 +113,26 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({
           <button
             onClick={onToggleSidebar}
             className={`p-2 rounded-lg transition-colors ${
-              sidebarVisible ? 'bg-purple-500/20 text-purple-400' : 'text-gray-400 hover:bg-gray-800'
+              sidebarVisible
+                ? "bg-purple-500/20 text-purple-400"
+                : "text-gray-400 hover:bg-gray-800"
             }`}
           >
             <Menu className="w-5 h-5" />
           </button>
         )}
-        <span className="text-sm font-semibold text-white">Infinity Terminal</span>
+        <span className="text-sm font-semibold text-white">
+          Infinity Terminal
+        </span>
       </div>
 
       {hasHUD && (
         <button
           onClick={onToggleHUD}
           className={`p-2 rounded-lg transition-colors ${
-            hudVisible ? 'bg-purple-500/20 text-purple-400' : 'text-gray-400 hover:bg-gray-800'
+            hudVisible
+              ? "bg-purple-500/20 text-purple-400"
+              : "text-gray-400 hover:bg-gray-800"
           }`}
         >
           <Layers className="w-5 h-5" />
@@ -147,7 +148,10 @@ interface MobileBottomSheetProps {
   onClose: () => void;
 }
 
-const MobileBottomSheet: React.FC<MobileBottomSheetProps> = ({ children, onClose }) => {
+const MobileBottomSheet: React.FC<MobileBottomSheetProps> = ({
+  children,
+  onClose,
+}) => {
   return (
     <>
       {/* Backdrop */}
@@ -161,10 +165,10 @@ const MobileBottomSheet: React.FC<MobileBottomSheetProps> = ({ children, onClose
 
       {/* Sheet */}
       <motion.div
-        initial={{ y: '100%' }}
+        initial={{ y: "100%" }}
         animate={{ y: 0 }}
-        exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", damping: 25, stiffness: 300 }}
         className="fixed bottom-0 left-0 right-0 z-40 bg-gray-900 border-t border-gray-700 rounded-t-2xl max-h-[70vh] overflow-hidden"
       >
         {/* Handle */}
@@ -174,7 +178,9 @@ const MobileBottomSheet: React.FC<MobileBottomSheetProps> = ({ children, onClose
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 pb-2 border-b border-gray-800">
-          <span className="text-sm font-medium text-gray-300">Governance HUD</span>
+          <span className="text-sm font-medium text-gray-300">
+            Governance HUD
+          </span>
           <button
             onClick={onClose}
             className="p-1 hover:bg-gray-800 rounded transition-colors"
@@ -184,7 +190,10 @@ const MobileBottomSheet: React.FC<MobileBottomSheetProps> = ({ children, onClose
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto" style={{ maxHeight: 'calc(70vh - 60px)' }}>
+        <div
+          className="overflow-y-auto"
+          style={{ maxHeight: "calc(70vh - 60px)" }}
+        >
           {children}
         </div>
       </motion.div>

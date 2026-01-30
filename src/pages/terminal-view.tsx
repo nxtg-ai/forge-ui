@@ -3,13 +3,13 @@
  * Full-screen view with Claude Code Terminal + Governance HUD + Context Window HUD
  */
 
-import React, { useState } from 'react';
-import { ClaudeTerminal, ContextWindowHUD } from '../components/terminal';
-import { GovernanceHUD } from '../components/governance';
-import { ErrorBoundary } from '../components/ErrorBoundary';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Terminal, X, Layout, Maximize2, Info } from 'lucide-react';
-import { useToast } from '../components/feedback/ToastSystem';
+import React, { useState } from "react";
+import { ClaudeTerminal, ContextWindowHUD } from "../components/terminal";
+import { GovernanceHUD } from "../components/governance";
+import { ErrorBoundary } from "../components/ErrorBoundary";
+import { motion, AnimatePresence } from "framer-motion";
+import { Terminal, X, Layout, Maximize2, Info } from "lucide-react";
+import { useToast } from "../components/feedback/ToastSystem";
 
 const TerminalView: React.FC = () => {
   const [showGovernancePanel, setShowGovernancePanel] = useState(true);
@@ -24,7 +24,10 @@ const TerminalView: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white" data-testid="terminal-view-container">
+    <div
+      className="min-h-screen bg-gray-950 text-white"
+      data-testid="terminal-view-container"
+    >
       {/* Header */}
       <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-30">
         <div className="px-6 py-4">
@@ -41,23 +44,23 @@ const TerminalView: React.FC = () => {
                 onClick={() => setShowContextPanel(!showContextPanel)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   showContextPanel
-                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+                    : "bg-gray-800 text-gray-400 hover:bg-gray-700"
                 }`}
                 title="Toggle Context Window"
               >
-                Context {showContextPanel ? 'ON' : 'OFF'}
+                Context {showContextPanel ? "ON" : "OFF"}
               </button>
               <button
                 onClick={() => setShowGovernancePanel(!showGovernancePanel)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   showGovernancePanel
-                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30'
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+                    : "bg-gray-800 text-gray-400 hover:bg-gray-700"
                 }`}
                 title="Toggle Governance Panel"
               >
-                Governance {showGovernancePanel ? 'ON' : 'OFF'}
+                Governance {showGovernancePanel ? "ON" : "OFF"}
               </button>
             </div>
           </div>
@@ -84,7 +87,7 @@ const TerminalView: React.FC = () => {
         {/* Center - Terminal */}
         <main className="flex-1 min-w-0 bg-black">
           <ClaudeTerminal
-            onCommandExecute={(cmd) => console.log('Command executed:', cmd)}
+            onCommandExecute={(cmd) => console.log("Command executed:", cmd)}
             onDangerousCommand={handleDangerousCommand}
             className="h-full"
           />
@@ -113,7 +116,9 @@ const TerminalView: React.FC = () => {
               data-testid="help-overlay-expanded"
             >
               <div className="flex items-center justify-between mb-2">
-                <h4 className="text-xs font-semibold text-gray-300">Keyboard Shortcuts</h4>
+                <h4 className="text-xs font-semibold text-gray-300">
+                  Keyboard Shortcuts
+                </h4>
                 <button
                   onClick={() => setShowHelpOverlay(false)}
                   className="p-0.5 rounded hover:bg-gray-800 transition-colors"
@@ -125,15 +130,21 @@ const TerminalView: React.FC = () => {
               </div>
               <div className="text-xs space-y-1">
                 <div className="flex items-center gap-2 text-gray-400">
-                  <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-xs">Ctrl+C</kbd>
+                  <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-xs">
+                    Ctrl+C
+                  </kbd>
                   <span>Cancel command</span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-400">
-                  <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-xs">Ctrl+L</kbd>
+                  <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-xs">
+                    Ctrl+L
+                  </kbd>
                   <span>Clear terminal</span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-400">
-                  <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-xs">↑/↓</kbd>
+                  <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-xs">
+                    ↑/↓
+                  </kbd>
                   <span>Command history</span>
                 </div>
               </div>

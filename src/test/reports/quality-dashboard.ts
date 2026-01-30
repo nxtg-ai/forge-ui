@@ -3,9 +3,9 @@
  * Real-time quality metrics and reporting
  */
 
-import { promises as fs } from 'fs';
-import * as path from 'path';
-import { glob } from 'glob';
+import { promises as fs } from "fs";
+import * as path from "path";
+import { glob } from "glob";
 
 export interface QualityMetrics {
   timestamp: Date;
@@ -47,21 +47,30 @@ export interface QualityMetrics {
     totalFunctions: number;
     documentationCoverage: number;
   };
-  overallGrade: 'A' | 'B' | 'C' | 'D' | 'F';
+  overallGrade: "A" | "B" | "C" | "D" | "F";
   overallScore: number;
 }
 
 export class QualityDashboard {
-  async generateMetrics(projectPath: string = process.cwd()): Promise<QualityMetrics> {
-    const srcPath = path.join(projectPath, 'src');
+  async generateMetrics(
+    projectPath: string = process.cwd(),
+  ): Promise<QualityMetrics> {
+    const srcPath = path.join(projectPath, "src");
 
-    const [coverage, codeQuality, security, performance, testing, documentation] = await Promise.all([
+    const [
+      coverage,
+      codeQuality,
+      security,
+      performance,
+      testing,
+      documentation,
+    ] = await Promise.all([
       this.analyzeCoverage(projectPath),
       this.analyzeCodeQuality(srcPath),
       this.analyzeSecurityScore(projectPath),
       this.analyzePerformance(projectPath),
       this.analyzeTestResults(projectPath),
-      this.analyzeDocumentation(srcPath)
+      this.analyzeDocumentation(srcPath),
     ]);
 
     const overallScore = this.calculateOverallScore({
@@ -70,7 +79,7 @@ export class QualityDashboard {
       security,
       performance,
       testing,
-      documentation
+      documentation,
     });
 
     const overallGrade = this.scoreToGrade(overallScore);
@@ -84,7 +93,7 @@ export class QualityDashboard {
       testing,
       documentation,
       overallScore,
-      overallGrade
+      overallGrade,
     };
 
     await this.saveMetrics(metrics, projectPath);
@@ -93,17 +102,23 @@ export class QualityDashboard {
     return metrics;
   }
 
-  private async analyzeCoverage(projectPath: string): Promise<QualityMetrics['coverage']> {
+  private async analyzeCoverage(
+    projectPath: string,
+  ): Promise<QualityMetrics["coverage"]> {
     try {
-      const coveragePath = path.join(projectPath, 'coverage', 'coverage-summary.json');
-      const coverageData = JSON.parse(await fs.readFile(coveragePath, 'utf-8'));
+      const coveragePath = path.join(
+        projectPath,
+        "coverage",
+        "coverage-summary.json",
+      );
+      const coverageData = JSON.parse(await fs.readFile(coveragePath, "utf-8"));
 
       const total = coverageData.total;
       return {
         lines: total.lines.pct,
         functions: total.functions.pct,
         branches: total.branches.pct,
-        statements: total.statements.pct
+        statements: total.statements.pct,
       };
     } catch {
       // No coverage data yet
@@ -111,20 +126,26 @@ export class QualityDashboard {
         lines: 0,
         functions: 0,
         branches: 0,
-        statements: 0
+        statements: 0,
       };
     }
   }
 
-  private async analyzeCodeQuality(srcPath: string): Promise<QualityMetrics['codeQuality']> {
+  private async analyzeCodeQuality(
+    srcPath: string,
+  ): Promise<QualityMetrics["codeQuality"]> {
     const files = await new Promise<string[]>((resolve, reject) => {
-      glob('**/*.{ts,tsx}', {
-        cwd: srcPath,
-        ignore: ['**/*.test.ts', '**/*.test.tsx', '**/*.d.ts']
-      }, (err, matches) => {
-        if (err) reject(err);
-        else resolve(matches);
-      });
+      glob(
+        "**/*.{ts,tsx}",
+        {
+          cwd: srcPath,
+          ignore: ["**/*.test.ts", "**/*.test.tsx", "**/*.d.ts"],
+        },
+        (err, matches) => {
+          if (err) reject(err);
+          else resolve(matches);
+        },
+      );
     });
 
     let totalComplexity = 0;
@@ -132,39 +153,50 @@ export class QualityDashboard {
 
     for (const file of files) {
       const fullPath = path.join(srcPath, file);
-      const content = await fs.readFile(fullPath, 'utf-8');
+      const content = await fs.readFile(fullPath, "utf-8");
 
       // Simple cyclomatic complexity estimation
-      const functionMatches = content.match(/function\s+\w+|=>\s*{|const\s+\w+\s*=\s*\(/g) || [];
+      const functionMatches =
+        content.match(/function\s+\w+|=>\s*{|const\s+\w+\s*=\s*\(/g) || [];
       functionCount += functionMatches.length;
 
       // Count decision points (if, for, while, case, &&, ||, ?)
-      const decisionPoints = (content.match(/\b(if|for|while|case)\b|\?\?|\|\||&&/g) || []).length;
+      const decisionPoints = (
+        content.match(/\b(if|for|while|case)\b|\?\?|\|\||&&/g) || []
+      ).length;
       totalComplexity += decisionPoints;
     }
 
-    const averageComplexity = functionCount > 0 ? totalComplexity / functionCount : 0;
+    const averageComplexity =
+      functionCount > 0 ? totalComplexity / functionCount : 0;
 
     return {
       totalFiles: files.length,
       averageComplexity: Math.round(averageComplexity * 10) / 10,
       lintWarnings: 0, // Would be populated from ESLint
       lintErrors: 0,
-      typeErrors: 0
+      typeErrors: 0,
     };
   }
 
-  private async analyzeSecurityScore(projectPath: string): Promise<QualityMetrics['security']> {
+  private async analyzeSecurityScore(
+    projectPath: string,
+  ): Promise<QualityMetrics["security"]> {
     try {
-      const reportPath = path.join(projectPath, '.claude', 'reports', 'security-audit.json');
-      const report = JSON.parse(await fs.readFile(reportPath, 'utf-8'));
+      const reportPath = path.join(
+        projectPath,
+        ".claude",
+        "reports",
+        "security-audit.json",
+      );
+      const report = JSON.parse(await fs.readFile(reportPath, "utf-8"));
 
       return {
         score: report.summary.overallScore,
         criticalIssues: report.summary.violations.critical,
         highIssues: report.summary.violations.high,
         mediumIssues: report.summary.violations.medium,
-        lowIssues: report.summary.violations.low
+        lowIssues: report.summary.violations.low,
       };
     } catch {
       return {
@@ -172,41 +204,51 @@ export class QualityDashboard {
         criticalIssues: 0,
         highIssues: 0,
         mediumIssues: 0,
-        lowIssues: 0
+        lowIssues: 0,
       };
     }
   }
 
-  private async analyzePerformance(projectPath: string): Promise<QualityMetrics['performance']> {
+  private async analyzePerformance(
+    projectPath: string,
+  ): Promise<QualityMetrics["performance"]> {
     // These would be populated from actual build and test runs
     return {
       buildTime: 0,
       bundleSize: 0,
       averageTestDuration: 0,
-      slowestTests: []
+      slowestTests: [],
     };
   }
 
-  private async analyzeTestResults(projectPath: string): Promise<QualityMetrics['testing']> {
+  private async analyzeTestResults(
+    projectPath: string,
+  ): Promise<QualityMetrics["testing"]> {
     // Would be populated from vitest results
     return {
       totalTests: 0,
       passing: 0,
       failing: 0,
       skipped: 0,
-      testCoverage: 0
+      testCoverage: 0,
     };
   }
 
-  private async analyzeDocumentation(srcPath: string): Promise<QualityMetrics['documentation']> {
+  private async analyzeDocumentation(
+    srcPath: string,
+  ): Promise<QualityMetrics["documentation"]> {
     const files = await new Promise<string[]>((resolve, reject) => {
-      glob('**/*.{ts,tsx}', {
-        cwd: srcPath,
-        ignore: ['**/*.test.ts', '**/*.test.tsx', '**/*.d.ts']
-      }, (err, matches) => {
-        if (err) reject(err);
-        else resolve(matches);
-      });
+      glob(
+        "**/*.{ts,tsx}",
+        {
+          cwd: srcPath,
+          ignore: ["**/*.test.ts", "**/*.test.tsx", "**/*.d.ts"],
+        },
+        (err, matches) => {
+          if (err) reject(err);
+          else resolve(matches);
+        },
+      );
     });
 
     let totalFunctions = 0;
@@ -214,20 +256,27 @@ export class QualityDashboard {
 
     for (const file of files) {
       const fullPath = path.join(srcPath, file);
-      const content = await fs.readFile(fullPath, 'utf-8');
-      const lines = content.split('\n');
+      const content = await fs.readFile(fullPath, "utf-8");
+      const lines = content.split("\n");
 
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
 
         // Check for function declarations
-        if (/(?:export\s+)?(?:async\s+)?function\s+\w+|(?:export\s+)?const\s+\w+\s*=\s*(?:async\s+)?\(/.test(line)) {
+        if (
+          /(?:export\s+)?(?:async\s+)?function\s+\w+|(?:export\s+)?const\s+\w+\s*=\s*(?:async\s+)?\(/.test(
+            line,
+          )
+        ) {
           totalFunctions++;
 
           // Check if previous lines have JSDoc comment
           let hasDoc = false;
           for (let j = i - 1; j >= Math.max(0, i - 5); j--) {
-            if (lines[j].trim().startsWith('/**') || lines[j].trim().startsWith('*')) {
+            if (
+              lines[j].trim().startsWith("/**") ||
+              lines[j].trim().startsWith("*")
+            ) {
               hasDoc = true;
               break;
             }
@@ -240,14 +289,15 @@ export class QualityDashboard {
       }
     }
 
-    const documentationCoverage = totalFunctions > 0
-      ? Math.round((documentedFunctions / totalFunctions) * 100)
-      : 100;
+    const documentationCoverage =
+      totalFunctions > 0
+        ? Math.round((documentedFunctions / totalFunctions) * 100)
+        : 100;
 
     return {
       documentedFunctions,
       totalFunctions,
-      documentationCoverage
+      documentationCoverage,
     };
   }
 
@@ -255,22 +305,22 @@ export class QualityDashboard {
     const weights = {
       coverage: 0.25,
       security: 0.25,
-      codeQuality: 0.20,
+      codeQuality: 0.2,
       testing: 0.15,
-      documentation: 0.10,
-      performance: 0.05
+      documentation: 0.1,
+      performance: 0.05,
     };
 
     let score = 0;
 
     // Coverage score (average of all metrics)
     if (metrics.coverage) {
-      const coverageAvg = (
-        metrics.coverage.lines +
-        metrics.coverage.functions +
-        metrics.coverage.branches +
-        metrics.coverage.statements
-      ) / 4;
+      const coverageAvg =
+        (metrics.coverage.lines +
+          metrics.coverage.functions +
+          metrics.coverage.branches +
+          metrics.coverage.statements) /
+        4;
       score += coverageAvg * weights.coverage;
     }
 
@@ -281,23 +331,33 @@ export class QualityDashboard {
 
     // Code quality score (inverse of complexity, max 100)
     if (metrics.codeQuality) {
-      const complexityScore = Math.max(0, 100 - (metrics.codeQuality.averageComplexity * 5));
-      const lintScore = Math.max(0, 100 - metrics.codeQuality.lintErrors * 10 - metrics.codeQuality.lintWarnings * 2);
+      const complexityScore = Math.max(
+        0,
+        100 - metrics.codeQuality.averageComplexity * 5,
+      );
+      const lintScore = Math.max(
+        0,
+        100 -
+          metrics.codeQuality.lintErrors * 10 -
+          metrics.codeQuality.lintWarnings * 2,
+      );
       const qualityScore = (complexityScore + lintScore) / 2;
       score += qualityScore * weights.codeQuality;
     }
 
     // Testing score
     if (metrics.testing) {
-      const testPassRate = metrics.testing.totalTests > 0
-        ? (metrics.testing.passing / metrics.testing.totalTests) * 100
-        : 100;
+      const testPassRate =
+        metrics.testing.totalTests > 0
+          ? (metrics.testing.passing / metrics.testing.totalTests) * 100
+          : 100;
       score += testPassRate * weights.testing;
     }
 
     // Documentation score
     if (metrics.documentation) {
-      score += metrics.documentation.documentationCoverage * weights.documentation;
+      score +=
+        metrics.documentation.documentationCoverage * weights.documentation;
     }
 
     // Performance score (placeholder)
@@ -306,27 +366,33 @@ export class QualityDashboard {
     return Math.round(score);
   }
 
-  private scoreToGrade(score: number): 'A' | 'B' | 'C' | 'D' | 'F' {
-    if (score >= 90) return 'A';
-    if (score >= 80) return 'B';
-    if (score >= 70) return 'C';
-    if (score >= 60) return 'D';
-    return 'F';
+  private scoreToGrade(score: number): "A" | "B" | "C" | "D" | "F" {
+    if (score >= 90) return "A";
+    if (score >= 80) return "B";
+    if (score >= 70) return "C";
+    if (score >= 60) return "D";
+    return "F";
   }
 
-  private async saveMetrics(metrics: QualityMetrics, projectPath: string): Promise<void> {
-    const reportsDir = path.join(projectPath, '.claude', 'reports');
+  private async saveMetrics(
+    metrics: QualityMetrics,
+    projectPath: string,
+  ): Promise<void> {
+    const reportsDir = path.join(projectPath, ".claude", "reports");
     await fs.mkdir(reportsDir, { recursive: true });
 
-    const metricsPath = path.join(reportsDir, 'quality-metrics.json');
+    const metricsPath = path.join(reportsDir, "quality-metrics.json");
     await fs.writeFile(metricsPath, JSON.stringify(metrics, null, 2));
 
     // Also save history
-    const historyPath = path.join(reportsDir, 'metrics-history.jsonl');
-    await fs.appendFile(historyPath, JSON.stringify(metrics) + '\n');
+    const historyPath = path.join(reportsDir, "metrics-history.jsonl");
+    await fs.appendFile(historyPath, JSON.stringify(metrics) + "\n");
   }
 
-  private async generateDashboardHTML(metrics: QualityMetrics, projectPath: string): Promise<void> {
+  private async generateDashboardHTML(
+    metrics: QualityMetrics,
+    projectPath: string,
+  ): Promise<void> {
     const html = `
 <!DOCTYPE html>
 <html lang="en">
@@ -460,8 +526,8 @@ export class QualityDashboard {
         <div class="metric-subtitle">
           Lines: ${metrics.coverage.lines}% | Functions: ${metrics.coverage.functions}% | Branches: ${metrics.coverage.branches}%
         </div>
-        <span class="status-badge ${metrics.coverage.lines >= 85 ? 'status-good' : metrics.coverage.lines >= 70 ? 'status-warning' : 'status-danger'}">
-          ${metrics.coverage.lines >= 85 ? 'Excellent' : metrics.coverage.lines >= 70 ? 'Good' : 'Needs Work'}
+        <span class="status-badge ${metrics.coverage.lines >= 85 ? "status-good" : metrics.coverage.lines >= 70 ? "status-warning" : "status-danger"}">
+          ${metrics.coverage.lines >= 85 ? "Excellent" : metrics.coverage.lines >= 70 ? "Good" : "Needs Work"}
         </span>
       </div>
 
@@ -475,8 +541,8 @@ export class QualityDashboard {
         <div class="metric-subtitle">
           Critical: ${metrics.security.criticalIssues} | High: ${metrics.security.highIssues} | Medium: ${metrics.security.mediumIssues}
         </div>
-        <span class="status-badge ${metrics.security.criticalIssues === 0 && metrics.security.highIssues === 0 ? 'status-good' : metrics.security.criticalIssues > 0 ? 'status-danger' : 'status-warning'}">
-          ${metrics.security.criticalIssues === 0 && metrics.security.highIssues === 0 ? 'Secure' : metrics.security.criticalIssues > 0 ? 'Critical Issues' : 'Review Needed'}
+        <span class="status-badge ${metrics.security.criticalIssues === 0 && metrics.security.highIssues === 0 ? "status-good" : metrics.security.criticalIssues > 0 ? "status-danger" : "status-warning"}">
+          ${metrics.security.criticalIssues === 0 && metrics.security.highIssues === 0 ? "Secure" : metrics.security.criticalIssues > 0 ? "Critical Issues" : "Review Needed"}
         </span>
       </div>
 
@@ -487,8 +553,8 @@ export class QualityDashboard {
         <div class="metric-subtitle">
           Average Complexity | ${metrics.codeQuality.totalFiles} files
         </div>
-        <span class="status-badge ${metrics.codeQuality.averageComplexity < 5 ? 'status-good' : metrics.codeQuality.averageComplexity < 10 ? 'status-warning' : 'status-danger'}">
-          ${metrics.codeQuality.averageComplexity < 5 ? 'Simple' : metrics.codeQuality.averageComplexity < 10 ? 'Moderate' : 'Complex'}
+        <span class="status-badge ${metrics.codeQuality.averageComplexity < 5 ? "status-good" : metrics.codeQuality.averageComplexity < 10 ? "status-warning" : "status-danger"}">
+          ${metrics.codeQuality.averageComplexity < 5 ? "Simple" : metrics.codeQuality.averageComplexity < 10 ? "Moderate" : "Complex"}
         </span>
       </div>
 
@@ -502,8 +568,8 @@ export class QualityDashboard {
         <div class="metric-subtitle">
           ${metrics.documentation.documentedFunctions}/${metrics.documentation.totalFunctions} functions documented
         </div>
-        <span class="status-badge ${metrics.documentation.documentationCoverage >= 80 ? 'status-good' : metrics.documentation.documentationCoverage >= 60 ? 'status-warning' : 'status-danger'}">
-          ${metrics.documentation.documentationCoverage >= 80 ? 'Well Documented' : metrics.documentation.documentationCoverage >= 60 ? 'Adequate' : 'Lacking'}
+        <span class="status-badge ${metrics.documentation.documentationCoverage >= 80 ? "status-good" : metrics.documentation.documentationCoverage >= 60 ? "status-warning" : "status-danger"}">
+          ${metrics.documentation.documentationCoverage >= 80 ? "Well Documented" : metrics.documentation.documentationCoverage >= 60 ? "Adequate" : "Lacking"}
         </span>
       </div>
     </div>
@@ -516,7 +582,12 @@ export class QualityDashboard {
 </html>
 `;
 
-    const htmlPath = path.join(projectPath, '.claude', 'reports', 'quality-dashboard.html');
+    const htmlPath = path.join(
+      projectPath,
+      ".claude",
+      "reports",
+      "quality-dashboard.html",
+    );
     await fs.writeFile(htmlPath, html);
 
     console.log(`\nQuality dashboard generated: ${htmlPath}`);
@@ -527,16 +598,23 @@ export class QualityDashboard {
 // CLI usage
 if (require.main === module) {
   const dashboard = new QualityDashboard();
-  dashboard.generateMetrics()
-    .then(metrics => {
-      console.log('\n=== Quality Metrics ===');
-      console.log(`Overall Grade: ${metrics.overallGrade} (${metrics.overallScore}/100)`);
-      console.log(`Coverage: ${Math.round((metrics.coverage.lines + metrics.coverage.statements) / 2)}%`);
+  dashboard
+    .generateMetrics()
+    .then((metrics) => {
+      console.log("\n=== Quality Metrics ===");
+      console.log(
+        `Overall Grade: ${metrics.overallGrade} (${metrics.overallScore}/100)`,
+      );
+      console.log(
+        `Coverage: ${Math.round((metrics.coverage.lines + metrics.coverage.statements) / 2)}%`,
+      );
       console.log(`Security Score: ${metrics.security.score}/100`);
-      console.log(`Documentation: ${metrics.documentation.documentationCoverage}%`);
+      console.log(
+        `Documentation: ${metrics.documentation.documentationCoverage}%`,
+      );
     })
-    .catch(error => {
-      console.error('Failed to generate metrics:', error);
+    .catch((error) => {
+      console.error("Failed to generate metrics:", error);
       process.exit(1);
     });
 }

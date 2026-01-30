@@ -3,11 +3,11 @@
  * Execute /[FRG]-* commands and stream results
  */
 
-import { z } from 'zod';
-import { exec, spawn, ChildProcess } from 'child_process';
-import { promisify } from 'util';
-import { BaseService, ServiceConfig } from './base-service';
-import { Result, IntegrationError } from '../utils/result';
+import { z } from "zod";
+import { exec, spawn, ChildProcess } from "child_process";
+import { promisify } from "util";
+import { BaseService, ServiceConfig } from "./base-service";
+import { Result, IntegrationError } from "../utils/result";
 
 const execAsync = promisify(exec);
 
@@ -28,7 +28,7 @@ export interface CommandOptions {
 export interface CommandResult {
   commandId: string;
   command: string;
-  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+  status: "pending" | "running" | "completed" | "failed" | "cancelled";
   output: string[];
   error?: string;
   exitCode?: number;
@@ -42,7 +42,7 @@ export interface CommandResult {
  */
 export interface CommandStreamEvent {
   commandId: string;
-  type: 'stdout' | 'stderr' | 'exit' | 'error';
+  type: "stdout" | "stderr" | "exit" | "error";
   data: string | number;
   timestamp: Date;
 }
@@ -51,15 +51,15 @@ export interface CommandStreamEvent {
  * Available Forge commands
  */
 export enum ForgeCommand {
-  INIT = '[FRG]-init',
-  STATUS = '[FRG]-status',
-  FEATURE = '[FRG]-feature',
-  TEST = '[FRG]-test',
-  DEPLOY = '[FRG]-deploy',
-  OPTIMIZE = '[FRG]-optimize',
-  REPORT = '[FRG]-report',
-  ENABLE_FORGE = '[FRG]-enable-forge',
-  STATUS_ENHANCED = '[FRG]-status-enhanced'
+  INIT = "[FRG]-init",
+  STATUS = "[FRG]-status",
+  FEATURE = "[FRG]-feature",
+  TEST = "[FRG]-test",
+  DEPLOY = "[FRG]-deploy",
+  OPTIMIZE = "[FRG]-optimize",
+  REPORT = "[FRG]-report",
+  ENABLE_FORGE = "[FRG]-enable-forge",
+  STATUS_ENHANCED = "[FRG]-status-enhanced",
 }
 
 /**
@@ -68,9 +68,9 @@ export enum ForgeCommand {
 export interface CommandMetadata {
   name: string;
   description: string;
-  category: 'forge' | 'git' | 'test' | 'deploy' | 'analyze';
+  category: "forge" | "git" | "test" | "deploy" | "analyze";
   requiresConfirmation?: boolean;
-  dangerLevel?: 'safe' | 'moderate' | 'dangerous';
+  dangerLevel?: "safe" | "moderate" | "dangerous";
 }
 
 /**
@@ -91,16 +91,16 @@ export class CommandService extends BaseService {
   private commandMetadata = new Map<string, CommandMetadata>();
   private outputBuffers = new Map<string, string[]>();
 
-  constructor(config: CommandServiceConfig = { name: 'CommandService' }) {
+  constructor(config: CommandServiceConfig = { name: "CommandService" }) {
     super({
       ...config,
-      timeout: config.commandTimeout ?? 60000
+      timeout: config.commandTimeout ?? 60000,
     });
 
     this.config = {
       maxConcurrentCommands: 5,
       outputBufferSize: 1000,
-      ...config
+      ...config,
     };
 
     this.initializeCommandMetadata();
@@ -111,61 +111,88 @@ export class CommandService extends BaseService {
    */
   private initializeCommandMetadata(): void {
     const commands: Array<[string, CommandMetadata]> = [
-      [ForgeCommand.INIT, {
-        name: ForgeCommand.INIT,
-        description: 'Initialize NXTG-Forge in your project',
-        category: 'forge',
-        dangerLevel: 'safe'
-      }],
-      [ForgeCommand.STATUS, {
-        name: ForgeCommand.STATUS,
-        description: 'Display project status and Forge configuration',
-        category: 'forge',
-        dangerLevel: 'safe'
-      }],
-      [ForgeCommand.FEATURE, {
-        name: ForgeCommand.FEATURE,
-        description: 'Implement a new feature with full orchestration',
-        category: 'forge',
-        dangerLevel: 'moderate'
-      }],
-      [ForgeCommand.TEST, {
-        name: ForgeCommand.TEST,
-        description: 'Run tests with comprehensive reporting',
-        category: 'test',
-        dangerLevel: 'safe'
-      }],
-      [ForgeCommand.DEPLOY, {
-        name: ForgeCommand.DEPLOY,
-        description: 'Deploy application with automated checks',
-        category: 'deploy',
-        requiresConfirmation: true,
-        dangerLevel: 'dangerous'
-      }],
-      [ForgeCommand.OPTIMIZE, {
-        name: ForgeCommand.OPTIMIZE,
-        description: 'Optimize code performance and structure',
-        category: 'analyze',
-        dangerLevel: 'moderate'
-      }],
-      [ForgeCommand.REPORT, {
-        name: ForgeCommand.REPORT,
-        description: 'Display comprehensive session activity report',
-        category: 'analyze',
-        dangerLevel: 'safe'
-      }],
-      [ForgeCommand.ENABLE_FORGE, {
-        name: ForgeCommand.ENABLE_FORGE,
-        description: 'Activate forge command center with orchestrator',
-        category: 'forge',
-        dangerLevel: 'safe'
-      }],
-      [ForgeCommand.STATUS_ENHANCED, {
-        name: ForgeCommand.STATUS_ENHANCED,
-        description: 'Enhanced status display with real-time dashboard',
-        category: 'forge',
-        dangerLevel: 'safe'
-      }]
+      [
+        ForgeCommand.INIT,
+        {
+          name: ForgeCommand.INIT,
+          description: "Initialize NXTG-Forge in your project",
+          category: "forge",
+          dangerLevel: "safe",
+        },
+      ],
+      [
+        ForgeCommand.STATUS,
+        {
+          name: ForgeCommand.STATUS,
+          description: "Display project status and Forge configuration",
+          category: "forge",
+          dangerLevel: "safe",
+        },
+      ],
+      [
+        ForgeCommand.FEATURE,
+        {
+          name: ForgeCommand.FEATURE,
+          description: "Implement a new feature with full orchestration",
+          category: "forge",
+          dangerLevel: "moderate",
+        },
+      ],
+      [
+        ForgeCommand.TEST,
+        {
+          name: ForgeCommand.TEST,
+          description: "Run tests with comprehensive reporting",
+          category: "test",
+          dangerLevel: "safe",
+        },
+      ],
+      [
+        ForgeCommand.DEPLOY,
+        {
+          name: ForgeCommand.DEPLOY,
+          description: "Deploy application with automated checks",
+          category: "deploy",
+          requiresConfirmation: true,
+          dangerLevel: "dangerous",
+        },
+      ],
+      [
+        ForgeCommand.OPTIMIZE,
+        {
+          name: ForgeCommand.OPTIMIZE,
+          description: "Optimize code performance and structure",
+          category: "analyze",
+          dangerLevel: "moderate",
+        },
+      ],
+      [
+        ForgeCommand.REPORT,
+        {
+          name: ForgeCommand.REPORT,
+          description: "Display comprehensive session activity report",
+          category: "analyze",
+          dangerLevel: "safe",
+        },
+      ],
+      [
+        ForgeCommand.ENABLE_FORGE,
+        {
+          name: ForgeCommand.ENABLE_FORGE,
+          description: "Activate forge command center with orchestrator",
+          category: "forge",
+          dangerLevel: "safe",
+        },
+      ],
+      [
+        ForgeCommand.STATUS_ENHANCED,
+        {
+          name: ForgeCommand.STATUS_ENHANCED,
+          description: "Enhanced status display with real-time dashboard",
+          category: "forge",
+          dangerLevel: "safe",
+        },
+      ],
     ];
 
     commands.forEach(([name, metadata]) => {
@@ -190,10 +217,10 @@ export class CommandService extends BaseService {
   protected async performDisposal(): Promise<void> {
     // Cancel all active commands
     for (const [commandId, process] of this.activeCommands) {
-      process.kill('SIGTERM');
+      process.kill("SIGTERM");
       const result = this.commandResults.get(commandId);
       if (result) {
-        result.status = 'cancelled';
+        result.status = "cancelled";
         result.endTime = new Date();
       }
     }
@@ -208,7 +235,7 @@ export class CommandService extends BaseService {
    */
   async execute(
     command: string,
-    options?: CommandOptions
+    options?: CommandOptions,
   ): Promise<Result<CommandResult, IntegrationError>> {
     // Generate unique command ID
     const commandId = this.generateCommandId();
@@ -224,9 +251,9 @@ export class CommandService extends BaseService {
     if (this.activeCommands.size >= (config.maxConcurrentCommands ?? 5)) {
       return Result.err(
         new IntegrationError(
-          'Maximum concurrent commands reached',
-          'COMMAND_LIMIT_EXCEEDED'
-        )
+          "Maximum concurrent commands reached",
+          "COMMAND_LIMIT_EXCEEDED",
+        ),
       );
     }
 
@@ -234,9 +261,9 @@ export class CommandService extends BaseService {
     const result: CommandResult = {
       commandId,
       command,
-      status: 'pending',
+      status: "pending",
       output: [],
-      startTime: new Date()
+      startTime: new Date(),
     };
 
     this.commandResults.set(commandId, result);
@@ -249,7 +276,7 @@ export class CommandService extends BaseService {
         return await this.executeBlocking(commandId, command, options);
       }
     } catch (error) {
-      result.status = 'failed';
+      result.status = "failed";
       result.error = error instanceof Error ? error.message : String(error);
       result.endTime = new Date();
       result.duration = result.endTime.getTime() - result.startTime.getTime();
@@ -257,9 +284,9 @@ export class CommandService extends BaseService {
       return Result.err(
         new IntegrationError(
           `Command execution failed: ${result.error}`,
-          'COMMAND_ERROR',
-          { commandId, command }
-        )
+          "COMMAND_ERROR",
+          { commandId, command },
+        ),
       );
     }
   }
@@ -270,42 +297,48 @@ export class CommandService extends BaseService {
   private async executeBlocking(
     commandId: string,
     command: string,
-    options?: CommandOptions
+    options?: CommandOptions,
   ): Promise<Result<CommandResult, IntegrationError>> {
     const result = this.commandResults.get(commandId)!;
-    result.status = 'running';
+    result.status = "running";
 
     try {
       const { stdout, stderr } = await execAsync(command, {
         env: { ...process.env, ...options?.env },
         cwd: options?.cwd,
-        timeout: options?.timeout ?? this.config.timeout
+        timeout: options?.timeout ?? this.config.timeout,
       });
 
       // Update result
-      result.status = 'completed';
-      result.output = stdout.split('\n').filter(line => line.length > 0);
+      result.status = "completed";
+      result.output = stdout.split("\n").filter((line) => line.length > 0);
       if (stderr) {
-        result.output.push(...stderr.split('\n').filter(line => line.length > 0));
+        result.output.push(
+          ...stderr.split("\n").filter((line) => line.length > 0),
+        );
       }
       result.exitCode = 0;
       result.endTime = new Date();
       result.duration = result.endTime.getTime() - result.startTime.getTime();
 
-      this.emit('commandComplete', result);
+      this.emit("commandComplete", result);
       return Result.ok(result);
     } catch (error: any) {
-      result.status = 'failed';
+      result.status = "failed";
       result.error = error.message;
       result.exitCode = error.code ?? -1;
-      result.output = error.stdout?.split('\n').filter((line: string) => line.length > 0) ?? [];
+      result.output =
+        error.stdout?.split("\n").filter((line: string) => line.length > 0) ??
+        [];
       if (error.stderr) {
-        result.output.push(...error.stderr.split('\n').filter((line: string) => line.length > 0));
+        result.output.push(
+          ...error.stderr.split("\n").filter((line: string) => line.length > 0),
+        );
       }
       result.endTime = new Date();
       result.duration = result.endTime.getTime() - result.startTime.getTime();
 
-      this.emit('commandFailed', result);
+      this.emit("commandFailed", result);
       return Result.ok(result); // Return result even on failure for error details
     }
   }
@@ -316,21 +349,21 @@ export class CommandService extends BaseService {
   private async executeStreaming(
     commandId: string,
     command: string,
-    options?: CommandOptions
+    options?: CommandOptions,
   ): Promise<Result<CommandResult, IntegrationError>> {
     return new Promise((resolve) => {
       const result = this.commandResults.get(commandId)!;
-      result.status = 'running';
+      result.status = "running";
 
       // Parse command and args
-      const [cmd, ...args] = command.split(' ');
+      const [cmd, ...args] = command.split(" ");
       const allArgs = [...args, ...(options?.args ?? [])];
 
       // Spawn child process
       const childProcess = spawn(cmd, allArgs, {
         env: { ...process.env, ...options?.env },
         cwd: options?.cwd,
-        shell: true
+        shell: true,
       });
 
       this.activeCommands.set(commandId, childProcess);
@@ -339,99 +372,100 @@ export class CommandService extends BaseService {
       let timeoutId: NodeJS.Timeout | undefined;
       if (options?.timeout) {
         timeoutId = setTimeout(() => {
-          childProcess.kill('SIGTERM');
-          result.status = 'failed';
-          result.error = 'Command timed out';
+          childProcess.kill("SIGTERM");
+          result.status = "failed";
+          result.error = "Command timed out";
           result.endTime = new Date();
-          result.duration = result.endTime.getTime() - result.startTime.getTime();
+          result.duration =
+            result.endTime.getTime() - result.startTime.getTime();
 
           this.activeCommands.delete(commandId);
-          this.emit('commandTimeout', result);
+          this.emit("commandTimeout", result);
           resolve(Result.ok(result));
         }, options.timeout);
       }
 
       // Handle stdout
-      childProcess.stdout?.on('data', (data: Buffer) => {
+      childProcess.stdout?.on("data", (data: Buffer) => {
         const output = data.toString();
-        const lines = output.split('\n').filter(line => line.length > 0);
+        const lines = output.split("\n").filter((line) => line.length > 0);
 
-        lines.forEach(line => {
+        lines.forEach((line) => {
           this.addOutput(commandId, line);
-          this.emit('commandStream', {
+          this.emit("commandStream", {
             commandId,
-            type: 'stdout',
+            type: "stdout",
             data: line,
-            timestamp: new Date()
+            timestamp: new Date(),
           } as CommandStreamEvent);
         });
       });
 
       // Handle stderr
-      childProcess.stderr?.on('data', (data: Buffer) => {
+      childProcess.stderr?.on("data", (data: Buffer) => {
         const output = data.toString();
-        const lines = output.split('\n').filter(line => line.length > 0);
+        const lines = output.split("\n").filter((line) => line.length > 0);
 
-        lines.forEach(line => {
+        lines.forEach((line) => {
           this.addOutput(commandId, line);
-          this.emit('commandStream', {
+          this.emit("commandStream", {
             commandId,
-            type: 'stderr',
+            type: "stderr",
             data: line,
-            timestamp: new Date()
+            timestamp: new Date(),
           } as CommandStreamEvent);
         });
       });
 
       // Handle process exit
-      childProcess.on('exit', (code: number | null) => {
+      childProcess.on("exit", (code: number | null) => {
         if (timeoutId) {
           clearTimeout(timeoutId);
         }
 
-        result.status = code === 0 ? 'completed' : 'failed';
+        result.status = code === 0 ? "completed" : "failed";
         result.exitCode = code ?? -1;
         result.output = this.outputBuffers.get(commandId) ?? [];
         result.endTime = new Date();
         result.duration = result.endTime.getTime() - result.startTime.getTime();
 
         this.activeCommands.delete(commandId);
-        this.emit('commandStream', {
+        this.emit("commandStream", {
           commandId,
-          type: 'exit',
+          type: "exit",
           data: code ?? -1,
-          timestamp: new Date()
+          timestamp: new Date(),
         } as CommandStreamEvent);
 
-        if (result.status === 'completed') {
-          this.emit('commandComplete', result);
+        if (result.status === "completed") {
+          this.emit("commandComplete", result);
         } else {
-          this.emit('commandFailed', result);
+          this.emit("commandFailed", result);
         }
 
         resolve(Result.ok(result));
       });
 
       // Handle process error
-      childProcess.on('error', (error: Error) => {
+      childProcess.on("error", (error: Error) => {
         if (timeoutId) {
           clearTimeout(timeoutId);
         }
 
-        result.status = 'failed';
+        result.status = "failed";
         result.error = error.message;
         result.output = this.outputBuffers.get(commandId) ?? [];
         result.endTime = new Date();
         result.duration = result.endTime.getTime() - result.startTime.getTime();
 
         this.activeCommands.delete(commandId);
-        this.emit('commandStream', {
+        this.emit("commandStream", {
           commandId,
-          type: 'error',
+          type: "error",
           data: error.message,
-          timestamp: new Date()
+          timestamp: new Date(),
         } as CommandStreamEvent);
-        this.emit('commandFailed', result);
+        this.emit("commandFailed", result);
 
         resolve(Result.ok(result));
       });
@@ -446,22 +480,22 @@ export class CommandService extends BaseService {
     if (!process) {
       return Result.err(
         new IntegrationError(
-          'Command not found or not running',
-          'COMMAND_NOT_FOUND'
-        )
+          "Command not found or not running",
+          "COMMAND_NOT_FOUND",
+        ),
       );
     }
 
     try {
-      process.kill('SIGTERM');
+      process.kill("SIGTERM");
       this.activeCommands.delete(commandId);
 
       const result = this.commandResults.get(commandId);
       if (result) {
-        result.status = 'cancelled';
+        result.status = "cancelled";
         result.endTime = new Date();
         result.duration = result.endTime.getTime() - result.startTime.getTime();
-        this.emit('commandCancelled', result);
+        this.emit("commandCancelled", result);
       }
 
       return Result.ok(undefined);
@@ -469,8 +503,8 @@ export class CommandService extends BaseService {
       return Result.err(
         new IntegrationError(
           `Failed to cancel command: ${error instanceof Error ? error.message : String(error)}`,
-          'CANCEL_ERROR'
-        )
+          "CANCEL_ERROR",
+        ),
       );
     }
   }
@@ -482,10 +516,7 @@ export class CommandService extends BaseService {
     const result = this.commandResults.get(commandId);
     if (!result) {
       return Result.err(
-        new IntegrationError(
-          'Command result not found',
-          'RESULT_NOT_FOUND'
-        )
+        new IntegrationError("Command result not found", "RESULT_NOT_FOUND"),
       );
     }
     return Result.ok(result);
@@ -502,8 +533,9 @@ export class CommandService extends BaseService {
    * Get active commands
    */
   getActiveCommands(): CommandResult[] {
-    return Array.from(this.commandResults.values())
-      .filter(result => result.status === 'running');
+    return Array.from(this.commandResults.values()).filter(
+      (result) => result.status === "running",
+    );
   }
 
   /**
@@ -525,7 +557,7 @@ export class CommandService extends BaseService {
    */
   streamOutput(
     commandId: string,
-    callback: (event: CommandStreamEvent) => void
+    callback: (event: CommandStreamEvent) => void,
   ): () => void {
     const handler = (event: CommandStreamEvent) => {
       if (event.commandId === commandId) {
@@ -533,8 +565,8 @@ export class CommandService extends BaseService {
       }
     };
 
-    this.on('commandStream', handler);
-    return () => this.off('commandStream', handler);
+    this.on("commandStream", handler);
+    return () => this.off("commandStream", handler);
   }
 
   /**
@@ -559,7 +591,7 @@ export class CommandService extends BaseService {
   private validateCommand(command: string): Result<void, IntegrationError> {
     if (!command || command.trim().length === 0) {
       return Result.err(
-        new IntegrationError('Command cannot be empty', 'INVALID_COMMAND')
+        new IntegrationError("Command cannot be empty", "INVALID_COMMAND"),
       );
     }
 
@@ -568,16 +600,16 @@ export class CommandService extends BaseService {
       /rm\s+-rf\s+\//,
       /format\s+/,
       /del\s+\/s\s+\/q/,
-      />\/dev\/sda/
+      />\/dev\/sda/,
     ];
 
     for (const pattern of dangerousPatterns) {
       if (pattern.test(command)) {
         return Result.err(
           new IntegrationError(
-            'Dangerous command detected',
-            'DANGEROUS_COMMAND'
-          )
+            "Dangerous command detected",
+            "DANGEROUS_COMMAND",
+          ),
         );
       }
     }
@@ -588,7 +620,9 @@ export class CommandService extends BaseService {
   /**
    * Check command availability
    */
-  private async checkCommandAvailability(): Promise<Result<void, IntegrationError>> {
+  private async checkCommandAvailability(): Promise<
+    Result<void, IntegrationError>
+  > {
     // Check if forge commands are available
     try {
       // This would check actual command availability
@@ -597,9 +631,9 @@ export class CommandService extends BaseService {
     } catch (error) {
       return Result.err(
         new IntegrationError(
-          'Failed to check command availability',
-          'AVAILABILITY_CHECK_ERROR'
-        )
+          "Failed to check command availability",
+          "AVAILABILITY_CHECK_ERROR",
+        ),
       );
     }
   }

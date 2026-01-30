@@ -3,8 +3,8 @@
  * Optimized terminal experience for mobile devices
  */
 
-import React, { useState, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Terminal,
   Maximize2,
@@ -18,10 +18,10 @@ import {
   Wifi,
   WifiOff,
   Menu,
-} from 'lucide-react';
-import { InfinityTerminal } from './InfinityTerminal';
-import { useTouchGestures } from './hooks/useTouchGestures';
-import { useResponsiveLayout } from './hooks/useResponsiveLayout';
+} from "lucide-react";
+import { InfinityTerminal } from "./InfinityTerminal";
+import { useTouchGestures } from "./hooks/useTouchGestures";
+import { useResponsiveLayout } from "./hooks/useResponsiveLayout";
 
 interface MobileTerminalViewProps {
   projectName?: string;
@@ -32,11 +32,11 @@ interface MobileTerminalViewProps {
 }
 
 export const MobileTerminalView: React.FC<MobileTerminalViewProps> = ({
-  projectName = 'nxtg-forge',
+  projectName = "nxtg-forge",
   ttydPort = 7681,
-  ttydHost = '127.0.0.1',
+  ttydHost = "127.0.0.1",
   onShare,
-  className = '',
+  className = "",
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -57,13 +57,13 @@ export const MobileTerminalView: React.FC<MobileTerminalViewProps> = ({
       if (showHUD) setShowHUD(false);
     },
     onPinchOut: (scale) => {
-      setFontSize(prev => Math.min(24, Math.round(prev * scale)));
+      setFontSize((prev) => Math.min(24, Math.round(prev * scale)));
     },
     onPinchIn: (scale) => {
-      setFontSize(prev => Math.max(10, Math.round(prev * scale)));
+      setFontSize((prev) => Math.max(10, Math.round(prev * scale)));
     },
     onDoubleTap: () => {
-      setIsFullscreen(prev => !prev);
+      setIsFullscreen((prev) => !prev);
     },
     onLongPress: () => {
       setShowMenu(true);
@@ -100,7 +100,9 @@ export const MobileTerminalView: React.FC<MobileTerminalViewProps> = ({
             {projectName}
           </span>
           {/* Connection indicator */}
-          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+          <div
+            className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"}`}
+          />
         </div>
 
         <div className="flex items-center gap-1">
@@ -108,7 +110,9 @@ export const MobileTerminalView: React.FC<MobileTerminalViewProps> = ({
           <button
             onClick={() => setShowKeyboard(!showKeyboard)}
             className={`p-2 rounded-lg transition-colors ${
-              showKeyboard ? 'bg-purple-500/20 text-purple-400' : 'text-gray-400'
+              showKeyboard
+                ? "bg-purple-500/20 text-purple-400"
+                : "text-gray-400"
             }`}
             aria-label="Toggle keyboard"
           >
@@ -118,7 +122,7 @@ export const MobileTerminalView: React.FC<MobileTerminalViewProps> = ({
           <button
             onClick={toggleFullscreen}
             className="p-2 text-gray-400 rounded-lg"
-            aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+            aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
           >
             {isFullscreen ? (
               <Minimize2 className="w-5 h-5" />
@@ -161,10 +165,10 @@ export const MobileTerminalView: React.FC<MobileTerminalViewProps> = ({
       <AnimatePresence>
         {showHUD && (
           <motion.div
-            initial={{ y: '100%' }}
+            initial={{ y: "100%" }}
             animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="absolute bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 rounded-t-xl shadow-xl safe-area-bottom"
           >
             {/* Handle */}
@@ -196,7 +200,7 @@ export const MobileTerminalView: React.FC<MobileTerminalViewProps> = ({
         {showKeyboard && (
           <motion.div
             initial={{ height: 0 }}
-            animate={{ height: 'auto' }}
+            animate={{ height: "auto" }}
             exit={{ height: 0 }}
             className="bg-gray-900 border-t border-gray-800 overflow-hidden safe-area-bottom"
           >
@@ -221,7 +225,9 @@ export const MobileTerminalView: React.FC<MobileTerminalViewProps> = ({
 };
 
 // Quick stats panel for the bottom HUD
-const QuickStatsPanel: React.FC<{ isConnected: boolean }> = ({ isConnected }) => (
+const QuickStatsPanel: React.FC<{ isConnected: boolean }> = ({
+  isConnected,
+}) => (
   <div className="space-y-3">
     <div className="flex items-center justify-between">
       <span className="text-sm text-gray-400">Connection</span>
@@ -260,13 +266,13 @@ const QuickStatsPanel: React.FC<{ isConnected: boolean }> = ({ isConnected }) =>
 // Mobile keyboard toolbar with common keys
 const MobileKeyboardBar: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const commonKeys = [
-    { label: 'Tab', key: '\t' },
-    { label: 'Esc', key: '\x1b' },
-    { label: 'Ctrl', key: 'ctrl', modifier: true },
-    { label: '↑', key: '\x1b[A' },
-    { label: '↓', key: '\x1b[B' },
-    { label: '←', key: '\x1b[D' },
-    { label: '→', key: '\x1b[C' },
+    { label: "Tab", key: "\t" },
+    { label: "Esc", key: "\x1b" },
+    { label: "Ctrl", key: "ctrl", modifier: true },
+    { label: "↑", key: "\x1b[A" },
+    { label: "↓", key: "\x1b[B" },
+    { label: "←", key: "\x1b[D" },
+    { label: "→", key: "\x1b[C" },
   ];
 
   return (
@@ -316,10 +322,10 @@ const MobileContextMenu: React.FC<MobileContextMenuProps> = ({
 
     {/* Menu */}
     <motion.div
-      initial={{ y: '100%' }}
+      initial={{ y: "100%" }}
       animate={{ y: 0 }}
-      exit={{ y: '100%' }}
-      transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+      exit={{ y: "100%" }}
+      transition={{ type: "spring", damping: 25, stiffness: 300 }}
       className="fixed bottom-0 left-0 right-0 bg-gray-900 rounded-t-xl z-50 safe-area-bottom"
     >
       <div className="flex justify-center py-2">

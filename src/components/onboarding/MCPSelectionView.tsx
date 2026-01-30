@@ -4,9 +4,20 @@
  * Beautiful UI for selecting MCP servers with AI-powered suggestions
  */
 
-import React, { useState, useEffect } from 'react';
-import { CheckCircle, Circle, Info, Zap, Clock, ChevronDown, ChevronUp } from 'lucide-react';
-import type { MCPServer, MCPSuggestion } from '../../orchestration/mcp-suggestion-engine';
+import React, { useState, useEffect } from "react";
+import {
+  CheckCircle,
+  Circle,
+  Info,
+  Zap,
+  Clock,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
+import type {
+  MCPServer,
+  MCPSuggestion,
+} from "../../orchestration/mcp-suggestion-engine";
 
 interface MCPSelectionViewProps {
   suggestions: MCPSuggestion;
@@ -14,9 +25,13 @@ interface MCPSelectionViewProps {
   onSkip: () => void;
 }
 
-export function MCPSelectionView({ suggestions, onSelectionComplete, onSkip }: MCPSelectionViewProps) {
+export function MCPSelectionView({
+  suggestions,
+  onSelectionComplete,
+  onSkip,
+}: MCPSelectionViewProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
-    new Set(suggestions.essential.map(m => m.id))
+    new Set(suggestions.essential.map((m) => m.id)),
   );
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
@@ -44,26 +59,34 @@ export function MCPSelectionView({ suggestions, onSelectionComplete, onSkip }: M
     onSelectionComplete(Array.from(selectedIds));
   };
 
-  const MCPServerCard = ({ server, defaultSelected = false }: { server: MCPServer; defaultSelected?: boolean }) => {
+  const MCPServerCard = ({
+    server,
+    defaultSelected = false,
+  }: {
+    server: MCPServer;
+    defaultSelected?: boolean;
+  }) => {
     const isSelected = selectedIds.has(server.id);
     const isExpanded = expandedIds.has(server.id);
 
     const priorityColors = {
-      essential: 'border-green-500 bg-green-500/5',
-      recommended: 'border-blue-500 bg-blue-500/5',
-      optional: 'border-gray-600 bg-gray-800/30'
+      essential: "border-green-500 bg-green-500/5",
+      recommended: "border-blue-500 bg-blue-500/5",
+      optional: "border-gray-600 bg-gray-800/30",
     };
 
     const priorityBadges = {
-      essential: 'bg-green-500/20 text-green-400 border-green-500/30',
-      recommended: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-      optional: 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+      essential: "bg-green-500/20 text-green-400 border-green-500/30",
+      recommended: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+      optional: "bg-gray-500/20 text-gray-400 border-gray-500/30",
     };
 
     return (
       <div
         className={`border-2 rounded-lg p-4 transition-all cursor-pointer ${
-          isSelected ? priorityColors[server.priority] : 'border-gray-700 bg-gray-800/50'
+          isSelected
+            ? priorityColors[server.priority]
+            : "border-gray-700 bg-gray-800/50"
         } hover:border-purple-500/50`}
         onClick={() => toggleSelection(server.id)}
       >
@@ -82,8 +105,12 @@ export function MCPSelectionView({ suggestions, onSelectionComplete, onSkip }: M
           <div className="flex-1 min-w-0">
             {/* Title Row */}
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="text-lg font-semibold text-white">{server.name}</h3>
-              <span className={`px-2 py-0.5 rounded text-xs border ${priorityBadges[server.priority]}`}>
+              <h3 className="text-lg font-semibold text-white">
+                {server.name}
+              </h3>
+              <span
+                className={`px-2 py-0.5 rounded text-xs border ${priorityBadges[server.priority]}`}
+              >
                 {server.priority.toUpperCase()}
               </span>
               <span className="ml-auto text-sm text-gray-400 flex items-center gap-1">
@@ -97,7 +124,9 @@ export function MCPSelectionView({ suggestions, onSelectionComplete, onSkip }: M
 
             {/* Use Case */}
             <div className="bg-gray-900/50 rounded p-3 mb-3">
-              <p className="text-sm text-purple-400 font-medium mb-1">💡 Use Case</p>
+              <p className="text-sm text-purple-400 font-medium mb-1">
+                💡 Use Case
+              </p>
               <p className="text-sm text-gray-300">{server.useCase}</p>
             </div>
 
@@ -136,10 +165,15 @@ export function MCPSelectionView({ suggestions, onSelectionComplete, onSkip }: M
               <div className="mt-4 space-y-3 border-t border-gray-700 pt-3">
                 {/* Benefits */}
                 <div>
-                  <p className="text-sm font-medium text-gray-400 mb-2">Benefits:</p>
+                  <p className="text-sm font-medium text-gray-400 mb-2">
+                    Benefits:
+                  </p>
                   <ul className="space-y-1">
                     {server.benefits.map((benefit, idx) => (
-                      <li key={idx} className="text-sm text-gray-300 flex items-start gap-2">
+                      <li
+                        key={idx}
+                        className="text-sm text-gray-300 flex items-start gap-2"
+                      >
                         <span className="text-green-400 mt-0.5">✓</span>
                         {benefit}
                       </li>
@@ -149,7 +183,9 @@ export function MCPSelectionView({ suggestions, onSelectionComplete, onSkip }: M
 
                 {/* Examples */}
                 <div>
-                  <p className="text-sm font-medium text-gray-400 mb-2">Example Commands:</p>
+                  <p className="text-sm font-medium text-gray-400 mb-2">
+                    Example Commands:
+                  </p>
                   <ul className="space-y-1">
                     {server.examples.slice(0, 2).map((example, idx) => (
                       <li key={idx} className="text-sm text-gray-300 italic">
@@ -161,7 +197,9 @@ export function MCPSelectionView({ suggestions, onSelectionComplete, onSkip }: M
 
                 {/* Setup Info */}
                 <div className="bg-yellow-500/10 border border-yellow-500/30 rounded p-2">
-                  <p className="text-xs text-yellow-400 font-medium mb-1">Setup Required:</p>
+                  <p className="text-xs text-yellow-400 font-medium mb-1">
+                    Setup Required:
+                  </p>
                   <p className="text-xs text-gray-300">{server.setup}</p>
                 </div>
               </div>
@@ -196,14 +234,20 @@ export function MCPSelectionView({ suggestions, onSelectionComplete, onSkip }: M
       {suggestions.essential.length > 0 && (
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-xl font-semibold text-green-400">🎯 Essential (Highly Recommended)</h2>
+            <h2 className="text-xl font-semibold text-green-400">
+              🎯 Essential (Highly Recommended)
+            </h2>
             <span className="text-sm text-gray-500">
               These are crucial for your project's success
             </span>
           </div>
           <div className="space-y-4">
-            {suggestions.essential.map(server => (
-              <MCPServerCard key={server.id} server={server} defaultSelected={true} />
+            {suggestions.essential.map((server) => (
+              <MCPServerCard
+                key={server.id}
+                server={server}
+                defaultSelected={true}
+              />
             ))}
           </div>
         </div>
@@ -213,13 +257,15 @@ export function MCPSelectionView({ suggestions, onSelectionComplete, onSkip }: M
       {suggestions.recommended.length > 0 && (
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-xl font-semibold text-blue-400">💡 Recommended</h2>
+            <h2 className="text-xl font-semibold text-blue-400">
+              💡 Recommended
+            </h2>
             <span className="text-sm text-gray-500">
               These will significantly boost productivity
             </span>
           </div>
           <div className="space-y-4">
-            {suggestions.recommended.map(server => (
+            {suggestions.recommended.map((server) => (
               <MCPServerCard key={server.id} server={server} />
             ))}
           </div>
@@ -230,13 +276,15 @@ export function MCPSelectionView({ suggestions, onSelectionComplete, onSkip }: M
       {suggestions.optional.length > 0 && (
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-xl font-semibold text-gray-400">🔮 Future Considerations</h2>
+            <h2 className="text-xl font-semibold text-gray-400">
+              🔮 Future Considerations
+            </h2>
             <span className="text-sm text-gray-500">
               You can add these later as your project grows
             </span>
           </div>
           <div className="space-y-4">
-            {suggestions.optional.map(server => (
+            {suggestions.optional.map((server) => (
               <MCPServerCard key={server.id} server={server} />
             ))}
           </div>
@@ -256,7 +304,8 @@ export function MCPSelectionView({ suggestions, onSelectionComplete, onSkip }: M
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="text-sm text-gray-400">
-                {selectedIds.size} MCP server{selectedIds.size !== 1 ? 's' : ''} selected
+                {selectedIds.size} MCP server{selectedIds.size !== 1 ? "s" : ""}{" "}
+                selected
               </p>
               <p className="text-xs text-gray-500">
                 ~{selectedIds.size * 2} minutes setup time

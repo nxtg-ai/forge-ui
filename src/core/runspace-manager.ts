@@ -5,23 +5,23 @@
  * Handles creation, switching, lifecycle, and persistence of runspaces
  */
 
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import * as os from 'os';
-import { EventEmitter } from 'events';
-import { v4 as uuidv4 } from 'uuid';
+import * as fs from "fs/promises";
+import * as path from "path";
+import * as os from "os";
+import { EventEmitter } from "events";
+import { v4 as uuidv4 } from "uuid";
 import {
   Runspace,
   RunspaceRegistry,
   CreateRunspaceConfig,
   RunspaceEvent,
   RunspaceBackendType,
-  IRunspaceBackend
-} from './runspace';
-import { WSLBackend } from './backends/wsl-backend';
+  IRunspaceBackend,
+} from "./runspace";
+import { WSLBackend } from "./backends/wsl-backend";
 
-const FORGE_HOME = path.join(os.homedir(), '.forge');
-const REGISTRY_FILE = path.join(FORGE_HOME, 'projects.json');
+const FORGE_HOME = path.join(os.homedir(), ".forge");
+const REGISTRY_FILE = path.join(FORGE_HOME, "projects.json");
 
 export class RunspaceManager extends EventEmitter {
   private runspaces = new Map<string, Runspace>();
@@ -32,7 +32,7 @@ export class RunspaceManager extends EventEmitter {
     super();
 
     // Register available backends
-    this.backends.set('wsl', new WSLBackend());
+    this.backends.set("wsl", new WSLBackend());
     // TODO: Add container and VM backends
   }
 
@@ -41,12 +41,12 @@ export class RunspaceManager extends EventEmitter {
    * Loads existing runspaces from disk
    */
   async initialize(): Promise<void> {
-    console.log('[RunspaceManager] Initializing...');
+    console.log("[RunspaceManager] Initializing...");
 
     // Ensure .forge directory exists
     await fs.mkdir(FORGE_HOME, { recursive: true });
-    await fs.mkdir(path.join(FORGE_HOME, 'cache'), { recursive: true });
-    await fs.mkdir(path.join(FORGE_HOME, 'logs'), { recursive: true });
+    await fs.mkdir(path.join(FORGE_HOME, "cache"), { recursive: true });
+    await fs.mkdir(path.join(FORGE_HOME, "logs"), { recursive: true });
 
     // Load registry
     await this.loadRegistry();
@@ -57,7 +57,7 @@ export class RunspaceManager extends EventEmitter {
     for (const runspace of this.runspaces.values()) {
       if (runspace.autoStart) {
         console.log(`[RunspaceManager] Auto-starting: ${runspace.displayName}`);
-        await this.startRunspace(runspace.id).catch(err => {
+        await this.startRunspace(runspace.id).catch((err) => {
           console.error(`Failed to auto-start ${runspace.displayName}:`, err);
         });
       }
@@ -89,8 +89,8 @@ export class RunspaceManager extends EventEmitter {
       name: config.name,
       displayName: config.displayName || config.name,
       path: path.resolve(config.path),
-      backendType: config.backendType || 'wsl',
-      status: 'stopped',
+      backendType: config.backendType || "wsl",
+      status: "stopped",
       vision: config.vision,
       mcpConfig: config.mcpConfig,
       createdAt: new Date(),
@@ -98,7 +98,7 @@ export class RunspaceManager extends EventEmitter {
       tags: config.tags || [],
       color: config.color || this.generateRandomColor(),
       icon: config.icon,
-      autoStart: config.autoStart || false
+      autoStart: config.autoStart || false,
     };
 
     // Create project directory structure
@@ -111,7 +111,7 @@ export class RunspaceManager extends EventEmitter {
     await this.saveRegistry();
 
     // Emit event
-    this.emit('runspace.created', { type: 'runspace.created', runspace });
+    this.emit("runspace.created", { type: "runspace.created", runspace });
 
     console.log(`[RunspaceManager] Created runspace: ${runspace.id}`);
     return runspace;
@@ -148,12 +148,14 @@ export class RunspaceManager extends EventEmitter {
       throw new Error(`Runspace not found: ${id}`);
     }
 
-    console.log(`[RunspaceManager] Switching to runspace: ${runspace.displayName}`);
+    console.log(
+      `[RunspaceManager] Switching to runspace: ${runspace.displayName}`,
+    );
 
     // Suspend current runspace if configured
     if (this.activeRunspaceId && this.activeRunspaceId !== id) {
       const current = this.runspaces.get(this.activeRunspaceId);
-      if (current?.autoSuspend && current.status === 'active') {
+      if (current?.autoSuspend && current.status === "active") {
         await this.suspendRunspace(this.activeRunspaceId);
       }
     }
@@ -163,12 +165,15 @@ export class RunspaceManager extends EventEmitter {
     runspace.lastActive = new Date();
 
     // Start if not active
-    if (runspace.status === 'stopped' || runspace.status === 'suspended') {
+    if (runspace.status === "stopped" || runspace.status === "suspended") {
       await this.startRunspace(id);
     }
 
     await this.saveRegistry();
-    this.emit('runspace.activated', { type: 'runspace.activated', runspaceId: id });
+    this.emit("runspace.activated", {
+      type: "runspace.activated",
+      runspaceId: id,
+    });
   }
 
   /**
@@ -180,8 +185,10 @@ export class RunspaceManager extends EventEmitter {
       throw new Error(`Runspace not found: ${id}`);
     }
 
-    if (runspace.status === 'active') {
-      console.log(`[RunspaceManager] Runspace already active: ${runspace.displayName}`);
+    if (runspace.status === "active") {
+      console.log(
+        `[RunspaceManager] Runspace already active: ${runspace.displayName}`,
+      );
       return;
     }
 
@@ -193,11 +200,11 @@ export class RunspaceManager extends EventEmitter {
     }
 
     await backend.start(runspace);
-    runspace.status = 'active';
+    runspace.status = "active";
     runspace.lastActive = new Date();
 
     await this.saveRegistry();
-    this.emit('runspace.updated', { type: 'runspace.updated', runspace });
+    this.emit("runspace.updated", { type: "runspace.updated", runspace });
   }
 
   /**
@@ -209,8 +216,10 @@ export class RunspaceManager extends EventEmitter {
       throw new Error(`Runspace not found: ${id}`);
     }
 
-    if (runspace.status === 'stopped') {
-      console.log(`[RunspaceManager] Runspace already stopped: ${runspace.displayName}`);
+    if (runspace.status === "stopped") {
+      console.log(
+        `[RunspaceManager] Runspace already stopped: ${runspace.displayName}`,
+      );
       return;
     }
 
@@ -221,7 +230,7 @@ export class RunspaceManager extends EventEmitter {
       await backend.stop(runspace);
     }
 
-    runspace.status = 'stopped';
+    runspace.status = "stopped";
     runspace.ptySessionId = undefined;
     runspace.wsRoomId = undefined;
     runspace.pid = undefined;
@@ -232,7 +241,7 @@ export class RunspaceManager extends EventEmitter {
     }
 
     await this.saveRegistry();
-    this.emit('runspace.updated', { type: 'runspace.updated', runspace });
+    this.emit("runspace.updated", { type: "runspace.updated", runspace });
   }
 
   /**
@@ -244,23 +253,31 @@ export class RunspaceManager extends EventEmitter {
       throw new Error(`Runspace not found: ${id}`);
     }
 
-    console.log(`[RunspaceManager] Suspending runspace: ${runspace.displayName}`);
+    console.log(
+      `[RunspaceManager] Suspending runspace: ${runspace.displayName}`,
+    );
 
     const backend = this.backends.get(runspace.backendType);
     if (backend) {
       await backend.suspend(runspace);
     }
 
-    runspace.status = 'suspended';
+    runspace.status = "suspended";
 
     await this.saveRegistry();
-    this.emit('runspace.suspended', { type: 'runspace.suspended', runspaceId: id });
+    this.emit("runspace.suspended", {
+      type: "runspace.suspended",
+      runspaceId: id,
+    });
   }
 
   /**
    * Delete a runspace
    */
-  async deleteRunspace(id: string, deleteFiles: boolean = false): Promise<void> {
+  async deleteRunspace(
+    id: string,
+    deleteFiles: boolean = false,
+  ): Promise<void> {
     const runspace = this.runspaces.get(id);
     if (!runspace) {
       throw new Error(`Runspace not found: ${id}`);
@@ -269,13 +286,13 @@ export class RunspaceManager extends EventEmitter {
     console.log(`[RunspaceManager] Deleting runspace: ${runspace.displayName}`);
 
     // Stop if active
-    if (runspace.status === 'active') {
+    if (runspace.status === "active") {
       await this.stopRunspace(id);
     }
 
     // Delete project files if requested
     if (deleteFiles) {
-      const projectForgeDir = path.join(runspace.path, '.forge');
+      const projectForgeDir = path.join(runspace.path, ".forge");
       await fs.rm(projectForgeDir, { recursive: true, force: true });
     }
 
@@ -288,13 +305,16 @@ export class RunspaceManager extends EventEmitter {
     }
 
     await this.saveRegistry();
-    this.emit('runspace.deleted', { type: 'runspace.deleted', runspaceId: id });
+    this.emit("runspace.deleted", { type: "runspace.deleted", runspaceId: id });
   }
 
   /**
    * Update runspace configuration
    */
-  async updateRunspace(id: string, updates: Partial<Runspace>): Promise<Runspace> {
+  async updateRunspace(
+    id: string,
+    updates: Partial<Runspace>,
+  ): Promise<Runspace> {
     const runspace = this.runspaces.get(id);
     if (!runspace) {
       throw new Error(`Runspace not found: ${id}`);
@@ -302,7 +322,7 @@ export class RunspaceManager extends EventEmitter {
 
     Object.assign(runspace, updates);
     await this.saveRegistry();
-    this.emit('runspace.updated', { type: 'runspace.updated', runspace });
+    this.emit("runspace.updated", { type: "runspace.updated", runspace });
 
     return runspace;
   }
@@ -328,25 +348,27 @@ export class RunspaceManager extends EventEmitter {
    * Create project directory structure
    */
   private async createProjectStructure(runspace: Runspace): Promise<void> {
-    const forgeDir = path.join(runspace.path, '.forge');
+    const forgeDir = path.join(runspace.path, ".forge");
 
     await fs.mkdir(forgeDir, { recursive: true });
-    await fs.mkdir(path.join(forgeDir, 'history'), { recursive: true });
-    await fs.mkdir(path.join(forgeDir, 'history/sessions'), { recursive: true });
+    await fs.mkdir(path.join(forgeDir, "history"), { recursive: true });
+    await fs.mkdir(path.join(forgeDir, "history/sessions"), {
+      recursive: true,
+    });
 
     // Save initial vision if provided
     if (runspace.vision) {
       await fs.writeFile(
-        path.join(forgeDir, 'vision.json'),
-        JSON.stringify(runspace.vision, null, 2)
+        path.join(forgeDir, "vision.json"),
+        JSON.stringify(runspace.vision, null, 2),
       );
     }
 
     // Save MCP config if provided
     if (runspace.mcpConfig) {
       await fs.writeFile(
-        path.join(forgeDir, 'mcp-config.json'),
-        JSON.stringify(runspace.mcpConfig, null, 2)
+        path.join(forgeDir, "mcp-config.json"),
+        JSON.stringify(runspace.mcpConfig, null, 2),
       );
     }
 
@@ -356,7 +378,7 @@ history/
 *.log
 cache/
 `;
-    await fs.writeFile(path.join(forgeDir, '.gitignore'), gitignore);
+    await fs.writeFile(path.join(forgeDir, ".gitignore"), gitignore);
   }
 
   /**
@@ -364,7 +386,7 @@ cache/
    */
   private async loadRegistry(): Promise<void> {
     try {
-      const data = await fs.readFile(REGISTRY_FILE, 'utf-8');
+      const data = await fs.readFile(REGISTRY_FILE, "utf-8");
       const registry: RunspaceRegistry = JSON.parse(data);
 
       // Convert date strings back to Date objects
@@ -379,8 +401,8 @@ cache/
 
       this.activeRunspaceId = registry.activeRunspaceId;
     } catch (error: any) {
-      if (error.code !== 'ENOENT') {
-        console.error('[RunspaceManager] Error loading registry:', error);
+      if (error.code !== "ENOENT") {
+        console.error("[RunspaceManager] Error loading registry:", error);
       }
       // File doesn't exist yet, that's fine
     }
@@ -393,8 +415,8 @@ cache/
     const registry: RunspaceRegistry = {
       runspaces: Array.from(this.runspaces.values()),
       activeRunspaceId: this.activeRunspaceId,
-      version: '1.0',
-      lastSync: new Date()
+      version: "1.0",
+      lastSync: new Date(),
     };
 
     await fs.writeFile(REGISTRY_FILE, JSON.stringify(registry, null, 2));
@@ -405,14 +427,14 @@ cache/
    */
   private generateRandomColor(): string {
     const colors = [
-      '#8B5CF6', // Purple
-      '#3B82F6', // Blue
-      '#10B981', // Green
-      '#F59E0B', // Orange
-      '#EF4444', // Red
-      '#EC4899', // Pink
-      '#14B8A6', // Teal
-      '#F97316'  // Orange-red
+      "#8B5CF6", // Purple
+      "#3B82F6", // Blue
+      "#10B981", // Green
+      "#F59E0B", // Orange
+      "#EF4444", // Red
+      "#EC4899", // Pink
+      "#14B8A6", // Teal
+      "#F97316", // Orange-red
     ];
     return colors[Math.floor(Math.random() * colors.length)];
   }
@@ -421,11 +443,11 @@ cache/
    * Cleanup on shutdown
    */
   async shutdown(): Promise<void> {
-    console.log('[RunspaceManager] Shutting down...');
+    console.log("[RunspaceManager] Shutting down...");
 
     // Stop all active runspaces
     for (const [id, runspace] of this.runspaces.entries()) {
-      if (runspace.status === 'active') {
+      if (runspace.status === "active") {
         await this.stopRunspace(id);
       }
     }

@@ -3,9 +3,9 @@
  * Parallel agent execution system for NXTG-Forge
  */
 
-export { AgentWorkerPool } from './AgentWorkerPool';
-export { AgentWorker } from './AgentWorker';
-export { TaskQueue } from './TaskQueue';
+export { AgentWorkerPool } from "./AgentWorkerPool";
+export { AgentWorker } from "./AgentWorker";
+export { TaskQueue } from "./TaskQueue";
 
 export type {
   // Worker types
@@ -32,11 +32,11 @@ export type {
 
   // Communication
   IPCMessage,
-} from './types';
+} from "./types";
 
 export {
   DEFAULT_POOL_CONFIG,
   DEFAULT_RESOURCE_LIMITS,
   ENV_WHITELIST,
   BLOCKED_COMMANDS,
-} from './types';
+} from "./types";

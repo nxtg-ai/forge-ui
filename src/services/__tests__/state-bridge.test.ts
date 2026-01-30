@@ -3,17 +3,17 @@
  * Unit tests for state synchronization service
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { StateBridgeService, StateUpdateType } from '../state-bridge';
-import { ProjectState, Blocker, Decision } from '../../components/types';
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { StateBridgeService, StateUpdateType } from "../state-bridge";
+import { ProjectState, Blocker, Decision } from "../../components/types";
 
-describe('StateBridgeService', () => {
+describe("StateBridgeService", () => {
   let service: StateBridgeService;
 
   beforeEach(() => {
     service = new StateBridgeService({
-      name: 'TestStateBridge',
-      pollingInterval: 0 // Disable polling for tests
+      name: "TestStateBridge",
+      pollingInterval: 0, // Disable polling for tests
     });
   });
 
@@ -21,69 +21,69 @@ describe('StateBridgeService', () => {
     await service.dispose();
   });
 
-  describe('initialization', () => {
-    it('should initialize successfully', async () => {
+  describe("initialization", () => {
+    it("should initialize successfully", async () => {
       const result = await service.initialize();
       expect(result.isOk()).toBe(true);
-      expect(service.getState()).toBe('ready');
+      expect(service.getState()).toBe("ready");
     });
 
-    it('should load initial state', async () => {
+    it("should load initial state", async () => {
       await service.initialize();
       const stateResult = service.getProjectState();
 
       expect(stateResult.isOk()).toBe(true);
       if (stateResult.isOk()) {
-        expect(stateResult.value).toHaveProperty('phase');
-        expect(stateResult.value).toHaveProperty('progress');
-        expect(stateResult.value).toHaveProperty('blockers');
+        expect(stateResult.value).toHaveProperty("phase");
+        expect(stateResult.value).toHaveProperty("progress");
+        expect(stateResult.value).toHaveProperty("blockers");
       }
     });
 
-    it('should load initial context', async () => {
+    it("should load initial context", async () => {
       await service.initialize();
       const contextResult = service.getProjectContext();
 
       expect(contextResult.isOk()).toBe(true);
       if (contextResult.isOk()) {
-        expect(contextResult.value).toHaveProperty('name');
-        expect(contextResult.value).toHaveProperty('activeAgents');
+        expect(contextResult.value).toHaveProperty("name");
+        expect(contextResult.value).toHaveProperty("activeAgents");
       }
     });
   });
 
-  describe('state updates', () => {
+  describe("state updates", () => {
     beforeEach(async () => {
       await service.initialize();
     });
 
-    it('should update project state', async () => {
+    it("should update project state", async () => {
       const update: Partial<ProjectState> = {
-        phase: 'building',
-        progress: 50
+        phase: "building",
+        progress: 50,
       };
 
       const result = await service.updateProjectState(update);
 
       expect(result.isOk()).toBe(true);
       if (result.isOk()) {
-        expect(result.value.phase).toBe('building');
+        expect(result.value.phase).toBe("building");
         expect(result.value.progress).toBe(50);
       }
     });
 
-    it('should validate state updates', async () => {
+    it("should validate state updates", async () => {
       const invalidUpdate: any = {
-        progress: 150 // Invalid: > 100
+        progress: 150, // Invalid: > 100
       };
 
       const result = await service.updateProjectState(invalidUpdate);
       expect(result.isErr()).toBe(true);
     });
 
-    it('should emit state update events', async () => {
+    it("should emit state update events", async () => {
       const updateHandler = vi.fn();
-      service.on('stateUpdate', updateHandler);
+      service.on("stateUpdate", updateHandler);
 
       await service.updateProjectState({ progress: 75 });
 
@@ -93,18 +93,18 @@ describe('StateBridgeService', () => {
     });
   });
 
-  describe('blocker management', () => {
+  describe("blocker management", () => {
     beforeEach(async () => {
       await service.initialize();
     });
 
-    it('should add a blocker', async () => {
+    it("should add a blocker", async () => {
       const blocker: Blocker = {
-        id: 'blocker-1',
-        severity: 'high',
-        title: 'Test blocker',
-        agent: 'test-agent',
-        needsHuman: true
+        id: "blocker-1",
+        severity: "high",
+        title: "Test blocker",
+        agent: "test-agent",
+        needsHuman: true,
       };
 
       const result = await service.addBlocker(blocker);
@@ -116,17 +116,17 @@ describe('StateBridgeService', () => {
       }
     });
 
-    it('should resolve a blocker', async () => {
+    it("should resolve a blocker", async () => {
       const blocker: Blocker = {
-        id: 'blocker-2',
-        severity: 'medium',
-        title: 'Another blocker',
-        agent: 'test-agent',
-        needsHuman: false
+        id: "blocker-2",
+        severity: "medium",
+        title: "Another blocker",
+        agent: "test-agent",
+        needsHuman: false,
       };
 
       await service.addBlocker(blocker);
-      const result = await service.resolveBlocker('blocker-2');
+      const result = await service.resolveBlocker("blocker-2");
 
       expect(result.isOk()).toBe(true);
 
@@ -136,47 +136,47 @@ describe('StateBridgeService', () => {
       }
     });
 
-    it('should emit blocker events', async () => {
+    it("should emit blocker events", async () => {
       const updateHandler = vi.fn();
-      service.on('stateUpdate', updateHandler);
+      service.on("stateUpdate", updateHandler);
 
       const blocker: Blocker = {
-        id: 'blocker-3',
-        severity: 'critical',
-        title: 'Critical blocker',
-        agent: 'test-agent',
-        needsHuman: true
+        id: "blocker-3",
+        severity: "critical",
+        title: "Critical blocker",
+        agent: "test-agent",
+        needsHuman: true,
       };
 
       await service.addBlocker(blocker);
 
       const addEvent = updateHandler.mock.calls.find(
-        call => call[0].type === StateUpdateType.BLOCKER_ADDED
+        (call) => call[0].type === StateUpdateType.BLOCKER_ADDED,
       );
       expect(addEvent).toBeDefined();
 
-      await service.resolveBlocker('blocker-3');
+      await service.resolveBlocker("blocker-3");
 
       const resolveEvent = updateHandler.mock.calls.find(
-        call => call[0].type === StateUpdateType.BLOCKER_RESOLVED
+        (call) => call[0].type === StateUpdateType.BLOCKER_RESOLVED,
       );
       expect(resolveEvent).toBeDefined();
     });
   });
 
-  describe('decision recording', () => {
+  describe("decision recording", () => {
     beforeEach(async () => {
       await service.initialize();
     });
 
-    it('should record a decision', async () => {
+    it("should record a decision", async () => {
       const decision: Decision = {
-        id: 'decision-1',
-        type: 'architecture',
-        title: 'Use microservices',
-        madeBy: 'architect',
+        id: "decision-1",
+        type: "architecture",
+        title: "Use microservices",
+        madeBy: "architect",
         timestamp: new Date(),
-        impact: 'high'
+        impact: "high",
       };
 
       const result = await service.recordDecision(decision);
@@ -188,16 +188,16 @@ describe('StateBridgeService', () => {
       }
     });
 
-    it('should limit recent decisions to 10', async () => {
+    it("should limit recent decisions to 10", async () => {
       // Add 12 decisions
       for (let i = 0; i < 12; i++) {
         const decision: Decision = {
           id: `decision-${i}`,
-          type: 'implementation',
+          type: "implementation",
           title: `Decision ${i}`,
-          madeBy: 'test',
+          madeBy: "test",
           timestamp: new Date(),
-          impact: 'low'
+          impact: "low",
         };
         await service.recordDecision(decision);
       }
@@ -206,19 +206,19 @@ describe('StateBridgeService', () => {
       if (stateResult.isOk()) {
         expect(stateResult.value.recentDecisions).toHaveLength(10);
         // Should keep the most recent ones
-        expect(stateResult.value.recentDecisions[0].id).toBe('decision-11');
+        expect(stateResult.value.recentDecisions[0].id).toBe("decision-11");
       }
     });
   });
 
-  describe('subscriptions', () => {
+  describe("subscriptions", () => {
     beforeEach(async () => {
       await service.initialize();
     });
 
-    it('should subscribe to state updates', async () => {
+    it("should subscribe to state updates", async () => {
       const callback = vi.fn();
-      const unsubscribe = service.subscribe('test-sub', callback);
+      const unsubscribe = service.subscribe("test-sub", callback);
 
       await service.updateProjectState({ progress: 60 });
 
@@ -231,32 +231,32 @@ describe('StateBridgeService', () => {
       expect(callback).not.toHaveBeenCalled();
     });
 
-    it('should filter subscriptions', async () => {
+    it("should filter subscriptions", async () => {
       const callback = vi.fn();
-      service.subscribe('filtered-sub', callback, {
-        filter: update => update.type === StateUpdateType.BLOCKER_ADDED
+      service.subscribe("filtered-sub", callback, {
+        filter: (update) => update.type === StateUpdateType.BLOCKER_ADDED,
       });
 
       await service.updateProjectState({ progress: 80 });
       expect(callback).not.toHaveBeenCalled();
 
       const blocker: Blocker = {
-        id: 'test-blocker',
-        severity: 'low',
-        title: 'Test',
-        agent: 'test',
-        needsHuman: false
+        id: "test-blocker",
+        severity: "low",
+        title: "Test",
+        agent: "test",
+        needsHuman: false,
       };
       await service.addBlocker(blocker);
       expect(callback).toHaveBeenCalled();
     });
 
-    it('should debounce subscriptions', async () => {
+    it("should debounce subscriptions", async () => {
       vi.useFakeTimers();
 
       const callback = vi.fn();
-      service.subscribe('debounced-sub', callback, {
-        debounceMs: 100
+      service.subscribe("debounced-sub", callback, {
+        debounceMs: 100,
       });
 
       // Rapid updates
@@ -275,33 +275,33 @@ describe('StateBridgeService', () => {
     });
   });
 
-  describe('snapshot management', () => {
+  describe("snapshot management", () => {
     beforeEach(async () => {
       await service.initialize();
     });
 
-    it('should create a snapshot', async () => {
+    it("should create a snapshot", async () => {
       await service.updateProjectState({
-        phase: 'testing',
-        progress: 90
+        phase: "testing",
+        progress: 90,
       });
 
       const snapshot = service.getSnapshot();
 
       expect(snapshot).not.toBeNull();
-      expect(snapshot?.projectState.phase).toBe('testing');
+      expect(snapshot?.projectState.phase).toBe("testing");
       expect(snapshot?.projectState.progress).toBe(90);
       expect(snapshot?.version).toBeGreaterThan(0);
     });
 
-    it('should restore from snapshot', async () => {
+    it("should restore from snapshot", async () => {
       const originalState = service.getProjectState();
 
       const snapshot = service.getSnapshot()!;
 
       await service.updateProjectState({
-        phase: 'deploying',
-        progress: 95
+        phase: "deploying",
+        progress: 95,
       });
 
       await service.restoreFromSnapshot(snapshot);
@@ -313,12 +313,12 @@ describe('StateBridgeService', () => {
     });
   });
 
-  describe('update history', () => {
+  describe("update history", () => {
     beforeEach(async () => {
       await service.initialize();
     });
 
-    it('should maintain update history', async () => {
+    it("should maintain update history", async () => {
       await service.updateProjectState({ progress: 25 });
       await service.updateProjectState({ progress: 50 });
       await service.updateProjectState({ progress: 75 });
@@ -329,11 +329,11 @@ describe('StateBridgeService', () => {
       expect(history[0].type).toBe(StateUpdateType.PROJECT_STATE);
     });
 
-    it('should limit history size', async () => {
+    it("should limit history size", async () => {
       const config = { maxBufferSize: 5 };
       const limitedService = new StateBridgeService({
-        name: 'LimitedService',
-        ...config
+        name: "LimitedService",
+        ...config,
       });
 
       await limitedService.initialize();
@@ -348,7 +348,7 @@ describe('StateBridgeService', () => {
       await limitedService.dispose();
     });
 
-    it('should clear update history', async () => {
+    it("should clear update history", async () => {
       await service.updateProjectState({ progress: 30 });
       await service.updateProjectState({ progress: 60 });
 
@@ -359,19 +359,19 @@ describe('StateBridgeService', () => {
     });
   });
 
-  describe('agent state management', () => {
+  describe("agent state management", () => {
     beforeEach(async () => {
       await service.initialize();
     });
 
-    it('should update agent state', async () => {
+    it("should update agent state", async () => {
       const agent = {
-        id: 'agent-1',
-        name: 'Test Agent',
-        role: 'builder',
-        status: 'working' as const,
-        currentTask: 'Building feature',
-        confidence: 0.85
+        id: "agent-1",
+        name: "Test Agent",
+        role: "builder",
+        status: "working" as const,
+        currentTask: "Building feature",
+        confidence: 0.85,
       };
 
       const result = await service.updateAgentState(agent);
@@ -379,46 +379,50 @@ describe('StateBridgeService', () => {
 
       const stateResult = service.getProjectState();
       if (stateResult.isOk()) {
-        const foundAgent = stateResult.value.activeAgents.find(a => a.id === 'agent-1');
+        const foundAgent = stateResult.value.activeAgents.find(
+          (a) => a.id === "agent-1",
+        );
         expect(foundAgent).toEqual(agent);
       }
     });
 
-    it('should update existing agent', async () => {
+    it("should update existing agent", async () => {
       const agent = {
-        id: 'agent-2',
-        name: 'Another Agent',
-        role: 'tester',
-        status: 'idle' as const,
-        currentTask: 'None',
-        confidence: 0.5
+        id: "agent-2",
+        name: "Another Agent",
+        role: "tester",
+        status: "idle" as const,
+        currentTask: "None",
+        confidence: 0.5,
       };
 
       await service.updateAgentState(agent);
 
       const updatedAgent = {
         ...agent,
-        status: 'working' as const,
-        currentTask: 'Running tests',
-        confidence: 0.9
+        status: "working" as const,
+        currentTask: "Running tests",
+        confidence: 0.9,
       };
 
       await service.updateAgentState(updatedAgent);
 
       const stateResult = service.getProjectState();
       if (stateResult.isOk()) {
-        const foundAgent = stateResult.value.activeAgents.find(a => a.id === 'agent-2');
-        expect(foundAgent?.status).toBe('working');
+        const foundAgent = stateResult.value.activeAgents.find(
+          (a) => a.id === "agent-2",
+        );
+        expect(foundAgent?.status).toBe("working");
         expect(foundAgent?.confidence).toBe(0.9);
       }
     });
   });
 
-  describe('error handling', () => {
-    it('should handle initialization errors gracefully', async () => {
+  describe("error handling", () => {
+    it("should handle initialization errors gracefully", async () => {
       const errorService = new StateBridgeService({
-        name: 'ErrorService',
-        statePath: '/invalid/path/state.json'
+        name: "ErrorService",
+        statePath: "/invalid/path/state.json",
       });
 
       const result = await errorService.initialize();
@@ -428,7 +432,7 @@ describe('StateBridgeService', () => {
       await errorService.dispose();
     });
 
-    it('should handle update errors', async () => {
+    it("should handle update errors", async () => {
       await service.initialize();
 
       // Force an error by disposing first
@@ -438,14 +442,14 @@ describe('StateBridgeService', () => {
       expect(result.isErr()).toBe(true);
     });
 
-    it('should validate snapshot before restore', async () => {
+    it("should validate snapshot before restore", async () => {
       await service.initialize();
 
       const invalidSnapshot: any = {
         projectState: { invalid: true },
         projectContext: {},
         timestamp: new Date(),
-        version: 1
+        version: 1,
       };
 
       const result = await service.restoreFromSnapshot(invalidSnapshot);

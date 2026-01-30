@@ -3,10 +3,23 @@
  * Type definitions for the parallel agent execution system
  */
 
-export type WorkerStatus = 'idle' | 'busy' | 'error' | 'crashed' | 'starting' | 'stopping';
-export type TaskPriority = 'high' | 'medium' | 'low' | 'background';
-export type TaskStatus = 'queued' | 'assigned' | 'running' | 'completed' | 'failed' | 'cancelled' | 'timeout';
-export type TaskType = 'claude-code' | 'shell' | 'script' | 'agent';
+export type WorkerStatus =
+  | "idle"
+  | "busy"
+  | "error"
+  | "crashed"
+  | "starting"
+  | "stopping";
+export type TaskPriority = "high" | "medium" | "low" | "background";
+export type TaskStatus =
+  | "queued"
+  | "assigned"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "timeout";
+export type TaskType = "claude-code" | "shell" | "script" | "agent";
 
 /**
  * Agent Task - Work item for workers
@@ -20,7 +33,7 @@ export interface AgentTask {
   args?: string[];
   env?: Record<string, string>;
   cwd?: string;
-  timeout?: number;  // ms, default 3600000 (1 hour)
+  timeout?: number; // ms, default 3600000 (1 hour)
   retryCount?: number;
   maxRetries?: number;
   metadata?: Record<string, unknown>;
@@ -39,7 +52,7 @@ export interface TaskResult {
   exitCode?: number;
   stdout: string;
   stderr: string;
-  duration: number;  // ms
+  duration: number; // ms
   error?: string;
   metadata?: Record<string, unknown>;
 }
@@ -53,7 +66,7 @@ export interface WorkerMetrics {
   tasksCompleted: number;
   tasksFailed: number;
   avgTaskDuration: number;
-  uptime: number;  // ms
+  uptime: number; // ms
   lastHeartbeat: Date;
 }
 
@@ -103,11 +116,11 @@ export interface PoolConfig {
   scaleDownThreshold: number;
   scaleUpStep: number;
   scaleDownStep: number;
-  scaleInterval: number;  // ms
-  cooldownPeriod: number;  // ms
-  healthCheckInterval: number;  // ms
-  taskTimeout: number;  // ms
-  workerStartTimeout: number;  // ms
+  scaleInterval: number; // ms
+  cooldownPeriod: number; // ms
+  healthCheckInterval: number; // ms
+  taskTimeout: number; // ms
+  workerStartTimeout: number; // ms
 }
 
 /**
@@ -124,19 +137,19 @@ export interface PoolMetrics {
   tasksFailed: number;
   avgTaskDuration: number;
   avgQueueWaitTime: number;
-  utilization: number;  // 0-1
-  uptime: number;  // ms
+  utilization: number; // 0-1
+  uptime: number; // ms
 }
 
 /**
  * Pool Status - Overall health
  */
 export interface PoolStatus {
-  status: 'running' | 'scaling' | 'degraded' | 'stopped' | 'starting';
+  status: "running" | "scaling" | "degraded" | "stopped" | "starting";
   metrics: PoolMetrics;
   workers: WorkerInfo[];
   lastScaleOperation?: {
-    direction: 'up' | 'down';
+    direction: "up" | "down";
     count: number;
     timestamp: Date;
   };
@@ -146,7 +159,7 @@ export interface PoolStatus {
  * IPC Message - Communication between pool and workers
  */
 export interface IPCMessage {
-  type: 'task' | 'result' | 'heartbeat' | 'log' | 'error' | 'control' | 'ready';
+  type: "task" | "result" | "heartbeat" | "log" | "error" | "control" | "ready";
   id: string;
   timestamp: number;
   payload: unknown;
@@ -180,18 +193,18 @@ export interface HealthStatus {
  * Pool Events
  */
 export type PoolEvent =
-  | { type: 'worker.started'; workerId: string; pid: number }
-  | { type: 'worker.stopped'; workerId: string; reason: string }
-  | { type: 'worker.error'; workerId: string; error: string }
-  | { type: 'worker.status'; workerId: string; status: WorkerStatus }
-  | { type: 'task.queued'; task: AgentTask }
-  | { type: 'task.assigned'; taskId: string; workerId: string }
-  | { type: 'task.started'; taskId: string; workerId: string }
-  | { type: 'task.completed'; taskId: string; result: TaskResult }
-  | { type: 'task.failed'; taskId: string; error: string }
-  | { type: 'task.cancelled'; taskId: string }
-  | { type: 'pool.scaled'; direction: 'up' | 'down'; count: number }
-  | { type: 'pool.status'; status: PoolStatus };
+  | { type: "worker.started"; workerId: string; pid: number }
+  | { type: "worker.stopped"; workerId: string; reason: string }
+  | { type: "worker.error"; workerId: string; error: string }
+  | { type: "worker.status"; workerId: string; status: WorkerStatus }
+  | { type: "task.queued"; task: AgentTask }
+  | { type: "task.assigned"; taskId: string; workerId: string }
+  | { type: "task.started"; taskId: string; workerId: string }
+  | { type: "task.completed"; taskId: string; result: TaskResult }
+  | { type: "task.failed"; taskId: string; error: string }
+  | { type: "task.cancelled"; taskId: string }
+  | { type: "pool.scaled"; direction: "up" | "down"; count: number }
+  | { type: "pool.status"; status: PoolStatus };
 
 /**
  * Default configuration
@@ -207,8 +220,8 @@ export const DEFAULT_POOL_CONFIG: PoolConfig = {
   scaleInterval: 30000,
   cooldownPeriod: 60000,
   healthCheckInterval: 30000,
-  taskTimeout: 3600000,  // 1 hour
-  workerStartTimeout: 10000,  // 10s
+  taskTimeout: 3600000, // 1 hour
+  workerStartTimeout: 10000, // 10s
 };
 
 /**
@@ -226,13 +239,13 @@ export const DEFAULT_RESOURCE_LIMITS: ResourceLimits = {
  * Environment whitelist
  */
 export const ENV_WHITELIST = [
-  'PATH',
-  'HOME',
-  'USER',
-  'SHELL',
-  'TERM',
-  'LANG',
-  'LC_ALL',
+  "PATH",
+  "HOME",
+  "USER",
+  "SHELL",
+  "TERM",
+  "LANG",
+  "LC_ALL",
   /^FORGE_/,
   /^CLAUDE_/,
   /^NODE_/,
@@ -245,7 +258,7 @@ export const ENV_WHITELIST = [
 export const BLOCKED_COMMANDS = [
   /^rm\s+-rf\s+\/$/,
   /^rm\s+-rf\s+\/\*$/,
-  /:\(\)\s*{\s*:\s*\|\s*:\s*&\s*}\s*;?\s*:/,  // Fork bomb
+  /:\(\)\s*{\s*:\s*\|\s*:\s*&\s*}\s*;?\s*:/, // Fork bomb
   /^mkfs\s+/,
   /^dd\s+if=\/dev\//,
   />\s*\/dev\/sd/,

@@ -1,17 +1,31 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  Users, Brain, Zap, Shield, MessageSquare, GitBranch,
-  Activity, CheckCircle, AlertCircle, Clock, TrendingUp,
-  Network, Cpu, Database, Cloud, Terminal, Code2
-} from 'lucide-react';
-import { ProgressBar } from '../ui/ProgressBar';
+  Users,
+  Brain,
+  Zap,
+  Shield,
+  MessageSquare,
+  GitBranch,
+  Activity,
+  CheckCircle,
+  AlertCircle,
+  Clock,
+  TrendingUp,
+  Network,
+  Cpu,
+  Database,
+  Cloud,
+  Terminal,
+  Code2,
+} from "lucide-react";
+import { ProgressBar } from "../ui/ProgressBar";
 
 interface Agent {
   id: string;
   name: string;
-  role: 'architect' | 'developer' | 'qa' | 'devops' | 'orchestrator';
-  status: 'idle' | 'thinking' | 'working' | 'blocked' | 'discussing';
+  role: "architect" | "developer" | "qa" | "devops" | "orchestrator";
+  status: "idle" | "thinking" | "working" | "blocked" | "discussing";
   currentTask?: string;
   confidence: number;
   collaboratingWith: string[];
@@ -27,7 +41,7 @@ interface Agent {
 interface CollaborationEdge {
   from: string;
   to: string;
-  type: 'data' | 'decision' | 'review' | 'handoff';
+  type: "data" | "decision" | "review" | "handoff";
   isActive: boolean;
   strength: number;
 }
@@ -36,14 +50,14 @@ interface AgentCollaborationViewProps {
   agents: Agent[];
   edges: CollaborationEdge[];
   onAgentClick?: (agent: Agent) => void;
-  viewMode?: 'network' | 'list' | 'metrics';
+  viewMode?: "network" | "list" | "metrics";
 }
 
 export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
   agents,
   edges,
   onAgentClick,
-  viewMode = 'network'
+  viewMode = "network",
 }) => {
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [hoveredAgent, setHoveredAgent] = useState<string | null>(null);
@@ -52,8 +66,10 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
   // Simulate typing indicators
   useEffect(() => {
     const interval = setInterval(() => {
-      const workingAgents = agents.filter(a => a.status === 'thinking' || a.status === 'discussing');
-      setTypingAgents(new Set(workingAgents.map(a => a.id)));
+      const workingAgents = agents.filter(
+        (a) => a.status === "thinking" || a.status === "discussing",
+      );
+      setTypingAgents(new Set(workingAgents.map((a) => a.id)));
     }, 1000);
 
     return () => clearInterval(interval);
@@ -61,39 +77,44 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
 
   const roleConfig = {
     architect: {
-      color: 'from-purple-500 to-indigo-500',
+      color: "from-purple-500 to-indigo-500",
       icon: <Brain className="w-5 h-5 text-white" />,
-      position: { x: 200, y: 100 }
+      position: { x: 200, y: 100 },
     },
     developer: {
-      color: 'from-blue-500 to-cyan-500',
+      color: "from-blue-500 to-cyan-500",
       icon: <Code2 className="w-5 h-5 text-white" />,
-      position: { x: 100, y: 200 }
+      position: { x: 100, y: 200 },
     },
     qa: {
-      color: 'from-green-500 to-emerald-500',
+      color: "from-green-500 to-emerald-500",
       icon: <Shield className="w-5 h-5 text-white" />,
-      position: { x: 300, y: 200 }
+      position: { x: 300, y: 200 },
     },
     devops: {
-      color: 'from-orange-500 to-red-500',
+      color: "from-orange-500 to-red-500",
       icon: <Cloud className="w-5 h-5 text-white" />,
-      position: { x: 150, y: 300 }
+      position: { x: 150, y: 300 },
     },
     orchestrator: {
-      color: 'from-yellow-500 to-amber-500',
+      color: "from-yellow-500 to-amber-500",
       icon: <Network className="w-5 h-5 text-white" />,
-      position: { x: 200, y: 200 }
-    }
+      position: { x: 200, y: 200 },
+    },
   };
 
-  const getStatusColor = (status: Agent['status']) => {
+  const getStatusColor = (status: Agent["status"]) => {
     switch (status) {
-      case 'idle': return 'bg-gray-500';
-      case 'thinking': return 'bg-yellow-500';
-      case 'working': return 'bg-green-500';
-      case 'blocked': return 'bg-red-500';
-      case 'discussing': return 'bg-blue-500';
+      case "idle":
+        return "bg-gray-500";
+      case "thinking":
+        return "bg-yellow-500";
+      case "working":
+        return "bg-green-500";
+      case "blocked":
+        return "bg-red-500";
+      case "discussing":
+        return "bg-blue-500";
     }
   };
 
@@ -105,13 +126,13 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
     const radius = 150;
 
     agents.forEach((agent, index) => {
-      if (agent.role === 'orchestrator') {
+      if (agent.role === "orchestrator") {
         positions[agent.id] = { x: centerX, y: centerY };
       } else {
         const angle = (index * 2 * Math.PI) / (agents.length - 1);
         positions[agent.id] = {
           x: centerX + radius * Math.cos(angle),
-          y: centerY + radius * Math.sin(angle)
+          y: centerY + radius * Math.sin(angle),
         };
       }
     });
@@ -120,12 +141,26 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
   }, [agents]);
 
   const renderNetworkView = () => (
-    <div data-testid="agent-collab-network-view" className="relative w-full h-[500px] bg-gray-900/30 rounded-2xl border border-gray-800 overflow-hidden">
+    <div
+      data-testid="agent-collab-network-view"
+      className="relative w-full h-[500px] bg-gray-900/30 rounded-2xl border border-gray-800 overflow-hidden"
+    >
       {/* Background grid */}
       <svg className="absolute inset-0 w-full h-full">
         <defs>
-          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1f2937" strokeWidth="1" opacity="0.5" />
+          <pattern
+            id="grid"
+            width="40"
+            height="40"
+            patternUnits="userSpaceOnUse"
+          >
+            <path
+              d="M 40 0 L 0 0 0 40"
+              fill="none"
+              stroke="#1f2937"
+              strokeWidth="1"
+              opacity="0.5"
+            />
           </pattern>
         </defs>
         <rect width="100%" height="100%" fill="url(#grid)" />
@@ -150,19 +185,26 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
           if (!fromPos || !toPos) return null;
 
           return (
-            <g key={`${edge.from}-${edge.to}-${index}`} data-testid={`agent-collab-edge-${edge.from}-${edge.to}`}>
+            <g
+              key={`${edge.from}-${edge.to}-${index}`}
+              data-testid={`agent-collab-edge-${edge.from}-${edge.to}`}
+            >
               <motion.line
                 x1={fromPos.x}
                 y1={fromPos.y}
                 x2={toPos.x}
                 y2={toPos.y}
-                stroke={edge.isActive ? "url(#edge-gradient-active)" : "url(#edge-gradient-inactive)"}
+                stroke={
+                  edge.isActive
+                    ? "url(#edge-gradient-active)"
+                    : "url(#edge-gradient-inactive)"
+                }
                 strokeWidth={edge.isActive ? 2 : 1}
-                strokeDasharray={edge.type === 'handoff' ? "5,5" : "0"}
+                strokeDasharray={edge.type === "handoff" ? "5,5" : "0"}
                 initial={{ pathLength: 0, opacity: 0 }}
                 animate={{
                   pathLength: 1,
-                  opacity: edge.isActive ? 1 : 0.3
+                  opacity: edge.isActive ? 1 : 0.3,
                 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
               />
@@ -172,12 +214,12 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
                 <motion.circle
                   r="3"
                   fill="#3B82F6"
-                  initial={{ offsetDistance: '0%' }}
-                  animate={{ offsetDistance: '100%' }}
+                  initial={{ offsetDistance: "0%" }}
+                  animate={{ offsetDistance: "100%" }}
                   transition={{
                     duration: 2,
                     repeat: Infinity,
-                    ease: "linear"
+                    ease: "linear",
                   }}
                 >
                   <animateMotion
@@ -205,15 +247,17 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
             key={agent.id}
             data-testid={`agent-collab-node-${agent.id}`}
             className="absolute cursor-pointer"
-            style={{
-              '--agent-x': `${position.x - 30}px`,
-              '--agent-y': `${position.y - 30}px`,
-              left: 'var(--agent-x)',
-              top: 'var(--agent-y)'
-            } as React.CSSProperties}
+            style={
+              {
+                "--agent-x": `${position.x - 30}px`,
+                "--agent-y": `${position.y - 30}px`,
+                left: "var(--agent-x)",
+                top: "var(--agent-y)",
+              } as React.CSSProperties
+            }
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: index * 0.1, type: 'spring' }}
+            transition={{ delay: index * 0.1, type: "spring" }}
             onMouseEnter={() => setHoveredAgent(agent.id)}
             onMouseLeave={() => setHoveredAgent(null)}
             onClick={() => {
@@ -222,16 +266,16 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
             }}
           >
             {/* Pulse effect for active agents */}
-            {agent.status === 'working' && (
+            {agent.status === "working" && (
               <motion.div
                 className="absolute -inset-4 rounded-full bg-green-500/20"
                 animate={{
                   scale: [1, 1.3, 1],
-                  opacity: [0.5, 0, 0.5]
+                  opacity: [0.5, 0, 0.5],
                 }}
                 transition={{
                   duration: 2,
-                  repeat: Infinity
+                  repeat: Infinity,
                 }}
               />
             )}
@@ -257,16 +301,20 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
               {config.icon}
 
               {/* Status indicator */}
-              <div className={`
+              <div
+                className={`
                 absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-gray-950
                 ${getStatusColor(agent.status)}
-                ${agent.status !== 'idle' ? 'animate-pulse' : ''}
-              `} />
+                ${agent.status !== "idle" ? "animate-pulse" : ""}
+              `}
+              />
 
               {/* Message queue badge */}
               {agent.messagesInQueue > 0 && (
                 <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-                  <span className="text-xs text-white font-bold">{agent.messagesInQueue}</span>
+                  <span className="text-xs text-white font-bold">
+                    {agent.messagesInQueue}
+                  </span>
                 </div>
               )}
             </motion.div>
@@ -275,18 +323,18 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
             {isTyping && (
               <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2">
                 <div className="flex gap-0.5 px-2 py-1 bg-gray-800 rounded-full">
-                  {[0, 1, 2].map(i => (
+                  {[0, 1, 2].map((i) => (
                     <motion.div
                       key={i}
                       className="w-1.5 h-1.5 rounded-full bg-blue-400"
                       animate={{
                         y: [0, -4, 0],
-                        opacity: [0.5, 1, 0.5]
+                        opacity: [0.5, 1, 0.5],
                       }}
                       transition={{
                         duration: 1,
                         repeat: Infinity,
-                        delay: i * 0.2
+                        delay: i * 0.2,
                       }}
                     />
                   ))}
@@ -304,10 +352,14 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
                   className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 z-10"
                 >
                   <div className="px-3 py-2 bg-gray-900 rounded-lg border border-gray-700 shadow-xl whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-100">{agent.name}</div>
+                    <div className="text-sm font-medium text-gray-100">
+                      {agent.name}
+                    </div>
                     <div className="text-xs text-gray-400">{agent.role}</div>
                     {agent.currentTask && (
-                      <div className="text-xs text-blue-400 mt-1">{agent.currentTask}</div>
+                      <div className="text-xs text-blue-400 mt-1">
+                        {agent.currentTask}
+                      </div>
                     )}
                     <div className="flex items-center gap-2 mt-2">
                       <div className="text-xs text-gray-500">Confidence:</div>
@@ -317,12 +369,17 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
                         className="flex-1 h-1"
                         bgColor="bg-gray-700"
                         fillColor={
-                          agent.confidence >= 80 ? 'bg-green-500' :
-                          agent.confidence >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                          agent.confidence >= 80
+                            ? "bg-green-500"
+                            : agent.confidence >= 60
+                              ? "bg-yellow-500"
+                              : "bg-red-500"
                         }
                         animated={false}
                       />
-                      <span className="text-xs text-gray-400">{agent.confidence}%</span>
+                      <span className="text-xs text-gray-400">
+                        {agent.confidence}%
+                      </span>
                     </div>
                   </div>
                 </motion.div>
@@ -339,21 +396,21 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
             <div className="w-2 h-2 rounded-full bg-green-500" />
             <span className="text-gray-400">Active:</span>
             <span className="text-gray-200 font-medium">
-              {agents.filter(a => a.status === 'working').length}
+              {agents.filter((a) => a.status === "working").length}
             </span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-yellow-500" />
             <span className="text-gray-400">Thinking:</span>
             <span className="text-gray-200 font-medium">
-              {agents.filter(a => a.status === 'thinking').length}
+              {agents.filter((a) => a.status === "thinking").length}
             </span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-red-500" />
             <span className="text-gray-400">Blocked:</span>
             <span className="text-gray-200 font-medium">
-              {agents.filter(a => a.status === 'blocked').length}
+              {agents.filter((a) => a.status === "blocked").length}
             </span>
           </div>
         </div>
@@ -375,24 +432,30 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`
+              <div
+                className={`
                 w-10 h-10 rounded-lg bg-gradient-to-br ${roleConfig[agent.role].color}
                 flex items-center justify-center
-              `}>
+              `}
+              >
                 {roleConfig[agent.role].icon}
               </div>
 
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{agent.name}</span>
-                  <div className={`
+                  <div
+                    className={`
                     w-2 h-2 rounded-full ${getStatusColor(agent.status)}
-                    ${agent.status !== 'idle' ? 'animate-pulse' : ''}
-                  `} />
-                  <span className="text-xs text-gray-500 capitalize">{agent.status}</span>
+                    ${agent.status !== "idle" ? "animate-pulse" : ""}
+                  `}
+                  />
+                  <span className="text-xs text-gray-500 capitalize">
+                    {agent.status}
+                  </span>
                 </div>
                 <div className="text-sm text-gray-400 mt-0.5">
-                  {agent.currentTask || 'No active task'}
+                  {agent.currentTask || "No active task"}
                 </div>
               </div>
             </div>
@@ -402,7 +465,7 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
               {agent.collaboratingWith.length > 0 && (
                 <div className="flex -space-x-2">
                   {agent.collaboratingWith.slice(0, 3).map((id, i) => {
-                    const collaborator = agents.find(a => a.id === id);
+                    const collaborator = agents.find((a) => a.id === id);
                     if (!collaborator) return null;
                     return (
                       <div
@@ -436,23 +499,32 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
                   max={100}
                   className="w-24 h-1.5"
                   fillColor={
-                    agent.confidence >= 80 ? 'bg-green-500' :
-                    agent.confidence >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                    agent.confidence >= 80
+                      ? "bg-green-500"
+                      : agent.confidence >= 60
+                        ? "bg-yellow-500"
+                        : "bg-red-500"
                   }
                   animated={false}
                 />
-                <span className="text-xs text-gray-500">{agent.confidence}%</span>
+                <span className="text-xs text-gray-500">
+                  {agent.confidence}%
+                </span>
               </div>
 
               {/* Performance indicators */}
               <div className="flex items-center gap-3 text-xs">
                 <div className="text-center">
                   <div className="text-gray-400">Tasks</div>
-                  <div className="font-medium">{agent.performance.tasksCompleted}</div>
+                  <div className="font-medium">
+                    {agent.performance.tasksCompleted}
+                  </div>
                 </div>
                 <div className="text-center">
                   <div className="text-gray-400">Success</div>
-                  <div className="font-medium">{agent.performance.successRate}%</div>
+                  <div className="font-medium">
+                    {agent.performance.successRate}%
+                  </div>
                 </div>
               </div>
             </div>
@@ -464,8 +536,8 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
 
   return (
     <div data-testid="agent-collab-container" className="space-y-4">
-      {viewMode === 'network' && renderNetworkView()}
-      {viewMode === 'list' && renderListView()}
+      {viewMode === "network" && renderNetworkView()}
+      {viewMode === "list" && renderListView()}
     </div>
   );
 };

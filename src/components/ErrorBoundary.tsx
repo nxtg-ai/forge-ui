@@ -3,8 +3,8 @@
  * Catches React errors and provides graceful fallback UI with recovery options
  */
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, Home, Bug } from 'lucide-react';
+import React, { Component, ErrorInfo, ReactNode } from "react";
+import { AlertTriangle, RefreshCw, Home, Bug } from "lucide-react";
 
 interface Props {
   children: ReactNode;
@@ -25,35 +25,35 @@ export class ErrorBoundary extends Component<Props, State> {
       hasError: false,
       error: null,
       errorInfo: null,
-      errorCount: 0
+      errorCount: 0,
     };
   }
 
   static getDerivedStateFromError(error: Error): Partial<State> {
     return {
       hasError: true,
-      error
+      error,
     };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Log error details for debugging
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
 
     // Update state with error details
-    this.setState(prevState => ({
+    this.setState((prevState) => ({
       error,
       errorInfo,
-      errorCount: prevState.errorCount + 1
+      errorCount: prevState.errorCount + 1,
     }));
 
     // Send error to monitoring service in production
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV === "production") {
       // TODO: Send to error tracking service (Sentry, LogRocket, etc.)
-      console.error('Production error:', {
+      console.error("Production error:", {
         error: error.toString(),
         componentStack: errorInfo.componentStack,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
   }
@@ -62,7 +62,7 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({
       hasError: false,
       error: null,
-      errorInfo: null
+      errorInfo: null,
     });
   };
 
@@ -71,7 +71,7 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   handleGoHome = () => {
-    window.location.href = '/';
+    window.location.href = "/";
   };
 
   copyErrorDetails = () => {
@@ -86,7 +86,7 @@ Timestamp: ${new Date().toISOString()}
     `.trim();
 
     navigator.clipboard.writeText(errorText);
-    alert('Error details copied to clipboard');
+    alert("Error details copied to clipboard");
   };
 
   render() {
@@ -110,12 +110,14 @@ Timestamp: ${new Date().toISOString()}
                   </div>
                   <div>
                     <h1 className="text-xl font-bold text-red-400">
-                      {isCritical ? 'Critical Error Detected' : 'Something Went Wrong'}
+                      {isCritical
+                        ? "Critical Error Detected"
+                        : "Something Went Wrong"}
                     </h1>
                     <p className="text-sm text-red-300/70">
                       {isCritical
-                        ? 'Multiple errors occurred. Please reload the application.'
-                        : 'The application encountered an unexpected error.'}
+                        ? "Multiple errors occurred. Please reload the application."
+                        : "The application encountered an unexpected error."}
                     </p>
                   </div>
                 </div>
@@ -130,7 +132,9 @@ Timestamp: ${new Date().toISOString()}
                 {/* Error Details */}
                 <div className="bg-gray-950 border border-gray-800 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-semibold text-gray-400">Error Details</h3>
+                    <h3 className="text-sm font-semibold text-gray-400">
+                      Error Details
+                    </h3>
                     <button
                       onClick={this.copyErrorDetails}
                       className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
@@ -141,9 +145,11 @@ Timestamp: ${new Date().toISOString()}
                   <div className="space-y-2">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Message:</p>
-                      <p className="text-sm text-red-400 font-mono">{error?.message}</p>
+                      <p className="text-sm text-red-400 font-mono">
+                        {error?.message}
+                      </p>
                     </div>
-                    {process.env.NODE_ENV === 'development' && errorInfo && (
+                    {process.env.NODE_ENV === "development" && errorInfo && (
                       <details className="mt-3">
                         <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-300">
                           Component Stack (Dev Only)
@@ -158,7 +164,9 @@ Timestamp: ${new Date().toISOString()}
 
                 {/* Recovery Instructions */}
                 <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-blue-400 mb-2">Recovery Steps</h3>
+                  <h3 className="text-sm font-semibold text-blue-400 mb-2">
+                    Recovery Steps
+                  </h3>
                   <ol className="text-sm text-gray-300 space-y-1 list-decimal list-inside">
                     <li>Try clicking "Reset" to recover without losing data</li>
                     <li>If the error persists, reload the page</li>
@@ -174,7 +182,8 @@ Timestamp: ${new Date().toISOString()}
                 {/* Statistics */}
                 {errorCount > 1 && (
                   <div className="text-xs text-gray-500">
-                    Error occurred {errorCount} time{errorCount !== 1 ? 's' : ''} in this session
+                    Error occurred {errorCount} time
+                    {errorCount !== 1 ? "s" : ""} in this session
                   </div>
                 )}
               </div>
@@ -194,7 +203,7 @@ Timestamp: ${new Date().toISOString()}
                   <button
                     onClick={this.handleReload}
                     className={`${
-                      isCritical ? 'flex-1' : 'flex-1'
+                      isCritical ? "flex-1" : "flex-1"
                     } px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-all`}
                   >
                     <RefreshCw className="w-4 h-4" />
@@ -214,7 +223,7 @@ Timestamp: ${new Date().toISOString()}
             {/* Help Text */}
             <div className="mt-4 text-center">
               <p className="text-sm text-gray-500">
-                Need help? Check the{' '}
+                Need help? Check the{" "}
                 <a
                   href="https://github.com/nxtg-ai/forge/issues"
                   target="_blank"
@@ -222,8 +231,8 @@ Timestamp: ${new Date().toISOString()}
                   className="text-blue-400 hover:text-blue-300 underline"
                 >
                   GitHub Issues
-                </a>
-                {' '}or contact support.
+                </a>{" "}
+                or contact support.
               </p>
             </div>
           </div>

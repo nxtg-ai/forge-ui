@@ -3,15 +3,15 @@
  * React hook for canonical vision management
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { VisionData, Goal, Metric, EngagementMode } from '../components/types';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { VisionData, Goal, Metric, EngagementMode } from "../components/types";
 import {
   VisionService,
   VisionUpdateEvent,
   VisionCaptureData,
-  AlignmentCheck
-} from '../services/vision-service';
-import { CanonicalVision } from '../types/vision';
+  AlignmentCheck,
+} from "../services/vision-service";
+import { CanonicalVision } from "../types/vision";
 
 /**
  * Vision hook options
@@ -42,11 +42,10 @@ export interface UseVisionReturn {
 /**
  * Hook for managing canonical vision
  */
-export function useVision(
-  options: UseVisionOptions = {}
-): UseVisionReturn {
+export function useVision(options: UseVisionOptions = {}): UseVisionReturn {
   const [vision, setVision] = useState<VisionData | null>(null);
-  const [canonicalVision, setCanonicalVision] = useState<CanonicalVision | null>(null);
+  const [canonicalVision, setCanonicalVision] =
+    useState<CanonicalVision | null>(null);
   const [history, setHistory] = useState<VisionUpdateEvent[]>([]);
   const [captures, setCaptures] = useState<VisionCaptureData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,9 +63,9 @@ export function useVision(
 
       // Create service instance
       const service = new VisionService({
-        name: 'VisionHook',
+        name: "VisionHook",
         autoSave: options.autoSave ?? true,
-        validateOnSave: true
+        validateOnSave: true,
       });
 
       serviceRef.current = service;
@@ -95,9 +94,8 @@ export function useVision(
       setCaptures(visionCaptures);
 
       // Subscribe to vision updates
-      service.on('visionUpdate', handleVisionUpdate);
-      service.on('visionCaptured', handleVisionCaptured);
-
+      service.on("visionUpdate", handleVisionUpdate);
+      service.on("visionCaptured", handleVisionCaptured);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
       setError(error);
@@ -113,7 +111,7 @@ export function useVision(
    * Handle vision update event
    */
   const handleVisionUpdate = useCallback((event: VisionUpdateEvent) => {
-    setHistory(prev => [...prev, event]);
+    setHistory((prev) => [...prev, event]);
 
     // Update vision state
     if (serviceRef.current) {
@@ -133,7 +131,7 @@ export function useVision(
    * Handle vision captured event
    */
   const handleVisionCaptured = useCallback((data: VisionCaptureData) => {
-    setCaptures(prev => [data, ...prev]);
+    setCaptures((prev) => [data, ...prev]);
   }, []);
 
   /**
@@ -141,7 +139,7 @@ export function useVision(
    */
   const updateVision = useCallback(async (update: Partial<VisionData>) => {
     if (!serviceRef.current) {
-      throw new Error('Service not initialized');
+      throw new Error("Service not initialized");
     }
 
     const result = await serviceRef.current.updateVision(update);
@@ -157,7 +155,7 @@ export function useVision(
    */
   const saveVision = useCallback(async () => {
     if (!serviceRef.current || !vision) {
-      throw new Error('Service not initialized or no vision data');
+      throw new Error("Service not initialized or no vision data");
     }
 
     const result = await serviceRef.current.saveVision(vision);
@@ -171,7 +169,7 @@ export function useVision(
    */
   const captureVision = useCallback(async (data: VisionCaptureData) => {
     if (!serviceRef.current) {
-      throw new Error('Service not initialized');
+      throw new Error("Service not initialized");
     }
 
     const result = await serviceRef.current.captureVision(data);
@@ -183,18 +181,21 @@ export function useVision(
   /**
    * Check alignment
    */
-  const checkAlignment = useCallback((decision: string): AlignmentCheck | null => {
-    if (!serviceRef.current) {
+  const checkAlignment = useCallback(
+    (decision: string): AlignmentCheck | null => {
+      if (!serviceRef.current) {
+        return null;
+      }
+
+      const result = serviceRef.current.checkAlignment(decision);
+      if (result.isOk()) {
+        return result.value;
+      }
+
       return null;
-    }
-
-    const result = serviceRef.current.checkAlignment(decision);
-    if (result.isOk()) {
-      return result.value;
-    }
-
-    return null;
-  }, []);
+    },
+    [],
+  );
 
   /**
    * Refresh vision data
@@ -233,8 +234,8 @@ export function useVision(
 
     return () => {
       if (serviceRef.current) {
-        serviceRef.current.off('visionUpdate', handleVisionUpdate);
-        serviceRef.current.off('visionCaptured', handleVisionCaptured);
+        serviceRef.current.off("visionUpdate", handleVisionUpdate);
+        serviceRef.current.off("visionCaptured", handleVisionCaptured);
         serviceRef.current.dispose();
       }
     };
@@ -251,6 +252,6 @@ export function useVision(
     saveVision,
     captureVision,
     checkAlignment,
-    refresh
+    refresh,
   };
 }

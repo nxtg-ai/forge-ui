@@ -5,11 +5,16 @@
  * Fastest option - uses local bash shells with isolated environments
  */
 
-import { spawn } from 'node-pty';
-import { Runspace, IRunspaceBackend, PTYSession, RunspaceHealth } from '../runspace';
+import { spawn } from "node-pty";
+import {
+  Runspace,
+  IRunspaceBackend,
+  PTYSession,
+  RunspaceHealth,
+} from "../runspace";
 
 export class WSLBackend implements IRunspaceBackend {
-  readonly type = 'wsl' as const;
+  readonly type = "wsl" as const;
   private sessions = new Map<string, PTYSession>();
 
   async start(runspace: Runspace): Promise<void> {
@@ -17,7 +22,7 @@ export class WSLBackend implements IRunspaceBackend {
 
     // WSL backend is "always on" - we just note it's active
     // The actual PTY session is created on-demand when terminal is opened
-    runspace.status = 'active';
+    runspace.status = "active";
   }
 
   async stop(runspace: Runspace): Promise<void> {
@@ -30,7 +35,7 @@ export class WSLBackend implements IRunspaceBackend {
       this.sessions.delete(runspace.id);
     }
 
-    runspace.status = 'stopped';
+    runspace.status = "stopped";
   }
 
   async suspend(runspace: Runspace): Promise<void> {
@@ -38,7 +43,7 @@ export class WSLBackend implements IRunspaceBackend {
 
     // For WSL, suspend = stop (no true pause capability)
     await this.stop(runspace);
-    runspace.status = 'suspended';
+    runspace.status = "suspended";
   }
 
   async resume(runspace: Runspace): Promise<void> {
@@ -49,13 +54,15 @@ export class WSLBackend implements IRunspaceBackend {
   }
 
   async execute(runspace: Runspace, command: string): Promise<string> {
-    console.log(`[WSLBackend] Executing in ${runspace.displayName}: ${command}`);
+    console.log(
+      `[WSLBackend] Executing in ${runspace.displayName}: ${command}`,
+    );
 
     return new Promise((resolve, reject) => {
-      const shell = process.env.SHELL || '/bin/bash';
+      const shell = process.env.SHELL || "/bin/bash";
 
-      const pty = spawn(shell, ['-c', command], {
-        name: 'xterm-256color',
+      const pty = spawn(shell, ["-c", command], {
+        name: "xterm-256color",
         cols: 80,
         rows: 24,
         cwd: runspace.path,
@@ -63,11 +70,11 @@ export class WSLBackend implements IRunspaceBackend {
           ...process.env,
           FORGE_RUNSPACE_ID: runspace.id,
           FORGE_RUNSPACE_NAME: runspace.name,
-          FORGE_PROJECT_PATH: runspace.path
-        }
+          FORGE_PROJECT_PATH: runspace.path,
+        },
       });
 
-      let output = '';
+      let output = "";
 
       pty.onData((data) => {
         output += data;
@@ -77,7 +84,9 @@ export class WSLBackend implements IRunspaceBackend {
         if (exitCode === 0) {
           resolve(output);
         } else {
-          reject(new Error(`Command failed with exit code ${exitCode}: ${output}`));
+          reject(
+            new Error(`Command failed with exit code ${exitCode}: ${output}`),
+          );
         }
       });
     });
@@ -94,31 +103,31 @@ export class WSLBackend implements IRunspaceBackend {
     }
 
     // Spawn new PTY
-    const shell = process.env.SHELL || '/bin/bash';
-    const pty = spawn(shell, ['--noprofile', '--norc', '-i'], {
-      name: 'xterm-256color',
+    const shell = process.env.SHELL || "/bin/bash";
+    const pty = spawn(shell, ["--noprofile", "--norc", "-i"], {
+      name: "xterm-256color",
       cols: 80,
       rows: 24,
       cwd: runspace.path,
       env: {
         ...process.env,
-        TERM: 'xterm-256color',
-        COLORTERM: 'truecolor',
+        TERM: "xterm-256color",
+        COLORTERM: "truecolor",
         PS1: `\\[\\033[1;36m\\]${runspace.displayName}\\[\\033[0m\\] \\$ `,
         FORGE_RUNSPACE_ID: runspace.id,
         FORGE_RUNSPACE_NAME: runspace.name,
         FORGE_PROJECT_PATH: runspace.path,
         HOME: process.env.HOME,
         USER: process.env.USER,
-        PATH: `${process.env.PATH}:/usr/local/bin:${process.env.HOME}/.local/bin`
-      }
+        PATH: `${process.env.PATH}:/usr/local/bin:${process.env.HOME}/.local/bin`,
+      },
     });
 
     session = {
       id: `pty-${runspace.id}-${Date.now()}`,
       runspaceId: runspace.id,
       pty,
-      createdAt: new Date()
+      createdAt: new Date(),
     };
 
     this.sessions.set(runspace.id, session);
@@ -135,15 +144,17 @@ export class WSLBackend implements IRunspaceBackend {
   async getHealth(runspace: Runspace): Promise<RunspaceHealth> {
     // For WSL backend, health is based on whether PTY is alive
     const session = this.sessions.get(runspace.id);
-    const isHealthy = runspace.status === 'active' && (!session || session.pty.pid !== undefined);
+    const isHealthy =
+      runspace.status === "active" &&
+      (!session || session.pty.pid !== undefined);
 
     return {
-      status: isHealthy ? 'healthy' : 'unhealthy',
-      cpu: 0,  // TODO: Implement actual metrics
+      status: isHealthy ? "healthy" : "unhealthy",
+      cpu: 0, // TODO: Implement actual metrics
       memory: 0,
       disk: 0,
       uptime: session ? (Date.now() - session.createdAt.getTime()) / 1000 : 0,
-      lastCheck: new Date()
+      lastCheck: new Date(),
     };
   }
 
@@ -155,39 +166,41 @@ export class WSLBackend implements IRunspaceBackend {
     console.log(`[WSLBackend] Creating default PTY session`);
 
     // Check if default session already exists
-    let session = this.sessions.get('default');
+    let session = this.sessions.get("default");
     if (session) {
       console.log(`[WSLBackend] Reusing existing default PTY session`);
       return session;
     }
 
     // Spawn new PTY in current working directory
-    const shell = process.env.SHELL || '/bin/bash';
+    const shell = process.env.SHELL || "/bin/bash";
     const pty = spawn(shell, [], {
-      name: 'xterm-256color',
+      name: "xterm-256color",
       cols: 80,
       rows: 24,
       cwd: process.cwd(),
       env: {
         ...process.env,
-        TERM: 'xterm-256color',
-        COLORTERM: 'truecolor',
+        TERM: "xterm-256color",
+        COLORTERM: "truecolor",
         HOME: process.env.HOME,
         USER: process.env.USER,
-        PATH: `${process.env.PATH}:/usr/local/bin:${process.env.HOME}/.local/bin`
-      }
+        PATH: `${process.env.PATH}:/usr/local/bin:${process.env.HOME}/.local/bin`,
+      },
     });
 
     session = {
       id: `pty-default-${Date.now()}`,
-      runspaceId: 'default',
+      runspaceId: "default",
       pty,
-      createdAt: new Date()
+      createdAt: new Date(),
     };
 
-    this.sessions.set('default', session);
+    this.sessions.set("default", session);
 
-    console.log(`[WSLBackend] Default PTY created: ${session.id}, PID: ${pty.pid}`);
+    console.log(
+      `[WSLBackend] Default PTY created: ${session.id}, PID: ${pty.pid}`,
+    );
 
     return session;
   }

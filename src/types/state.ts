@@ -3,17 +3,17 @@
  * System state and context schemas
  */
 
-import { z } from 'zod';
-import { CanonicalVisionSchema } from './vision';
+import { z } from "zod";
+import { CanonicalVisionSchema } from "./vision";
 
 // Task status
 export enum TaskStatus {
-  PENDING = 'pending',
-  IN_PROGRESS = 'in_progress',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
-  BLOCKED = 'blocked',
-  CANCELLED = 'cancelled'
+  PENDING = "pending",
+  IN_PROGRESS = "in_progress",
+  COMPLETED = "completed",
+  FAILED = "failed",
+  BLOCKED = "blocked",
+  CANCELLED = "cancelled",
 }
 
 // Task schema
@@ -31,14 +31,14 @@ export const TaskSchema = z.object({
   actualDuration: z.number().optional(), // minutes
   priority: z.number().min(1).max(10),
   artifacts: z.array(z.string()),
-  metadata: z.record(z.string(), z.any()).optional()
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 // Agent state schema
 export const AgentStateSchema = z.object({
   id: z.string(),
   name: z.string(),
-  status: z.enum(['idle', 'busy', 'blocked', 'error', 'offline']),
+  status: z.enum(["idle", "busy", "blocked", "error", "offline"]),
   currentTask: z.string().optional(),
   taskQueue: z.array(z.string()),
   capabilities: z.array(z.string()),
@@ -46,9 +46,9 @@ export const AgentStateSchema = z.object({
     tasksCompleted: z.number(),
     averageDuration: z.number(),
     successRate: z.number(),
-    lastActive: z.date()
+    lastActive: z.date(),
   }),
-  metadata: z.record(z.string(), z.any()).optional()
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 // Conversation context schema
@@ -58,24 +58,26 @@ export const ConversationContextSchema = z.object({
   lastInteraction: z.date(),
   messageCount: z.number(),
   currentTopic: z.string().optional(),
-  userRole: z.enum(['ceo', 'vp', 'engineer', 'builder', 'founder']).optional(),
-  recentMessages: z.array(z.object({
-    role: z.enum(['user', 'assistant', 'system']),
-    content: z.string(),
-    timestamp: z.date()
-  })),
-  contextTags: z.array(z.string())
+  userRole: z.enum(["ceo", "vp", "engineer", "builder", "founder"]).optional(),
+  recentMessages: z.array(
+    z.object({
+      role: z.enum(["user", "assistant", "system"]),
+      content: z.string(),
+      timestamp: z.date(),
+    }),
+  ),
+  contextTags: z.array(z.string()),
 });
 
 // Progress graph node
 export const ProgressNodeSchema = z.object({
   id: z.string(),
-  type: z.enum(['goal', 'milestone', 'task', 'subtask']),
+  type: z.enum(["goal", "milestone", "task", "subtask"]),
   title: z.string(),
   status: z.nativeEnum(TaskStatus),
   progress: z.number().min(0).max(100),
   dependencies: z.array(z.string()),
-  children: z.array(z.string())
+  children: z.array(z.string()),
 });
 
 // System state schema
@@ -93,30 +95,30 @@ export const SystemStateSchema = z.object({
     gitBranch: z.string().optional(),
     gitCommit: z.string().optional(),
     projectPath: z.string(),
-    currentPhase: z.string().optional()
-  })
+    currentPhase: z.string().optional(),
+  }),
 });
 
 // Context node for graph
 export const ContextNodeSchema = z.object({
   id: z.string(),
-  type: z.enum(['vision', 'goal', 'feature', 'task', 'artifact']),
+  type: z.enum(["vision", "goal", "feature", "task", "artifact"]),
   title: z.string(),
-  data: z.any()
+  data: z.any(),
 });
 
 // Context edge for graph
 export const ContextEdgeSchema = z.object({
   from: z.string(),
   to: z.string(),
-  type: z.enum(['implements', 'depends-on', 'blocks', 'relates-to']),
-  weight: z.number().optional()
+  type: z.enum(["implements", "depends-on", "blocks", "relates-to"]),
+  weight: z.number().optional(),
 });
 
 // Context graph schema
 export const ContextGraphSchema = z.object({
   nodes: z.array(ContextNodeSchema),
-  edges: z.array(ContextEdgeSchema)
+  edges: z.array(ContextEdgeSchema),
 });
 
 // Situation report schema
@@ -126,14 +128,16 @@ export const SituationReportSchema = z.object({
   activeGoals: z.array(z.string()),
   tasksInProgress: z.number(),
   tasksCompleted: z.number(),
-  blockingIssues: z.array(z.object({
-    id: z.string(),
-    description: z.string(),
-    impact: z.enum(['low', 'medium', 'high']),
-    suggestedAction: z.string()
-  })),
+  blockingIssues: z.array(
+    z.object({
+      id: z.string(),
+      description: z.string(),
+      impact: z.enum(["low", "medium", "high"]),
+      suggestedAction: z.string(),
+    }),
+  ),
   nextActions: z.array(z.string()),
-  estimatedCompletion: z.date().optional()
+  estimatedCompletion: z.date().optional(),
 });
 
 // Task checkpoint schema for progress tracking
@@ -144,16 +148,16 @@ export const TaskCheckpointSchema = z.object({
   artifacts: z.object({
     filesCreated: z.array(z.string()),
     filesModified: z.array(z.string()),
-    commandsRun: z.array(z.string())
+    commandsRun: z.array(z.string()),
   }),
   nextAction: z.string(),
-  status: z.enum(['pending', 'in_progress', 'completed', 'failed'])
+  status: z.enum(["pending", "in_progress", "completed", "failed"]),
 });
 
 // Checkpoint state schema
 export const CheckpointStateSchema = z.object({
   checkpoints: z.map(z.string(), TaskCheckpointSchema),
-  lastCheckpoint: z.date().nullable()
+  lastCheckpoint: z.date().nullable(),
 });
 
 // Type exports

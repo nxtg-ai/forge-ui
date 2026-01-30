@@ -18,8 +18,8 @@
  * - Batch approvals
  */
 
-import { v4 as uuidv4 } from 'uuid';
-import { EventEmitter } from 'events';
+import { v4 as uuidv4 } from "uuid";
+import { EventEmitter } from "events";
 import {
   ApprovalRequest,
   ApprovalResult,
@@ -29,7 +29,7 @@ import {
   DecisionRisk,
   ApproverRole,
   QueueStats,
-} from '../types/approval';
+} from "../types/approval";
 
 /**
  * Approval Queue Service
@@ -55,7 +55,7 @@ export class ApprovalQueueService extends EventEmitter {
     options?: {
       requiredApprover?: ApproverRole;
       timeoutMinutes?: number;
-    }
+    },
   ): Promise<ApprovalRequest> {
     const request: ApprovalRequest = {
       id: uuidv4(),
@@ -80,7 +80,7 @@ export class ApprovalQueueService extends EventEmitter {
     this.timeouts.set(request.id, timeout);
 
     // Emit event
-    this.emit('approval-requested', request);
+    this.emit("approval-requested", request);
 
     return request;
   }
@@ -92,7 +92,7 @@ export class ApprovalQueueService extends EventEmitter {
     requestId: string,
     approver: ApproverRole,
     reason: string,
-    feedback?: string
+    feedback?: string,
   ): Promise<ApprovalResult> {
     const request = this.queue.get(requestId);
     if (!request) {
@@ -100,7 +100,9 @@ export class ApprovalQueueService extends EventEmitter {
     }
 
     if (request.status !== ApprovalStatus.PENDING) {
-      throw new Error(`Request ${requestId} is not pending (status: ${request.status})`);
+      throw new Error(
+        `Request ${requestId} is not pending (status: ${request.status})`,
+      );
     }
 
     // Update request
@@ -125,7 +127,7 @@ export class ApprovalQueueService extends EventEmitter {
       timestamp: request.approvedAt,
       feedback,
     };
-    this.emit('approval-decided', request, result);
+    this.emit("approval-decided", request, result);
 
     return result;
   }
@@ -137,7 +139,7 @@ export class ApprovalQueueService extends EventEmitter {
     requestId: string,
     approver: ApproverRole,
     reason: string,
-    feedback?: string
+    feedback?: string,
   ): Promise<ApprovalResult> {
     const request = this.queue.get(requestId);
     if (!request) {
@@ -145,7 +147,9 @@ export class ApprovalQueueService extends EventEmitter {
     }
 
     if (request.status !== ApprovalStatus.PENDING) {
-      throw new Error(`Request ${requestId} is not pending (status: ${request.status})`);
+      throw new Error(
+        `Request ${requestId} is not pending (status: ${request.status})`,
+      );
     }
 
     // Update request
@@ -170,7 +174,7 @@ export class ApprovalQueueService extends EventEmitter {
       timestamp: request.approvedAt,
       feedback,
     };
-    this.emit('approval-decided', request, result);
+    this.emit("approval-decided", request, result);
 
     return result;
   }
@@ -180,12 +184,12 @@ export class ApprovalQueueService extends EventEmitter {
    */
   getPending(approver?: ApproverRole): ApprovalRequest[] {
     const pending = Array.from(this.queue.values()).filter(
-      (req) => req.status === ApprovalStatus.PENDING
+      (req) => req.status === ApprovalStatus.PENDING,
     );
 
     if (approver) {
       return pending.filter(
-        (req) => !req.requiredApprover || req.requiredApprover === approver
+        (req) => !req.requiredApprover || req.requiredApprover === approver,
       );
     }
 
@@ -213,7 +217,8 @@ export class ApprovalQueueService extends EventEmitter {
     const pending = this.getPending().length;
     const avgResponseTime =
       this.stats.responseTimes.length > 0
-        ? this.stats.responseTimes.reduce((a, b) => a + b, 0) / this.stats.responseTimes.length
+        ? this.stats.responseTimes.reduce((a, b) => a + b, 0) /
+          this.stats.responseTimes.length
         : 0;
 
     const autoApprovalRate =
@@ -247,7 +252,7 @@ export class ApprovalQueueService extends EventEmitter {
     request.status = ApprovalStatus.CANCELLED;
     this.clearTimeout(requestId);
 
-    this.emit('approval-cancelled', request);
+    this.emit("approval-cancelled", request);
   }
 
   /**
@@ -283,10 +288,10 @@ export class ApprovalQueueService extends EventEmitter {
     request.status = ApprovalStatus.TIMEOUT;
     request.approvedAt = new Date();
     request.decision = false;
-    request.feedback = 'Request timed out without decision';
+    request.feedback = "Request timed out without decision";
 
     this.stats.totalTimeout++;
-    this.emit('approval-timeout', request);
+    this.emit("approval-timeout", request);
   }
 
   /**
@@ -305,7 +310,8 @@ export class ApprovalQueueService extends EventEmitter {
    */
   private trackResponseTime(request: ApprovalRequest): void {
     if (request.approvedAt) {
-      const responseTime = request.approvedAt.getTime() - request.timestamp.getTime();
+      const responseTime =
+        request.approvedAt.getTime() - request.timestamp.getTime();
       this.stats.responseTimes.push(responseTime);
 
       // Keep only last 100 response times

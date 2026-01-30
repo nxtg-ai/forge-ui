@@ -77,10 +77,7 @@ export class Ok<T> {
   /**
    * Matches on the Result
    */
-  match<U>(patterns: {
-    ok: (value: T) => U;
-    err: (error: never) => U;
-  }): U {
+  match<U>(patterns: { ok: (value: T) => U; err: (error: never) => U }): U {
     return patterns.ok(this.value);
   }
 }
@@ -153,10 +150,7 @@ export class Err<E> {
   /**
    * Matches on the Result
    */
-  match<U>(patterns: {
-    ok: (value: never) => U;
-    err: (error: E) => U;
-  }): U {
+  match<U>(patterns: { ok: (value: never) => U; err: (error: E) => U }): U {
     return patterns.err(this.error);
   }
 }
@@ -231,8 +225,8 @@ export const Result = {
       lastError = result;
     }
 
-    return lastError || new Err(new Error('No results provided'));
-  }
+    return lastError || new Err(new Error("No results provided"));
+  },
 };
 
 /**
@@ -256,37 +250,37 @@ export class IntegrationError extends Error {
   constructor(
     message: string,
     public readonly code: string,
-    public readonly details?: unknown
+    public readonly details?: unknown,
   ) {
     super(message);
-    this.name = 'IntegrationError';
+    this.name = "IntegrationError";
   }
 }
 
 export class ValidationError extends IntegrationError {
   constructor(message: string, details?: unknown) {
-    super(message, 'VALIDATION_ERROR', details);
-    this.name = 'ValidationError';
+    super(message, "VALIDATION_ERROR", details);
+    this.name = "ValidationError";
   }
 }
 
 export class NetworkError extends IntegrationError {
   constructor(message: string, details?: unknown) {
-    super(message, 'NETWORK_ERROR', details);
-    this.name = 'NetworkError';
+    super(message, "NETWORK_ERROR", details);
+    this.name = "NetworkError";
   }
 }
 
 export class TimeoutError extends IntegrationError {
   constructor(message: string, details?: unknown) {
-    super(message, 'TIMEOUT_ERROR', details);
-    this.name = 'TimeoutError';
+    super(message, "TIMEOUT_ERROR", details);
+    this.name = "TimeoutError";
   }
 }
 
 export class StateError extends IntegrationError {
   constructor(message: string, details?: unknown) {
-    super(message, 'STATE_ERROR', details);
-    this.name = 'StateError';
+    super(message, "STATE_ERROR", details);
+    this.name = "StateError";
   }
 }

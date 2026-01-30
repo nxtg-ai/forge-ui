@@ -5,9 +5,16 @@
  * Shows active runspace with quick access to all projects
  */
 
-import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Plus, Circle, CheckCircle, FolderOpen, Settings } from 'lucide-react';
-import type { Runspace } from '../core/runspace';
+import React, { useState, useRef, useEffect } from "react";
+import {
+  ChevronDown,
+  Plus,
+  Circle,
+  CheckCircle,
+  FolderOpen,
+  Settings,
+} from "lucide-react";
+import type { Runspace } from "../core/runspace";
 
 interface ProjectSwitcherProps {
   currentRunspace: Runspace | null;
@@ -22,7 +29,7 @@ export const ProjectSwitcher: React.FC<ProjectSwitcherProps> = ({
   runspaces,
   onSwitch,
   onNew,
-  onManage
+  onManage,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -30,19 +37,22 @@ export const ProjectSwitcher: React.FC<ProjectSwitcherProps> = ({
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Sort runspaces: active first, then by last active
   const sortedRunspaces = [...runspaces].sort((a, b) => {
-    if (a.status === 'active' && b.status !== 'active') return -1;
-    if (b.status === 'active' && a.status !== 'active') return 1;
+    if (a.status === "active" && b.status !== "active") return -1;
+    if (b.status === "active" && a.status !== "active") return 1;
     return b.lastActive.getTime() - a.lastActive.getTime();
   });
 
@@ -51,25 +61,25 @@ export const ProjectSwitcher: React.FC<ProjectSwitcherProps> = ({
     setIsOpen(false);
   };
 
-  const getStatusColor = (status: Runspace['status']) => {
+  const getStatusColor = (status: Runspace["status"]) => {
     switch (status) {
-      case 'active':
-        return 'text-green-400 bg-green-500';
-      case 'suspended':
-        return 'text-yellow-400 bg-yellow-500';
-      case 'stopped':
-        return 'text-gray-400 bg-gray-500';
+      case "active":
+        return "text-green-400 bg-green-500";
+      case "suspended":
+        return "text-yellow-400 bg-yellow-500";
+      case "stopped":
+        return "text-gray-400 bg-gray-500";
     }
   };
 
-  const getStatusLabel = (status: Runspace['status']) => {
+  const getStatusLabel = (status: Runspace["status"]) => {
     switch (status) {
-      case 'active':
-        return 'Active';
-      case 'suspended':
-        return 'Suspended';
-      case 'stopped':
-        return 'Stopped';
+      case "active":
+        return "Active";
+      case "suspended":
+        return "Suspended";
+      case "stopped":
+        return "Stopped";
     }
   };
 
@@ -97,18 +107,24 @@ export const ProjectSwitcher: React.FC<ProjectSwitcherProps> = ({
             </span>
 
             {/* Status Indicator */}
-            <div className={`w-2 h-2 rounded-full ${getStatusColor(currentRunspace.status)}`} />
+            <div
+              className={`w-2 h-2 rounded-full ${getStatusColor(currentRunspace.status)}`}
+            />
           </>
         ) : (
           <>
             <FolderOpen className="w-4 h-4 text-gray-400" />
-            <span className="flex-1 text-left text-sm text-gray-400">No Project</span>
+            <span className="flex-1 text-left text-sm text-gray-400">
+              No Project
+            </span>
           </>
         )}
 
-        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${
-          isOpen ? 'rotate-180' : ''
-        }`} />
+        <ChevronDown
+          className={`w-4 h-4 text-gray-400 transition-transform ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
       </button>
 
       {/* Dropdown Menu */}
@@ -120,7 +136,9 @@ export const ProjectSwitcher: React.FC<ProjectSwitcherProps> = ({
         >
           {/* Header */}
           <div className="px-4 py-3 border-b border-gray-800">
-            <p className="text-xs text-gray-400 uppercase font-semibold">Your Projects</p>
+            <p className="text-xs text-gray-400 uppercase font-semibold">
+              Your Projects
+            </p>
           </div>
 
           {/* Project List */}
@@ -136,8 +154,10 @@ export const ProjectSwitcher: React.FC<ProjectSwitcherProps> = ({
                   onClick={() => handleSwitch(runspace.id)}
                   className={`w-full px-4 py-3 flex items-start gap-3 hover:bg-gray-800/50
                              transition-all text-left ${
-                    currentRunspace?.id === runspace.id ? 'bg-gray-800/30' : ''
-                  }`}
+                               currentRunspace?.id === runspace.id
+                                 ? "bg-gray-800/30"
+                                 : ""
+                             }`}
                   data-testid={`project-switcher-item-${runspace.name}`}
                 >
                   {/* Icon/Color */}
@@ -169,16 +189,21 @@ export const ProjectSwitcher: React.FC<ProjectSwitcherProps> = ({
 
                     <div className="flex items-center gap-2">
                       {/* Status Badge */}
-                      <span className={`
+                      <span
+                        className={`
                         px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1
-                        ${runspace.status === 'active'
-                          ? 'bg-green-500/10 text-green-400'
-                          : runspace.status === 'suspended'
-                          ? 'bg-yellow-500/10 text-yellow-400'
-                          : 'bg-gray-500/10 text-gray-400'
+                        ${
+                          runspace.status === "active"
+                            ? "bg-green-500/10 text-green-400"
+                            : runspace.status === "suspended"
+                              ? "bg-yellow-500/10 text-yellow-400"
+                              : "bg-gray-500/10 text-gray-400"
                         }
-                      `}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${getStatusColor(runspace.status)}`} />
+                      `}
+                      >
+                        <div
+                          className={`w-1.5 h-1.5 rounded-full ${getStatusColor(runspace.status)}`}
+                        />
                         {getStatusLabel(runspace.status)}
                       </span>
 

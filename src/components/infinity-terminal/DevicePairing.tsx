@@ -3,8 +3,8 @@
  * QR code generation and scanning for multi-device session sharing
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   QrCode,
   Smartphone,
@@ -16,7 +16,7 @@ import {
   RefreshCw,
   Share2,
   Camera,
-} from 'lucide-react';
+} from "lucide-react";
 
 interface SessionShareInfo {
   sessionId: string;
@@ -38,19 +38,19 @@ export const DevicePairing: React.FC<DevicePairingProps> = ({
   sessionInfo,
   onClose,
   onPairDevice,
-  className = '',
+  className = "",
 }) => {
-  const [mode, setMode] = useState<'share' | 'scan'>('share');
+  const [mode, setMode] = useState<"share" | "scan">("share");
   const [copied, setCopied] = useState(false);
-  const [shareUrl, setShareUrl] = useState('');
+  const [shareUrl, setShareUrl] = useState("");
   const [pairedDevices, setPairedDevices] = useState<PairedDevice[]>([]);
-  const [qrData, setQrData] = useState('');
+  const [qrData, setQrData] = useState("");
 
   // Generate share URL and QR data
   useEffect(() => {
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
     const shareData = {
-      t: 'infinity-terminal',
+      t: "infinity-terminal",
       s: sessionInfo.sessionId,
       w: sessionInfo.wsUrl,
       n: sessionInfo.sessionName,
@@ -73,7 +73,7 @@ export const DevicePairing: React.FC<DevicePairingProps> = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy:', err);
+      console.error("Failed to copy:", err);
     }
   }, [shareUrl]);
 
@@ -83,11 +83,11 @@ export const DevicePairing: React.FC<DevicePairingProps> = ({
       try {
         await navigator.share({
           title: `Join Terminal: ${sessionInfo.sessionName}`,
-          text: 'Join my Infinity Terminal session',
+          text: "Join my Infinity Terminal session",
           url: shareUrl,
         });
       } catch (err) {
-        console.error('Share failed:', err);
+        console.error("Share failed:", err);
       }
     }
   }, [shareUrl, sessionInfo.sessionName]);
@@ -124,11 +124,11 @@ export const DevicePairing: React.FC<DevicePairingProps> = ({
         {/* Mode Tabs */}
         <div className="flex border-b border-gray-800">
           <button
-            onClick={() => setMode('share')}
+            onClick={() => setMode("share")}
             className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
-              mode === 'share'
-                ? 'text-purple-400 border-b-2 border-purple-400'
-                : 'text-gray-500 hover:text-gray-300'
+              mode === "share"
+                ? "text-purple-400 border-b-2 border-purple-400"
+                : "text-gray-500 hover:text-gray-300"
             }`}
           >
             <span className="flex items-center justify-center gap-2">
@@ -137,11 +137,11 @@ export const DevicePairing: React.FC<DevicePairingProps> = ({
             </span>
           </button>
           <button
-            onClick={() => setMode('scan')}
+            onClick={() => setMode("scan")}
             className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
-              mode === 'scan'
-                ? 'text-purple-400 border-b-2 border-purple-400'
-                : 'text-gray-500 hover:text-gray-300'
+              mode === "scan"
+                ? "text-purple-400 border-b-2 border-purple-400"
+                : "text-gray-500 hover:text-gray-300"
             }`}
           >
             <span className="flex items-center justify-center gap-2">
@@ -154,7 +154,7 @@ export const DevicePairing: React.FC<DevicePairingProps> = ({
         {/* Content */}
         <div className="p-4">
           <AnimatePresence mode="wait">
-            {mode === 'share' ? (
+            {mode === "share" ? (
               <ShareMode
                 key="share"
                 sessionInfo={sessionInfo}
@@ -168,7 +168,7 @@ export const DevicePairing: React.FC<DevicePairingProps> = ({
               <ScanMode
                 key="scan"
                 onScan={(data) => {
-                  console.log('Scanned:', data);
+                  console.log("Scanned:", data);
                   // Handle scanned QR code
                 }}
               />
@@ -188,7 +188,7 @@ export const DevicePairing: React.FC<DevicePairingProps> = ({
                   key={device.id}
                   className="flex items-center gap-2 p-2 bg-gray-800/50 rounded-lg"
                 >
-                  {device.type === 'mobile' ? (
+                  {device.type === "mobile" ? (
                     <Smartphone className="w-4 h-4 text-gray-400" />
                   ) : (
                     <Monitor className="w-4 h-4 text-gray-400" />
@@ -270,7 +270,7 @@ const ShareMode: React.FC<ShareModeProps> = ({
     </div>
 
     {/* Native Share (mobile) */}
-    {typeof navigator !== 'undefined' && 'share' in navigator && (
+    {typeof navigator !== "undefined" && "share" in navigator && (
       <button
         onClick={onShare}
         className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 rounded-lg transition-colors"
@@ -282,7 +282,8 @@ const ShareMode: React.FC<ShareModeProps> = ({
 
     {/* Expiration notice */}
     <p className="text-[10px] text-center text-gray-600">
-      Link expires in {Math.round((sessionInfo.expiresAt - Date.now()) / 60000)} minutes
+      Link expires in {Math.round((sessionInfo.expiresAt - Date.now()) / 60000)}{" "}
+      minutes
     </p>
   </motion.div>
 );
@@ -301,14 +302,14 @@ const ScanMode: React.FC<ScanModeProps> = ({ onScan }) => {
     const startCamera = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
+          video: { facingMode: "environment" },
         });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           setIsScanning(true);
         }
       } catch (err) {
-        console.error('Camera access denied:', err);
+        console.error("Camera access denied:", err);
         setHasCamera(false);
       }
     };
@@ -381,8 +382,8 @@ const ScanMode: React.FC<ScanModeProps> = ({ onScan }) => {
           placeholder="Paste session link here..."
           className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
           onPaste={(e) => {
-            const text = e.clipboardData.getData('text');
-            if (text.includes('terminal/join')) {
+            const text = e.clipboardData.getData("text");
+            if (text.includes("terminal/join")) {
               onScan(text);
             }
           }}
@@ -393,7 +394,10 @@ const ScanMode: React.FC<ScanModeProps> = ({ onScan }) => {
 };
 
 // QR Code display component (simple ASCII fallback - would use qrcode library in production)
-const QRCodeDisplay: React.FC<{ data: string; size: number }> = ({ data, size }) => {
+const QRCodeDisplay: React.FC<{ data: string; size: number }> = ({
+  data,
+  size,
+}) => {
   // In production, use a library like 'qrcode' or 'qrcode.react'
   // This is a placeholder that shows a visual representation
   return (
@@ -415,7 +419,7 @@ const QRCodeDisplay: React.FC<{ data: string; size: number }> = ({ data, size })
 interface PairedDevice {
   id: string;
   name: string;
-  type: 'mobile' | 'desktop';
+  type: "mobile" | "desktop";
   connectedAt: Date;
 }
 

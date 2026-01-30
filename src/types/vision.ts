@@ -3,17 +3,17 @@
  * Canonical vision management schemas for NXTG-Forge
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 // Engagement modes for different user personas
-export type EngagementMode = 'ceo' | 'vp' | 'engineer' | 'builder' | 'founder';
+export type EngagementMode = "ceo" | "vp" | "engineer" | "builder" | "founder";
 
 // Priority levels for strategic goals
 export enum Priority {
-  CRITICAL = 'critical',
-  HIGH = 'high',
-  MEDIUM = 'medium',
-  LOW = 'low'
+  CRITICAL = "critical",
+  HIGH = "high",
+  MEDIUM = "medium",
+  LOW = "low",
 }
 
 // Strategic goal schema
@@ -24,8 +24,8 @@ export const StrategicGoalSchema = z.object({
   priority: z.nativeEnum(Priority),
   deadline: z.date().optional(),
   metrics: z.array(z.string()),
-  status: z.enum(['not-started', 'in-progress', 'completed', 'blocked']),
-  progress: z.number().min(0).max(100)
+  status: z.enum(["not-started", "in-progress", "completed", "blocked"]),
+  progress: z.number().min(0).max(100),
 });
 
 // Canonical vision schema
@@ -38,30 +38,38 @@ export const CanonicalVisionSchema = z.object({
   strategicGoals: z.array(StrategicGoalSchema),
   currentFocus: z.string(),
   successMetrics: z.record(z.string(), z.union([z.string(), z.number()])),
-  metadata: z.record(z.string(), z.any()).optional()
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 // Vision event for event sourcing
 export const VisionEventSchema = z.object({
   id: z.string(),
   timestamp: z.date(),
-  type: z.enum(['created', 'updated', 'goal-added', 'goal-completed', 'focus-changed']),
+  type: z.enum([
+    "created",
+    "updated",
+    "goal-added",
+    "goal-completed",
+    "focus-changed",
+  ]),
   actor: z.string(),
   data: z.any(),
   previousVersion: z.string().optional(),
-  newVersion: z.string()
+  newVersion: z.string(),
 });
 
 // Alignment check result
 export const AlignmentResultSchema = z.object({
   aligned: z.boolean(),
   score: z.number().min(0).max(1),
-  violations: z.array(z.object({
-    principle: z.string(),
-    reason: z.string(),
-    severity: z.enum(['minor', 'major', 'critical'])
-  })),
-  suggestions: z.array(z.string())
+  violations: z.array(
+    z.object({
+      principle: z.string(),
+      reason: z.string(),
+      severity: z.enum(["minor", "major", "critical"]),
+    }),
+  ),
+  suggestions: z.array(z.string()),
 });
 
 // Decision schema for alignment checking
@@ -69,9 +77,9 @@ export const DecisionSchema = z.object({
   id: z.string(),
   type: z.string(),
   description: z.string(),
-  impact: z.enum(['low', 'medium', 'high']),
+  impact: z.enum(["low", "medium", "high"]),
   rationale: z.string(),
-  alternatives: z.array(z.string()).optional()
+  alternatives: z.array(z.string()).optional(),
 });
 
 // Type exports

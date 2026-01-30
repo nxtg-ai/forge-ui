@@ -3,16 +3,16 @@
  * Structured logging for NXTG-Forge
  */
 
-import winston from 'winston';
-import * as path from 'path';
+import winston from "winston";
+import * as path from "path";
 
 // Log levels
 export enum LogLevel {
-  ERROR = 'error',
-  WARN = 'warn',
-  INFO = 'info',
-  DEBUG = 'debug',
-  VERBOSE = 'verbose'
+  ERROR = "error",
+  WARN = "warn",
+  INFO = "info",
+  DEBUG = "debug",
+  VERBOSE = "verbose",
 }
 
 // Log context
@@ -31,34 +31,34 @@ export class Logger {
   // Initialize default logger
   static {
     Logger.defaultLogger = winston.createLogger({
-      level: process.env.LOG_LEVEL || 'info',
+      level: process.env.LOG_LEVEL || "info",
       format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.errors({ stack: true }),
-        winston.format.json()
+        winston.format.json(),
       ),
       transports: [
         new winston.transports.Console({
           format: winston.format.combine(
             winston.format.colorize(),
-            winston.format.simple()
-          )
-        })
-      ]
+            winston.format.simple(),
+          ),
+        }),
+      ],
     });
 
     // Add file transport in production
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV === "production") {
       Logger.defaultLogger.add(
         new winston.transports.File({
-          filename: path.join(process.cwd(), 'logs', 'error.log'),
-          level: 'error'
-        })
+          filename: path.join(process.cwd(), "logs", "error.log"),
+          level: "error",
+        }),
       );
       Logger.defaultLogger.add(
         new winston.transports.File({
-          filename: path.join(process.cwd(), 'logs', 'combined.log')
-        })
+          filename: path.join(process.cwd(), "logs", "combined.log"),
+        }),
       );
     }
   }
@@ -82,7 +82,11 @@ export class Logger {
   /**
    * Log error message
    */
-  error(message: string, error?: Error | any, context?: Partial<LogContext>): void {
+  error(
+    message: string,
+    error?: Error | any,
+    context?: Partial<LogContext>,
+  ): void {
     this.log(LogLevel.ERROR, message, { error, ...context });
   }
 
@@ -117,13 +121,17 @@ export class Logger {
   /**
    * Generic log method
    */
-  private log(level: LogLevel, message: string, context?: Partial<LogContext>): void {
+  private log(
+    level: LogLevel,
+    message: string,
+    context?: Partial<LogContext>,
+  ): void {
     const logEntry = {
       level,
       message,
       module: this.module,
       timestamp: new Date(),
-      ...context
+      ...context,
     };
 
     this.winston.log(level, message, logEntry);
@@ -133,7 +141,9 @@ export class Logger {
    * Create child logger with additional context
    */
   child(context: Record<string, any>): Logger {
-    const childLogger = new Logger(`${this.module}:${context.component || 'child'}`);
+    const childLogger = new Logger(
+      `${this.module}:${context.component || "child"}`,
+    );
     childLogger.winston = this.winston.child(context);
     return childLogger;
   }
@@ -153,7 +163,7 @@ export class Logger {
    * Log method entry (for debugging)
    */
   methodEntry(methodName: string, args?: any): void {
-    if (process.env.LOG_LEVEL === 'verbose') {
+    if (process.env.LOG_LEVEL === "verbose") {
       this.verbose(`Entering ${methodName}`, { method: methodName, args });
     }
   }
@@ -162,7 +172,7 @@ export class Logger {
    * Log method exit (for debugging)
    */
   methodExit(methodName: string, result?: any): void {
-    if (process.env.LOG_LEVEL === 'verbose') {
+    if (process.env.LOG_LEVEL === "verbose") {
       this.verbose(`Exiting ${methodName}`, { method: methodName, result });
     }
   }
@@ -179,7 +189,7 @@ export class Logger {
    */
   static async flush(): Promise<void> {
     return new Promise((resolve) => {
-      Logger.defaultLogger.on('finish', resolve);
+      Logger.defaultLogger.on("finish", resolve);
       Logger.defaultLogger.end();
     });
   }

@@ -13,7 +13,7 @@ export interface Command {
   aliases?: string[];
   action: CommandAction;
   requiresConfirmation?: boolean;
-  dangerLevel?: 'safe' | 'moderate' | 'dangerous';
+  dangerLevel?: "safe" | "moderate" | "dangerous";
   availability?: CommandAvailability;
   parameters?: CommandParameter[];
   recent?: boolean;
@@ -21,20 +21,20 @@ export interface Command {
 }
 
 export type CommandCategory =
-  | 'navigation'
-  | 'file'
-  | 'git'
-  | 'agent'
-  | 'vision'
-  | 'build'
-  | 'test'
-  | 'deploy'
-  | 'debug'
-  | 'settings'
-  | 'help';
+  | "navigation"
+  | "file"
+  | "git"
+  | "agent"
+  | "vision"
+  | "build"
+  | "test"
+  | "deploy"
+  | "debug"
+  | "settings"
+  | "help";
 
 export interface CommandAction {
-  type: 'function' | 'route' | 'external' | 'composite';
+  type: "function" | "route" | "external" | "composite";
   handler: string | (() => void) | (() => Promise<void>);
   payload?: any;
 }
@@ -49,7 +49,14 @@ export interface CommandAvailability {
 
 export interface CommandParameter {
   name: string;
-  type: 'string' | 'number' | 'boolean' | 'select' | 'multiselect' | 'file' | 'directory';
+  type:
+    | "string"
+    | "number"
+    | "boolean"
+    | "select"
+    | "multiselect"
+    | "file"
+    | "directory";
   label: string;
   description?: string;
   required: boolean;
@@ -73,7 +80,7 @@ export interface CommandExecution {
   parameters?: Record<string, any>;
   result?: CommandResult;
   duration?: number;
-  source: 'palette' | 'shortcut' | 'menu' | 'api';
+  source: "palette" | "shortcut" | "menu" | "api";
 }
 
 export interface CommandResult {
@@ -94,7 +101,7 @@ export interface CommandPaletteState {
   filteredCommands: Command[];
   recentCommands: Command[];
   category?: CommandCategory;
-  mode: 'search' | 'execute' | 'confirm';
+  mode: "search" | "execute" | "confirm";
   currentCommand?: Command;
   parameters?: Record<string, any>;
 }
@@ -114,7 +121,7 @@ export interface CommandHistory {
 export interface CommandSuggestion {
   command: Command;
   score: number;
-  reason: 'recent' | 'frequent' | 'contextual' | 'search';
+  reason: "recent" | "frequent" | "contextual" | "search";
   highlight?: {
     start: number;
     end: number;

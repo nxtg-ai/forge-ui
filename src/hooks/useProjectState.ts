@@ -3,10 +3,19 @@
  * React hook for live project state synchronization
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { ProjectState, ProjectContext, Blocker, Decision } from '../components/types';
-import { StateBridgeService, StateUpdate, StateUpdateType } from '../services/state-bridge';
-import { Result } from '../utils/result';
+import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  ProjectState,
+  ProjectContext,
+  Blocker,
+  Decision,
+} from "../components/types";
+import {
+  StateBridgeService,
+  StateUpdate,
+  StateUpdateType,
+} from "../services/state-bridge";
+import { Result } from "../utils/result";
 
 /**
  * Project state hook options
@@ -37,7 +46,7 @@ export interface UseProjectStateReturn {
  * Hook for managing project state
  */
 export function useProjectState(
-  options: UseProjectStateOptions = {}
+  options: UseProjectStateOptions = {},
 ): UseProjectStateReturn {
   const [state, setState] = useState<ProjectState | null>(null);
   const [context, setContext] = useState<ProjectContext | null>(null);
@@ -58,8 +67,8 @@ export function useProjectState(
 
       // Create service instance
       const service = new StateBridgeService({
-        name: 'ProjectStateHook',
-        pollingInterval: options.pollingInterval
+        name: "ProjectStateHook",
+        pollingInterval: options.pollingInterval,
       });
 
       serviceRef.current = service;
@@ -83,11 +92,11 @@ export function useProjectState(
 
       // Subscribe to updates
       unsubscribeRef.current = service.subscribe(
-        'useProjectState',
+        "useProjectState",
         handleStateUpdate,
         {
-          debounceMs: 100
-        }
+          debounceMs: 100,
+        },
       );
 
       setConnected(true);
@@ -111,10 +120,14 @@ export function useProjectState(
         setState(update.data as ProjectState);
         break;
       case StateUpdateType.PHASE_CHANGED:
-        setState(prev => prev ? { ...prev, phase: update.data as any } : null);
+        setState((prev) =>
+          prev ? { ...prev, phase: update.data as any } : null,
+        );
         break;
       case StateUpdateType.PROGRESS_UPDATE:
-        setState(prev => prev ? { ...prev, progress: update.data as number } : null);
+        setState((prev) =>
+          prev ? { ...prev, progress: update.data as number } : null,
+        );
         break;
       case StateUpdateType.BLOCKER_ADDED:
       case StateUpdateType.BLOCKER_RESOLVED:
@@ -128,7 +141,7 @@ export function useProjectState(
    */
   const updateState = useCallback(async (update: Partial<ProjectState>) => {
     if (!serviceRef.current) {
-      throw new Error('Service not initialized');
+      throw new Error("Service not initialized");
     }
 
     const result = await serviceRef.current.updateProjectState(update);
@@ -144,7 +157,7 @@ export function useProjectState(
    */
   const addBlocker = useCallback(async (blocker: Blocker) => {
     if (!serviceRef.current) {
-      throw new Error('Service not initialized');
+      throw new Error("Service not initialized");
     }
 
     const result = await serviceRef.current.addBlocker(blocker);
@@ -158,7 +171,7 @@ export function useProjectState(
    */
   const resolveBlocker = useCallback(async (blockerId: string) => {
     if (!serviceRef.current) {
-      throw new Error('Service not initialized');
+      throw new Error("Service not initialized");
     }
 
     const result = await serviceRef.current.resolveBlocker(blockerId);
@@ -172,7 +185,7 @@ export function useProjectState(
    */
   const recordDecision = useCallback(async (decision: Decision) => {
     if (!serviceRef.current) {
-      throw new Error('Service not initialized');
+      throw new Error("Service not initialized");
     }
 
     const result = await serviceRef.current.recordDecision(decision);
@@ -228,6 +241,6 @@ export function useProjectState(
     addBlocker,
     resolveBlocker,
     recordDecision,
-    refresh
+    refresh,
   };
 }

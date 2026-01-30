@@ -1,7 +1,14 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Briefcase, AlertTriangle, AlertCircle, CheckCircle, Bot, Loader2 } from 'lucide-react';
-import type { Workstream } from '../../types/governance.types';
+import React from "react";
+import { motion } from "framer-motion";
+import {
+  Briefcase,
+  AlertTriangle,
+  AlertCircle,
+  CheckCircle,
+  Bot,
+  Loader2,
+} from "lucide-react";
+import type { Workstream } from "../../types/governance.types";
 
 interface ImpactMatrixProps {
   workstreams: Workstream[];
@@ -10,41 +17,56 @@ interface ImpactMatrixProps {
 export const ImpactMatrix: React.FC<ImpactMatrixProps> = ({ workstreams }) => {
   const getRiskColor = (risk: string) => {
     switch (risk) {
-      case 'low': return 'text-green-500';
-      case 'medium': return 'text-yellow-500';
-      case 'high': return 'text-red-500';
-      case 'critical': return 'text-red-600 animate-pulse';
-      default: return 'text-gray-500';
+      case "low":
+        return "text-green-500";
+      case "medium":
+        return "text-yellow-500";
+      case "high":
+        return "text-red-500";
+      case "critical":
+        return "text-red-600 animate-pulse";
+      default:
+        return "text-gray-500";
     }
   };
 
   const getRiskIcon = (risk: string) => {
     switch (risk) {
-      case 'low': return <CheckCircle className="w-3.5 h-3.5" />;
-      case 'medium': return <AlertCircle className="w-3.5 h-3.5" />;
-      case 'high': return <AlertTriangle className="w-3.5 h-3.5" />;
-      case 'critical': return <AlertTriangle className="w-3.5 h-3.5" />;
-      default: return null;
+      case "low":
+        return <CheckCircle className="w-3.5 h-3.5" />;
+      case "medium":
+        return <AlertCircle className="w-3.5 h-3.5" />;
+      case "high":
+        return <AlertTriangle className="w-3.5 h-3.5" />;
+      case "critical":
+        return <AlertTriangle className="w-3.5 h-3.5" />;
+      default:
+        return null;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-      case 'pending': return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
-      case 'completed': return 'bg-green-500/20 text-green-400 border-green-500/30';
-      case 'blocked': return 'bg-red-500/20 text-red-400 border-red-500/30';
-      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+      case "active":
+        return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+      case "pending":
+        return "bg-gray-500/20 text-gray-400 border-gray-500/30";
+      case "completed":
+        return "bg-green-500/20 text-green-400 border-green-500/30";
+      case "blocked":
+        return "bg-red-500/20 text-red-400 border-red-500/30";
+      default:
+        return "bg-gray-500/20 text-gray-400 border-gray-500/30";
     }
   };
 
   const getProgressColor = (progress: number) => {
-    if (progress < 30) return 'bg-red-500';
-    if (progress < 70) return 'bg-yellow-500';
-    return 'bg-green-500';
+    if (progress < 30) return "bg-red-500";
+    if (progress < 70) return "bg-yellow-500";
+    return "bg-green-500";
   };
 
-  const activeCount = workstreams.filter(ws => ws.status === 'active').length;
+  const activeCount = workstreams.filter((ws) => ws.status === "active").length;
 
   return (
     <motion.div
@@ -84,13 +106,20 @@ export const ImpactMatrix: React.FC<ImpactMatrixProps> = ({ workstreams }) => {
                     title={`Worker: ${ws.assignedWorkerId}`}
                   >
                     <Bot className="w-2.5 h-2.5" />
-                    <span className="font-mono">{ws.assignedWorkerId.slice(-6)}</span>
+                    <span className="font-mono">
+                      {ws.assignedWorkerId.slice(-6)}
+                    </span>
                   </div>
                 )}
-                <div className={`${getRiskColor(ws.risk)}`} title={`Risk: ${ws.risk}`}>
+                <div
+                  className={`${getRiskColor(ws.risk)}`}
+                  title={`Risk: ${ws.risk}`}
+                >
                   {getRiskIcon(ws.risk)}
                 </div>
-                <div className={`px-2 py-0.5 rounded text-xs border ${getStatusColor(ws.status)}`}>
+                <div
+                  className={`px-2 py-0.5 rounded text-xs border ${getStatusColor(ws.status)}`}
+                >
                   {ws.status}
                 </div>
               </div>
@@ -108,7 +137,9 @@ export const ImpactMatrix: React.FC<ImpactMatrixProps> = ({ workstreams }) => {
             <div className="mt-1 flex justify-between text-xs text-gray-500">
               <span>{ws.progress}% complete</span>
               {ws.metrics && (
-                <span>{ws.metrics.tasksCompleted}/{ws.metrics.totalTasks} tasks</span>
+                <span>
+                  {ws.metrics.tasksCompleted}/{ws.metrics.totalTasks} tasks
+                </span>
               )}
             </div>
 
@@ -116,19 +147,28 @@ export const ImpactMatrix: React.FC<ImpactMatrixProps> = ({ workstreams }) => {
             {ws.tasks && ws.tasks.length > 0 && (
               <div className="mt-2 pt-2 border-t border-gray-800/50">
                 <div className="flex items-center gap-1 flex-wrap">
-                  {ws.tasks.filter(t => t.status === 'in_progress').slice(0, 3).map(task => (
-                    <div
-                      key={task.id}
-                      className="flex items-center gap-1 px-1.5 py-0.5 bg-yellow-500/10 text-yellow-400 rounded text-[10px]"
-                      title={task.name}
-                    >
-                      <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                      <span className="truncate max-w-[80px]">{task.name}</span>
-                    </div>
-                  ))}
-                  {ws.tasks.filter(t => t.status === 'in_progress').length > 3 && (
+                  {ws.tasks
+                    .filter((t) => t.status === "in_progress")
+                    .slice(0, 3)
+                    .map((task) => (
+                      <div
+                        key={task.id}
+                        className="flex items-center gap-1 px-1.5 py-0.5 bg-yellow-500/10 text-yellow-400 rounded text-[10px]"
+                        title={task.name}
+                      >
+                        <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                        <span className="truncate max-w-[80px]">
+                          {task.name}
+                        </span>
+                      </div>
+                    ))}
+                  {ws.tasks.filter((t) => t.status === "in_progress").length >
+                    3 && (
                     <span className="text-[10px] text-gray-500">
-                      +{ws.tasks.filter(t => t.status === 'in_progress').length - 3} more
+                      +
+                      {ws.tasks.filter((t) => t.status === "in_progress")
+                        .length - 3}{" "}
+                      more
                     </span>
                   )}
                 </div>

@@ -3,8 +3,8 @@
  * React hooks for seamless UI-backend integration
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { apiClient, WSMessageType } from '../services/api-client';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { apiClient, WSMessageType } from "../services/api-client";
 import type {
   VisionData,
   ProjectState,
@@ -12,8 +12,8 @@ import type {
   Command,
   ArchitectureDecision,
   AutomatedAction,
-  YoloStatistics
-} from '../components/types';
+  YoloStatistics,
+} from "../components/types";
 
 // ============= Data Mappers (Backend -> Frontend) =============
 
@@ -24,21 +24,25 @@ function mapBackendVisionToFrontend(backendData: any): VisionData | null {
   if (!backendData) return null;
 
   return {
-    mission: backendData.mission || '',
-    goals: (backendData.strategicGoals || []).map((goal: any, index: number) => ({
-      id: `goal-${index}`,
-      title: goal.title || goal,
-      description: goal.description || '',
-      status: 'pending' as const,
-      progress: 0,
-      dependencies: []
-    })),
+    mission: backendData.mission || "",
+    goals: (backendData.strategicGoals || []).map(
+      (goal: any, index: number) => ({
+        id: `goal-${index}`,
+        title: goal.title || goal,
+        description: goal.description || "",
+        status: "pending" as const,
+        progress: 0,
+        dependencies: [],
+      }),
+    ),
     constraints: backendData.principles || [],
     successMetrics: [],
-    timeframe: 'Not set',
+    timeframe: "Not set",
     createdAt: backendData.created ? new Date(backendData.created) : new Date(),
-    lastUpdated: backendData.updated ? new Date(backendData.updated) : new Date(),
-    version: typeof backendData.version === 'string' ? 1 : backendData.version
+    lastUpdated: backendData.updated
+      ? new Date(backendData.updated)
+      : new Date(),
+    version: typeof backendData.version === "string" ? 1 : backendData.version,
   };
 }
 
@@ -59,7 +63,7 @@ export function useVision() {
       const mappedVision = mapBackendVisionToFrontend(response.data);
       setVision(mappedVision);
     } else {
-      setError(response.error || 'Failed to fetch vision');
+      setError(response.error || "Failed to fetch vision");
     }
 
     setLoading(false);
@@ -75,7 +79,7 @@ export function useVision() {
       const mappedVision = mapBackendVisionToFrontend(response.data);
       setVision(mappedVision);
     } else {
-      setError(response.error || 'Failed to update vision');
+      setError(response.error || "Failed to update vision");
     }
 
     setLoading(false);
@@ -92,7 +96,7 @@ export function useVision() {
       const mappedVision = mapBackendVisionToFrontend(response.data);
       setVision(mappedVision);
     } else {
-      setError(response.error || 'Failed to capture vision');
+      setError(response.error || "Failed to capture vision");
     }
 
     setLoading(false);
@@ -103,7 +107,7 @@ export function useVision() {
     fetchVision();
 
     // Subscribe to vision changes
-    const unsubscribe = apiClient.subscribe('vision.change', (data: any) => {
+    const unsubscribe = apiClient.subscribe("vision.change", (data: any) => {
       const mappedVision = mapBackendVisionToFrontend(data);
       setVision(mappedVision);
     });
@@ -117,7 +121,7 @@ export function useVision() {
     error,
     updateVision,
     captureVision,
-    refresh: fetchVision
+    refresh: fetchVision,
   };
 }
 
@@ -136,13 +140,13 @@ export function useProjectState() {
       setProjectState(response.data);
       setError(null);
     } else {
-      setError(response.error || 'Failed to fetch project state');
+      setError(response.error || "Failed to fetch project state");
     }
 
     setLoading(false);
   }, []);
 
-  const updatePhase = useCallback(async (phase: ProjectState['phase']) => {
+  const updatePhase = useCallback(async (phase: ProjectState["phase"]) => {
     const response = await apiClient.updateProjectPhase(phase);
 
     if (response.success && response.data) {
@@ -156,9 +160,12 @@ export function useProjectState() {
     fetchProjectState();
 
     // Subscribe to state updates
-    const unsubscribe = apiClient.subscribe('state.update', (data: ProjectState) => {
-      setProjectState(data);
-    });
+    const unsubscribe = apiClient.subscribe(
+      "state.update",
+      (data: ProjectState) => {
+        setProjectState(data);
+      },
+    );
 
     // Set up polling as fallback (every 5 seconds)
     pollingInterval.current = setInterval(fetchProjectState, 5000);
@@ -176,7 +183,7 @@ export function useProjectState() {
     loading,
     error,
     updatePhase,
-    refresh: fetchProjectState
+    refresh: fetchProjectState,
   };
 }
 
@@ -197,7 +204,7 @@ export function useAgentActivities() {
       setActivities(response.data);
       setError(null);
     } else {
-      setError(response.error || 'Failed to fetch activities');
+      setError(response.error || "Failed to fetch activities");
     }
 
     setLoading(false);
@@ -214,7 +221,9 @@ export function useAgentActivities() {
 
     // Set new timer to flush buffer
     flushTimer.current = setTimeout(() => {
-      setActivities(prev => [...activityBuffer.current, ...prev].slice(0, 100)); // Keep last 100
+      setActivities((prev) =>
+        [...activityBuffer.current, ...prev].slice(0, 100),
+      ); // Keep last 100
       activityBuffer.current = [];
     }, 100);
   }, []);
@@ -223,7 +232,7 @@ export function useAgentActivities() {
     fetchActivities();
 
     // Subscribe to agent activity updates
-    const unsubscribe = apiClient.subscribe('agent.activity', addActivity);
+    const unsubscribe = apiClient.subscribe("agent.activity", addActivity);
 
     return () => {
       unsubscribe();
@@ -237,7 +246,7 @@ export function useAgentActivities() {
     activities,
     loading,
     error,
-    refresh: fetchActivities
+    refresh: fetchActivities,
   };
 }
 
@@ -257,9 +266,9 @@ export function useCommandExecution() {
 
     if (response.success && response.data) {
       setLastResult(response.data.result);
-      setHistory(prev => [command, ...prev]);
+      setHistory((prev) => [command, ...prev]);
     } else {
-      setError(response.error || 'Command execution failed');
+      setError(response.error || "Command execution failed");
     }
 
     setExecuting(false);
@@ -282,10 +291,10 @@ export function useCommandExecution() {
     fetchHistory();
 
     // Subscribe to command execution events
-    const unsubscribe = apiClient.subscribe('command.executed', (data: any) => {
+    const unsubscribe = apiClient.subscribe("command.executed", (data: any) => {
       setLastResult(data.result);
       if (data.command) {
-        setHistory(prev => [data.command, ...prev]);
+        setHistory((prev) => [data.command, ...prev]);
       }
     });
 
@@ -298,7 +307,7 @@ export function useCommandExecution() {
     lastResult,
     error,
     history,
-    getSuggestions
+    getSuggestions,
   };
 }
 
@@ -317,28 +326,31 @@ export function useArchitectureDecisions() {
       setDecisions(response.data);
       setError(null);
     } else {
-      setError(response.error || 'Failed to fetch decisions');
+      setError(response.error || "Failed to fetch decisions");
     }
 
     setLoading(false);
   }, []);
 
-  const proposeDecision = useCallback(async (decision: Partial<ArchitectureDecision>) => {
-    const response = await apiClient.proposeArchitecture(decision);
+  const proposeDecision = useCallback(
+    async (decision: Partial<ArchitectureDecision>) => {
+      const response = await apiClient.proposeArchitecture(decision);
 
-    if (response.success && response.data) {
-      setDecisions(prev => [response.data!, ...prev]);
-    }
+      if (response.success && response.data) {
+        setDecisions((prev) => [response.data!, ...prev]);
+      }
 
-    return response.success;
-  }, []);
+      return response.success;
+    },
+    [],
+  );
 
   const approveDecision = useCallback(async (decisionId: string) => {
     const response = await apiClient.approveArchitectureDecision(decisionId);
 
     if (response.success && response.data) {
-      setDecisions(prev =>
-        prev.map(d => d.id === decisionId ? response.data! : d)
+      setDecisions((prev) =>
+        prev.map((d) => (d.id === decisionId ? response.data! : d)),
       );
     }
 
@@ -349,15 +361,18 @@ export function useArchitectureDecisions() {
     fetchDecisions();
 
     // Subscribe to decision updates
-    const unsubscribe = apiClient.subscribe('decision.made', (data: ArchitectureDecision) => {
-      setDecisions(prev => {
-        const exists = prev.some(d => d.id === data.id);
-        if (exists) {
-          return prev.map(d => d.id === data.id ? data : d);
-        }
-        return [data, ...prev];
-      });
-    });
+    const unsubscribe = apiClient.subscribe(
+      "decision.made",
+      (data: ArchitectureDecision) => {
+        setDecisions((prev) => {
+          const exists = prev.some((d) => d.id === data.id);
+          if (exists) {
+            return prev.map((d) => (d.id === data.id ? data : d));
+          }
+          return [data, ...prev];
+        });
+      },
+    );
 
     return unsubscribe;
   }, [fetchDecisions]);
@@ -368,7 +383,7 @@ export function useArchitectureDecisions() {
     error,
     proposeDecision,
     approveDecision,
-    refresh: fetchDecisions
+    refresh: fetchDecisions,
   };
 }
 
@@ -396,31 +411,34 @@ export function useYoloMode() {
     }
   }, []);
 
-  const executeAction = useCallback(async (action: AutomatedAction) => {
-    setExecuting(true);
-    setError(null);
+  const executeAction = useCallback(
+    async (action: AutomatedAction) => {
+      setExecuting(true);
+      setError(null);
 
-    const response = await apiClient.executeYoloAction(action);
+      const response = await apiClient.executeYoloAction(action);
 
-    if (response.success) {
-      setHistory(prev => [action, ...prev]);
-      fetchStatistics(); // Refresh statistics
-    } else {
-      setError(response.error || 'YOLO action failed');
-    }
+      if (response.success) {
+        setHistory((prev) => [action, ...prev]);
+        fetchStatistics(); // Refresh statistics
+      } else {
+        setError(response.error || "YOLO action failed");
+      }
 
-    setExecuting(false);
-    return response.success;
-  }, [fetchStatistics]);
+      setExecuting(false);
+      return response.success;
+    },
+    [fetchStatistics],
+  );
 
   useEffect(() => {
     fetchStatistics();
     fetchHistory();
 
     // Subscribe to YOLO action events
-    const unsubscribe = apiClient.subscribe('yolo.action', (data: any) => {
+    const unsubscribe = apiClient.subscribe("yolo.action", (data: any) => {
       if (data.action) {
-        setHistory(prev => [data.action, ...prev]);
+        setHistory((prev) => [data.action, ...prev]);
       }
       if (data.statistics) {
         setStatistics(data.statistics);
@@ -439,7 +457,7 @@ export function useYoloMode() {
     refresh: () => {
       fetchStatistics();
       fetchHistory();
-    }
+    },
   };
 }
 
@@ -465,7 +483,7 @@ export function useForgeIntegration() {
     agentActivities.error,
     commandExecution.error,
     architectureDecisions.error,
-    yoloMode.error
+    yoloMode.error,
   ].filter(Boolean);
 
   return {
@@ -477,6 +495,6 @@ export function useForgeIntegration() {
     yoloMode,
     isLoading,
     errors,
-    isConnected: !isLoading && errors.length === 0
+    isConnected: !isLoading && errors.length === 0,
   };
 }

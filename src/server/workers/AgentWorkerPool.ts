@@ -3,8 +3,8 @@
  * Orchestrates multiple agent workers for parallel execution
  */
 
-import { EventEmitter } from 'events';
-import { v4 as uuidv4 } from 'uuid';
+import { EventEmitter } from "events";
+import { v4 as uuidv4 } from "uuid";
 import {
   PoolConfig,
   PoolMetrics,
@@ -17,20 +17,23 @@ import {
   WorkerInfo,
   DEFAULT_POOL_CONFIG,
   DEFAULT_RESOURCE_LIMITS,
-} from './types';
-import { AgentWorker } from './AgentWorker';
-import { TaskQueue } from './TaskQueue';
+} from "./types";
+import { AgentWorker } from "./AgentWorker";
+import { TaskQueue } from "./TaskQueue";
 
 export class AgentWorkerPool extends EventEmitter {
   private config: PoolConfig;
   private workers: Map<string, AgentWorker> = new Map();
   private taskQueue: TaskQueue;
   private taskAssignments: Map<string, TaskAssignment> = new Map();
-  private runningTasks: Map<string, { task: AgentTask; workerId: string; startTime: number }> = new Map();
+  private runningTasks: Map<
+    string,
+    { task: AgentTask; workerId: string; startTime: number }
+  > = new Map();
 
-  private _status: PoolStatus['status'] = 'stopped';
+  private _status: PoolStatus["status"] = "stopped";
   private startedAt: Date | null = null;
-  private lastScaleOperation: PoolStatus['lastScaleOperation'];
+  private lastScaleOperation: PoolStatus["lastScaleOperation"];
 
   private scaleTimer: NodeJS.Timeout | null = null;
   private healthTimer: NodeJS.Timeout | null = null;
@@ -50,15 +53,17 @@ export class AgentWorkerPool extends EventEmitter {
    * Initialize and start the pool
    */
   async initialize(): Promise<void> {
-    if (this._status !== 'stopped') {
-      throw new Error('Pool already initialized');
+    if (this._status !== "stopped") {
+      throw new Error("Pool already initialized");
     }
 
-    this._status = 'starting';
+    this._status = "starting";
     this.startedAt = new Date();
-    this.emitEvent({ type: 'pool.status', status: this.getStatus() });
+    this.emitEvent({ type: "pool.status", status: this.getStatus() });
 
-    console.log(`[WorkerPool] Initializing with ${this.config.initialWorkers} workers`);
+    console.log(
+      `[WorkerPool] Initializing with ${this.config.initialWorkers} workers`,
+    );
 
     // Spawn initial workers
     const spawnPromises: Promise<void>[] = [];
@@ -68,8 +73,8 @@ export class AgentWorkerPool extends EventEmitter {
 
     await Promise.all(spawnPromises);
 
-    this._status = 'running';
-    this.emitEvent({ type: 'pool.status', status: this.getStatus() });
+    this._status = "running";
+    this.emitEvent({ type: "pool.status", status: this.getStatus() });
 
     // Start background processes
     this.startScaleMonitor();
@@ -83,13 +88,15 @@ export class AgentWorkerPool extends EventEmitter {
    * Shutdown the pool
    */
   async shutdown(): Promise<void> {
-    console.log('[WorkerPool] Shutting down...');
+    console.log("[WorkerPool] Shutting down...");
 
-    this._status = 'stopped';
+    this._status = "stopped";
     this.stopTimers();
 
     // Terminate all workers
-    const terminatePromises = Array.from(this.workers.values()).map(w => w.terminate());
+    const terminatePromises = Array.from(this.workers.values()).map((w) =>
+      w.terminate(),
+    );
     await Promise.all(terminatePromises);
 
     this.workers.clear();
@@ -97,14 +104,14 @@ export class AgentWorkerPool extends EventEmitter {
     this.taskAssignments.clear();
     this.runningTasks.clear();
 
-    this.emitEvent({ type: 'pool.status', status: this.getStatus() });
-    console.log('[WorkerPool] Shutdown complete');
+    this.emitEvent({ type: "pool.status", status: this.getStatus() });
+    console.log("[WorkerPool] Shutdown complete");
   }
 
   /**
    * Submit a task for execution
    */
-  async submitTask(task: Omit<AgentTask, 'id' | 'createdAt'>): Promise<string> {
+  async submitTask(task: Omit<AgentTask, "id" | "createdAt">): Promise<string> {
     const fullTask: AgentTask = {
       ...task,
       id: uuidv4(),
@@ -114,9 +121,11 @@ export class AgentWorkerPool extends EventEmitter {
     };
 
     this.taskQueue.enqueue(fullTask);
-    this.emitEvent({ type: 'task.queued', task: fullTask });
+    this.emitEvent({ type: "task.queued", task: fullTask });
 
-    console.log(`[WorkerPool] Task queued: ${fullTask.id} (${fullTask.type}: ${fullTask.command})`);
+    console.log(
+      `[WorkerPool] Task queued: ${fullTask.id} (${fullTask.type}: ${fullTask.command})`,
+    );
 
     // Trigger immediate dispatch
     this.dispatchTasks();
@@ -130,7 +139,7 @@ export class AgentWorkerPool extends EventEmitter {
   async cancelTask(taskId: string): Promise<boolean> {
     // Check if in queue
     if (this.taskQueue.remove(taskId)) {
-      this.emitEvent({ type: 'task.cancelled', taskId });
+      this.emitEvent({ type: "task.cancelled", taskId });
       return true;
     }
 
@@ -141,7 +150,7 @@ export class AgentWorkerPool extends EventEmitter {
       if (worker) {
         await worker.abort();
         this.runningTasks.delete(taskId);
-        this.emitEvent({ type: 'task.cancelled', taskId });
+        this.emitEvent({ type: "task.cancelled", taskId });
         return true;
       }
     }
@@ -153,8 +162,8 @@ export class AgentWorkerPool extends EventEmitter {
    * Get task status
    */
   getTaskStatus(taskId: string): TaskStatus | null {
-    if (this.taskQueue.getTask(taskId)) return 'queued';
-    if (this.runningTasks.has(taskId)) return 'running';
+    if (this.taskQueue.getTask(taskId)) return "queued";
+    if (this.runningTasks.has(taskId)) return "running";
     const assignment = this.taskAssignments.get(taskId);
     return assignment?.status || null;
   }
@@ -171,7 +180,7 @@ export class AgentWorkerPool extends EventEmitter {
    * Get all workers
    */
   getAllWorkers(): WorkerInfo[] {
-    return Array.from(this.workers.values()).map(w => w.getInfo());
+    return Array.from(this.workers.values()).map((w) => w.getInfo());
   }
 
   /**
@@ -191,13 +200,17 @@ export class AgentWorkerPool extends EventEmitter {
    */
   getMetrics(): PoolMetrics {
     const workers = Array.from(this.workers.values());
-    const activeWorkers = workers.filter(w => w.status === 'busy').length;
-    const idleWorkers = workers.filter(w => w.status === 'idle').length;
-    const errorWorkers = workers.filter(w => w.status === 'error' || w.status === 'crashed').length;
+    const activeWorkers = workers.filter((w) => w.status === "busy").length;
+    const idleWorkers = workers.filter((w) => w.status === "idle").length;
+    const errorWorkers = workers.filter(
+      (w) => w.status === "error" || w.status === "crashed",
+    ).length;
 
-    const avgDuration = this.taskDurations.length > 0
-      ? this.taskDurations.reduce((a, b) => a + b, 0) / this.taskDurations.length
-      : 0;
+    const avgDuration =
+      this.taskDurations.length > 0
+        ? this.taskDurations.reduce((a, b) => a + b, 0) /
+          this.taskDurations.length
+        : 0;
 
     return {
       totalWorkers: workers.length,
@@ -225,7 +238,7 @@ export class AgentWorkerPool extends EventEmitter {
 
     if (toAdd <= 0) return;
 
-    this._status = 'scaling';
+    this._status = "scaling";
     console.log(`[WorkerPool] Scaling up: adding ${toAdd} workers`);
 
     const promises: Promise<void>[] = [];
@@ -235,9 +248,13 @@ export class AgentWorkerPool extends EventEmitter {
 
     await Promise.all(promises);
 
-    this.lastScaleOperation = { direction: 'up', count: toAdd, timestamp: new Date() };
-    this._status = 'running';
-    this.emitEvent({ type: 'pool.scaled', direction: 'up', count: toAdd });
+    this.lastScaleOperation = {
+      direction: "up",
+      count: toAdd,
+      timestamp: new Date(),
+    };
+    this._status = "running";
+    this.emitEvent({ type: "pool.scaled", direction: "up", count: toAdd });
   }
 
   /**
@@ -250,12 +267,12 @@ export class AgentWorkerPool extends EventEmitter {
 
     if (toRemove <= 0) return;
 
-    this._status = 'scaling';
+    this._status = "scaling";
     console.log(`[WorkerPool] Scaling down: removing ${toRemove} workers`);
 
     // Remove idle workers first
     const idleWorkers = Array.from(this.workers.values())
-      .filter(w => w.status === 'idle')
+      .filter((w) => w.status === "idle")
       .slice(0, toRemove);
 
     for (const worker of idleWorkers) {
@@ -263,9 +280,17 @@ export class AgentWorkerPool extends EventEmitter {
       this.workers.delete(worker.id);
     }
 
-    this.lastScaleOperation = { direction: 'down', count: idleWorkers.length, timestamp: new Date() };
-    this._status = 'running';
-    this.emitEvent({ type: 'pool.scaled', direction: 'down', count: idleWorkers.length });
+    this.lastScaleOperation = {
+      direction: "down",
+      count: idleWorkers.length,
+      timestamp: new Date(),
+    };
+    this._status = "running";
+    this.emitEvent({
+      type: "pool.scaled",
+      direction: "down",
+      count: idleWorkers.length,
+    });
   }
 
   // Private methods
@@ -275,32 +300,34 @@ export class AgentWorkerPool extends EventEmitter {
     const worker = new AgentWorker(workerId, DEFAULT_RESOURCE_LIMITS);
 
     // Set up event handlers
-    worker.on('status', (status) => {
-      this.emitEvent({ type: 'worker.status', workerId, status });
+    worker.on("status", (status) => {
+      this.emitEvent({ type: "worker.status", workerId, status });
     });
 
-    worker.on('task.completed', ({ taskId, result }) => {
+    worker.on("task.completed", ({ taskId, result }) => {
       this.handleTaskComplete(taskId, result);
     });
 
-    worker.on('task.failed', ({ taskId, error }) => {
+    worker.on("task.failed", ({ taskId, error }) => {
       this.handleTaskFailed(taskId, error);
     });
 
-    worker.on('crashed', () => {
+    worker.on("crashed", () => {
       this.handleWorkerCrash(workerId);
     });
 
-    worker.on('error', (error) => {
+    worker.on("error", (error) => {
       console.error(`[WorkerPool] Worker ${workerId} error:`, error);
-      this.emitEvent({ type: 'worker.error', workerId, error: String(error) });
+      this.emitEvent({ type: "worker.error", workerId, error: String(error) });
     });
 
     try {
       await worker.spawn();
       this.workers.set(workerId, worker);
-      this.emitEvent({ type: 'worker.started', workerId, pid: worker.pid });
-      console.log(`[WorkerPool] Worker ${workerId} spawned (pid: ${worker.pid})`);
+      this.emitEvent({ type: "worker.started", workerId, pid: worker.pid });
+      console.log(
+        `[WorkerPool] Worker ${workerId} spawned (pid: ${worker.pid})`,
+      );
     } catch (error) {
       console.error(`[WorkerPool] Failed to spawn worker ${workerId}:`, error);
     }
@@ -309,7 +336,9 @@ export class AgentWorkerPool extends EventEmitter {
   private dispatchTasks(): void {
     while (!this.taskQueue.isEmpty()) {
       // Find idle worker
-      const idleWorker = Array.from(this.workers.values()).find(w => w.status === 'idle');
+      const idleWorker = Array.from(this.workers.values()).find(
+        (w) => w.status === "idle",
+      );
       if (!idleWorker) break;
 
       const task = this.taskQueue.dequeue();
@@ -319,12 +348,15 @@ export class AgentWorkerPool extends EventEmitter {
     }
   }
 
-  private async assignTaskToWorker(task: AgentTask, worker: AgentWorker): Promise<void> {
+  private async assignTaskToWorker(
+    task: AgentTask,
+    worker: AgentWorker,
+  ): Promise<void> {
     const assignment: TaskAssignment = {
       taskId: task.id,
       workerId: worker.id,
       assignedAt: new Date(),
-      status: 'assigned',
+      status: "assigned",
     };
 
     this.taskAssignments.set(task.id, assignment);
@@ -334,11 +366,15 @@ export class AgentWorkerPool extends EventEmitter {
       startTime: Date.now(),
     });
 
-    this.emitEvent({ type: 'task.assigned', taskId: task.id, workerId: worker.id });
+    this.emitEvent({
+      type: "task.assigned",
+      taskId: task.id,
+      workerId: worker.id,
+    });
     console.log(`[WorkerPool] Task ${task.id} assigned to worker ${worker.id}`);
 
     // Execute (don't await - runs async)
-    worker.execute(task).catch(error => {
+    worker.execute(task).catch((error) => {
       console.error(`[WorkerPool] Task ${task.id} execution error:`, error);
     });
   }
@@ -358,10 +394,10 @@ export class AgentWorkerPool extends EventEmitter {
 
     const assignment = this.taskAssignments.get(taskId);
     if (assignment) {
-      assignment.status = 'completed';
+      assignment.status = "completed";
     }
 
-    this.emitEvent({ type: 'task.completed', taskId, result });
+    this.emitEvent({ type: "task.completed", taskId, result });
     console.log(`[WorkerPool] Task ${taskId} completed (${result.duration}ms)`);
 
     // Dispatch more tasks
@@ -377,16 +413,18 @@ export class AgentWorkerPool extends EventEmitter {
 
     // Check for retry
     if ((task.retryCount || 0) < (task.maxRetries || 0)) {
-      console.log(`[WorkerPool] Retrying task ${taskId} (attempt ${(task.retryCount || 0) + 1})`);
+      console.log(
+        `[WorkerPool] Retrying task ${taskId} (attempt ${(task.retryCount || 0) + 1})`,
+      );
       task.retryCount = (task.retryCount || 0) + 1;
       this.taskQueue.enqueue(task);
     } else {
       this.totalTasksFailed++;
       const assignment = this.taskAssignments.get(taskId);
       if (assignment) {
-        assignment.status = 'failed';
+        assignment.status = "failed";
       }
-      this.emitEvent({ type: 'task.failed', taskId, error });
+      this.emitEvent({ type: "task.failed", taskId, error });
       console.log(`[WorkerPool] Task ${taskId} failed: ${error}`);
     }
 
@@ -411,11 +449,18 @@ export class AgentWorkerPool extends EventEmitter {
       // Respawn worker
       try {
         await worker.restart();
-        this.emitEvent({ type: 'worker.started', workerId, pid: worker.pid });
+        this.emitEvent({ type: "worker.started", workerId, pid: worker.pid });
       } catch (error) {
-        console.error(`[WorkerPool] Failed to respawn worker ${workerId}:`, error);
+        console.error(
+          `[WorkerPool] Failed to respawn worker ${workerId}:`,
+          error,
+        );
         this.workers.delete(workerId);
-        this.emitEvent({ type: 'worker.stopped', workerId, reason: 'respawn_failed' });
+        this.emitEvent({
+          type: "worker.stopped",
+          workerId,
+          reason: "respawn_failed",
+        });
 
         // Spawn replacement if below minimum
         if (this.workers.size < this.config.minWorkers) {
@@ -432,19 +477,26 @@ export class AgentWorkerPool extends EventEmitter {
   }
 
   private checkScaling(): void {
-    if (this._status !== 'running') return;
+    if (this._status !== "running") return;
 
     // Check cooldown
     if (this.lastScaleOperation) {
-      const timeSinceLastScale = Date.now() - this.lastScaleOperation.timestamp.getTime();
+      const timeSinceLastScale =
+        Date.now() - this.lastScaleOperation.timestamp.getTime();
       if (timeSinceLastScale < this.config.cooldownPeriod) return;
     }
 
     const metrics = this.getMetrics();
 
-    if (metrics.utilization > this.config.scaleUpThreshold && this.workers.size < this.config.maxWorkers) {
+    if (
+      metrics.utilization > this.config.scaleUpThreshold &&
+      this.workers.size < this.config.maxWorkers
+    ) {
       this.scaleUp();
-    } else if (metrics.utilization < this.config.scaleDownThreshold && this.workers.size > this.config.minWorkers) {
+    } else if (
+      metrics.utilization < this.config.scaleDownThreshold &&
+      this.workers.size > this.config.minWorkers
+    ) {
       this.scaleDown();
     }
   }
@@ -459,21 +511,25 @@ export class AgentWorkerPool extends EventEmitter {
     for (const worker of this.workers.values()) {
       const health = await worker.checkHealth();
       if (!health.healthy) {
-        console.warn(`[WorkerPool] Worker ${worker.id} unhealthy:`, health.issues);
-        if (health.issues.includes('Process not running')) {
+        console.warn(
+          `[WorkerPool] Worker ${worker.id} unhealthy:`,
+          health.issues,
+        );
+        if (health.issues.includes("Process not running")) {
           await this.handleWorkerCrash(worker.id);
         }
       }
     }
 
     // Check for degraded state
-    const errorCount = Array.from(this.workers.values())
-      .filter(w => w.status === 'error' || w.status === 'crashed').length;
+    const errorCount = Array.from(this.workers.values()).filter(
+      (w) => w.status === "error" || w.status === "crashed",
+    ).length;
 
     if (errorCount > this.workers.size * 0.5) {
-      this._status = 'degraded';
-    } else if (this._status === 'degraded') {
-      this._status = 'running';
+      this._status = "degraded";
+    } else if (this._status === "degraded") {
+      this._status = "running";
     }
   }
 
@@ -494,7 +550,7 @@ export class AgentWorkerPool extends EventEmitter {
 
   private emitEvent(event: PoolEvent): void {
     this.emit(event.type, event);
-    this.emit('event', event);
+    this.emit("event", event);
   }
 }
 

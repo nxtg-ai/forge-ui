@@ -17,7 +17,7 @@ export interface Goal {
   id: string;
   title: string;
   description: string;
-  status: 'pending' | 'in-progress' | 'completed' | 'blocked';
+  status: "pending" | "in-progress" | "completed" | "blocked";
   progress: number;
   dependencies: string[];
 }
@@ -28,7 +28,7 @@ export interface Metric {
   current: number;
   target: number;
   unit: string;
-  trend: 'up' | 'down' | 'stable';
+  trend: "up" | "down" | "stable";
 }
 
 export interface ProgressData {
@@ -41,11 +41,11 @@ export interface ProgressData {
 }
 
 // Engagement and Interaction
-export type EngagementMode = 'ceo' | 'vp' | 'engineer' | 'builder' | 'founder';
+export type EngagementMode = "ceo" | "vp" | "engineer" | "builder" | "founder";
 
 // Project State and Management
 export interface ProjectState {
-  phase: 'planning' | 'architecting' | 'building' | 'testing' | 'deploying';
+  phase: "planning" | "architecting" | "building" | "testing" | "deploying";
   progress: number;
   blockers: Blocker[];
   recentDecisions: Decision[];
@@ -64,7 +64,7 @@ export interface ProjectContext {
 
 export interface Blocker {
   id: string;
-  severity: 'critical' | 'high' | 'medium' | 'low';
+  severity: "critical" | "high" | "medium" | "low";
   title: string;
   agent: string;
   needsHuman: boolean;
@@ -72,11 +72,11 @@ export interface Blocker {
 
 export interface Decision {
   id: string;
-  type: 'architecture' | 'implementation' | 'deployment';
+  type: "architecture" | "implementation" | "deployment";
   title: string;
   madeBy: string;
   timestamp: Date;
-  impact: 'high' | 'medium' | 'low';
+  impact: "high" | "medium" | "low";
 }
 
 // Agent System
@@ -84,7 +84,7 @@ export interface Agent {
   id: string;
   name: string;
   role: string;
-  status: 'idle' | 'thinking' | 'working' | 'blocked' | 'discussing';
+  status: "idle" | "thinking" | "working" | "blocked" | "discussing";
   currentTask: string;
   confidence: number;
 }
@@ -118,22 +118,26 @@ export interface Command {
   id: string;
   name: string;
   description: string;
-  category: 'forge' | 'git' | 'test' | 'deploy' | 'analyze';
+  category: "forge" | "git" | "test" | "deploy" | "analyze";
   hotkey?: string;
   requiresConfirmation?: boolean;
   icon: React.ReactNode;
 }
 
 // Automation and YOLO Mode
-export type AutomationLevel = 'conservative' | 'balanced' | 'aggressive' | 'maximum';
+export type AutomationLevel =
+  | "conservative"
+  | "balanced"
+  | "aggressive"
+  | "maximum";
 
 export interface AutomatedAction {
   id: string;
-  type: 'fix' | 'optimize' | 'refactor' | 'update' | 'deploy';
+  type: "fix" | "optimize" | "refactor" | "update" | "deploy";
   title: string;
   description: string;
-  impact: 'low' | 'medium' | 'high';
-  status: 'pending' | 'executing' | 'completed' | 'failed' | 'reverted';
+  impact: "low" | "medium" | "high";
+  status: "pending" | "executing" | "completed" | "failed" | "reverted";
   timestamp: Date;
   confidence: number;
   automated: boolean;
@@ -153,13 +157,13 @@ export interface Message {
   id: string;
   architectId: string;
   content: string;
-  type: 'proposal' | 'concern' | 'agreement' | 'question' | 'decision';
+  type: "proposal" | "concern" | "agreement" | "question" | "decision";
   timestamp: Date;
   attachments?: Attachment[];
 }
 
 export interface Attachment {
-  type: 'diagram' | 'code' | 'reference';
+  type: "diagram" | "code" | "reference";
   title: string;
   content: string;
 }

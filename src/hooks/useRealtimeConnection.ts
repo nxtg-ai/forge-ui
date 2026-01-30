@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from "react";
 
 interface WebSocketConfig {
   url: string;
@@ -12,7 +12,12 @@ interface WebSocketConfig {
 }
 
 interface ConnectionState {
-  status: 'connecting' | 'connected' | 'disconnected' | 'reconnecting' | 'error';
+  status:
+    | "connecting"
+    | "connected"
+    | "disconnected"
+    | "reconnecting"
+    | "error";
   lastConnected?: Date;
   reconnectAttempt: number;
   latency: number;
@@ -27,13 +32,13 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
     onOpen,
     onClose,
     onError,
-    onReconnect
+    onReconnect,
   } = config;
 
   const [connectionState, setConnectionState] = useState<ConnectionState>({
-    status: 'disconnected',
+    status: "disconnected",
     reconnectAttempt: 0,
-    latency: 0
+    latency: 0,
   });
 
   const [messages, setMessages] = useState<T[]>([]);
@@ -56,7 +61,7 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
     heartbeatIntervalRef.current = setInterval(() => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         pingTimestampRef.current = Date.now();
-        wsRef.current.send(JSON.stringify({ type: 'ping' }));
+        wsRef.current.send(JSON.stringify({ type: "ping" }));
       }
     }, heartbeatInterval);
   }, [heartbeatInterval]);
@@ -73,9 +78,9 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
       return;
     }
 
-    setConnectionState(prev => ({
+    setConnectionState((prev) => ({
       ...prev,
-      status: prev.reconnectAttempt > 0 ? 'reconnecting' : 'connecting'
+      status: prev.reconnectAttempt > 0 ? "reconnecting" : "connecting",
     }));
 
     try {
@@ -83,10 +88,10 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
 
       wsRef.current.onopen = () => {
         setConnectionState({
-          status: 'connected',
+          status: "connected",
           lastConnected: new Date(),
           reconnectAttempt: 0,
-          latency: 0
+          latency: 0,
         });
         startHeartbeat();
         onOpen?.();
@@ -97,31 +102,31 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
           const data = JSON.parse(event.data);
 
           // Handle pong response
-          if (data.type === 'pong' && pingTimestampRef.current) {
+          if (data.type === "pong" && pingTimestampRef.current) {
             const latency = Date.now() - pingTimestampRef.current;
-            setConnectionState(prev => ({ ...prev, latency }));
+            setConnectionState((prev) => ({ ...prev, latency }));
             return;
           }
 
           // Add message to queue
-          setMessages(prev => [...prev, data as T]);
+          setMessages((prev) => [...prev, data as T]);
         } catch (error) {
-          console.error('Failed to parse WebSocket message:', error);
+          console.error("Failed to parse WebSocket message:", error);
         }
       };
 
       wsRef.current.onerror = (event) => {
-        setConnectionState(prev => ({
+        setConnectionState((prev) => ({
           ...prev,
-          status: 'error'
+          status: "error",
         }));
         onError?.(event);
       };
 
       wsRef.current.onclose = () => {
-        setConnectionState(prev => ({
+        setConnectionState((prev) => ({
           ...prev,
-          status: 'disconnected'
+          status: "disconnected",
         }));
         stopHeartbeat();
         onClose?.();
@@ -131,9 +136,9 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
           const attempt = connectionState.reconnectAttempt + 1;
           const delay = getReconnectDelay(attempt);
 
-          setConnectionState(prev => ({
+          setConnectionState((prev) => ({
             ...prev,
-            reconnectAttempt: attempt
+            reconnectAttempt: attempt,
           }));
 
           onReconnect?.(attempt);
@@ -144,10 +149,10 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
         }
       };
     } catch (error) {
-      console.error('WebSocket connection failed:', error);
-      setConnectionState(prev => ({
+      console.error("WebSocket connection failed:", error);
+      setConnectionState((prev) => ({
         ...prev,
-        status: 'error'
+        status: "error",
       }));
     }
   }, [
@@ -159,7 +164,7 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
     onOpen,
     onClose,
     onError,
-    onReconnect
+    onReconnect,
   ]);
 
   // Disconnect from WebSocket
@@ -175,9 +180,9 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
     }
 
     setConnectionState({
-      status: 'disconnected',
+      status: "disconnected",
       reconnectAttempt: 0,
-      latency: 0
+      latency: 0,
     });
   }, [stopHeartbeat]);
 
@@ -211,48 +216,52 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
     clearMessages,
     connect,
     disconnect,
-    isConnected: connectionState.status === 'connected',
-    isReconnecting: connectionState.status === 'reconnecting'
+    isConnected: connectionState.status === "connected",
+    isReconnecting: connectionState.status === "reconnecting",
   };
 };
 
 // Hook for optimistic updates with rollback
-export const useOptimisticUpdate = <T,>(
+export const useOptimisticUpdate = <T>(
   initialValue: T,
-  updateFn: (value: T) => Promise<T>
+  updateFn: (value: T) => Promise<T>,
 ) => {
   const [value, setValue] = useState(initialValue);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const previousValueRef = useRef(initialValue);
 
-  const update = useCallback(async (newValue: T | ((prev: T) => T)) => {
-    const nextValue = typeof newValue === 'function'
-      ? (newValue as (prev: T) => T)(value)
-      : newValue;
+  const update = useCallback(
+    async (newValue: T | ((prev: T) => T)) => {
+      const nextValue =
+        typeof newValue === "function"
+          ? (newValue as (prev: T) => T)(value)
+          : newValue;
 
-    // Store previous value for rollback
-    previousValueRef.current = value;
+      // Store previous value for rollback
+      previousValueRef.current = value;
 
-    // Optimistically update UI
-    setValue(nextValue);
-    setIsUpdating(true);
-    setError(null);
+      // Optimistically update UI
+      setValue(nextValue);
+      setIsUpdating(true);
+      setError(null);
 
-    try {
-      // Perform actual update
-      const result = await updateFn(nextValue);
-      setValue(result); // Sync with server response
-      return result;
-    } catch (err) {
-      // Rollback on failure
-      setValue(previousValueRef.current);
-      setError(err as Error);
-      throw err;
-    } finally {
-      setIsUpdating(false);
-    }
-  }, [value, updateFn]);
+      try {
+        // Perform actual update
+        const result = await updateFn(nextValue);
+        setValue(result); // Sync with server response
+        return result;
+      } catch (err) {
+        // Rollback on failure
+        setValue(previousValueRef.current);
+        setError(err as Error);
+        throw err;
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    [value, updateFn],
+  );
 
   const reset = useCallback(() => {
     setValue(initialValue);
@@ -265,7 +274,7 @@ export const useOptimisticUpdate = <T,>(
     reset,
     isUpdating,
     error,
-    rollback: () => setValue(previousValueRef.current)
+    rollback: () => setValue(previousValueRef.current),
   };
 };
 
@@ -277,13 +286,13 @@ export const useAdaptivePolling = (
     maxInterval?: number;
     enabled?: boolean;
     onError?: (error: Error) => void;
-  } = {}
+  } = {},
 ) => {
   const {
     baseInterval = 1000,
     maxInterval = 30000,
     enabled = true,
-    onError
+    onError,
   } = options;
 
   const [isPolling, setIsPolling] = useState(false);
@@ -293,20 +302,23 @@ export const useAdaptivePolling = (
   const intervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const currentIntervalRef = useRef(baseInterval);
 
-  const adjustInterval = useCallback((success: boolean) => {
-    if (success) {
-      // Reset to base interval on success
-      currentIntervalRef.current = baseInterval;
-      setErrorCount(0);
-    } else {
-      // Exponential backoff on failure
-      currentIntervalRef.current = Math.min(
-        currentIntervalRef.current * 2,
-        maxInterval
-      );
-      setErrorCount(prev => prev + 1);
-    }
-  }, [baseInterval, maxInterval]);
+  const adjustInterval = useCallback(
+    (success: boolean) => {
+      if (success) {
+        // Reset to base interval on success
+        currentIntervalRef.current = baseInterval;
+        setErrorCount(0);
+      } else {
+        // Exponential backoff on failure
+        currentIntervalRef.current = Math.min(
+          currentIntervalRef.current * 2,
+          maxInterval,
+        );
+        setErrorCount((prev) => prev + 1);
+      }
+    },
+    [baseInterval, maxInterval],
+  );
 
   const poll = useCallback(async () => {
     if (!enabled) return;
@@ -317,7 +329,7 @@ export const useAdaptivePolling = (
       setLastFetch(new Date());
       adjustInterval(true);
     } catch (error) {
-      console.error('Polling error:', error);
+      console.error("Polling error:", error);
       adjustInterval(false);
       onError?.(error as Error);
     } finally {
@@ -348,6 +360,6 @@ export const useAdaptivePolling = (
     lastFetch,
     errorCount,
     currentInterval: currentIntervalRef.current,
-    forceRefresh: poll
+    forceRefresh: poll,
   };
 };

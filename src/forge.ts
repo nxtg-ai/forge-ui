@@ -3,9 +3,9 @@
  * Main orchestration engine for AI-driven development
  */
 
-import { ForgeState, Feature, Task } from './types';
-import { StateManager } from './state';
-import { Logger } from './utils';
+import { ForgeState, Feature, Task } from "./types";
+import { StateManager } from "./state";
+import { Logger } from "./utils";
 
 export class Forge {
   private state: StateManager;
@@ -13,18 +13,18 @@ export class Forge {
 
   constructor() {
     this.state = new StateManager();
-    this.logger = new Logger('Forge');
+    this.logger = new Logger("Forge");
   }
 
   /**
    * Initialize forge in a project
    */
-  async init(projectPath: string = '.'): Promise<void> {
-    this.logger.info('Initializing NXTG Forge...');
+  async init(projectPath: string = "."): Promise<void> {
+    this.logger.info("Initializing NXTG Forge...");
 
     await this.state.initialize(projectPath);
 
-    this.logger.success('Forge initialized successfully');
+    this.logger.success("Forge initialized successfully");
   }
 
   /**
@@ -37,9 +37,9 @@ export class Forge {
       id: this.generateId(),
       name,
       description,
-      status: 'pending',
+      status: "pending",
       createdAt: new Date().toISOString(),
-      tasks: []
+      tasks: [],
     };
 
     await this.state.addFeature(feature);
@@ -62,12 +62,12 @@ export class Forge {
     this.logger.info(`Executing task: ${taskId}`);
 
     // Task execution logic here
-    await this.state.updateTaskStatus(taskId, 'in_progress');
+    await this.state.updateTaskStatus(taskId, "in_progress");
 
     // Simulate work
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    await this.state.updateTaskStatus(taskId, 'completed');
+    await this.state.updateTaskStatus(taskId, "completed");
     this.logger.success(`Task ${taskId} completed`);
   }
 

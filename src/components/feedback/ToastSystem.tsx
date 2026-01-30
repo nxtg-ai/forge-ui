@@ -1,11 +1,18 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { createContext, useContext, useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  CheckCircle, AlertCircle, Info, AlertTriangle, X,
-  RotateCw, ExternalLink, Copy, ChevronRight
-} from 'lucide-react';
+  CheckCircle,
+  AlertCircle,
+  Info,
+  AlertTriangle,
+  X,
+  RotateCw,
+  ExternalLink,
+  Copy,
+  ChevronRight,
+} from "lucide-react";
 
-type ToastType = 'success' | 'error' | 'warning' | 'info';
+type ToastType = "success" | "error" | "warning" | "info";
 
 interface ToastAction {
   label: string;
@@ -41,16 +48,18 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 export const useToast = () => {
   const context = useContext(ToastContext);
   if (!context) {
-    throw new Error('useToast must be used within a ToastProvider');
+    throw new Error("useToast must be used within a ToastProvider");
   }
   return context;
 };
 
-export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const addToast = useCallback((toast: Toast) => {
-    setToasts(prev => [toast, ...prev].slice(0, 5)); // Max 5 toasts
+    setToasts((prev) => [toast, ...prev].slice(0, 5)); // Max 5 toasts
 
     // Auto dismiss if not persistent
     if (!toast.persistent) {
@@ -61,29 +70,36 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const dismiss = useCallback((id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
   const dismissAll = useCallback(() => {
     setToasts([]);
   }, []);
 
-  const createToast = useCallback((type: ToastType, title: string, options?: Partial<Toast>) => {
-    const toast: Toast = {
-      id: `toast-${Date.now()}-${Math.random()}`,
-      type,
-      title,
-      timestamp: new Date(),
-      ...options
-    };
-    addToast(toast);
-  }, [addToast]);
+  const createToast = useCallback(
+    (type: ToastType, title: string, options?: Partial<Toast>) => {
+      const toast: Toast = {
+        id: `toast-${Date.now()}-${Math.random()}`,
+        type,
+        title,
+        timestamp: new Date(),
+        ...options,
+      };
+      addToast(toast);
+    },
+    [addToast],
+  );
 
   const toast = {
-    success: (title: string, options?: Partial<Toast>) => createToast('success', title, options),
-    error: (title: string, options?: Partial<Toast>) => createToast('error', title, options),
-    warning: (title: string, options?: Partial<Toast>) => createToast('warning', title, options),
-    info: (title: string, options?: Partial<Toast>) => createToast('info', title, options)
+    success: (title: string, options?: Partial<Toast>) =>
+      createToast("success", title, options),
+    error: (title: string, options?: Partial<Toast>) =>
+      createToast("error", title, options),
+    warning: (title: string, options?: Partial<Toast>) =>
+      createToast("warning", title, options),
+    info: (title: string, options?: Partial<Toast>) =>
+      createToast("info", title, options),
   };
 
   return (
@@ -99,7 +115,10 @@ const ToastContainer: React.FC<{
   onDismiss: (id: string) => void;
 }> = ({ toasts, onDismiss }) => {
   return (
-    <div data-testid="toast-container" className="fixed top-4 right-4 z-50 space-y-2 max-w-md">
+    <div
+      data-testid="toast-container"
+      className="fixed top-4 right-4 z-50 space-y-2 max-w-md"
+    >
       <AnimatePresence mode="popLayout">
         {toasts.map((toast, index) => (
           <ToastItem
@@ -123,37 +142,37 @@ const ToastItem: React.FC<{
 
   const getToastConfig = (type: ToastType) => {
     switch (type) {
-      case 'success':
+      case "success":
         return {
           icon: <CheckCircle className="w-5 h-5" />,
-          bgColor: 'bg-green-900/20',
-          borderColor: 'border-green-500/30',
-          iconColor: 'text-green-400',
-          textColor: 'text-green-100'
+          bgColor: "bg-green-900/20",
+          borderColor: "border-green-500/30",
+          iconColor: "text-green-400",
+          textColor: "text-green-100",
         };
-      case 'error':
+      case "error":
         return {
           icon: <AlertCircle className="w-5 h-5" />,
-          bgColor: 'bg-red-900/20',
-          borderColor: 'border-red-500/30',
-          iconColor: 'text-red-400',
-          textColor: 'text-red-100'
+          bgColor: "bg-red-900/20",
+          borderColor: "border-red-500/30",
+          iconColor: "text-red-400",
+          textColor: "text-red-100",
         };
-      case 'warning':
+      case "warning":
         return {
           icon: <AlertTriangle className="w-5 h-5" />,
-          bgColor: 'bg-yellow-900/20',
-          borderColor: 'border-yellow-500/30',
-          iconColor: 'text-yellow-400',
-          textColor: 'text-yellow-100'
+          bgColor: "bg-yellow-900/20",
+          borderColor: "border-yellow-500/30",
+          iconColor: "text-yellow-400",
+          textColor: "text-yellow-100",
         };
-      case 'info':
+      case "info":
         return {
           icon: <Info className="w-5 h-5" />,
-          bgColor: 'bg-blue-900/20',
-          borderColor: 'border-blue-500/30',
-          iconColor: 'text-blue-400',
-          textColor: 'text-blue-100'
+          bgColor: "bg-blue-900/20",
+          borderColor: "border-blue-500/30",
+          iconColor: "text-blue-400",
+          textColor: "text-blue-100",
         };
     }
   };
@@ -170,16 +189,16 @@ const ToastItem: React.FC<{
         y: 0,
         scale: 1,
         transition: {
-          type: 'spring',
+          type: "spring",
           stiffness: 500,
           damping: 30,
-          delay: index * 0.05
-        }
+          delay: index * 0.05,
+        },
       }}
       exit={{
         opacity: 0,
         scale: 0.95,
-        transition: { duration: 0.2 }
+        transition: { duration: 0.2 },
       }}
       className={`
         relative overflow-hidden rounded-xl border backdrop-blur-sm shadow-2xl
@@ -190,9 +209,12 @@ const ToastItem: React.FC<{
       {!toast.persistent && (
         <motion.div
           className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500"
-          initial={{ width: '100%' }}
-          animate={{ width: '0%' }}
-          transition={{ duration: toast.duration ? toast.duration / 1000 : 5, ease: 'linear' }}
+          initial={{ width: "100%" }}
+          animate={{ width: "0%" }}
+          transition={{
+            duration: toast.duration ? toast.duration / 1000 : 5,
+            ease: "linear",
+          }}
         />
       )}
 
@@ -212,9 +234,7 @@ const ToastItem: React.FC<{
                 </h4>
 
                 {toast.message && (
-                  <p className="text-sm text-gray-300 mt-1">
-                    {toast.message}
-                  </p>
+                  <p className="text-sm text-gray-300 mt-1">{toast.message}</p>
                 )}
 
                 {/* Expandable details */}
@@ -225,10 +245,10 @@ const ToastItem: React.FC<{
                   >
                     <ChevronRight
                       className={`w-3 h-3 transition-transform ${
-                        isExpanded ? 'rotate-90' : ''
+                        isExpanded ? "rotate-90" : ""
                       }`}
                     />
-                    {isExpanded ? 'Hide' : 'Show'} details
+                    {isExpanded ? "Hide" : "Show"} details
                   </button>
                 )}
 
@@ -236,7 +256,7 @@ const ToastItem: React.FC<{
                   {isExpanded && toast.details && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
+                      animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
                       className="mt-2"
                     >
@@ -260,9 +280,10 @@ const ToastItem: React.FC<{
                         className={`
                           flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium
                           transition-all hover:scale-105 active:scale-95
-                          ${idx === 0
-                            ? `${config.bgColor} ${config.borderColor} ${config.textColor} border`
-                            : 'text-gray-400 hover:text-gray-200'
+                          ${
+                            idx === 0
+                              ? `${config.bgColor} ${config.borderColor} ${config.textColor} border`
+                              : "text-gray-400 hover:text-gray-200"
                           }
                         `}
                       >
@@ -294,62 +315,62 @@ const ToastItem: React.FC<{
 export const toastPresets = {
   commandExecuting: (commandName: string) => ({
     title: `Executing ${commandName}`,
-    message: 'Command is being processed...',
-    type: 'info' as ToastType,
-    persistent: true
+    message: "Command is being processed...",
+    type: "info" as ToastType,
+    persistent: true,
   }),
 
   commandSuccess: (commandName: string) => ({
     title: `${commandName} completed`,
-    type: 'success' as ToastType,
-    duration: 3000
+    type: "success" as ToastType,
+    duration: 3000,
   }),
 
   commandError: (commandName: string, error: string) => ({
     title: `${commandName} failed`,
-    message: 'An error occurred while executing the command',
+    message: "An error occurred while executing the command",
     details: error,
-    type: 'error' as ToastType,
+    type: "error" as ToastType,
     actions: [
       {
-        label: 'Retry',
+        label: "Retry",
         icon: <RotateCw className="w-3 h-3" />,
-        onClick: () => console.log('Retry')
-      }
-    ]
+        onClick: () => console.log("Retry"),
+      },
+    ],
   }),
 
   networkError: () => ({
-    title: 'Connection lost',
-    message: 'Unable to connect to the server',
-    type: 'error' as ToastType,
+    title: "Connection lost",
+    message: "Unable to connect to the server",
+    type: "error" as ToastType,
     persistent: true,
     actions: [
       {
-        label: 'Retry',
+        label: "Retry",
         icon: <RotateCw className="w-3 h-3" />,
-        onClick: () => window.location.reload()
-      }
-    ]
+        onClick: () => window.location.reload(),
+      },
+    ],
   }),
 
   updateAvailable: () => ({
-    title: 'Update available',
-    message: 'A new version is ready to install',
-    type: 'info' as ToastType,
+    title: "Update available",
+    message: "A new version is ready to install",
+    type: "info" as ToastType,
     persistent: true,
     actions: [
       {
-        label: 'Update now',
-        onClick: () => console.log('Update')
-      }
-    ]
+        label: "Update now",
+        onClick: () => console.log("Update"),
+      },
+    ],
   }),
 
   copied: (text: string) => ({
-    title: 'Copied to clipboard',
-    message: text.length > 50 ? text.substring(0, 50) + '...' : text,
-    type: 'success' as ToastType,
-    duration: 2000
-  })
+    title: "Copied to clipboard",
+    message: text.length > 50 ? text.substring(0, 50) + "..." : text,
+    type: "success" as ToastType,
+    duration: 2000,
+  }),
 };

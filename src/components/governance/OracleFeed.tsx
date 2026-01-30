@@ -1,7 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Terminal, Info, CheckCircle, AlertTriangle, XOctagon } from 'lucide-react';
-import type { SentinelEntry } from '../../types/governance.types';
+import React, { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Terminal,
+  Info,
+  CheckCircle,
+  AlertTriangle,
+  XOctagon,
+} from "lucide-react";
+import type { SentinelEntry } from "../../types/governance.types";
 
 interface OracleFeedProps {
   logs: SentinelEntry[];
@@ -20,33 +26,33 @@ export const OracleFeed: React.FC<OracleFeedProps> = ({ logs }) => {
 
   const getLogColor = (type: string) => {
     switch (type) {
-      case 'INFO':
-        return 'text-gray-400';
-      case 'SUCCESS':
-        return 'text-green-400';
-      case 'WARN':
-        return 'text-yellow-400';
-      case 'ERROR':
-        return 'text-red-400 animate-pulse';
-      case 'CRITICAL':
-        return 'text-red-500 animate-pulse';
+      case "INFO":
+        return "text-gray-400";
+      case "SUCCESS":
+        return "text-green-400";
+      case "WARN":
+        return "text-yellow-400";
+      case "ERROR":
+        return "text-red-400 animate-pulse";
+      case "CRITICAL":
+        return "text-red-500 animate-pulse";
       default:
-        return 'text-gray-400';
+        return "text-gray-400";
     }
   };
 
   const getLogIcon = (type: string) => {
     const className = "w-3 h-3 flex-shrink-0";
     switch (type) {
-      case 'INFO':
+      case "INFO":
         return <Info className={className} />;
-      case 'SUCCESS':
+      case "SUCCESS":
         return <CheckCircle className={className} />;
-      case 'WARN':
+      case "WARN":
         return <AlertTriangle className={className} />;
-      case 'ERROR':
+      case "ERROR":
         return <XOctagon className={className} />;
-      case 'CRITICAL':
+      case "CRITICAL":
         return <XOctagon className={className} />;
       default:
         return <Info className={className} />;
@@ -55,11 +61,11 @@ export const OracleFeed: React.FC<OracleFeedProps> = ({ logs }) => {
 
   const formatTimestamp = (timestamp: number) => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
     });
   };
 
@@ -76,9 +82,7 @@ export const OracleFeed: React.FC<OracleFeedProps> = ({ logs }) => {
         <Terminal className="w-5 h-5 text-green-400" />
         <h3 className="font-semibold text-sm">Oracle Feed</h3>
         <div className="ml-auto flex items-center gap-2">
-          {isPaused && (
-            <span className="text-xs text-yellow-400">Paused</span>
-          )}
+          {isPaused && <span className="text-xs text-yellow-400">Paused</span>}
           <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
         </div>
       </div>
@@ -135,7 +139,7 @@ export const OracleFeed: React.FC<OracleFeedProps> = ({ logs }) => {
       <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
         <span>{logs.length} entries</span>
         <span className="text-gray-600">
-          {isPaused ? 'Scroll paused' : 'Auto-scrolling'}
+          {isPaused ? "Scroll paused" : "Auto-scrolling"}
         </span>
       </div>
     </motion.div>

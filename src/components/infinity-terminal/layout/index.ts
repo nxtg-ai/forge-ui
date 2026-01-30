@@ -2,4 +2,4 @@
  * Layout Components
  */
 
-export { InfinityTerminalLayout } from './InfinityTerminalLayout';
+export { InfinityTerminalLayout } from "./InfinityTerminalLayout";

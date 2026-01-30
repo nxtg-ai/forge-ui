@@ -3,18 +3,18 @@
  * React hook for YOLO mode automation control
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   AutomatedAction,
   AutomationLevel,
-  YoloStatistics
-} from '../components/types';
+  YoloStatistics,
+} from "../components/types";
 import {
   AutomationService,
   AutomationRule,
   AutomationResult,
-  AutomationContext
-} from '../services/automation-service';
+  AutomationContext,
+} from "../services/automation-service";
 
 /**
  * Automation hook options
@@ -40,11 +40,13 @@ export interface UseAutomationReturn {
   connected: boolean;
   setLevel: (level: AutomationLevel) => void;
   executeAction: (
-    action: Omit<AutomatedAction, 'id' | 'status' | 'timestamp'>,
-    context?: Partial<AutomationContext>
+    action: Omit<AutomatedAction, "id" | "status" | "timestamp">,
+    context?: Partial<AutomationContext>,
   ) => Promise<AutomationResult>;
   rollback: (actionId: string) => Promise<void>;
-  analyzeSituation: (context: Record<string, unknown>) => Promise<AutomatedAction[]>;
+  analyzeSituation: (
+    context: Record<string, unknown>,
+  ) => Promise<AutomatedAction[]>;
   confirmAction: (actionId: string) => Promise<void>;
   rejectAction: (actionId: string) => void;
   clearHistory: () => void;
@@ -54,10 +56,10 @@ export interface UseAutomationReturn {
  * Hook for YOLO mode automation
  */
 export function useAutomation(
-  options: UseAutomationOptions = {}
+  options: UseAutomationOptions = {},
 ): UseAutomationReturn {
   const [level, setLevelState] = useState<AutomationLevel>(
-    options.defaultLevel ?? 'balanced'
+    options.defaultLevel ?? "balanced",
   );
   const [statistics, setStatistics] = useState<YoloStatistics>({
     actionsToday: 0,
@@ -65,7 +67,7 @@ export function useAutomation(
     timesSaved: 0,
     issuesFixed: 0,
     performanceGain: 0,
-    costSaved: 0
+    costSaved: 0,
   });
   const [actionHistory, setActionHistory] = useState<AutomatedAction[]>([]);
   const [rules, setRules] = useState<AutomationRule[]>([]);
@@ -86,8 +88,8 @@ export function useAutomation(
 
       // Create service instance
       const service = new AutomationService({
-        name: 'AutomationHook',
-        defaultLevel: options.defaultLevel ?? 'balanced'
+        name: "AutomationHook",
+        defaultLevel: options.defaultLevel ?? "balanced",
       });
 
       serviceRef.current = service;
@@ -105,11 +107,11 @@ export function useAutomation(
       setRules(service.getRules());
 
       // Subscribe to events
-      service.on('automationLevelChanged', handleLevelChanged);
-      service.on('actionCompleted', handleActionCompleted);
-      service.on('actionFailed', handleActionFailed);
-      service.on('confirmationRequired', handleConfirmationRequired);
-      service.on('rollbackCompleted', handleRollbackCompleted);
+      service.on("automationLevelChanged", handleLevelChanged);
+      service.on("actionCompleted", handleActionCompleted);
+      service.on("actionFailed", handleActionFailed);
+      service.on("confirmationRequired", handleConfirmationRequired);
+      service.on("rollbackCompleted", handleRollbackCompleted);
 
       setConnected(true);
     } catch (err) {
@@ -134,8 +136,8 @@ export function useAutomation(
    * Handle action completed
    */
   const handleActionCompleted = useCallback((action: AutomatedAction) => {
-    setActionHistory(prev => [...prev, action]);
-    setPendingActions(prev => prev.filter(a => a.id !== action.id));
+    setActionHistory((prev) => [...prev, action]);
+    setPendingActions((prev) => prev.filter((a) => a.id !== action.id));
 
     // Update statistics
     if (serviceRef.current) {
@@ -146,39 +148,48 @@ export function useAutomation(
   /**
    * Handle action failed
    */
-  const handleActionFailed = useCallback(({ action }: { action: AutomatedAction }) => {
-    setActionHistory(prev => [...prev, action]);
-    setPendingActions(prev => prev.filter(a => a.id !== action.id));
+  const handleActionFailed = useCallback(
+    ({ action }: { action: AutomatedAction }) => {
+      setActionHistory((prev) => [...prev, action]);
+      setPendingActions((prev) => prev.filter((a) => a.id !== action.id));
 
-    // Update statistics
-    if (serviceRef.current) {
-      setStatistics(serviceRef.current.getStatistics());
-    }
-  }, []);
+      // Update statistics
+      if (serviceRef.current) {
+        setStatistics(serviceRef.current.getStatistics());
+      }
+    },
+    [],
+  );
 
   /**
    * Handle confirmation required
    */
-  const handleConfirmationRequired = useCallback((action: AutomatedAction) => {
-    setPendingActions(prev => [...prev, action]);
+  const handleConfirmationRequired = useCallback(
+    (action: AutomatedAction) => {
+      setPendingActions((prev) => [...prev, action]);
 
-    if (options.onConfirmationRequired) {
-      options.onConfirmationRequired(action);
-    }
-  }, [options.onConfirmationRequired]);
+      if (options.onConfirmationRequired) {
+        options.onConfirmationRequired(action);
+      }
+    },
+    [options.onConfirmationRequired],
+  );
 
   /**
    * Handle rollback completed
    */
-  const handleRollbackCompleted = useCallback(({ actionId }: { actionId: string }) => {
-    setActionHistory(prev =>
-      prev.map(action =>
-        action.id === actionId
-          ? { ...action, status: 'reverted' as const }
-          : action
-      )
-    );
-  }, []);
+  const handleRollbackCompleted = useCallback(
+    ({ actionId }: { actionId: string }) => {
+      setActionHistory((prev) =>
+        prev.map((action) =>
+          action.id === actionId
+            ? { ...action, status: "reverted" as const }
+            : action,
+        ),
+      );
+    },
+    [],
+  );
 
   /**
    * Set automation level
@@ -195,28 +206,31 @@ export function useAutomation(
   /**
    * Execute action
    */
-  const executeAction = useCallback(async (
-    action: Omit<AutomatedAction, 'id' | 'status' | 'timestamp'>,
-    context?: Partial<AutomationContext>
-  ): Promise<AutomationResult> => {
-    if (!serviceRef.current) {
-      throw new Error('Service not initialized');
-    }
+  const executeAction = useCallback(
+    async (
+      action: Omit<AutomatedAction, "id" | "status" | "timestamp">,
+      context?: Partial<AutomationContext>,
+    ): Promise<AutomationResult> => {
+      if (!serviceRef.current) {
+        throw new Error("Service not initialized");
+      }
 
-    const result = await serviceRef.current.executeAction(action, context);
-    if (result.isErr()) {
-      throw result.error;
-    }
+      const result = await serviceRef.current.executeAction(action, context);
+      if (result.isErr()) {
+        throw result.error;
+      }
 
-    return result.value;
-  }, []);
+      return result.value;
+    },
+    [],
+  );
 
   /**
    * Rollback action
    */
   const rollback = useCallback(async (actionId: string) => {
     if (!serviceRef.current) {
-      throw new Error('Service not initialized');
+      throw new Error("Service not initialized");
     }
 
     const result = await serviceRef.current.rollback(actionId);
@@ -228,44 +242,48 @@ export function useAutomation(
   /**
    * Analyze situation
    */
-  const analyzeSituation = useCallback(async (
-    context: Record<string, unknown>
-  ): Promise<AutomatedAction[]> => {
-    if (!serviceRef.current) {
-      throw new Error('Service not initialized');
-    }
+  const analyzeSituation = useCallback(
+    async (context: Record<string, unknown>): Promise<AutomatedAction[]> => {
+      if (!serviceRef.current) {
+        throw new Error("Service not initialized");
+      }
 
-    const result = await serviceRef.current.analyzeSituation(context);
-    if (result.isErr()) {
-      throw result.error;
-    }
+      const result = await serviceRef.current.analyzeSituation(context);
+      if (result.isErr()) {
+        throw result.error;
+      }
 
-    return result.value;
-  }, []);
+      return result.value;
+    },
+    [],
+  );
 
   /**
    * Confirm pending action
    */
-  const confirmAction = useCallback(async (actionId: string) => {
-    const action = pendingActions.find(a => a.id === actionId);
-    if (!action || !serviceRef.current) {
-      return;
-    }
+  const confirmAction = useCallback(
+    async (actionId: string) => {
+      const action = pendingActions.find((a) => a.id === actionId);
+      if (!action || !serviceRef.current) {
+        return;
+      }
 
-    // Remove from pending
-    setPendingActions(prev => prev.filter(a => a.id !== actionId));
+      // Remove from pending
+      setPendingActions((prev) => prev.filter((a) => a.id !== actionId));
 
-    // Execute with confirmation
-    await executeAction(action, {
-      requireConfirmation: false // Already confirmed
-    });
-  }, [pendingActions, executeAction]);
+      // Execute with confirmation
+      await executeAction(action, {
+        requireConfirmation: false, // Already confirmed
+      });
+    },
+    [pendingActions, executeAction],
+  );
 
   /**
    * Reject pending action
    */
   const rejectAction = useCallback((actionId: string) => {
-    setPendingActions(prev => prev.filter(a => a.id !== actionId));
+    setPendingActions((prev) => prev.filter((a) => a.id !== actionId));
   }, []);
 
   /**
@@ -284,7 +302,7 @@ export function useAutomation(
       timesSaved: 0,
       issuesFixed: 0,
       performanceGain: 0,
-      costSaved: 0
+      costSaved: 0,
     });
   }, []);
 
@@ -298,11 +316,14 @@ export function useAutomation(
 
     return () => {
       if (serviceRef.current) {
-        serviceRef.current.off('automationLevelChanged', handleLevelChanged);
-        serviceRef.current.off('actionCompleted', handleActionCompleted);
-        serviceRef.current.off('actionFailed', handleActionFailed);
-        serviceRef.current.off('confirmationRequired', handleConfirmationRequired);
-        serviceRef.current.off('rollbackCompleted', handleRollbackCompleted);
+        serviceRef.current.off("automationLevelChanged", handleLevelChanged);
+        serviceRef.current.off("actionCompleted", handleActionCompleted);
+        serviceRef.current.off("actionFailed", handleActionFailed);
+        serviceRef.current.off(
+          "confirmationRequired",
+          handleConfirmationRequired,
+        );
+        serviceRef.current.off("rollbackCompleted", handleRollbackCompleted);
         serviceRef.current.dispose();
       }
     };
@@ -323,6 +344,6 @@ export function useAutomation(
     analyzeSituation,
     confirmAction,
     rejectAction,
-    clearHistory
+    clearHistory,
   };
 }
