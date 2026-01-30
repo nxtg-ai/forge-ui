@@ -1,9 +1,9 @@
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ [1] HEADER (sticky top-0 z-30)                                                                                 │
 │ ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────┐ │
-│ │ [Terminal Icon] Agentic Command Center                                          [Context ON] [Diffs ON]    │ │
+│ │ [Terminal+Infinity Icon] Infinity Terminal [Persistent]        [Memory ON] [Governance ON] [Keyboard]      │ │
 │ │ Class: border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm                                            │ │
-│ │ TestID: "terminal-view-container"                                                                          │ │
+│ │ TestID: "infinity-terminal-view"                                                                           │ │
 │ └────────────────────────────────────────────────────────────────────────────────────────────────────────────┘ │
 └────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 
@@ -11,97 +11,150 @@
 │ [2] MAIN LAYOUT CONTAINER (flex h-[calc(100vh-73px)])                                                          │
 │                                                                                                                │
 │ ┌───────────────────────────────────────────┬──────────────────────────────────┬─────────────────────────────┐ │
-│ │ [3] LEFT SIDEBAR (Context Window HUD)     │ [4] CENTER - TERMINAL            │ [5] RIGHT SIDEBAR (Diffs)   │ │
-│ │ (Conditional Render)                      │ (Always Visible)                 │ (Conditional Render)        │ │
+│ │ [3] LEFT SIDEBAR (Memory & Context)       │ [4] CENTER - INFINITY TERMINAL   │ [5] RIGHT SIDEBAR           │ │
+│ │ (Conditional: showContextPanel)           │ (Always Visible)                 │ (Conditional: hudVisible)   │ │
 │ │                                           │                                  │                             │ │
 │ │ Width: w-80                               │ Width: flex-1 min-w-0            │ Width: w-96                 │ │
-│ │ Class: border-r bg-gray-950               │ Class: bg-black                  │ Class: border-l bg-gray-900 │ │
-│ │ TestID: "context-window-hud"              │                                  │                             │ │
+│ │ Class: border-r bg-gray-950               │ Class: bg-black                  │ Class: border-l border-800  │ │
+│ │ Animation: x: -320 -> 0                   │                                  │ Animation: x: 384 -> 0      │ │
 │ │                                           │                                  │                             │ │
 │ │ ┌───────────────────────────────────────┐ │ ┌──────────────────────────────┐ │ ┌─────────────────────────┐ │ │
-│ │ │ [3a] Header Section                   │ │ │ [4a] ClaudeTerminal          │ │ │ [5a] Diff Visualization │ │ │
-│ │ │ Class: px-4 py-3 border-b border-800  │ │ │                              │ │ │                         │ │ │
-│ │ │ - Brain Icon / Title                  │ │ │ - Terminal Output            │ │ │ - File Tabs             │ │ │
-│ │ │ - Token Usage Bar & %                 │ │ │ - Command Input              │ │ │ - Split View            │ │ │
-│ │ └───────────────────────────────────────┘ │ │ - History                    │ │ │ - Apply / Reject        │ │ │
-│ │                                           │ │                              │ │ └─────────────────────────┘ │ │
-│ │ ┌───────────────────────────────────────┐ │ │                              │ │                             │ │
-│ │ │ [3b] Current Thought (CONDITIONAL)    │ │ │                              │ │                             │ │
-│ │ │ {contextData.currentThought && ...}   │ │ │                              │ │                             │ │
-│ │ │ Class: bg-purple-500/5 border-b       │ │ │                              │ │                             │ │
-│ │ │ - "Claude is thinking..."             │ │ │                              │ │                             │ │
-│ │ └───────────────────────────────────────┘ │ │                              │ │                             │ │
-│ │                                           │ │                              │ │                             │ │
-│ │ ┌───────────────────────────────────────┐ │ │                              │ │                             │ │
-│ │ │ [3c] Memory Section (The Fix Area)    │ │ │                              │ │                             │ │
-│ │ │                                       │ │ │                              │ │                             │ │
-│ │ │ [3c-i] Header: "Memory (7)" + Btn     │ │ │                              │ │                             │ │
-│ │ │ [3c-ii] Add Form (Conditional)        │ │ │                              │ │                             │ │
-│ │ │                                       │ │ │                              │ │                             │ │
-│ │ │ [3c-iii] Memory List Container        │ │ │                              │ │                             │ │
-│ │ │ DYNAMIC CLASS LOGIC:                  │ │ │                              │ │                             │ │
-│ │ │                                       │ │ │                              │ │                             │ │
-│ │ │ IF files.length > 0:                  │ │ │                              │ │                             │ │
-│ │ │   "max-h-64 overflow-y-auto"          │ │ │                              │ │                             │ │
-│ │ │   (Restricted height)                 │ │ │                              │ │                             │ │
-│ │ │                                       │ │ │                              │ │                             │ │
-│ │ │ IF files.length === 0:                │ │ │                              │ │                             │ │
-│ │ │   "flex-1 min-h-0 overflow-y-auto"    │ │ │                              │ │                             │ │
-│ │ │   (Expands to fill remaining space)   │ │ │                              │ │                             │ │
-│ │ └───────────────────────────────────────┘ │ │                              │ │                             │ │
-│ │                                           │ │                              │ │                             │ │
-│ │ ┌───────────────────────────────────────┐ │ │                              │ │                             │ │
-│ │ │ [3d] Files Heat Map (CONDITIONAL)     │ │ │                              │ │                             │ │
-│ │ │ {contextData.files.length > 0 && ...} │ │ │                              │ │                             │ │
-│ │ │                                       │ │ │                              │ │                             │ │
-│ │ │ Class: flex-1 overflow-y-auto min-h-0 │ │ │                              │ │                             │ │
-│ │ │ TestID: "context-window-files-section"│ │ │                              │ │                             │ │
-│ │ │                                       │ │ │                              │ │                             │ │
-│ │ │ *If visible, THIS takes the flex-1* │ │ │                                │ │                             │ │
-│ │ └───────────────────────────────────────┘ │ │                              │ │                             │ │
-│ │                                           │ │                              │ │                             │ │
-│ │ ┌───────────────────────────────────────┐ │ │                              │ │                             │ │
-│ │ │ [3e] Footer Stats (CONDITIONAL)       │ │ │                              │ │                             │ │
-│ │ │ {contextData.files.length > 0 && ...} │ │ │                              │ │                             │ │
-│ │ │                                       │ │ │                              │ │                             │ │
-│ │ │ Class: border-t bg-gray-950/50        │ │ │                              │ │                             │ │
-│ │ │ - Reading / Analyzing / Complete      │ │ │                              │ │                             │ │
-│ │ └───────────────────────────────────────┘ │ └──────────────────────────────┘ │                             │ │
+│ │ │ [3a] ContextWindowHUD                 │ │ │ [4a] InfinityTerminal        │ │ │ [5a] GovernanceHUD      │ │ │
+│ │ │ Class: h-full (inside p-4 wrapper)    │ │ │                              │ │ │ (ErrorBoundary wrapped) │ │ │
+│ │ │                                       │ │ │ Props:                       │ │ │                         │ │ │
+│ │ │ ┌─────────────────────────────────┐   │ │ │ - projectName="nxtg-forge"   │ │ │ Components:             │ │ │
+│ │ │ │ Header Section                  │   │ │ │ - layout="default"           │ │ │ - Constitution Card     │ │ │
+│ │ │ │ - Brain Icon + "Context & Mem"  │   │ │ │ - onSessionRestore           │ │ │ - Impact Matrix         │ │ │
+│ │ │ │ - Token Usage Bar (0-200k)      │   │ │ │ - onConnectionChange         │ │ │ - Worker Pool Metrics   │ │ │
+│ │ │ │ - Token % capacity              │   │ │ │                              │ │ │ - Agent Activity Feed   │ │ │
+│ │ │ └─────────────────────────────────┘   │ │ │ Features:                    │ │ │ - Strategic Advisor     │ │ │
+│ │ │                                       │ │ │ - Persistent sessions        │ │ │ - Oracle Feed           │ │ │
+│ │ │ ┌─────────────────────────────────┐   │ │ │ - Multi-device access        │ │ │                         │ │ │
+│ │ │ │ Current Thought (CONDITIONAL)   │   │ │ │ - Auto-reconnection          │ │ │                         │ │ │
+│ │ │ │ Class: bg-purple-500/5          │   │ │ │ - Session history            │ │ │                         │ │ │
+│ │ │ │ "Claude is thinking..."         │   │ │ │                              │ │ │                         │ │ │
+│ │ │ └─────────────────────────────────┘   │ │ │ ┌──────────────────────────┐ │ │ │                         │ │ │
+│ │ │                                       │ │ │ │ Terminal Header          │ │ │ │                         │ │ │
+│ │ │ ┌─────────────────────────────────┐   │ │ │ │ - Connection Status      │ │ │ │                         │ │ │
+│ │ │ │ Memory Section                  │   │ │ │ │ - Session Name           │ │ │ │                         │ │ │
+│ │ │ │                                 │   │ │ │ │ - History / Reconnect    │ │ │ │                         │ │ │
+│ │ │ │ [Header] "Memory (n)" [+]       │   │ │ │ └──────────────────────────┘ │ │ │                         │ │ │
+│ │ │ │                                 │   │ │ │                              │ │ │                         │ │ │
+│ │ │ │ [Add Form] (conditional)        │   │ │ │ ┌──────────────────────────┐ │ │ │                         │ │ │
+│ │ │ │ - Category dropdown             │   │ │ │ │ xterm.js Terminal        │ │ │ │                         │ │ │
+│ │ │ │ - Content textarea              │   │ │ │ │                          │ │ │ │                         │ │ │
+│ │ │ │ - Tags input                    │   │ │ │ │ - Cascadia Code font     │ │ │ │                         │ │ │
+│ │ │ │                                 │   │ │ │ │ - Dark theme #0a0a0a     │ │ │ │                         │ │ │
+│ │ │ │ [Memory Items List]             │   │ │ │ │ - Cursor blink           │ │ │ │                         │ │ │
+│ │ │ │ - Decision (purple)             │   │ │ │ │ - Web links addon        │ │ │ │                         │ │ │
+│ │ │ │ - Instruction (blue)            │   │ │ │ │ - Fit addon              │ │ │ │                         │ │ │
+│ │ │ │ - Learning (green)              │   │ │ │ │                          │ │ │ │                         │ │ │
+│ │ │ │ - Context (yellow)              │   │ │ │ │ JSON Protocol:           │ │ │ │                         │ │ │
+│ │ │ │ - Other (gray)                  │   │ │ │ │ {type:'input', data}     │ │ │ │                         │ │ │
+│ │ │ │                                 │   │ │ │ │ {type:'resize',cols,rows}│ │ │ │                         │ │ │
+│ │ │ │ Dynamic Height:                 │   │ │ │ │ {type:'output', data}    │ │ │ │                         │ │ │
+│ │ │ │ - files > 0: max-h-64           │   │ │ │ └──────────────────────────┘ │ │ │                         │ │ │
+│ │ │ │ - files = 0: flex-1 (expands)   │   │ │ │                              │ │ │                         │ │ │
+│ │ │ └─────────────────────────────────┘   │ │ │ ┌──────────────────────────┐ │ │ │                         │ │ │
+│ │ │                                       │ │ │ │ Error Banner (if error)  │ │ │ │                         │ │ │
+│ │ │ ┌─────────────────────────────────┐   │ │ │ │ - Error message          │ │ │ │                         │ │ │
+│ │ │ │ Files Heat Map (CONDITIONAL)    │   │ │ │ │ - Retry button           │ │ │ │                         │ │ │
+│ │ │ │ {files.length > 0}              │   │ │ │ └──────────────────────────┘ │ │ │                         │ │ │
+│ │ │ │                                 │   │ │ └──────────────────────────────┘ │ └─────────────────────────┘ │ │
+│ │ │ │ - File path + tokens            │   │ │                                  │                             │ │
+│ │ │ │ - Intensity color coding        │   │ │                                  │                             │ │
+│ │ │ │ - Status icons (read/analyze)   │   │ │                                  │                             │ │
+│ │ │ └─────────────────────────────────┘   │ │                                  │                             │ │
+│ │ │                                       │ │                                  │                             │ │
+│ │ │ ┌─────────────────────────────────┐   │ │                                  │                             │ │
+│ │ │ │ Footer Stats (CONDITIONAL)      │   │ │                                  │                             │ │
+│ │ │ │ {files.length > 0}              │   │ │                                  │                             │ │
+│ │ │ │ Reading | Analyzing | Complete  │   │ │                                  │                             │ │
+│ │ │ └─────────────────────────────────┘   │ │                                  │                             │ │
+│ │ └───────────────────────────────────────┘ │                                  │                             │ │
 │ └───────────────────────────────────────────┴──────────────────────────────────┴─────────────────────────────┘ │
 └────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ [6] FLOATING ELEMENTS                                                                                          │
-│ ┌────────────────────────────────────────────────────────┐                                                     │
-│ │ [6a] Help Overlay (fixed bottom-4 left-4 z-20)         │                                                     │
-│ │                                                        │                                                     │
-│ │  [Collapsed]: (i) Button                               │                                                     │
-│ │                                                        │                                                     │
-│ │  [Expanded]:  ┌─────────────────────────────────────┐  │                                                     │
-│ │               │ Keyboard Shortcuts              [x] │  │                                                     │
-│ │               │ Ctrl+C  Cancel    Ctrl+L  Clear     │  │                                                     │
-│ │               └─────────────────────────────────────┘  │                                                     │
-│ └────────────────────────────────────────────────────────┘                                                     │
+│ [6] MOBILE LAYOUT (layout.isMobile === true)                                                                   │
+│                                                                                                                │
+│ On mobile, sidebars become bottom sheets instead of fixed panels:                                              │
+│                                                                                                                │
+│ ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ [6a] MobileHUDSheet (for Governance)                                                                       │ │
+│ │ - Triggered when: hudVisible && layout.isMobile                                                            │ │
+│ │ - Fixed bottom-0, z-40, max-h-[70vh]                                                                       │ │
+│ │ - Spring animation y: 100% -> 0                                                                            │ │
+│ │ - Drag handle at top                                                                                       │ │
+│ │ - Backdrop overlay (black/50)                                                                              │ │
+│ └────────────────────────────────────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                                                │
+│ ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ [6b] MobileHUDSheet (for Context Panel)                                                                    │ │
+│ │ - Triggered when: showContextPanel && layout.isMobile                                                      │ │
+│ │ - Same component, different content (ContextWindowHUD)                                                     │ │
+│ └────────────────────────────────────────────────────────────────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ [7] OVERLAYS & MODALS                                                                                          │
+│                                                                                                                │
+│ ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ [7a] HelpOverlay (fixed inset-0 z-50)                                                                      │ │
+│ │ - Triggered when: showHelpOverlay                                                                          │ │
+│ │ - bg-black/80 backdrop                                                                                     │ │
+│ │ - Centered modal with keyboard shortcuts:                                                                  │ │
+│ │   - Ctrl+C: Cancel command                                                                                 │ │
+│ │   - Ctrl+L: Clear terminal                                                                                 │ │
+│ │   - Ctrl+O D: Detach session (Zellij)                                                                      │ │
+│ │   - Alt+H/J/K/L: Navigate panes (Zellij)                                                                   │ │
+│ │   - Ctrl+P N/X: New/Close pane (Zellij)                                                                    │ │
+│ │   - Up/Down: Command history                                                                               │ │
+│ └────────────────────────────────────────────────────────────────────────────────────────────────────────────┘ │
+│                                                                                                                │
+│ ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────┐ │
+│ │ [7b] SessionRestoreModal                                                                                   │ │
+│ │ - Triggered when: showRestoreModal && lastSession                                                          │ │
+│ │ - Asks user to restore previous session or start new                                                       │ │
+│ └────────────────────────────────────────────────────────────────────────────────────────────────────────────┘ │
 └────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 
   NUMBERED SECTION REFERENCE:
 
-  [1] - Header (sticky, toggles for panels)
+  [1] - Header (sticky, toggles for Memory/Governance/Keyboard)
   [2] - Main layout container (3-column flex)
-  [3] - Left sidebar (Context Window HUD, conditional)
-  - [3a] - Header section (Brain, title, token usage)
-  - [3b] - Current Thought (conditional, purple bg)
-  - [3c] - Memory Section (dynamic height based on files)
-    - [3c-i] - Memory header with Add button
-    - [3c-ii] - Add memory form (conditional)
-    - [3c-iii] - Memory items list (flex-1 or max-h-64)
-  - [3d] - Files Heat Map (conditional, only if files exist)
-  - [3e] - Footer Stats (conditional, only if files exist)
+  [3] - Left sidebar (Memory & Context Panel, conditional)
+    - [3a] - ContextWindowHUD component
+      - Header with token usage
+      - Current thought (conditional)
+      - Memory section with dynamic height
+      - Files heat map (conditional)
+      - Footer stats (conditional)
   [4] - Center terminal (always visible, flex-1)
-  - [4a] - ClaudeTerminal component
-  [5] - Right sidebar (Diff Visualization, conditional)
-  - [5a] - Diff component with tabs and buttons
-  [6] - Floating elements
-  - [6a] - Help overlay (collapsible)
-    - [6a-i] - Collapsed state (info icon)
-    - [6a-ii] - Expanded state (shortcuts panel)
+    - [4a] - InfinityTerminal component
+      - Persistent sessions via PTY bridge (ws://localhost:5051/terminal)
+      - JSON message protocol
+      - Session history and restore
+  [5] - Right sidebar (Governance HUD, conditional)
+    - [5a] - GovernanceHUD wrapped in ErrorBoundary
+  [6] - Mobile layout
+    - [6a] - Mobile bottom sheet for Governance
+    - [6b] - Mobile bottom sheet for Context Panel
+  [7] - Overlays & Modals
+    - [7a] - Keyboard shortcuts help overlay
+    - [7b] - Session restore modal
+
+  STATE VARIABLES:
+
+  - showContextPanel (default: true) - toggles left sidebar
+  - hudVisible (from useResponsiveLayout) - toggles right sidebar
+  - showHelpOverlay (default: false) - toggles keyboard shortcuts
+  - showRestoreModal (default: false) - session restore prompt
+  - sessionRestored (default: false) - tracks if session was restored
+  - layout.isMobile (from useResponsiveLayout) - responsive breakpoint
+
+  WEBSOCKET CONNECTIONS:
+
+  - Terminal: ws://localhost:5051/terminal (PTY bridge, JSON protocol)
+  - Governance: ws://localhost:5051/ws (worker pool events)
+  - Memory API: http://localhost:5051/api/memory/seed (seed data)

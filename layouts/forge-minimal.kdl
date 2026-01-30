@@ -1,0 +1,18 @@
+// NXTG-Forge Infinity Terminal - Minimal Layout
+// Single pane for simple persistent sessions
+//
+// Use when you don't need Oracle/HUD monitoring
+
+layout {
+    pane size=1 borderless=true {
+        plugin location="zellij:tab-bar"
+    }
+
+    pane name="Claude Code" {
+        focus true
+    }
+
+    pane size=2 borderless=true {
+        plugin location="zellij:status-bar"
+    }
+}

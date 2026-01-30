@@ -1,0 +1,52 @@
+// NXTG-Forge Infinity Terminal - Multi-Worker Layout
+// Layout with dedicated panes for parallel agent workers
+//
+// Layout:
+// ┌──────────────────────────┬────────────────────┐
+// │                          │   Oracle Monitor   │
+// │     Claude Code          ├────────────────────┤
+// │       (50%)              │  Governance HUD    │
+// │                          ├────────────────────┤
+// │                          │  Worker Pool       │
+// └──────────────────────────┴────────────────────┘
+
+layout {
+    // Tab bar at top
+    pane size=1 borderless=true {
+        plugin location="zellij:tab-bar"
+    }
+
+    // Main content area
+    pane split_direction="vertical" {
+        // Left pane: Claude Code Terminal (50%)
+        pane size="50%" name="Claude Code" {
+            focus true
+        }
+
+        // Right side: Oracle + HUD + Workers (50%)
+        pane split_direction="horizontal" size="50%" {
+            // Oracle Monitor (top right)
+            pane size="33%" name="Oracle" {
+                command "bash"
+                args "-c" "echo '🔮 Oracle Monitor'; watch -n1 -c 'cat .claude/governance.json 2>/dev/null | jq -C \".sentinelLog[-3:]\" 2>/dev/null || echo \"Waiting...\"'"
+            }
+
+            // Governance HUD (middle right)
+            pane size="33%" name="Governance HUD" {
+                command "bash"
+                args "-c" "echo '📊 Governance HUD'; bash"
+            }
+
+            // Worker Pool Status (bottom right)
+            pane size="34%" name="Worker Pool" {
+                command "bash"
+                args "-c" "echo '🤖 Agent Worker Pool'; echo ''; echo 'Workers: 0/20 active'; echo ''; echo 'Waiting for worker pool initialization...'; bash"
+            }
+        }
+    }
+
+    // Status bar at bottom
+    pane size=2 borderless=true {
+        plugin location="zellij:status-bar"
+    }
+}

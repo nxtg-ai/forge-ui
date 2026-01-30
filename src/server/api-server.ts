@@ -20,6 +20,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { GovernanceState } from '../types/governance.types';
 import { GovernanceStateManager } from '../services/governance-state-manager';
+import { AgentWorkerPool, PoolStatus, AgentTask } from './workers';
 
 const app = express();
 const server = createServer(app);
@@ -28,6 +29,27 @@ const wss = new WebSocketServer({ noServer: true });
 // Initialize Governance State Manager
 const projectRoot = process.cwd();
 const governanceStateManager = new GovernanceStateManager(projectRoot);
+
+// Initialize Worker Pool (lazy - starts on first request or explicit init)
+let workerPool: AgentWorkerPool | null = null;
+async function getWorkerPool(): Promise<AgentWorkerPool> {
+  if (!workerPool) {
+    workerPool = new AgentWorkerPool({
+      initialWorkers: 5,
+      maxWorkers: 20,
+      minWorkers: 2,
+    });
+
+    // Forward pool events to WebSocket clients
+    workerPool.on('event', (event) => {
+      broadcast('worker.event', event);
+    });
+
+    await workerPool.initialize();
+    console.log('[API] Worker pool initialized');
+  }
+  return workerPool;
+}
 
 // Middleware
 app.use(cors({
@@ -1130,6 +1152,321 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// ============= Worker Pool Endpoints =============
+
+// Initialize worker pool
+app.post('/api/workers/init', async (req, res) => {
+  try {
+    const pool = await getWorkerPool();
+    res.json({
+      success: true,
+      data: pool.getStatus(),
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to initialize worker pool',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Get worker pool status
+app.get('/api/workers', async (req, res) => {
+  try {
+    if (!workerPool) {
+      return res.json({
+        success: true,
+        data: { status: 'stopped', workers: [], metrics: null },
+        timestamp: new Date().toISOString()
+      });
+    }
+    res.json({
+      success: true,
+      data: workerPool.getStatus(),
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get worker status',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Get pool metrics
+app.get('/api/workers/metrics', async (req, res) => {
+  try {
+    if (!workerPool) {
+      return res.status(404).json({
+        success: false,
+        error: 'Worker pool not initialized',
+        timestamp: new Date().toISOString()
+      });
+    }
+    res.json({
+      success: true,
+      data: workerPool.getMetrics(),
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get metrics',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Get individual worker
+app.get('/api/workers/:workerId', async (req, res) => {
+  try {
+    if (!workerPool) {
+      return res.status(404).json({
+        success: false,
+        error: 'Worker pool not initialized',
+        timestamp: new Date().toISOString()
+      });
+    }
+    const worker = workerPool.getWorker(req.params.workerId);
+    if (!worker) {
+      return res.status(404).json({
+        success: false,
+        error: 'Worker not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+    res.json({
+      success: true,
+      data: worker,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get worker',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Submit task to worker pool
+app.post('/api/workers/tasks', async (req, res) => {
+  try {
+    const pool = await getWorkerPool();
+    const { type, priority, command, args, workstreamId, timeout, env, metadata } = req.body;
+
+    if (!type || !command) {
+      return res.status(400).json({
+        success: false,
+        error: 'type and command are required',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const taskId = await pool.submitTask({
+      type,
+      priority: priority || 'medium',
+      command,
+      args,
+      workstreamId,
+      timeout,
+      env,
+      metadata
+    });
+
+    res.json({
+      success: true,
+      data: { taskId },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to submit task',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Get task status
+app.get('/api/workers/tasks/:taskId', async (req, res) => {
+  try {
+    if (!workerPool) {
+      return res.status(404).json({
+        success: false,
+        error: 'Worker pool not initialized',
+        timestamp: new Date().toISOString()
+      });
+    }
+    const status = workerPool.getTaskStatus(req.params.taskId);
+    if (!status) {
+      return res.status(404).json({
+        success: false,
+        error: 'Task not found',
+        timestamp: new Date().toISOString()
+      });
+    }
+    res.json({
+      success: true,
+      data: { taskId: req.params.taskId, status },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get task status',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Cancel task
+app.delete('/api/workers/tasks/:taskId', async (req, res) => {
+  try {
+    if (!workerPool) {
+      return res.status(404).json({
+        success: false,
+        error: 'Worker pool not initialized',
+        timestamp: new Date().toISOString()
+      });
+    }
+    const cancelled = await workerPool.cancelTask(req.params.taskId);
+    res.json({
+      success: true,
+      data: { taskId: req.params.taskId, cancelled },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to cancel task',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Scale pool up
+app.post('/api/workers/scale/up', async (req, res) => {
+  try {
+    const pool = await getWorkerPool();
+    const { count } = req.body;
+    await pool.scaleUp(count || 2);
+    res.json({
+      success: true,
+      data: pool.getStatus(),
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to scale up',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Scale pool down
+app.post('/api/workers/scale/down', async (req, res) => {
+  try {
+    if (!workerPool) {
+      return res.status(404).json({
+        success: false,
+        error: 'Worker pool not initialized',
+        timestamp: new Date().toISOString()
+      });
+    }
+    const { count } = req.body;
+    await workerPool.scaleDown(count || 1);
+    res.json({
+      success: true,
+      data: workerPool.getStatus(),
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to scale down',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Worker pool health check
+app.get('/api/workers/health', async (req, res) => {
+  try {
+    if (!workerPool) {
+      return res.json({
+        success: true,
+        data: {
+          status: 'stopped',
+          workers: { total: 0, active: 0, idle: 0, error: 0 },
+          queue: { depth: 0, oldestTaskAge: 0 },
+          lastCheck: new Date().toISOString()
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const status = workerPool.getStatus();
+    const metrics = status.metrics;
+
+    res.json({
+      success: true,
+      data: {
+        status: metrics.errorWorkers > metrics.totalWorkers * 0.5 ? 'unhealthy' :
+                metrics.errorWorkers > 0 ? 'degraded' : 'healthy',
+        workers: {
+          total: metrics.totalWorkers,
+          active: metrics.activeWorkers,
+          idle: metrics.idleWorkers,
+          error: metrics.errorWorkers
+        },
+        queue: {
+          depth: metrics.tasksQueued,
+          avgWaitTime: metrics.avgQueueWaitTime
+        },
+        lastCheck: new Date().toISOString()
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to check health',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Shutdown worker pool
+app.post('/api/workers/shutdown', async (req, res) => {
+  try {
+    if (!workerPool) {
+      return res.json({
+        success: true,
+        message: 'Worker pool not running',
+        timestamp: new Date().toISOString()
+      });
+    }
+    await workerPool.shutdown();
+    workerPool = null;
+    res.json({
+      success: true,
+      message: 'Worker pool shutdown complete',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to shutdown',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Start server
 const PORT = process.env.PORT || 5051; // NXTG-Forge dedicated API port
 
@@ -1169,6 +1506,12 @@ server.listen(PORT, async () => {
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, closing server...');
+
+  // Shutdown worker pool
+  if (workerPool) {
+    await workerPool.shutdown();
+    console.log('Worker pool shutdown complete');
+  }
 
   // Shutdown runspace manager
   await runspaceManager.shutdown();

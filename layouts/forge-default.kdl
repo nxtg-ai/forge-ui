@@ -1,0 +1,46 @@
+// NXTG-Forge Infinity Terminal Layout
+// 3-pane layout for persistent multi-agent terminal sessions
+//
+// Layout:
+// ┌──────────────────────────┬────────────────────┐
+// │                          │   Oracle Monitor   │
+// │     Claude Code          │    (15%)           │
+// │       (70%)              ├────────────────────┤
+// │                          │  Governance HUD    │
+// │                          │    (15%)           │
+// └──────────────────────────┴────────────────────┘
+
+layout {
+    // Tab bar at top
+    pane size=1 borderless=true {
+        plugin location="zellij:tab-bar"
+    }
+
+    // Main content area
+    pane split_direction="vertical" {
+        // Left pane: Claude Code Terminal (70%)
+        pane size="70%" name="Claude Code" {
+            focus true
+        }
+
+        // Right side: Oracle + HUD (30%)
+        pane split_direction="horizontal" size="30%" {
+            // Oracle Monitor (top right)
+            pane size="50%" name="Oracle" {
+                command "bash"
+                args "-c" "echo '🔮 Oracle Monitor - Watching governance state...'; echo ''; watch -n1 -c 'cat .claude/governance.json 2>/dev/null | jq -C \".sentinelLog[-5:]\" 2>/dev/null || echo \"Waiting for governance state...\"'"
+            }
+
+            // Governance HUD (bottom right)
+            pane size="50%" name="Governance HUD" {
+                command "bash"
+                args "-c" "echo '📊 Governance HUD'; echo ''; echo 'Run: npm run hud:tui'; echo ''; bash"
+            }
+        }
+    }
+
+    // Status bar at bottom
+    pane size=2 borderless=true {
+        plugin location="zellij:status-bar"
+    }
+}

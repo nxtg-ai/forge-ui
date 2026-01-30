@@ -1,0 +1,149 @@
+# NXTG-Forge Infinity Terminal Configuration
+# Persistent terminal sessions with multi-device access
+# Version: 1.0.0
+
+infinity_terminal:
+  enabled: true
+  version: "1.0.0"
+
+# ttyd Web Terminal Configuration
+ttyd:
+  port: 7681
+  interface: "127.0.0.1"  # SECURITY: Never bind to 0.0.0.0 without auth
+  ssl: false              # Enable for production with valid certs
+  writable: true
+  reconnect_timeout: 5    # seconds
+  ping_interval: 30       # seconds
+  max_clients: 5
+  credential: "${TTYD_CREDENTIAL}"  # Set via environment if auth needed
+
+# Zellij Session Configuration
+zellij:
+  session_prefix: "forge"
+  default_layout: "forge-default"
+  layouts_dir: "./layouts"
+  auto_create: true
+  auto_attach: true
+
+  # Session naming: {session_prefix}-{project_name}
+  # Example: forge-nxtg-forge-v3
+
+  # Available layouts:
+  #   - forge-default:  3-pane (Claude Code 70%, Oracle 15%, HUD 15%)
+  #   - forge-minimal:  Single pane (just terminal)
+  #   - forge-workers:  Multi-worker layout (5 panes)
+
+# Security Configuration
+security:
+  authentication:
+    enabled: false        # Enable for production
+    type: "basic"         # basic | jwt | oauth
+    token_expiry: "24h"
+    refresh_enabled: true
+
+  network:
+    bind_interface: "127.0.0.1"  # CRITICAL: localhost only for dev
+    allowed_origins:
+      - "http://localhost:5050"
+      - "http://localhost:5173"
+      - "http://127.0.0.1:5050"
+      - "http://127.0.0.1:5173"
+    rate_limit: 100  # requests per minute
+    cors_enabled: true
+
+  session:
+    id_length: 32          # cryptographically secure session IDs
+    expiry_hours: 24
+    max_concurrent: 5      # max sessions per user
+    cleanup_interval: 3600 # clean dead sessions every hour
+
+  # Agent sandboxing (for multi-agent parallelization)
+  agent:
+    sandboxed: true
+    max_workers: 20
+    env_whitelist:
+      - "PATH"
+      - "HOME"
+      - "USER"
+      - "SHELL"
+      - "TERM"
+      - "LANG"
+      - "FORGE_*"
+      - "CLAUDE_*"
+      - "NODE_*"
+      - "NPM_*"
+    blocked_commands:
+      - "rm -rf /"
+      - "rm -rf /*"
+      - ":(){ :|:& };:"   # fork bomb
+      - "mkfs"
+      - "dd if=/dev"
+      - "> /dev/sd"
+    resource_limits:
+      memory_mb: 512
+      cpu_percent: 25
+      max_processes: 50
+      max_open_files: 1024
+
+# Worker Pool Configuration (Phase 3)
+workers:
+  enabled: false          # Enable when implementing Phase 3
+  initial_pool_size: 5
+  max_pool_size: 20
+  min_pool_size: 2
+  scale_up_threshold: 0.8   # Scale up when 80% utilized
+  scale_down_threshold: 0.2 # Scale down when 20% utilized
+  health_check_interval: 30 # seconds
+  task_timeout: 3600        # 1 hour max per task
+  memory_limit_mb: 512
+  cpu_limit_percent: 25
+
+# Session Persistence
+session:
+  auto_save: true
+  save_interval: 60        # seconds
+  max_history: 10000       # lines
+  recovery_enabled: true
+  state_file: ".claude/sessions/${SESSION_NAME}.json"
+
+# Logging
+logging:
+  level: "info"            # debug | info | warn | error
+  file: ".claude/logs/infinity-terminal.log"
+  session_log: ".claude/logs/terminal-sessions.log"
+  max_size_mb: 10
+  max_files: 5
+  format: "json"           # json | text
+
+# UI Integration (Phase 2)
+ui:
+  enabled: true
+  component_path: "src/components/infinity-terminal"
+  responsive:
+    mobile_breakpoint: 640
+    tablet_breakpoint: 768
+    desktop_breakpoint: 1280
+  theme: "forge"
+  animations_enabled: true
+  haptic_feedback: true    # for mobile
+
+# Health Monitoring
+health:
+  enabled: true
+  endpoint: "/api/infinity-terminal/health"
+  checks:
+    - zellij_session
+    - ttyd_process
+    - websocket_connection
+    - worker_pool
+  alert_threshold: 3       # failures before alert
+
+# Feature Flags (for gradual rollout)
+features:
+  persistent_sessions: true
+  web_terminal: true
+  multi_device: false      # Phase 5
+  parallel_agents: false   # Phase 3
+  mobile_optimized: false  # Phase 5
+  pwa_support: false       # Phase 5
+  session_sharing: false   # Future

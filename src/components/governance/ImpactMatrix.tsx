@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Briefcase, AlertTriangle, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { Briefcase, AlertTriangle, AlertCircle, CheckCircle, Bot, Loader2 } from 'lucide-react';
 import type { Workstream } from '../../types/governance.types';
 
 interface ImpactMatrixProps {
@@ -77,6 +77,16 @@ export const ImpactMatrix: React.FC<ImpactMatrixProps> = ({ workstreams }) => {
                 {ws.name}
               </span>
               <div className="flex items-center gap-2">
+                {/* Worker Assignment Badge */}
+                {ws.assignedWorkerId && (
+                  <div
+                    className="flex items-center gap-1 px-1.5 py-0.5 bg-purple-500/20 text-purple-400 rounded text-[10px] border border-purple-500/30"
+                    title={`Worker: ${ws.assignedWorkerId}`}
+                  >
+                    <Bot className="w-2.5 h-2.5" />
+                    <span className="font-mono">{ws.assignedWorkerId.slice(-6)}</span>
+                  </div>
+                )}
                 <div className={`${getRiskColor(ws.risk)}`} title={`Risk: ${ws.risk}`}>
                   {getRiskIcon(ws.risk)}
                 </div>
@@ -101,6 +111,29 @@ export const ImpactMatrix: React.FC<ImpactMatrixProps> = ({ workstreams }) => {
                 <span>{ws.metrics.tasksCompleted}/{ws.metrics.totalTasks} tasks</span>
               )}
             </div>
+
+            {/* Active Tasks Indicator */}
+            {ws.tasks && ws.tasks.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-gray-800/50">
+                <div className="flex items-center gap-1 flex-wrap">
+                  {ws.tasks.filter(t => t.status === 'in_progress').slice(0, 3).map(task => (
+                    <div
+                      key={task.id}
+                      className="flex items-center gap-1 px-1.5 py-0.5 bg-yellow-500/10 text-yellow-400 rounded text-[10px]"
+                      title={task.name}
+                    >
+                      <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                      <span className="truncate max-w-[80px]">{task.name}</span>
+                    </div>
+                  ))}
+                  {ws.tasks.filter(t => t.status === 'in_progress').length > 3 && (
+                    <span className="text-[10px] text-gray-500">
+                      +{ws.tasks.filter(t => t.status === 'in_progress').length - 3} more
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
           </motion.div>
         ))}
       </div>

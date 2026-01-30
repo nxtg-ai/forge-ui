@@ -21,6 +21,52 @@ export interface GovernanceState {
   sentinelLog: SentinelEntry[];
   /** System metadata and synchronization info */
   metadata: GovernanceMetadata;
+  /** Worker pool status (optional, present when pool is active) */
+  workerPool?: WorkerPoolState;
+}
+
+/**
+ * Worker pool state for parallel agent execution
+ */
+export interface WorkerPoolState {
+  /** Pool operational status */
+  status: 'running' | 'scaling' | 'degraded' | 'stopped' | 'starting';
+  /** Total number of workers in pool */
+  totalWorkers: number;
+  /** Number of workers actively executing tasks */
+  activeWorkers: number;
+  /** Number of idle workers available for tasks */
+  idleWorkers: number;
+  /** Number of workers in error state */
+  errorWorkers: number;
+  /** Number of tasks waiting in queue */
+  tasksQueued: number;
+  /** Tasks completed in last 24 hours */
+  tasksCompleted24h: number;
+  /** Average task duration in milliseconds */
+  avgTaskDurationMs: number;
+  /** Individual worker summaries */
+  workers: WorkerSummary[];
+}
+
+/**
+ * Summary info for an individual worker
+ */
+export interface WorkerSummary {
+  /** Worker identifier */
+  id: string;
+  /** Current worker status */
+  status: 'idle' | 'busy' | 'error' | 'crashed';
+  /** Current task ID if busy */
+  currentTaskId?: string;
+  /** Assigned workstream ID if any */
+  assignedWorkstream?: string;
+  /** Resource usage metrics */
+  metrics: {
+    cpuPercent: number;
+    memoryMB: number;
+    tasksCompleted: number;
+  };
 }
 
 /**
@@ -74,6 +120,24 @@ export interface Workstream {
   progress: number;
   /** Detailed workstream metrics */
   metrics?: WorkstreamMetrics;
+  /** Assigned worker ID from worker pool */
+  assignedWorkerId?: string;
+  /** Tasks associated with this workstream */
+  tasks?: WorkstreamTask[];
+}
+
+/**
+ * Task within a workstream
+ */
+export interface WorkstreamTask {
+  /** Task identifier */
+  id: string;
+  /** Task name */
+  name: string;
+  /** Task status */
+  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  /** Assigned worker ID */
+  workerId?: string;
 }
 
 /**

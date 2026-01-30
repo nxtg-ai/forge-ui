@@ -5,6 +5,8 @@ import { ConstitutionCard } from './ConstitutionCard';
 import { ImpactMatrix } from './ImpactMatrix';
 import { OracleFeed } from './OracleFeed';
 import { StrategicAdvisor } from './StrategicAdvisor';
+import { WorkerPoolMetrics } from './WorkerPoolMetrics';
+import { AgentActivityFeed } from './AgentActivityFeed';
 
 interface GovernanceHUDProps {
   className?: string;
@@ -91,7 +93,9 @@ export const GovernanceHUD: React.FC<GovernanceHUDProps> = ({ className }) => {
       <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-2 p-2">
         <StrategicAdvisor state={state} />
         <ConstitutionCard constitution={state.constitution} />
+        <WorkerPoolMetrics />
         <ImpactMatrix workstreams={state.workstreams} />
+        <AgentActivityFeed maxEntries={15} />
         <OracleFeed logs={state.sentinelLog} />
       </div>
     </motion.div>

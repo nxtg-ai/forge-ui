@@ -16,6 +16,7 @@ import {
 } from './components';
 import { MCPSelectionView } from './components/onboarding/MCPSelectionView';
 import TerminalView from './pages/terminal-view';
+import InfinityTerminalView from './pages/infinity-terminal-view';
 import {
   useVision,
   useProjectState,
@@ -72,7 +73,7 @@ function IntegratedApp() {
 
   // Local state management
   const [currentView, setCurrentView] = useState<
-    'vision-capture' | 'mcp-selection' | 'dashboard' | 'architect' | 'command' | 'vision-display' | 'yolo' | 'terminal'
+    'vision-capture' | 'mcp-selection' | 'dashboard' | 'architect' | 'command' | 'vision-display' | 'yolo' | 'terminal' | 'infinity-terminal'
   >('dashboard');
   const [engagementMode, setEngagementMode] = useState<EngagementMode>('founder');
   const [automationLevel, setAutomationLevel] = useState<AutomationLevel>('conservative');
@@ -413,7 +414,7 @@ function IntegratedApp() {
                 {[
                   { id: 'dashboard', label: 'Dashboard', icon: '📊' },
                   { id: 'vision-display', label: 'Vision', icon: '🎯' },
-                  { id: 'terminal', label: 'Terminal', icon: '💻' },
+                  { id: 'infinity-terminal', label: 'Terminal', icon: '♾️' },
                   { id: 'command', label: 'Command', icon: '⚡' },
                   { id: 'architect', label: 'Architect', icon: '🏛️' },
                   { id: 'yolo', label: 'YOLO', icon: '🚀' }
@@ -625,9 +626,14 @@ function IntegratedApp() {
           />
         )}
 
-        {/* Terminal View */}
+        {/* Terminal View (Legacy) */}
         {currentView === 'terminal' && (
           <TerminalView />
+        )}
+
+        {/* Infinity Terminal View (Persistent Sessions) */}
+        {currentView === 'infinity-terminal' && (
+          <InfinityTerminalView />
         )}
       </main>
 
