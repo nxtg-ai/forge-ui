@@ -7,42 +7,49 @@
  */
 
 // Main component
-export { InfinityTerminal, default as InfinityTerminalDefault } from './InfinityTerminal';
+export {
+  InfinityTerminal,
+  default as InfinityTerminalDefault,
+} from "./InfinityTerminal";
 
 // Mobile components
-export { MobileTerminalView } from './MobileTerminalView';
-export { DevicePairing } from './DevicePairing';
+export { MobileTerminalView } from "./MobileTerminalView";
+export { DevicePairing } from "./DevicePairing";
 
 // Pane management
-export { TerminalPaneSwitcher } from './TerminalPaneSwitcher';
-export type { TerminalPane } from './TerminalPaneSwitcher';
+export { TerminalPaneSwitcher } from "./TerminalPaneSwitcher";
+export type { TerminalPane } from "./TerminalPaneSwitcher";
 
 // Layout components
-export { InfinityTerminalLayout } from './layout';
+export { InfinityTerminalLayout } from "./layout";
+export { Panel } from "./Panel";
+export { FooterPanel } from "./FooterPanel";
+export { OracleFeedMarquee } from "./OracleFeedMarquee";
+export type { OracleMessage } from "./OracleFeedMarquee";
 
 // Session components
 export {
   SessionStatusBar,
   SessionRestoreModal,
   SessionPersistenceIndicator,
-} from './session';
+} from "./session";
 
 // Hooks
 export {
   useSessionPersistence,
   useResponsiveLayout,
   useTouchGestures,
-} from './hooks';
+} from "./hooks";
 
 // Types
 export type {
   SessionState,
   SessionConfig,
   UseSessionPersistenceReturn,
-} from './hooks/useSessionPersistence';
+} from "./hooks/useSessionPersistence";
 
 export type {
   Breakpoint,
   LayoutConfig,
   UseResponsiveLayoutReturn,
-} from './hooks/useResponsiveLayout';
+} from "./hooks/useResponsiveLayout";

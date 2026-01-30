@@ -58,4 +58,9 @@
     left: var(--agent-x);
     top: var(--agent-y);
   }
+
+  /* Marquee animation utilities */
+  .animate-marquee:hover {
+    animation-play-state: paused;
+  }
 }

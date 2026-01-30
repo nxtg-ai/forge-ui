@@ -3,9 +3,11 @@
  * Handles breakpoint detection and layout management
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from "react";
 
-export type Breakpoint = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+export type Breakpoint = "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
+
+export type PanelMode = "fixed" | "overlay";
 
 export interface LayoutConfig {
   breakpoint: Breakpoint;
@@ -18,7 +20,8 @@ export interface LayoutConfig {
   showHUD: boolean;
   hudWidth: number;
   terminalHeight: string;
-  paneLayout: 'single' | 'split-vertical' | 'split-horizontal' | 'multi';
+  paneLayout: "single" | "split-vertical" | "split-horizontal" | "multi";
+  panelMode: PanelMode;
 }
 
 // Tailwind-compatible breakpoints
@@ -28,7 +31,7 @@ const BREAKPOINTS: Record<Breakpoint, number> = {
   md: 768,
   lg: 1024,
   xl: 1280,
-  '2xl': 1536,
+  "2xl": 1536,
 };
 
 interface UseResponsiveLayoutOptions {
@@ -46,103 +49,127 @@ export function useResponsiveLayout(options: UseResponsiveLayoutOptions = {}) {
 
   const [hudVisible, setHudVisible] = useState(defaultHUDVisible);
   const [sidebarVisible, setSidebarVisible] = useState(defaultSidebarVisible);
+  const [contextPanelVisible, setContextPanelVisible] = useState(false); // Default false on mobile, updated by breakpoint
+  const [footerVisible, setFooterVisible] = useState(true);
 
   const getBreakpoint = useCallback((width: number): Breakpoint => {
-    if (width >= BREAKPOINTS['2xl']) return '2xl';
-    if (width >= BREAKPOINTS.xl) return 'xl';
-    if (width >= BREAKPOINTS.lg) return 'lg';
-    if (width >= BREAKPOINTS.md) return 'md';
-    if (width >= BREAKPOINTS.sm) return 'sm';
-    return 'xs';
+    if (width >= BREAKPOINTS["2xl"]) return "2xl";
+    if (width >= BREAKPOINTS.xl) return "xl";
+    if (width >= BREAKPOINTS.lg) return "lg";
+    if (width >= BREAKPOINTS.md) return "md";
+    if (width >= BREAKPOINTS.sm) return "sm";
+    return "xs";
   }, []);
 
-  const calculateLayout = useCallback((width: number): LayoutConfig => {
-    const breakpoint = getBreakpoint(width);
-    const isMobile = breakpoint === 'xs' || breakpoint === 'sm';
-    const isTablet = breakpoint === 'md' || breakpoint === 'lg';
-    const isDesktop = breakpoint === 'xl' || breakpoint === '2xl';
+  const calculateLayout = useCallback(
+    (width: number): LayoutConfig => {
+      const breakpoint = getBreakpoint(width);
+      const isMobile = breakpoint === "xs" || breakpoint === "sm";
+      const isTablet = breakpoint === "md" || breakpoint === "lg";
+      const isDesktop = breakpoint === "xl" || breakpoint === "2xl";
 
-    let config: LayoutConfig = {
-      breakpoint,
-      width,
-      isMobile,
-      isTablet,
-      isDesktop,
-      showSidebar: false,
-      sidebarWidth: 0,
-      showHUD: false,
-      hudWidth: 0,
-      terminalHeight: '100%',
-      paneLayout: 'single',
-    };
+      // Determine panel mode based on breakpoint
+      const panelMode: PanelMode = isMobile ? "overlay" : "fixed";
 
-    if (isMobile) {
-      // Mobile: Single pane, bottom sheet for HUD
-      config = {
-        ...config,
+      let config: LayoutConfig = {
+        breakpoint,
+        width,
+        isMobile,
+        isTablet,
+        isDesktop,
         showSidebar: false,
         sidebarWidth: 0,
-        showHUD: hudVisible,
-        hudWidth: width, // Full width bottom sheet
-        terminalHeight: hudVisible ? '60vh' : '100%',
-        paneLayout: 'single',
+        showHUD: false,
+        hudWidth: 0,
+        terminalHeight: "100%",
+        paneLayout: "single",
+        panelMode,
       };
-    } else if (isTablet) {
-      // Tablet: 2-pane layout
-      config = {
-        ...config,
-        showSidebar: sidebarVisible,
-        sidebarWidth: sidebarVisible ? 200 : 0,
-        showHUD: hudVisible,
-        hudWidth: hudVisible ? 280 : 0,
-        terminalHeight: '100%',
-        paneLayout: 'split-vertical',
-      };
-    } else {
-      // Desktop: Full 3-pane layout
-      config = {
-        ...config,
-        showSidebar: sidebarVisible,
-        sidebarWidth: sidebarVisible ? 240 : 0,
-        showHUD: hudVisible,
-        hudWidth: hudVisible ? 384 : 0,
-        terminalHeight: '100%',
-        paneLayout: 'multi',
-      };
-    }
 
-    return config;
-  }, [getBreakpoint, hudVisible, sidebarVisible]);
+      if (isMobile) {
+        // Mobile: Single pane, bottom sheet for HUD
+        config = {
+          ...config,
+          showSidebar: false,
+          sidebarWidth: 0,
+          showHUD: hudVisible,
+          hudWidth: width, // Full width bottom sheet
+          terminalHeight: hudVisible ? "60vh" : "100%",
+          paneLayout: "single",
+        };
+      } else if (isTablet) {
+        // Tablet: 2-pane layout
+        config = {
+          ...config,
+          showSidebar: sidebarVisible,
+          sidebarWidth: sidebarVisible ? 200 : 0,
+          showHUD: hudVisible,
+          hudWidth: hudVisible ? 320 : 0, // Consistent 320px
+          terminalHeight: "100%",
+          paneLayout: "split-vertical",
+        };
+      } else {
+        // Desktop: Full 3-pane layout
+        config = {
+          ...config,
+          showSidebar: sidebarVisible,
+          sidebarWidth: sidebarVisible ? 240 : 0,
+          showHUD: hudVisible,
+          hudWidth: hudVisible ? 320 : 0, // Consistent 320px
+          terminalHeight: "100%",
+          paneLayout: "multi",
+        };
+      }
+
+      return config;
+    },
+    [getBreakpoint, hudVisible, sidebarVisible],
+  );
 
   const [layout, setLayout] = useState<LayoutConfig>(() =>
-    calculateLayout(typeof window !== 'undefined' ? window.innerWidth : 1280)
+    calculateLayout(typeof window !== "undefined" ? window.innerWidth : 1280),
   );
 
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
       const newLayout = calculateLayout(window.innerWidth);
-      setLayout(prev => {
+      setLayout((prev) => {
         if (prev.breakpoint !== newLayout.breakpoint) {
           onBreakpointChange?.(newLayout.breakpoint);
+
+          // Auto-update context panel visibility based on breakpoint
+          if (newLayout.isDesktop && !contextPanelVisible) {
+            setContextPanelVisible(true);
+          } else if (newLayout.isMobile && contextPanelVisible) {
+            setContextPanelVisible(false);
+          }
         }
         return newLayout;
       });
     };
 
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
     handleResize(); // Initial calculation
 
-    return () => window.removeEventListener('resize', handleResize);
-  }, [calculateLayout, onBreakpointChange]);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [calculateLayout, onBreakpointChange, contextPanelVisible]);
 
   // Toggle functions
   const toggleHUD = useCallback(() => {
-    setHudVisible(prev => !prev);
+    setHudVisible((prev) => !prev);
   }, []);
 
   const toggleSidebar = useCallback(() => {
-    setSidebarVisible(prev => !prev);
+    setSidebarVisible((prev) => !prev);
+  }, []);
+
+  const toggleContextPanel = useCallback(() => {
+    setContextPanelVisible((prev) => !prev);
+  }, []);
+
+  const toggleFooter = useCallback(() => {
+    setFooterVisible((prev) => !prev);
   }, []);
 
   const setHUD = useCallback((visible: boolean) => {
@@ -151,6 +178,14 @@ export function useResponsiveLayout(options: UseResponsiveLayoutOptions = {}) {
 
   const setSidebar = useCallback((visible: boolean) => {
     setSidebarVisible(visible);
+  }, []);
+
+  const setContextPanel = useCallback((visible: boolean) => {
+    setContextPanelVisible(visible);
+  }, []);
+
+  const setFooter = useCallback((visible: boolean) => {
+    setFooterVisible(visible);
   }, []);
 
   // Recalculate layout when visibility changes
@@ -164,30 +199,28 @@ export function useResponsiveLayout(options: UseResponsiveLayoutOptions = {}) {
 
     return {
       container: [
-        'flex',
-        isMobile ? 'flex-col' : 'flex-row',
-        isDesktop ? 'h-screen' : 'min-h-screen',
-      ].join(' '),
+        "flex",
+        isMobile ? "flex-col" : "flex-row",
+        isDesktop ? "h-screen" : "min-h-screen",
+      ].join(" "),
 
-      terminal: [
-        'flex-1',
-        'min-w-0',
-        isMobile ? 'order-first' : '',
-      ].join(' '),
+      terminal: ["flex-1", "min-w-0", isMobile ? "order-first" : ""].join(" "),
 
       sidebar: [
-        'flex-shrink-0',
-        isMobile ? 'w-full' : `w-[${layout.sidebarWidth}px]`,
-        isMobile ? 'order-last' : 'order-first',
-        isMobile ? 'h-auto' : 'h-full',
-      ].join(' '),
+        "flex-shrink-0",
+        isMobile ? "w-full" : `w-[${layout.sidebarWidth}px]`,
+        isMobile ? "order-last" : "order-first",
+        isMobile ? "h-auto" : "h-full",
+      ].join(" "),
 
       hud: [
-        'flex-shrink-0',
-        isMobile ? 'w-full fixed bottom-0 left-0 right-0' : `w-[${layout.hudWidth}px]`,
-        isMobile ? 'h-[40vh]' : 'h-full',
-        isMobile ? 'z-40' : '',
-      ].join(' '),
+        "flex-shrink-0",
+        isMobile
+          ? "w-full fixed bottom-0 left-0 right-0"
+          : `w-[${layout.hudWidth}px]`,
+        isMobile ? "h-[40vh]" : "h-full",
+        isMobile ? "z-40" : "",
+      ].join(" "),
     };
   }, [layout]);
 
@@ -195,10 +228,16 @@ export function useResponsiveLayout(options: UseResponsiveLayoutOptions = {}) {
     layout,
     hudVisible,
     sidebarVisible,
+    contextPanelVisible,
+    footerVisible,
     toggleHUD,
     toggleSidebar,
+    toggleContextPanel,
+    toggleFooter,
     setHUD,
     setSidebar,
+    setContextPanel,
+    setFooter,
     getResponsiveClasses,
     breakpoints: BREAKPOINTS,
   };
