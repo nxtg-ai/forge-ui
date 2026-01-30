@@ -133,6 +133,59 @@ Use with:
 
 ## Mobile Usage
 
+### WSL2 Setup (Windows)
+
+If running NXTG-Forge on WSL2, extra steps are required for mobile access:
+
+**1. Get your Windows LAN IP:**
+```powershell
+# In PowerShell
+(Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -eq 'Ethernet' -or $_.InterfaceAlias -eq 'Wi-Fi' }).IPAddress
+```
+
+**2. Get your WSL2 IP:**
+```bash
+# In WSL2
+hostname -I | awk '{print $1}'
+```
+
+**3. Set up port forwarding (Run PowerShell as Admin):**
+```powershell
+# Forward UI port (5050) and API port (5051)
+netsh interface portproxy add v4tov4 listenport=5050 listenaddress=0.0.0.0 connectport=5050 connectaddress=<WSL2_IP>
+netsh interface portproxy add v4tov4 listenport=5051 listenaddress=0.0.0.0 connectport=5051 connectaddress=<WSL2_IP>
+
+# Add firewall rules
+New-NetFirewallRule -DisplayName "WSL2 Port 5050" -Direction Inbound -LocalPort 5050 -Protocol TCP -Action Allow
+New-NetFirewallRule -DisplayName "WSL2 Port 5051" -Direction Inbound -LocalPort 5051 -Protocol TCP -Action Allow
+```
+
+**4. Start the dev server with network access:**
+```bash
+# In WSL2 - run these in your terminal
+npm run server:dev &
+npx vite --host 0.0.0.0 --port 5050
+```
+
+**5. Access from your phone:**
+```
+http://<WINDOWS_LAN_IP>:5050
+```
+
+> **Note:** Your phone must be on the same WiFi network. If your router has AP/Client isolation enabled, device-to-device communication will be blocked.
+
+**Verify port forwarding:**
+```powershell
+netsh interface portproxy show v4tov4
+```
+
+**Remove port forwarding (when done):**
+```powershell
+netsh interface portproxy reset
+```
+
+---
+
 ### Touch Gestures
 
 | Gesture | Action |
