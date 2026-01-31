@@ -54,7 +54,7 @@ async function getWorkerPool(): Promise<AgentWorkerPool> {
 // Middleware
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5050", // NXTG-Forge UI
+    origin: true, // Allow all origins for multi-device access (mobile, tablet, etc.)
     credentials: true,
   }),
 );
@@ -1536,9 +1536,9 @@ server.on("upgrade", (request, socket, head) => {
   // PTY bridge handles /terminal path in createPTYBridge
 });
 
-server.listen(PORT, async () => {
-  console.log(`NXTG-Forge API Server running on port ${PORT}`);
-  console.log(`WebSocket server available at ws://localhost:${PORT}/ws`);
+server.listen(PORT, "0.0.0.0", async () => {
+  console.log(`NXTG-Forge API Server running on http://0.0.0.0:${PORT}`);
+  console.log(`WebSocket server available at ws://0.0.0.0:${PORT}/ws`);
 
   // Initialize services
   orchestrator.initialize();

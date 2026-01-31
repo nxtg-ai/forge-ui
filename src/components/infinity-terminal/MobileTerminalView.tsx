@@ -34,7 +34,7 @@ interface MobileTerminalViewProps {
 export const MobileTerminalView: React.FC<MobileTerminalViewProps> = ({
   projectName = "nxtg-forge",
   ttydPort = 7681,
-  ttydHost = "127.0.0.1",
+  ttydHost = typeof window !== 'undefined' ? window.location.hostname : "127.0.0.1",
   onShare,
   className = "",
 }) => {
