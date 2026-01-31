@@ -5,6 +5,16 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import {
+  BarChart3,
+  Target,
+  Infinity,
+  Zap,
+  Building2,
+  Rocket,
+  Shield,
+  Database,
+} from "lucide-react";
+import {
   VisionCapture,
   ChiefOfStaffDashboard,
   ArchitectDiscussion,
@@ -349,7 +359,7 @@ function IntegratedApp() {
       id: "lead-architect",
       name: "Lead Architect",
       role: "System Architecture & Integration",
-      avatar: "🏛️",
+      avatar: <Building2 className="w-5 h-5" />,
       status: "available",
       expertise: ["system-design", "scalability", "integration"],
       currentFocus: "Analyzing system boundaries",
@@ -358,7 +368,7 @@ function IntegratedApp() {
       id: "security-architect",
       name: "Security Architect",
       role: "Security & Compliance",
-      avatar: "🔒",
+      avatar: <Shield className="w-5 h-5" />,
       status: "available",
       expertise: ["security", "compliance", "encryption"],
       currentFocus: "Reviewing authentication flow",
@@ -367,7 +377,7 @@ function IntegratedApp() {
       id: "data-architect",
       name: "Data Architect",
       role: "Data Flow & Storage",
-      avatar: "💾",
+      avatar: <Database className="w-5 h-5" />,
       status: "busy",
       expertise: ["database", "caching", "data-flow"],
       currentFocus: "Optimizing query patterns",
@@ -462,18 +472,18 @@ function IntegratedApp() {
 
               <nav className="flex space-x-4">
                 {[
-                  { id: "dashboard", label: "Dashboard", icon: "📊" },
-                  { id: "vision-display", label: "Vision", icon: "🎯" },
-                  { id: "infinity-terminal", label: "Terminal", icon: "♾️" },
-                  { id: "command", label: "Command", icon: "⚡" },
-                  { id: "architect", label: "Architect", icon: "🏛️" },
-                  { id: "yolo", label: "YOLO", icon: "🚀" },
+                  { id: "dashboard", label: "Dashboard", icon: <BarChart3 className="w-4 h-4" /> },
+                  { id: "vision-display", label: "Vision", icon: <Target className="w-4 h-4" /> },
+                  { id: "infinity-terminal", label: "Terminal", icon: <Infinity className="w-4 h-4" /> },
+                  { id: "command", label: "Command", icon: <Zap className="w-4 h-4" /> },
+                  { id: "architect", label: "Architect", icon: <Building2 className="w-4 h-4" /> },
+                  { id: "yolo", label: "YOLO", icon: <Rocket className="w-4 h-4" /> },
                 ].map((nav) => (
                   <button
                     key={nav.id}
                     data-testid={`app-nav-btn-${nav.id}`}
                     onClick={() => setCurrentView(nav.id as any)}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center ${
                       currentView === nav.id
                         ? "bg-gray-800 text-white"
                         : "text-gray-400 hover:text-white hover:bg-gray-800/50"

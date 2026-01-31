@@ -13,6 +13,9 @@ import {
   Clock,
   ChevronDown,
   ChevronUp,
+  Lightbulb,
+  Target,
+  Sparkles,
 } from "lucide-react";
 import type {
   MCPServer,
@@ -124,8 +127,9 @@ export function MCPSelectionView({
 
             {/* Use Case */}
             <div className="bg-gray-900/50 rounded p-3 mb-3">
-              <p className="text-sm text-purple-400 font-medium mb-1">
-                💡 Use Case
+              <p className="text-sm text-purple-400 font-medium mb-1 flex items-center gap-2">
+                <Lightbulb className="w-4 h-4" />
+                Use Case
               </p>
               <p className="text-sm text-gray-300">{server.useCase}</p>
             </div>
@@ -234,8 +238,9 @@ export function MCPSelectionView({
       {suggestions.essential.length > 0 && (
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-xl font-semibold text-green-400">
-              🎯 Essential (Highly Recommended)
+            <h2 className="text-xl font-semibold text-green-400 flex items-center gap-2">
+              <Target className="w-4 h-4" />
+              Essential (Highly Recommended)
             </h2>
             <span className="text-sm text-gray-500">
               These are crucial for your project's success
@@ -257,8 +262,9 @@ export function MCPSelectionView({
       {suggestions.recommended.length > 0 && (
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-xl font-semibold text-blue-400">
-              💡 Recommended
+            <h2 className="text-xl font-semibold text-blue-400 flex items-center gap-2">
+              <Lightbulb className="w-4 h-4" />
+              Recommended
             </h2>
             <span className="text-sm text-gray-500">
               These will significantly boost productivity
@@ -276,8 +282,9 @@ export function MCPSelectionView({
       {suggestions.optional.length > 0 && (
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-xl font-semibold text-gray-400">
-              🔮 Future Considerations
+            <h2 className="text-xl font-semibold text-gray-400 flex items-center gap-2">
+              <Sparkles className="w-4 h-4" />
+              Future Considerations
             </h2>
             <span className="text-sm text-gray-500">
               You can add these later as your project grows

@@ -3,6 +3,9 @@
 ## 1. Start Servers
 
 ```bash
+# Kill any existing processes first (important!)
+pkill -f "vite|tsx.*api-server" 2>/dev/null; sleep 1
+
 # Start both UI and API servers
 npm run dev
 
@@ -10,6 +13,8 @@ npm run dev
 npm run server:dev  # API on port 5051
 npm run ui:dev      # UI on port 5050
 ```
+
+**If you see "Port in use" errors:** Run the pkill command above first.
 
 ## 2. Verify Everything is Running
 
