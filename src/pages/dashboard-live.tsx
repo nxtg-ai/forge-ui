@@ -70,7 +70,7 @@ const LiveDashboard: React.FC = () => {
   // WebSocket connection for real-time updates
   const { connectionState, messages, sendMessage, isConnected } =
     useRealtimeConnection({
-      url: import.meta.env.VITE_WS_URL || `ws://${window.location.hostname}:5051/ws`,
+      url: import.meta.env.VITE_WS_URL || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`,
       onOpen: () => {
         toast.success("Connected to Forge", {
           message: "Real-time updates enabled",

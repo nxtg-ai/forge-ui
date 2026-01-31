@@ -55,7 +55,8 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
 
     const connect = () => {
       try {
-        const wsUrl = import.meta.env.VITE_WS_URL || `ws://${window.location.hostname}:5051/ws`;
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = import.meta.env.VITE_WS_URL || `${wsProtocol}//${window.location.host}/ws`;
         ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {

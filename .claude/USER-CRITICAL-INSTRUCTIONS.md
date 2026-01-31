@@ -66,6 +66,18 @@ Task(developer, "Add CLI command")
 - Stopped to ask permission after decisions made
 - **Fixed:** Execute immediately after CEO-LOOP decides
 
+### Correction #4: Infinity Terminal Misinformation (2026-01-31)
+- Wrongly claimed Zellij was needed for session persistence
+- Wrongly suggested the Infinity Terminal didn't have persistence built-in
+- **Fact:** Session persistence is BUILT INTO the PTY Bridge + useSessionPersistence.ts
+- **Fact:** Zellij is OPTIONAL local enhancement, not a dependency
+- **Fixed:** Created CLAUDE.md with correct architecture documentation
+
+### Correction #5: Multi-Device Access (2026-01-31)
+- Spent too long on scattered fixes instead of finding root cause
+- Root cause was `.env` file hardcoding `VITE_API_URL=http://localhost:5051/api`
+- **Fixed:** Removed hardcoded URLs, documented proper Vite proxy approach
+
 ## Current Status
 
 **Week 1:** COMPLETE ✅

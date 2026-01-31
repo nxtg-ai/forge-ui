@@ -9,7 +9,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     coverage: {
-      provider: 'c8',
+      provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
       exclude: [
         'node_modules/',
@@ -37,12 +37,7 @@ export default defineConfig({
     testTimeout: 10000,
     hookTimeout: 10000,
     isolate: true,
-    pool: 'threads',
-    poolOptions: {
-      threads: {
-        singleThread: false
-      }
-    }
+    pool: 'threads'
   },
   resolve: {
     alias: {

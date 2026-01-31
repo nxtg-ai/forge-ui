@@ -14,22 +14,23 @@ import type {
   YoloStatistics,
 } from "../components/types";
 
-// API Configuration - use current hostname for multi-device access
-const getApiHost = () => {
+// API Configuration
+// In dev mode: use relative URLs (/api) - Vite proxies to localhost:5051
+// In production: use absolute URLs with current hostname
+const getApiBaseUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (import.meta.env.DEV) return '/api';  // Vite proxy handles this
   const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
   return `http://${host}:5051/api`;
 };
 
-const getWsHost = () => {
+const getWsUrl = () => {
   if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL;
-  const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+  // WebSocket needs absolute URL - use current host and Vite's port (5050) which proxies to 5051
+  const host = typeof window !== 'undefined' ? window.location.host : 'localhost:5050';
   const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${host}:5051/ws`;
+  return `${protocol}//${host}/ws`;
 };
-
-const API_BASE_URL = getApiHost();
-const WS_URL = getWsHost();
 
 // Response schemas for type safety
 const ApiResponseSchema = <T extends z.ZodType>(dataSchema: T) =>
@@ -95,7 +96,7 @@ export class ApiClient {
     options: RequestInit = {},
   ): Promise<ApiResponse<T>> {
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const response = await fetch(`${getApiBaseUrl()}${endpoint}`, {
         ...options,
         headers: {
           "Content-Type": "application/json",
@@ -268,7 +269,7 @@ export class ApiClient {
     }
 
     try {
-      this.wsConnection = new WebSocket(WS_URL);
+      this.wsConnection = new WebSocket(getWsUrl());
 
       this.wsConnection.onopen = () => {
         console.log("WebSocket connected");

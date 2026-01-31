@@ -151,14 +151,21 @@ hostname -I | awk '{print $1}'
 
 **3. Set up port forwarding (Run PowerShell as Admin):**
 ```powershell
-# Forward UI port (5050) and API port (5051)
-netsh interface portproxy add v4tov4 listenport=5050 listenaddress=0.0.0.0 connectport=5050 connectaddress=<WSL2_IP>
-netsh interface portproxy add v4tov4 listenport=5051 listenaddress=0.0.0.0 connectport=5051 connectaddress=<WSL2_IP>
+# Get your WSL2 IP first
+$wslIp = (wsl hostname -I).Split()[0]
+Write-Host "WSL2 IP: $wslIp"
 
-# Add firewall rules
-New-NetFirewallRule -DisplayName "WSL2 Port 5050" -Direction Inbound -LocalPort 5050 -Protocol TCP -Action Allow
-New-NetFirewallRule -DisplayName "WSL2 Port 5051" -Direction Inbound -LocalPort 5051 -Protocol TCP -Action Allow
+# Forward all NXTG-Forge ports
+netsh interface portproxy add v4tov4 listenport=5050 listenaddress=0.0.0.0 connectport=5050 connectaddress=$wslIp
+netsh interface portproxy add v4tov4 listenport=5051 listenaddress=0.0.0.0 connectport=5051 connectaddress=$wslIp
+netsh interface portproxy add v4tov4 listenport=5173 listenaddress=0.0.0.0 connectport=5173 connectaddress=$wslIp
+netsh interface portproxy add v4tov4 listenport=8003 listenaddress=0.0.0.0 connectport=8003 connectaddress=$wslIp
+
+# Add firewall rule (REQUIRED - without this, mobile access won't work!)
+New-NetFirewallRule -DisplayName 'NXTG Forge' -Direction Inbound -LocalPort 5050,5051,5173,8003 -Protocol TCP -Action Allow
 ```
+
+> **Important:** The firewall rule is essential. Port forwarding alone won't work without it.
 
 **4. Start the dev server with network access:**
 ```bash

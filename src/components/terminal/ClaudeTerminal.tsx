@@ -238,8 +238,8 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
       return;
     }
 
-    const wsHost = window.location.hostname;
-    const ws = new WebSocket(`ws://${wsHost}:5051/terminal`);
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(`${wsProtocol}//${window.location.host}/terminal`);
 
     ws.onopen = () => {
       setIsConnected(true);

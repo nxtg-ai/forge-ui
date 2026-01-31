@@ -121,7 +121,7 @@ function IntegratedApp() {
       setLoadingMcpSuggestions(true);
       try {
         const response = await fetch(
-          `http://${window.location.hostname}:5051/api/mcp/suggestions`,
+          `/api/mcp/suggestions`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -161,7 +161,7 @@ function IntegratedApp() {
       try {
         // Send selected MCPs to backend for configuration
         const response = await fetch(
-          `http://${window.location.hostname}:5051/api/mcp/configure`,
+          `/api/mcp/configure`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -222,7 +222,7 @@ function IntegratedApp() {
     const fetchRunspaces = async () => {
       try {
         setLoadingRunspaces(true);
-        const response = await fetch(`http://${window.location.hostname}:5051/api/runspaces`);
+        const response = await fetch(`/api/runspaces`);
         const result = await response.json();
 
         if (result.success) {
@@ -248,7 +248,7 @@ function IntegratedApp() {
   const handleRunspaceSwitch = useCallback(async (runspaceId: string) => {
     try {
       const response = await fetch(
-        `http://${window.location.hostname}:5051/api/runspaces/${runspaceId}/switch`,
+        `/api/runspaces/${runspaceId}/switch`,
         {
           method: "POST",
         },
@@ -258,7 +258,7 @@ function IntegratedApp() {
       if (result.success) {
         setActiveRunspace(result.data);
         // Refresh runspaces list
-        const listResponse = await fetch(`http://${window.location.hostname}:5051/api/runspaces`);
+        const listResponse = await fetch(`/api/runspaces`);
         const listResult = await listResponse.json();
         if (listResult.success) {
           setRunspaces(listResult.data.runspaces || []);

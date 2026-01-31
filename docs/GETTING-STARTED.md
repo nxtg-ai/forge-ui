@@ -111,6 +111,44 @@ State is stored in `.claude/state.json` and managed automatically.
 - Delete `.claude/state.json` and reinitialize
 - Check for file permission issues
 
+### Multi-Device Access (Mobile/Tablet/Other PCs)
+
+**Problem**: API calls fail with CORS errors when accessing from devices other than localhost.
+
+**Root Cause**: Hardcoded `localhost` URLs in `.env` file override dynamic URL detection.
+
+**Solution**:
+1. Comment out hardcoded API URLs in `.env`:
+   ```bash
+   # Client - URLs are dynamically determined based on window.location
+   # VITE_API_URL=http://localhost:5051/api
+   # VITE_WS_URL=ws://localhost:5051/ws
+   ```
+
+2. Ensure servers bind to `0.0.0.0`:
+   ```typescript
+   // vite.config.ts
+   server: {
+     host: '0.0.0.0',
+     port: 5050
+   }
+   ```
+
+3. Use Vite's proxy for API calls (relative URLs like `/api/...`):
+   ```typescript
+   // vite.config.ts
+   proxy: {
+     '/api': {
+       target: 'http://localhost:5051',
+       changeOrigin: true
+     }
+   }
+   ```
+
+**Why This Works**: Relative URLs (`/api/endpoint`) are served through Vite on the same host the browser accessed. Vite proxies these to the actual API server, avoiding CORS issues entirely.
+
+**Pattern**: Never hardcode `localhost` in client-side code or env vars. Use relative URLs + proxy in development, or dynamic `window.location.host` detection.
+
 ## Next Steps
 
 - Explore [ARCHITECTURE.md](ARCHITECTURE.md) for technical details

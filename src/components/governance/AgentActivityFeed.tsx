@@ -66,7 +66,8 @@ export const AgentActivityFeed: React.FC<AgentActivityFeedProps> = ({
       }
 
       try {
-        ws = new WebSocket(`ws://${window.location.hostname}:5051/ws`);
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws`);
 
         ws.onopen = () => {
           if (isCancelled) {

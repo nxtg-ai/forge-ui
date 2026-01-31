@@ -66,7 +66,7 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = ({
       } else {
         // No memory stored, fetch seed data
         try {
-          const response = await fetch(`http://${window.location.hostname}:5051/api/memory/seed`);
+          const response = await fetch(`/api/memory/seed`);
           if (response.ok) {
             const data = await response.json();
             if (data.success && data.data) {

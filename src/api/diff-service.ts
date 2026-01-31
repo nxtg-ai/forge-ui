@@ -3,8 +3,12 @@
  * Handles apply/reject diff commands via backend API
  */
 
-const getApiBase = () => `http://${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:5051`;
-const API_BASE = getApiBase();
+// In dev mode, use empty string (relative URL) - Vite proxies /api to localhost:5051
+const getApiBase = () => {
+  // @ts-ignore - import.meta.env exists in Vite
+  if (import.meta.env?.DEV) return '';
+  return `http://${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:5051`;
+};
 
 export interface DiffOperation {
   filePath: string;
@@ -24,7 +28,7 @@ export interface DiffResult {
  */
 export async function applyDiff(filePath: string): Promise<DiffResult> {
   try {
-    const response = await fetch(`${API_BASE}/api/diffs/apply`, {
+    const response = await fetch(`${getApiBase()}/api/diffs/apply`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ filePath, timestamp: new Date().toISOString() }),
@@ -61,7 +65,7 @@ export async function applyDiff(filePath: string): Promise<DiffResult> {
  */
 export async function rejectDiff(filePath: string): Promise<DiffResult> {
   try {
-    const response = await fetch(`${API_BASE}/api/diffs/reject`, {
+    const response = await fetch(`${getApiBase()}/api/diffs/reject`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ filePath, timestamp: new Date().toISOString() }),
@@ -101,7 +105,7 @@ export async function getPendingDiffs(): Promise<{
   error?: string;
 }> {
   try {
-    const response = await fetch(`${API_BASE}/api/diffs/pending`);
+    const response = await fetch(`${getApiBase()}/api/diffs/pending`);
 
     if (!response.ok) {
       const error = await response.json();

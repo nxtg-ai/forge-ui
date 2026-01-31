@@ -618,6 +618,26 @@ When Claude Code runs in a NXTG-Forge project:
 
 ---
 
-**Last Updated**: 2026-01-06
-**Version**: 1.0.0
+---
+
+## Lessons Learned (Living Knowledge Base)
+
+This section captures institutional knowledge from real debugging sessions. These patterns are also implemented as hooks and skills.
+
+### 2026-01-31: Multi-Device Development Access
+
+**Issue**: API calls fail from mobile/tablet/other PCs with CORS errors
+**Root Cause**: `.env` with `VITE_API_URL=http://localhost:5051/api` overrides dynamic URL detection
+**Solution**: Comment out hardcoded localhost URLs, use relative URLs + Vite proxy
+**Artifacts Created**:
+- `.claude/skills/dev-environment-patterns.md` - Full pattern documentation
+- `.claude/hooks/env-validator.md` - Proactive validation hook
+- `docs/GETTING-STARTED.md` - User troubleshooting section
+
+This demonstrates the intelligence loop: **Problem → Debug → Document → Automate Prevention**
+
+---
+
+**Last Updated**: 2026-01-31
+**Version**: 1.1.0
 **Status**: Living Document

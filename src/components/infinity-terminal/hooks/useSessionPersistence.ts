@@ -32,8 +32,8 @@ export interface SessionConfig {
 }
 
 const DEFAULT_CONFIG: SessionConfig = {
-  // Use the existing PTY bridge running on the API server
-  wsPort: 5051,
+  // Use Vite's proxy - connects through current host:port which proxies to API server
+  wsPort: typeof window !== 'undefined' ? parseInt(window.location.port) || (window.location.protocol === 'https:' ? 443 : 80) : 5050,
   wsHost: typeof window !== 'undefined' ? window.location.hostname : 'localhost',
   wsPath: "/terminal",
   sessionPrefix: "forge",
