@@ -5,7 +5,8 @@
   "description": "Next-Generation Development Forge - AI-Orchestrated Development System",
   "main": "dist/index.js",
   "scripts": {
-    "dev": "concurrently \"npm run server:dev\" \"npm run ui:dev\"",
+    "dev": "bash scripts/dev-start.sh",
+    "dev:raw": "concurrently \"npm run server:dev\" \"npm run ui:dev\"",
     "server:dev": "tsx watch src/server/api-server.ts",
     "ui:dev": "vite",
     "build": "vite build",

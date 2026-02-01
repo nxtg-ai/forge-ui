@@ -16,6 +16,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0', // Bind to all interfaces for mobile/external access
     port: 5050, // NXTG-Forge dedicated UI port
+    strictPort: true, // FAIL if port in use - do NOT auto-increment
     open: true,
     proxy: {
       '/api': {

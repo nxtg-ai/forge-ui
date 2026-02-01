@@ -131,7 +131,7 @@ export const ProjectSwitcher: React.FC<ProjectSwitcherProps> = ({
       {isOpen && (
         <div
           className="absolute top-full left-0 mt-2 w-80 bg-gray-900 border border-gray-700
-                     rounded-lg shadow-2xl z-50 max-h-96 overflow-y-auto"
+                     rounded-lg shadow-2xl z-[100] max-h-96 overflow-y-auto"
           data-testid="project-switcher-dropdown"
         >
           {/* Header */}
