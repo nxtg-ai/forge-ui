@@ -92,10 +92,7 @@ const InfinityTerminalView: React.FC = () => {
 
   const handleSessionRestore = useCallback(
     (sessionId: string) => {
-      toast({
-        type: "success",
-        message: `Session restored: ${sessionId}`,
-      });
+      toast.success(`Session restored: ${sessionId}`);
       setSessionRestored(true);
     },
     [toast],
@@ -104,10 +101,7 @@ const InfinityTerminalView: React.FC = () => {
   const handleConnectionChange = useCallback(
     (connected: boolean) => {
       if (connected) {
-        toast({
-          type: "success",
-          message: "Connected to persistent session",
-        });
+        toast.success("Connected to persistent session");
       }
     },
     [toast],

@@ -304,8 +304,17 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
     };
   }, [projectPath, refreshInterval]);
 
-  // Get status color
+  // Get status color for progress bar
   const getStatusColor = (
+    score: number,
+  ): "green" | "yellow" | "red" => {
+    if (score >= 85) return "green";
+    if (score >= 70) return "yellow";
+    return "red";
+  };
+
+  // Get health status for metric cards
+  const getHealthStatus = (
     score: number,
   ): "healthy" | "warning" | "critical" => {
     if (score >= 85) return "healthy";
@@ -412,7 +421,7 @@ export const MetricsDashboard: React.FC<MetricsDashboardProps> = ({
                 title="Overall Health"
                 value={`${health.overallScore}%`}
                 subtitle={health.status}
-                status={getStatusColor(health.overallScore)}
+                status={getHealthStatus(health.overallScore)}
                 trend={
                   health.overallScore > 85
                     ? "up"

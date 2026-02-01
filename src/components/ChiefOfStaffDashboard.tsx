@@ -211,41 +211,11 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
               </div>
             </div>
 
-            {/* Mode Selector */}
+            {/* YOLO Mode Toggle */}
             <div
               className="flex items-center gap-4"
               data-testid="dashboard-mode-selector"
             >
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-900 border border-gray-800">
-                <span className="text-xs text-gray-400">Engagement Mode:</span>
-                <div
-                  className="flex gap-1"
-                  data-testid="dashboard-engagement-modes"
-                >
-                  {Object.entries(modeConfig).map(([mode, config]) => (
-                    <button
-                      key={mode}
-                      onClick={() => onModeChange(mode as EngagementMode)}
-                      className={`
-                        px-3 py-1 rounded-md text-xs font-medium transition-all
-                        ${
-                          currentMode === mode
-                            ? `bg-${config.color}-500/20 text-${config.color}-400 border border-${config.color}-500/30`
-                            : "text-gray-500 hover:text-gray-300"
-                        }
-                      `}
-                      title={config.description}
-                      data-testid={`dashboard-mode-${mode}-btn`}
-                    >
-                      <div className="flex items-center gap-1">
-                        {config.icon}
-                        {config.label}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               <button
                 onClick={() => setAutoMode(!autoMode)}
                 className={`

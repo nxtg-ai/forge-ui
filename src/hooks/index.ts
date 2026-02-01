@@ -30,3 +30,12 @@ export type {
   UseAutomationOptions,
   UseAutomationReturn,
 } from "./useAutomation";
+
+export {
+  useKeyboardShortcuts,
+  useKeyboardShortcut,
+  usePressedKeys,
+  formatShortcut,
+  isShortcutAvailable,
+} from "./useKeyboardShortcuts";
+export type { ShortcutConfig, UseKeyboardShortcutsOptions } from "./useKeyboardShortcuts";

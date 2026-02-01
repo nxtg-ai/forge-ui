@@ -57,11 +57,11 @@ const cardVariants = cva("rounded-xl transition-all duration-300", {
 
 export interface CardProps
   extends
-    React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof cardVariants>,
-    Partial<MotionProps> {
+    Omit<React.HTMLAttributes<HTMLDivElement>, keyof MotionProps>,
+    VariantProps<typeof cardVariants> {
   hover?: boolean;
   delay?: number;
+  children?: React.ReactNode;
 }
 
 const Card = forwardRef<HTMLDivElement, CardProps>(
@@ -78,7 +78,7 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
           transition: {
             duration: 0.4,
             delay,
-            ease: [0.16, 1, 0.3, 1], // Spring easing
+            ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
           },
           whileHover: { y: -4 },
         }

@@ -1,4 +1,5 @@
 // Core type definitions for NXTG-Forge Meta-Orchestration System
+import type React from "react";
 
 // Vision and Goals
 export interface VisionData {
@@ -99,9 +100,14 @@ export interface AgentActivity {
 export interface Architect {
   id: string;
   name: string;
-  specialty: string;
-  avatar: string;
-  confidence: number;
+  role: string;
+  avatar: React.ReactNode;
+  status: "available" | "busy" | "offline";
+  expertise: string[];
+  currentFocus: string;
+  // Legacy fields (optional for backward compatibility)
+  specialty?: string;
+  confidence?: number;
 }
 
 export interface ArchitectureDecision {

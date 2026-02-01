@@ -676,7 +676,7 @@ export class AutomationService extends BaseService {
       return Result.ok({
         commandId: "dry-run",
         command: `[DRY RUN] ${action.title}`,
-        status: "completed",
+        status: "completed" as const,
         output: [`Would execute: ${action.description}`],
         startTime: new Date(),
         endTime: new Date(),
@@ -696,7 +696,7 @@ export class AutomationService extends BaseService {
     return Result.ok({
       commandId: this.generateActionId(),
       command: action.title,
-      status: "completed",
+      status: "completed" as const,
       output: [`Executed: ${action.description}`],
       startTime: new Date(),
       endTime: new Date(),

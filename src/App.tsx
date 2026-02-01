@@ -42,8 +42,10 @@ import type {
   Architect,
   Command,
   AutomationLevel,
+  AgentActivity,
 } from "./components/types";
 import type { Runspace } from "./core/runspace";
+import { EngagementProvider, useEngagement } from "./contexts/EngagementContext";
 
 // Loading component
 const LoadingOverlay: React.FC<{ message?: string }> = ({
@@ -82,6 +84,37 @@ const ErrorDisplay: React.FC<{ errors: string[] }> = ({ errors }) => {
   );
 };
 
+// Header status component with engagement mode indicator
+const AppHeaderStatus: React.FC<{ forge: any }> = ({ forge }) => {
+  const { mode: engagementMode } = useEngagement();
+
+  return (
+    <div className="flex items-center space-x-4">
+      <div
+        data-testid="app-connection-status"
+        className="flex items-center space-x-2"
+      >
+        <div
+          className={`h-2 w-2 rounded-full ${
+            forge.isConnected ? "bg-green-500" : "bg-red-500"
+          } animate-pulse`}
+        />
+        <span className="text-sm text-gray-400">
+          {forge.isConnected ? "Connected" : "Disconnected"}
+        </span>
+      </div>
+
+      {/* Mode Indicator */}
+      <div className="px-3 py-1 bg-gray-800 rounded-full">
+        <span className="text-xs text-gray-400">Mode: </span>
+        <span className="text-xs font-semibold text-blue-400">
+          {engagementMode.toUpperCase()}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 // Main integrated app component
 function IntegratedApp() {
   // Use integrated hooks for backend connection
@@ -99,10 +132,6 @@ function IntegratedApp() {
     | "terminal"
     | "infinity-terminal"
   >("dashboard");
-  const [engagementMode, setEngagementMode] =
-    useState<EngagementMode>("founder");
-  const [automationLevel, setAutomationLevel] =
-    useState<AutomationLevel>("conservative");
   const [selectedArchitect, setSelectedArchitect] = useState<Architect | null>(
     null,
   );
@@ -216,15 +245,10 @@ function IntegratedApp() {
     [forge.architectureDecisions],
   );
 
-  // Handle YOLO mode activation
+  // YOLO mode will be managed via EngagementContext now
+  // This handler is kept for backward compatibility but will be removed
   const handleYoloModeToggle = useCallback((active: boolean) => {
-    if (active) {
-      setEngagementMode("founder");
-      setAutomationLevel("aggressive");
-    } else {
-      setEngagementMode("engineer");
-      setAutomationLevel("conservative");
-    }
+    console.warn("handleYoloModeToggle is deprecated. Use EngagementContext instead.");
   }, []);
 
   // Fetch runspaces on mount
@@ -339,18 +363,14 @@ function IntegratedApp() {
     }
   }, []);
 
-  // Handle engagement mode changes
+  // Engagement mode changes now handled by EngagementContext
   const handleModeChange = useCallback(
     (mode: EngagementMode) => {
-      setEngagementMode(mode);
-
-      // Send mode change to backend
-      forge.projectState.projectState &&
-        apiClient.sendWSMessage("state.update", {
-          engagementMode: mode,
-        });
+      // EngagementContext will handle this
+      // This is just a bridge for components not yet using context
+      console.warn("handleModeChange called - consider using EngagementContext.setMode directly");
     },
-    [forge.projectState.projectState],
+    [],
   );
 
   // Architecture discussion handlers
@@ -439,6 +459,146 @@ function IntegratedApp() {
             </button>
           </div>
         </div>
+        <ErrorDisplay errors={forge.errors.filter((e): e is string => e !== null)} />
+      </div>
+    );
+  }
+
+  return (
+    <EngagementProvider
+      onModeChange={(mode, automation) => {
+        // Sync to backend when mode changes
+        if (forge.projectState.projectState) {
+          apiClient.sendWSMessage("state.update", {
+            engagementMode: mode,
+            automationLevel: automation,
+          });
+        }
+      }}
+    >
+      <AppContent
+        currentView={currentView}
+        setCurrentView={setCurrentView}
+        selectedArchitect={selectedArchitect}
+        setSelectedArchitect={setSelectedArchitect}
+        visionSkipped={visionSkipped}
+        setVisionSkipped={setVisionSkipped}
+        capturedVision={capturedVision}
+        setCapturedVision={setCapturedVision}
+        mcpSuggestions={mcpSuggestions}
+        setMcpSuggestions={setMcpSuggestions}
+        loadingMcpSuggestions={loadingMcpSuggestions}
+        setLoadingMcpSuggestions={setLoadingMcpSuggestions}
+        runspaces={runspaces}
+        activeRunspace={activeRunspace}
+        loadingRunspaces={loadingRunspaces}
+        showProjectsManagement={showProjectsManagement}
+        setShowProjectsManagement={setShowProjectsManagement}
+        handleVisionCapture={handleVisionCapture}
+        handleSkipVision={handleSkipVision}
+        handleMcpSelectionComplete={handleMcpSelectionComplete}
+        handleMcpSkip={handleMcpSkip}
+        handleCommandExecution={handleCommandExecution}
+        handleDecisionApproval={handleDecisionApproval}
+        handleYoloModeToggle={handleYoloModeToggle}
+        handleRunspaceSwitch={handleRunspaceSwitch}
+        handleNewProject={handleNewProject}
+        handleManageProjects={handleManageProjects}
+        handleRunspaceStart={handleRunspaceStart}
+        handleRunspaceStop={handleRunspaceStop}
+        handleRunspaceDelete={handleRunspaceDelete}
+        loadRunspaces={loadRunspaces}
+        handleModeChange={handleModeChange}
+        architects={architects}
+        forge={forge}
+      />
+    </EngagementProvider>
+  );
+}
+
+// Separate component to use EngagementContext
+const AppContent: React.FC<any> = (props) => {
+  const {
+    currentView,
+    setCurrentView,
+    handleRunspaceSwitch,
+    handleNewProject,
+    handleManageProjects,
+    handleVisionCapture,
+    handleSkipVision,
+    handleMcpSelectionComplete,
+    handleMcpSkip,
+    handleCommandExecution,
+    handleYoloModeToggle,
+    handleModeChange,
+    architects,
+    forge,
+    activeRunspace,
+    runspaces,
+    visionSkipped,
+    capturedVision,
+    mcpSuggestions,
+    loadingMcpSuggestions,
+    showProjectsManagement,
+    handleRunspaceStart,
+    handleRunspaceStop,
+    handleRunspaceDelete,
+    loadRunspaces,
+  } = props;
+
+  // Use engagement context
+  const { mode: engagementMode, automationLevel, setAutomationLevel } = useEngagement();
+
+  // Get data from hooks with safe defaults
+  const { vision, projectState, agentActivities } = forge;
+  const visionData = vision.vision || {
+    mission: "No vision defined yet",
+    goals: [],
+    constraints: [],
+    successMetrics: [],
+    timeframe: "Not set",
+  };
+  const currentProjectState = projectState.projectState || {
+    phase: "planning" as const,
+    progress: 0,
+    blockers: [],
+    recentDecisions: [],
+    activeAgents: [],
+    healthScore: 100,
+  };
+  const activities = agentActivities.activities || [];
+
+  // Show vision capture if no real vision exists
+  const hasNoVision =
+    !visionData.mission ||
+    visionData.mission === "No vision defined yet" ||
+    visionData.mission.trim() === "";
+
+  if (hasNoVision && !visionSkipped && currentView !== "vision-capture") {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-white mb-4">
+            Welcome to NXTG-Forge
+          </h2>
+          <p className="text-gray-400 mb-6">
+            Let's start by capturing your vision for this project
+          </p>
+          <div className="flex gap-4 justify-center">
+            <button
+              onClick={() => setCurrentView("vision-capture")}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
+            >
+              Capture Vision
+            </button>
+            <button
+              onClick={handleSkipVision}
+              className="px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              Skip for Now
+            </button>
+          </div>
+        </div>
         <ErrorDisplay errors={forge.errors} />
       </div>
     );
@@ -497,29 +657,7 @@ function IntegratedApp() {
             </div>
 
             {/* Connection Status */}
-            <div className="flex items-center space-x-4">
-              <div
-                data-testid="app-connection-status"
-                className="flex items-center space-x-2"
-              >
-                <div
-                  className={`h-2 w-2 rounded-full ${
-                    forge.isConnected ? "bg-green-500" : "bg-red-500"
-                  } animate-pulse`}
-                />
-                <span className="text-sm text-gray-400">
-                  {forge.isConnected ? "Connected" : "Disconnected"}
-                </span>
-              </div>
-
-              {/* Mode Indicator */}
-              <div className="px-3 py-1 bg-gray-800 rounded-full">
-                <span className="text-xs text-gray-400">Mode: </span>
-                <span className="text-xs font-semibold text-blue-400">
-                  {engagementMode.toUpperCase()}
-                </span>
-              </div>
-            </div>
+            <AppHeaderStatus forge={forge} />
           </div>
         </div>
       </header>
@@ -557,12 +695,10 @@ function IntegratedApp() {
 
         {/* Dashboard View */}
         {currentView === "dashboard" && (
-          <ChiefOfStaffDashboard
+          <DashboardWithEngagement
             visionData={visionData}
             projectState={currentProjectState}
             agentActivity={activities}
-            onModeChange={handleModeChange}
-            currentMode={engagementMode}
           />
         )}
 
@@ -654,7 +790,7 @@ function IntegratedApp() {
         {currentView === "architect" && (
           <ArchitectDiscussion
             topic="System Architecture Design"
-            participants={architects.map((a) => ({
+            participants={architects.map((a: Architect) => ({
               id: a.id,
               name: a.name,
               specialty: a.role,
@@ -675,13 +811,8 @@ function IntegratedApp() {
 
         {/* YOLO Mode View */}
         {currentView === "yolo" && (
-          <YoloMode
-            isActive={
-              engagementMode === "founder" && automationLevel === "aggressive"
-            }
+          <YoloModeWithEngagement
             onToggle={handleYoloModeToggle}
-            automationLevel={automationLevel}
-            onAutomationLevelChange={setAutomationLevel}
             statistics={
               forge.yoloMode.statistics || {
                 totalActions: 0,
@@ -711,7 +842,7 @@ function IntegratedApp() {
             Live Activity
           </h4>
           <div className="space-y-2">
-            {(activities || []).slice(0, 5).map((activity, idx) => (
+            {(activities || []).slice(0, 5).map((activity: AgentActivity, idx: number) => (
               <div
                 key={activity.agentId || idx}
                 className="flex items-start space-x-2"
@@ -730,7 +861,7 @@ function IntegratedApp() {
       {/* Projects Management Modal */}
       <ProjectsManagement
         isOpen={showProjectsManagement}
-        onClose={() => setShowProjectsManagement(false)}
+        onClose={() => props.setShowProjectsManagement(false)}
         runspaces={runspaces}
         activeRunspaceId={activeRunspace?.id || null}
         onRefresh={loadRunspaces}
@@ -739,8 +870,86 @@ function IntegratedApp() {
         onStop={handleRunspaceStop}
         onDelete={handleRunspaceDelete}
       />
+
+      {/* Error Display */}
+      <ErrorDisplay errors={forge.errors} />
+
+      {/* Real-time Activity Feed (floating) */}
+      {(activities || []).length > 0 && currentView === "dashboard" && (
+        <div className="fixed bottom-4 left-4 max-w-sm bg-gray-900/90 backdrop-blur-sm border border-gray-700 rounded-lg p-4 max-h-64 overflow-y-auto">
+          <h4 className="text-sm font-semibold text-gray-400 mb-2">
+            Live Activity
+          </h4>
+          <div className="space-y-2">
+            {(activities || []).slice(0, 5).map((activity: AgentActivity, idx: number) => (
+              <div
+                key={activity.agentId || idx}
+                className="flex items-start space-x-2"
+              >
+                <div className="h-2 w-2 bg-green-500 rounded-full mt-1 animate-pulse" />
+                <div className="flex-1">
+                  <p className="text-xs text-white">{activity.agentId}</p>
+                  <p className="text-xs text-gray-400">{activity.action}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
-}
+};
+
+// Dashboard wrapper that uses engagement context
+const DashboardWithEngagement: React.FC<{
+  visionData: any;
+  projectState: any;
+  agentActivity: any[];
+}> = ({ visionData, projectState, agentActivity }) => {
+  const { mode, setMode } = useEngagement();
+
+  return (
+    <ChiefOfStaffDashboard
+      visionData={visionData}
+      projectState={projectState}
+      agentActivity={agentActivity}
+      onModeChange={setMode}
+      currentMode={mode}
+    />
+  );
+};
+
+// YOLO Mode wrapper that uses engagement context
+const YoloModeWithEngagement: React.FC<{
+  onToggle: (active: boolean) => void;
+  statistics: any;
+  recentActions: any[];
+}> = ({ onToggle, statistics, recentActions }) => {
+  const { mode, automationLevel, setMode, setAutomationLevel } = useEngagement();
+
+  const isActive = mode === "founder" && automationLevel === "aggressive";
+
+  const handleToggle = (active: boolean) => {
+    if (active) {
+      setMode("founder");
+      setAutomationLevel("aggressive");
+    } else {
+      setMode("engineer");
+      setAutomationLevel("conservative");
+    }
+    onToggle(active);
+  };
+
+  return (
+    <YoloMode
+      enabled={isActive}
+      onToggle={handleToggle}
+      automationLevel={automationLevel}
+      onLevelChange={setAutomationLevel}
+      statistics={statistics}
+      recentActions={recentActions}
+    />
+  );
+};
 
 export default IntegratedApp;

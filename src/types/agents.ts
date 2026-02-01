@@ -167,6 +167,7 @@ export interface Artifact {
   createdBy: string;
   createdAt: Date;
   signOffs: SignOffResult[];
+  files?: string[]; // Optional: list of files in this artifact
 }
 
 // Agent execution context

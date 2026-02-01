@@ -1522,7 +1522,7 @@ app.post("/api/workers/shutdown", async (req, res) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 5051; // NXTG-Forge dedicated API port
+const PORT = Number(process.env.PORT) || 5051; // NXTG-Forge dedicated API port
 
 // Handle WebSocket upgrade routing
 server.on("upgrade", (request, socket, head) => {

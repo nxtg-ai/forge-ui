@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   Activity,
   Users,
@@ -47,6 +48,10 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
   const [isReconnecting, setIsReconnecting] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState<"all" | "important" | "errors">("all");
+
+  // Virtual scrolling configuration
+  const VIRTUAL_SCROLL_THRESHOLD = 50;
+  const ESTIMATED_ROW_HEIGHT = 64;
 
   // WebSocket connection
   useEffect(() => {
@@ -146,6 +151,17 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
 
     return true;
   });
+
+  // Setup virtualizer for large lists
+  const virtualizer = useVirtualizer({
+    count: filteredActivities.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ESTIMATED_ROW_HEIGHT,
+    overscan: 5, // Render 5 extra items above/below viewport for smooth scrolling
+  });
+
+  // Determine if we should use virtual scrolling
+  const useVirtualScroll = filteredActivities.length > VIRTUAL_SCROLL_THRESHOLD;
 
   const getActivityIcon = (type: ActivityItem["type"]) => {
     switch (type) {
@@ -278,165 +294,305 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
       {/* Activity list */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-2 py-2 space-y-1 max-h-100"
+        className="flex-1 overflow-y-auto px-2 py-2 max-h-100"
       >
-        <AnimatePresence mode="popLayout">
-          {filteredActivities.length > 0 ? (
-            filteredActivities.map((activity, index) => (
-              <motion.div
-                key={activity.id}
-                data-testid={`activity-feed-item-${activity.id}`}
-                layout
-                initial={{ opacity: 0, x: -20, scale: 0.95 }}
-                animate={{
-                  opacity: 1,
-                  x: 0,
-                  scale: 1,
-                  transition: {
-                    delay: index * 0.02,
-                    duration: 0.3,
-                    ease: [0.16, 1, 0.3, 1],
-                  },
-                }}
-                exit={{ opacity: 0, x: 20, scale: 0.95 }}
-                onClick={() => onActivityClick?.(activity)}
-                className={`
-                  relative px-3 py-2 rounded-lg border transition-all cursor-pointer
-                  ${getActivityColor(activity.type)}
-                  hover:bg-gray-800/30
-                `}
-              >
-                {/* New activity glow */}
-                {activity.isNew && (
-                  <motion.div
-                    initial={{ opacity: 1 }}
-                    animate={{ opacity: 0 }}
-                    transition={{ duration: 2 }}
-                    className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-transparent rounded-lg pointer-events-none"
-                  />
-                )}
+        {filteredActivities.length > 0 ? (
+          useVirtualScroll ? (
+            // Virtual scrolling for large lists (>50 items)
+            <div
+              style={{
+                height: `${virtualizer.getTotalSize()}px`,
+                position: "relative",
+              }}
+            >
+              {virtualizer.getVirtualItems().map((virtualItem) => {
+                const activity = filteredActivities[virtualItem.index];
+                return (
+                  <div
+                    key={activity.id}
+                    data-testid={`activity-feed-item-${activity.id}`}
+                    data-index={virtualItem.index}
+                    ref={virtualizer.measureElement}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      transform: `translateY(${virtualItem.start}px)`,
+                    }}
+                    onClick={() => onActivityClick?.(activity)}
+                    className={`
+                      relative px-3 py-2 mb-1 rounded-lg border transition-all cursor-pointer
+                      ${getActivityColor(activity.type)}
+                      hover:bg-gray-800/30
+                    `}
+                  >
+                    {/* New activity glow */}
+                    {activity.isNew && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-transparent rounded-lg pointer-events-none animate-pulse" />
+                    )}
 
-                <div className="flex items-start gap-3">
-                  {/* Icon */}
-                  <div className="mt-0.5">{getActivityIcon(activity.type)}</div>
+                    <div className="flex items-start gap-3">
+                      {/* Icon */}
+                      <div className="mt-0.5">{getActivityIcon(activity.type)}</div>
 
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium text-sm text-blue-400">
-                            {activity.agentName}
-                          </span>
-                          {activity.relatedAgents &&
-                            activity.relatedAgents.length > 0 && (
-                              <>
-                                <span className="text-xs text-gray-500">
-                                  with
-                                </span>
-                                <div className="flex -space-x-1">
-                                  {activity.relatedAgents
-                                    .slice(0, 3)
-                                    .map((agent, i) => (
-                                      <div
-                                        key={i}
-                                        className="w-5 h-5 rounded-full bg-gray-700 border border-gray-900 flex items-center justify-center"
-                                      >
-                                        <span className="text-xs text-gray-400">
-                                          {agent[0]}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  {activity.relatedAgents.length > 3 && (
-                                    <div className="w-5 h-5 rounded-full bg-gray-800 border border-gray-900 flex items-center justify-center">
-                                      <span className="text-xs text-gray-500">
-                                        +{activity.relatedAgents.length - 3}
-                                      </span>
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium text-sm text-blue-400">
+                                {activity.agentName}
+                              </span>
+                              {activity.relatedAgents &&
+                                activity.relatedAgents.length > 0 && (
+                                  <>
+                                    <span className="text-xs text-gray-500">
+                                      with
+                                    </span>
+                                    <div className="flex -space-x-1">
+                                      {activity.relatedAgents
+                                        .slice(0, 3)
+                                        .map((agent, i) => (
+                                          <div
+                                            key={i}
+                                            className="w-5 h-5 rounded-full bg-gray-700 border border-gray-900 flex items-center justify-center"
+                                          >
+                                            <span className="text-xs text-gray-400">
+                                              {agent[0]}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      {activity.relatedAgents.length > 3 && (
+                                        <div className="w-5 h-5 rounded-full bg-gray-800 border border-gray-900 flex items-center justify-center">
+                                          <span className="text-xs text-gray-500">
+                                            +{activity.relatedAgents.length - 3}
+                                          </span>
+                                        </div>
+                                      )}
                                     </div>
-                                  )}
-                                </div>
-                              </>
-                            )}
-                        </div>
-
-                        <p className="text-sm text-gray-300 mt-0.5">
-                          {activity.action}
-                        </p>
-
-                        {activity.details && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            {activity.details}
-                          </p>
-                        )}
-
-                        {/* Confidence indicator */}
-                        {activity.confidence !== undefined && (
-                          <div className="mt-2 flex items-center gap-2">
-                            <div className="flex-1 max-w-[100px] h-1 bg-gray-800 rounded-full overflow-hidden">
-                              <motion.div
-                                className={`h-full ${
-                                  activity.confidence >= 80
-                                    ? "bg-green-500"
-                                    : activity.confidence >= 60
-                                      ? "bg-yellow-500"
-                                      : "bg-red-500"
-                                }`}
-                                initial={{ width: 0 }}
-                                animate={{ width: `${activity.confidence}%` }}
-                                transition={{
-                                  duration: 0.5,
-                                  ease: [0.16, 1, 0.3, 1],
-                                }}
-                              />
+                                  </>
+                                )}
                             </div>
-                            <span className="text-xs text-gray-500">
-                              {activity.confidence}% confident
-                            </span>
+
+                            <p className="text-sm text-gray-300 mt-0.5">
+                              {activity.action}
+                            </p>
+
+                            {activity.details && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                {activity.details}
+                              </p>
+                            )}
+
+                            {/* Confidence indicator */}
+                            {activity.confidence !== undefined && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <div className="flex-1 max-w-[100px] h-1 bg-gray-800 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full transition-all duration-500 ease-out ${
+                                      activity.confidence >= 80
+                                        ? "bg-green-500"
+                                        : activity.confidence >= 60
+                                          ? "bg-yellow-500"
+                                          : "bg-red-500"
+                                    }`}
+                                    style={{ width: `${activity.confidence}%` }}
+                                  />
+                                </div>
+                                <span className="text-xs text-gray-500">
+                                  {activity.confidence}% confident
+                                </span>
+                              </div>
+                            )}
                           </div>
-                        )}
+
+                          {/* Timestamp */}
+                          <span
+                            data-testid={`activity-feed-timestamp-${activity.id}`}
+                            className="text-xs text-gray-500 whitespace-nowrap"
+                          >
+                            {formatTimestamp(activity.timestamp)}
+                          </span>
+                        </div>
                       </div>
 
-                      {/* Timestamp */}
-                      <span
-                        data-testid={`activity-feed-timestamp-${activity.id}`}
-                        className="text-xs text-gray-500 whitespace-nowrap"
+                      {/* Actions menu */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Handle menu
+                        }}
+                        className="p-1 hover:bg-gray-700 rounded transition-all opacity-0 group-hover:opacity-100"
                       >
-                        {formatTimestamp(activity.timestamp)}
-                      </span>
+                        <MoreVertical className="w-3 h-3 text-gray-500" />
+                      </button>
                     </div>
                   </div>
-
-                  {/* Actions menu */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Handle menu
-                    }}
-                    className="p-1 hover:bg-gray-700 rounded transition-all opacity-0 group-hover:opacity-100"
-                  >
-                    <MoreVertical className="w-3 h-3 text-gray-500" />
-                  </button>
-                </div>
-              </motion.div>
-            ))
+                );
+              })}
+            </div>
           ) : (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center py-12 text-center"
-            >
-              <div className="w-16 h-16 rounded-2xl bg-gray-800 flex items-center justify-center mb-4">
-                <Activity className="w-8 h-8 text-gray-600" />
-              </div>
-              <p className="text-gray-400 mb-1">No activities yet</p>
-              <p className="text-xs text-gray-500">
-                {isConnected
-                  ? "Waiting for agent activity..."
-                  : "Connecting to activity stream..."}
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            // Regular rendering for small lists (<=50 items)
+            <div className="space-y-1">
+              <AnimatePresence mode="popLayout">
+                {filteredActivities.map((activity, index) => (
+                  <motion.div
+                    key={activity.id}
+                    data-testid={`activity-feed-item-${activity.id}`}
+                    layout
+                    initial={{ opacity: 0, x: -20, scale: 0.95 }}
+                    animate={{
+                      opacity: 1,
+                      x: 0,
+                      scale: 1,
+                      transition: {
+                        delay: index * 0.02,
+                        duration: 0.3,
+                        ease: [0.16, 1, 0.3, 1],
+                      },
+                    }}
+                    exit={{ opacity: 0, x: 20, scale: 0.95 }}
+                    onClick={() => onActivityClick?.(activity)}
+                    className={`
+                      relative px-3 py-2 rounded-lg border transition-all cursor-pointer
+                      ${getActivityColor(activity.type)}
+                      hover:bg-gray-800/30
+                    `}
+                  >
+                    {/* New activity glow */}
+                    {activity.isNew && (
+                      <motion.div
+                        initial={{ opacity: 1 }}
+                        animate={{ opacity: 0 }}
+                        transition={{ duration: 2 }}
+                        className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-transparent rounded-lg pointer-events-none"
+                      />
+                    )}
+
+                    <div className="flex items-start gap-3">
+                      {/* Icon */}
+                      <div className="mt-0.5">{getActivityIcon(activity.type)}</div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium text-sm text-blue-400">
+                                {activity.agentName}
+                              </span>
+                              {activity.relatedAgents &&
+                                activity.relatedAgents.length > 0 && (
+                                  <>
+                                    <span className="text-xs text-gray-500">
+                                      with
+                                    </span>
+                                    <div className="flex -space-x-1">
+                                      {activity.relatedAgents
+                                        .slice(0, 3)
+                                        .map((agent, i) => (
+                                          <div
+                                            key={i}
+                                            className="w-5 h-5 rounded-full bg-gray-700 border border-gray-900 flex items-center justify-center"
+                                          >
+                                            <span className="text-xs text-gray-400">
+                                              {agent[0]}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      {activity.relatedAgents.length > 3 && (
+                                        <div className="w-5 h-5 rounded-full bg-gray-800 border border-gray-900 flex items-center justify-center">
+                                          <span className="text-xs text-gray-500">
+                                            +{activity.relatedAgents.length - 3}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
+                            </div>
+
+                            <p className="text-sm text-gray-300 mt-0.5">
+                              {activity.action}
+                            </p>
+
+                            {activity.details && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                {activity.details}
+                              </p>
+                            )}
+
+                            {/* Confidence indicator */}
+                            {activity.confidence !== undefined && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <div className="flex-1 max-w-[100px] h-1 bg-gray-800 rounded-full overflow-hidden">
+                                  <motion.div
+                                    className={`h-full ${
+                                      activity.confidence >= 80
+                                        ? "bg-green-500"
+                                        : activity.confidence >= 60
+                                          ? "bg-yellow-500"
+                                          : "bg-red-500"
+                                    }`}
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${activity.confidence}%` }}
+                                    transition={{
+                                      duration: 0.5,
+                                      ease: [0.16, 1, 0.3, 1],
+                                    }}
+                                  />
+                                </div>
+                                <span className="text-xs text-gray-500">
+                                  {activity.confidence}% confident
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Timestamp */}
+                          <span
+                            data-testid={`activity-feed-timestamp-${activity.id}`}
+                            className="text-xs text-gray-500 whitespace-nowrap"
+                          >
+                            {formatTimestamp(activity.timestamp)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Actions menu */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Handle menu
+                        }}
+                        className="p-1 hover:bg-gray-700 rounded transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        <MoreVertical className="w-3 h-3 text-gray-500" />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          )
+        ) : (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center justify-center py-12 text-center"
+          >
+            <div className="w-16 h-16 rounded-2xl bg-gray-800 flex items-center justify-center mb-4">
+              <Activity className="w-8 h-8 text-gray-600" />
+            </div>
+            <p className="text-gray-400 mb-1">No activities yet</p>
+            <p className="text-xs text-gray-500">
+              {isConnected
+                ? "Waiting for agent activity..."
+                : "Connecting to activity stream..."}
+            </p>
+          </motion.div>
+        )}
       </div>
 
       {/* Footer with stats */}

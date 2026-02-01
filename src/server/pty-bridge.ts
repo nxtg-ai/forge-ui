@@ -144,7 +144,9 @@ export function createPTYBridge(
           ws.close();
         }
         sessions.delete(sessionId);
-        wslBackend.removeSession(runspace.id);
+        if (runspace) {
+          wslBackend.removeSession(runspace.id);
+        }
       });
 
       // Handle WebSocket messages
