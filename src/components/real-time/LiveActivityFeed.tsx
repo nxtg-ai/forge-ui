@@ -193,9 +193,10 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
     }
   };
 
-  const formatTimestamp = (date: Date) => {
+  const formatTimestamp = (date: Date | string) => {
     const now = new Date();
-    const diff = now.getTime() - date.getTime();
+    const dateObj = date instanceof Date ? date : new Date(date);
+    const diff = now.getTime() - dateObj.getTime();
     const seconds = Math.floor(diff / 1000);
 
     if (seconds < 60) return "just now";
