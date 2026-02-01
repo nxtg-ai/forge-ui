@@ -137,7 +137,9 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = ({
   }, []);
 
   const tokenPercentage =
-    contextData.maxTokens > 0 ? (contextData.totalTokens / contextData.maxTokens) * 100 : 0;
+    contextData.maxTokens > 0 && contextData.totalTokens != null
+      ? (contextData.totalTokens / contextData.maxTokens) * 100
+      : 0;
   const getTokenColor = () => {
     if (tokenPercentage < 50) return "bg-green-500";
     if (tokenPercentage < 75) return "bg-yellow-500";
@@ -199,7 +201,7 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = ({
             <motion.div
               className={`h-full ${getTokenColor()}`}
               initial={{ width: 0 }}
-              animate={{ width: `${tokenPercentage}%` }}
+              animate={{ width: `${tokenPercentage ?? 0}%` }}
               transition={{ duration: 0.5, ease: "easeOut" }}
             />
           </div>

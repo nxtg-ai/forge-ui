@@ -130,12 +130,12 @@ export const ImpactMatrix: React.FC<ImpactMatrixProps> = ({ workstreams }) => {
               <motion.div
                 className={getProgressColor(ws.progress)}
                 initial={{ width: 0 }}
-                animate={{ width: `${ws.progress}%` }}
+                animate={{ width: `${ws.progress ?? 0}%` }}
                 transition={{ duration: 0.5 }}
               />
             </div>
             <div className="mt-1 flex justify-between text-xs text-gray-500">
-              <span>{ws.progress}% complete</span>
+              <span>{ws.progress ?? 0}% complete</span>
               {ws.metrics && (
                 <span>
                   {ws.metrics.tasksCompleted}/{ws.metrics.totalTasks} tasks

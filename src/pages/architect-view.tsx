@@ -290,12 +290,12 @@ const ImpactAnalysisPanel: React.FC<{
             <div key={metric.label} className="space-y-1">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-gray-400">{metric.label}</span>
-                <span className="text-gray-200 font-medium">{metric.value}%</span>
+                <span className="text-gray-200 font-medium">{metric.value ?? 0}%</span>
               </div>
               <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: `${metric.value}%` }}
+                  animate={{ width: `${metric.value ?? 0}%` }}
                   transition={{ duration: 0.5, delay: 0.1 }}
                   className={`h-full bg-gradient-to-r ${metric.color} rounded-full`}
                 />

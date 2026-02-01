@@ -197,13 +197,13 @@ export const WorkerPoolMetrics: React.FC<WorkerPoolMetricsProps> = ({
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs text-gray-400">Utilization</span>
                     <span className="text-xs font-mono text-gray-300">
-                      {Math.round(metrics.utilization * 100)}%
+                      {Math.round((metrics.utilization ?? 0) * 100)}%
                     </span>
                   </div>
                   <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
-                      animate={{ width: `${metrics.utilization * 100}%` }}
+                      animate={{ width: `${(metrics.utilization ?? 0) * 100}%` }}
                       className={`h-full rounded-full ${
                         metrics.utilization > 0.8
                           ? "bg-red-500"

@@ -22,7 +22,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   showPercentage = false,
   testIdPrefix = "progress-bar",
 }) => {
-  const percentage = Math.min((value / max) * 100, 100);
+  const percentage = Math.min(((value ?? 0) / (max || 100)) * 100, 100) || 0;
 
   if (animated) {
     return (

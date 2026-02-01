@@ -276,7 +276,7 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
                 <motion.div
                   className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
                   initial={{ width: 0 }}
-                  animate={{ width: `${phaseProgress[projectState.phase]}%` }}
+                  animate={{ width: `${phaseProgress[projectState.phase] ?? 0}%` }}
                   transition={{ duration: 1, ease: "easeOut" }}
                 />
               </div>

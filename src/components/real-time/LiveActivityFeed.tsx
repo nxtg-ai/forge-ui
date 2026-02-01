@@ -415,11 +415,11 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                                           ? "bg-yellow-500"
                                           : "bg-red-500"
                                     }`}
-                                    style={{ width: `${activity.confidence}%` }}
+                                    style={{ width: `${activity.confidence ?? 0}%` }}
                                   />
                                 </div>
                                 <span className="text-xs text-gray-500">
-                                  {activity.confidence}% confident
+                                  {activity.confidence ?? 0}% confident
                                 </span>
                               </div>
                             )}
@@ -554,7 +554,7 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                                           : "bg-red-500"
                                     }`}
                                     initial={{ width: 0 }}
-                                    animate={{ width: `${activity.confidence}%` }}
+                                    animate={{ width: `${activity.confidence ?? 0}%` }}
                                     transition={{
                                       duration: 0.5,
                                       ease: [0.16, 1, 0.3, 1],
@@ -562,7 +562,7 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                                   />
                                 </div>
                                 <span className="text-xs text-gray-500">
-                                  {activity.confidence}% confident
+                                  {activity.confidence ?? 0}% confident
                                 </span>
                               </div>
                             )}
