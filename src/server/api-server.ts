@@ -126,6 +126,11 @@ function broadcast(type: string, payload: any) {
 // Handle WebSocket messages
 async function handleWSMessage(ws: WebSocket, message: any) {
   switch (message.type) {
+    case "ping":
+      // Respond to heartbeat
+      ws.send(JSON.stringify({ type: "pong", timestamp: Date.now() }));
+      break;
+
     case "state.update":
       await stateManager.updateState(message.payload);
       broadcast("state.update", stateManager.getState());
@@ -143,7 +148,10 @@ async function handleWSMessage(ws: WebSocket, message: any) {
       break;
 
     default:
-      console.log("Unknown message type:", message.type);
+      // Only log truly unknown message types (not common ones)
+      if (!['pong', 'heartbeat'].includes(message.type)) {
+        console.log("Unknown message type:", message.type);
+      }
   }
 }
 

@@ -55,8 +55,9 @@ interface InfinityTerminalProps {
 export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
   projectName = "nxtg-forge",
   layout = "default",
-  ttydPort = 7681,
-  ttydHost = typeof window !== 'undefined' ? window.location.hostname : "127.0.0.1",
+  // Use current port (5050 in dev) - Vite proxies /terminal to API server
+  ttydPort = typeof window !== 'undefined' ? parseInt(window.location.port) || 5050 : 5050,
+  ttydHost = typeof window !== 'undefined' ? window.location.hostname : "localhost",
   className = "",
   onSessionRestore,
   onConnectionChange,
