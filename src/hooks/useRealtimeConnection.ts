@@ -209,11 +209,15 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
     setMessages([]);
   }, []);
 
-  // Auto-connect on mount
+  // Auto-connect on mount with delay to allow API server to start
   useEffect(() => {
-    connect();
+    // Small delay to allow API server to be ready (race condition fix)
+    const connectTimeout = setTimeout(() => {
+      connect();
+    }, 500);
 
     return () => {
+      clearTimeout(connectTimeout);
       disconnect();
     };
   }, []);

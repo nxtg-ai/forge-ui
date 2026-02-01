@@ -67,6 +67,7 @@ export const AgentActivityFeed: React.FC<AgentActivityFeedProps> = ({
 
       try {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        // Use relative URL - Vite proxy handles forwarding to API server
         ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws`);
 
         ws.onopen = () => {
@@ -119,10 +120,14 @@ export const AgentActivityFeed: React.FC<AgentActivityFeedProps> = ({
       }
     };
 
-    connectWebSocket();
+    // Delay initial connection to allow API server to start
+    const initialConnectTimeout = setTimeout(() => {
+      connectWebSocket();
+    }, 600);
 
     return () => {
       isCancelled = true;
+      clearTimeout(initialConnectTimeout);
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
       }

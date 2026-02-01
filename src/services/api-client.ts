@@ -86,7 +86,10 @@ export class ApiClient {
   private isProcessingQueue = false;
 
   constructor() {
-    this.initializeWebSocket();
+    // Delay WebSocket init to allow API server to start (race condition fix)
+    setTimeout(() => {
+      this.initializeWebSocket();
+    }, 500);
   }
 
   // ============= HTTP Methods =============
