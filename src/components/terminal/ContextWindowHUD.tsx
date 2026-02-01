@@ -137,7 +137,7 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = ({
   }, []);
 
   const tokenPercentage =
-    (contextData.totalTokens / contextData.maxTokens) * 100;
+    contextData.maxTokens > 0 ? (contextData.totalTokens / contextData.maxTokens) * 100 : 0;
   const getTokenColor = () => {
     if (tokenPercentage < 50) return "bg-green-500";
     if (tokenPercentage < 75) return "bg-yellow-500";
@@ -277,12 +277,12 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = ({
                         </span>
                         <div
                           className="w-12 h-1.5 bg-gray-800 rounded-full overflow-hidden"
-                          title={`${((file.tokens / contextData.maxTokens) * 100).toFixed(1)}% of total`}
+                          title={`${(contextData.maxTokens > 0 ? (file.tokens / contextData.maxTokens) * 100 : 0).toFixed(1)}% of total`}
                         >
                           <div
                             className={`h-full ${getTokenColor()}`}
                             style={{
-                              width: `${(file.tokens / contextData.maxTokens) * 100}%`,
+                              width: `${contextData.maxTokens > 0 ? (file.tokens / contextData.maxTokens) * 100 : 0}%`,
                             }}
                           />
                         </div>

@@ -23,9 +23,9 @@ interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
 export const Skeleton = forwardRef<HTMLDivElement, SkeletonProps>(
   ({ width, height, borderRadius, className, style, ...props }, ref) => {
     const inlineStyle: React.CSSProperties = {
-      width: typeof width === "number" ? `${width}px` : width,
-      height: typeof height === "number" ? `${height}px` : height,
-      borderRadius: typeof borderRadius === "number" ? `${borderRadius}px` : borderRadius,
+      ...(width !== undefined && { width: typeof width === "number" ? `${width}px` : width }),
+      ...(height !== undefined && { height: typeof height === "number" ? `${height}px` : height }),
+      ...(borderRadius !== undefined && { borderRadius: typeof borderRadius === "number" ? `${borderRadius}px` : borderRadius }),
       ...style,
     };
 
