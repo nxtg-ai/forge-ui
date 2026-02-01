@@ -130,30 +130,41 @@ export function useResponsiveLayout(options: UseResponsiveLayoutOptions = {}) {
     calculateLayout(typeof window !== "undefined" ? window.innerWidth : 1280),
   );
 
-  // Handle window resize
+  // Handle window resize with debounce to prevent render loops
   useEffect(() => {
-    const handleResize = () => {
-      const newLayout = calculateLayout(window.innerWidth);
-      setLayout((prev) => {
-        if (prev.breakpoint !== newLayout.breakpoint) {
-          onBreakpointChange?.(newLayout.breakpoint);
+    let rafId: number | null = null;
 
-          // Auto-update context panel visibility based on breakpoint
-          if (newLayout.isDesktop && !contextPanelVisible) {
-            setContextPanelVisible(true);
-          } else if (newLayout.isMobile && contextPanelVisible) {
-            setContextPanelVisible(false);
+    const handleResize = () => {
+      // Debounce using requestAnimationFrame
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+
+      rafId = requestAnimationFrame(() => {
+        const newLayout = calculateLayout(window.innerWidth);
+        setLayout((prev) => {
+          // Only update if layout actually changed
+          if (JSON.stringify(prev) === JSON.stringify(newLayout)) {
+            return prev;
           }
-        }
-        return newLayout;
+          if (prev.breakpoint !== newLayout.breakpoint) {
+            onBreakpointChange?.(newLayout.breakpoint);
+          }
+          return newLayout;
+        });
       });
     };
 
     window.addEventListener("resize", handleResize);
     handleResize(); // Initial calculation
 
-    return () => window.removeEventListener("resize", handleResize);
-  }, [calculateLayout, onBreakpointChange, contextPanelVisible]);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+    };
+  }, [calculateLayout, onBreakpointChange]);
 
   // Toggle functions
   const toggleHUD = useCallback(() => {

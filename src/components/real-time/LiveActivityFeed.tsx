@@ -310,8 +310,8 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                 const activity = filteredActivities[virtualItem.index];
                 return (
                   <div
-                    key={activity.id}
-                    data-testid={`activity-feed-item-${activity.id}`}
+                    key={activity.id || `activity-${virtualItem.index}`}
+                    data-testid={`activity-feed-item-${activity.id || virtualItem.index}`}
                     data-index={virtualItem.index}
                     ref={virtualizer.measureElement}
                     style={{
@@ -439,8 +439,8 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
               <AnimatePresence mode="popLayout">
                 {filteredActivities.map((activity, index) => (
                   <motion.div
-                    key={activity.id}
-                    data-testid={`activity-feed-item-${activity.id}`}
+                    key={activity.id || `activity-${index}`}
+                    data-testid={`activity-feed-item-${activity.id || index}`}
                     layout
                     initial={{ opacity: 0, x: -20, scale: 0.95 }}
                     animate={{
