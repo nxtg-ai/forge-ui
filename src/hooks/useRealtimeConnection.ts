@@ -47,6 +47,25 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const pingTimestampRef = useRef<number>(0);
 
+  // Store callbacks in refs to avoid dependency issues
+  const onOpenRef = useRef(onOpen);
+  const onCloseRef = useRef(onClose);
+  const onErrorRef = useRef(onError);
+  const onReconnectRef = useRef(onReconnect);
+
+  useEffect(() => {
+    onOpenRef.current = onOpen;
+  }, [onOpen]);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
+  useEffect(() => {
+    onReconnectRef.current = onReconnect;
+  }, [onReconnect]);
+
   // Exponential backoff for reconnection
   const getReconnectDelay = (attempt: number) => {
     return Math.min(reconnectDelay * Math.pow(2, attempt), 30000);
@@ -94,7 +113,7 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
           latency: 0,
         });
         startHeartbeat();
-        onOpen?.();
+        onOpenRef.current?.();
       };
 
       wsRef.current.onmessage = (event) => {
@@ -120,7 +139,7 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
           ...prev,
           status: "error",
         }));
-        onError?.(event);
+        onErrorRef.current?.(event);
       };
 
       wsRef.current.onclose = () => {
@@ -129,7 +148,7 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
           status: "disconnected",
         }));
         stopHeartbeat();
-        onClose?.();
+        onCloseRef.current?.();
 
         // Attempt to reconnect
         if (connectionState.reconnectAttempt < maxReconnectAttempts) {
@@ -141,7 +160,7 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
             reconnectAttempt: attempt,
           }));
 
-          onReconnect?.(attempt);
+          onReconnectRef.current?.(attempt);
 
           reconnectTimeoutRef.current = setTimeout(() => {
             connect();
@@ -155,17 +174,7 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
         status: "error",
       }));
     }
-  }, [
-    url,
-    connectionState.reconnectAttempt,
-    maxReconnectAttempts,
-    startHeartbeat,
-    stopHeartbeat,
-    onOpen,
-    onClose,
-    onError,
-    onReconnect,
-  ]);
+  }, [url, connectionState.reconnectAttempt, maxReconnectAttempts, startHeartbeat, stopHeartbeat]);
 
   // Disconnect from WebSocket
   const disconnect = useCallback(() => {
@@ -302,6 +311,19 @@ export const useAdaptivePolling = (
   const intervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const currentIntervalRef = useRef(baseInterval);
 
+  // Store fetchFn and onError in refs to avoid dependency issues
+  const fetchFnRef = useRef(fetchFn);
+  const onErrorRef = useRef(onError);
+
+  // Update refs when props change
+  useEffect(() => {
+    fetchFnRef.current = fetchFn;
+  }, [fetchFn]);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
+
   const adjustInterval = useCallback(
     (success: boolean) => {
       if (success) {
@@ -321,31 +343,27 @@ export const useAdaptivePolling = (
   );
 
   const poll = useCallback(async () => {
-    if (!enabled) return;
-
     setIsPolling(true);
     try {
-      await fetchFn();
+      await fetchFnRef.current();
       setLastFetch(new Date());
       adjustInterval(true);
     } catch (error) {
       console.error("Polling error:", error);
       adjustInterval(false);
-      onError?.(error as Error);
+      onErrorRef.current?.(error as Error);
     } finally {
       setIsPolling(false);
     }
 
     // Schedule next poll
     intervalRef.current = setTimeout(poll, currentIntervalRef.current);
-  }, [enabled, fetchFn, adjustInterval, onError]);
+  }, [adjustInterval]);
 
   // Start/stop polling based on enabled state
   useEffect(() => {
     if (enabled) {
       poll();
-    } else if (intervalRef.current) {
-      clearTimeout(intervalRef.current);
     }
 
     return () => {

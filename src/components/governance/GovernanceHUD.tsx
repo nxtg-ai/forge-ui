@@ -26,11 +26,7 @@ export const GovernanceHUD: React.FC<GovernanceHUDProps> = ({ className }) => {
           throw new Error(`API returned ${res.status}: ${errorText}`);
         }
 
-        const text = await res.text();
-        console.log("API Response (raw):", text.substring(0, 100));
-
-        const response = JSON.parse(text);
-        console.log("API Response (parsed):", response);
+        const response = await res.json();
 
         // API wraps response in { success, data, timestamp }
         if (response.data) {
