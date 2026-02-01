@@ -70,8 +70,25 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
         };
 
         ws.onmessage = (event) => {
-          const activity: ActivityItem = JSON.parse(event.data);
-          handleNewActivity(activity);
+          try {
+            const message = JSON.parse(event.data);
+            // Only handle agent.activity messages
+            if (message.type === "agent.activity" && message.payload) {
+              const activity: ActivityItem = {
+                id: message.payload.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                agentId: message.payload.agent || "unknown",
+                agentName: message.payload.agentName || message.payload.agent || "Agent",
+                type: message.payload.status === "completed" ? "completed" :
+                      message.payload.status === "blocked" ? "blocked" : "working",
+                action: message.payload.action || "Activity",
+                details: message.payload.details,
+                timestamp: new Date(message.payload.timestamp || message.timestamp),
+              };
+              handleNewActivity(activity);
+            }
+          } catch (err) {
+            // Ignore malformed messages
+          }
         };
 
         ws.onerror = () => {
