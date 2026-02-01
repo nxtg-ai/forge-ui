@@ -17,11 +17,8 @@ check_port() {
     if ss -tlnp 2>/dev/null | grep -q ":${port} "; then
         echo "ERROR: Port ${port} (${name}) is already in use!"
         echo ""
-        echo "Run this to kill the process on that port:"
-        echo "  fuser -k ${port}/tcp"
-        echo ""
-        echo "Or kill all node processes:"
-        echo "  pkill -9 -f node"
+        echo "Run this to safely kill Forge dev servers:"
+        echo "  pkill -f 'NXTG-Forge/v3/node_modules'"
         echo ""
         exit 1
     fi
@@ -45,7 +42,7 @@ echo "Starting servers..."
 echo "  UI:  http://localhost:${UI_PORT}"
 echo "  API: http://localhost:${API_PORT}"
 echo ""
-echo "Press Ctrl+C to stop"
+echo "To stop: Ctrl+C or pkill -f 'NXTG-Forge/v3/node_modules'"
 echo ""
 
 # Start with concurrently
