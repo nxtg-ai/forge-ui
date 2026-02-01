@@ -27,6 +27,7 @@ import {
 import { MCPSelectionView } from "./components/onboarding/MCPSelectionView";
 import TerminalView from "./pages/terminal-view";
 import InfinityTerminalView from "./pages/infinity-terminal-view";
+import DashboardLive from "./pages/dashboard-live";
 import {
   useVision,
   useProjectState,
@@ -693,14 +694,8 @@ const AppContent: React.FC<any> = (props) => {
           </div>
         )}
 
-        {/* Dashboard View */}
-        {currentView === "dashboard" && (
-          <DashboardWithEngagement
-            visionData={visionData}
-            projectState={currentProjectState}
-            agentActivity={activities}
-          />
-        )}
+        {/* Dashboard View - Full panel architecture with mode selector */}
+        {currentView === "dashboard" && <DashboardLive />}
 
         {/* Vision Display View */}
         {currentView === "vision-display" && (
