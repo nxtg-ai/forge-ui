@@ -823,6 +823,7 @@ const VisionView: React.FC = () => {
 
       {/* Header */}
       <header
+        data-testid="vision-page-header"
         className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm flex-shrink-0 z-30"
         role="banner"
       >

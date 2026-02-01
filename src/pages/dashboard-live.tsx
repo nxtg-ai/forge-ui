@@ -592,7 +592,7 @@ const LiveDashboard: React.FC = () => {
       </div>
 
       {/* Header */}
-      <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm flex-shrink-0 z-30" role="banner">
+      <header data-testid="dashboard-page-header" className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm flex-shrink-0 z-30" role="banner">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

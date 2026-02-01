@@ -40,6 +40,16 @@ interface InfinityTerminalProps {
   className?: string;
   onSessionRestore?: (sessionId: string) => void;
   onConnectionChange?: (connected: boolean) => void;
+  /** Hide the built-in header (for when page provides its own header) */
+  showHeader?: boolean;
+  /** Controlled expanded state */
+  isExpanded?: boolean;
+  /** Callback when expanded state changes */
+  onExpandedChange?: (expanded: boolean) => void;
+  /** Callback to expose reconnect function to parent */
+  onReconnectRef?: (reconnect: () => void) => void;
+  /** Callback to expose session state to parent */
+  onSessionStateChange?: (state: SessionState) => void;
 }
 
 export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
@@ -50,6 +60,11 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
   className = "",
   onSessionRestore,
   onConnectionChange,
+  showHeader = true,
+  isExpanded: controlledExpanded,
+  onExpandedChange,
+  onReconnectRef,
+  onSessionStateChange,
 }) => {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
@@ -57,7 +72,9 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
   const initializedRef = useRef(false);
   const wsListenerAttached = useRef(false);
 
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [internalExpanded, setInternalExpanded] = useState(false);
+  const isExpanded = controlledExpanded !== undefined ? controlledExpanded : internalExpanded;
+  const setIsExpanded = onExpandedChange || setInternalExpanded;
   const [showSessionHistory, setShowSessionHistory] = useState(false);
 
   const {
@@ -226,6 +243,20 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
     }, 500);
   }, [connect, disconnect]);
 
+  // Expose reconnect function to parent
+  useEffect(() => {
+    if (onReconnectRef) {
+      onReconnectRef(handleReconnect);
+    }
+  }, [onReconnectRef, handleReconnect]);
+
+  // Expose session state to parent
+  useEffect(() => {
+    if (onSessionStateChange) {
+      onSessionStateChange(sessionState);
+    }
+  }, [onSessionStateChange, sessionState]);
+
   // Handle session restore
   const handleRestoreSession = useCallback(
     (sessionName: string) => {
@@ -247,73 +278,75 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
       className={`flex flex-col ${isExpanded ? "fixed inset-4 z-50" : "relative"} ${className}`}
       data-testid="infinity-terminal"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-900/90 backdrop-blur-sm border-b border-gray-800">
-        <div className="flex items-center gap-3">
-          <TerminalIcon className="w-5 h-5 text-purple-400" />
-          <span className="font-semibold text-sm">Infinity Terminal</span>
+      {/* Header (optional - can be hidden when page provides its own) */}
+      {showHeader && (
+        <div data-testid="infinity-terminal-header" className="flex items-center justify-between px-4 py-2 bg-gray-900/90 backdrop-blur-sm border-b border-gray-800">
+          <div className="flex items-center gap-3">
+            <TerminalIcon className="w-5 h-5 text-purple-400" />
+            <span className="font-semibold text-sm">Infinity Terminal</span>
 
-          {/* Connection Status */}
-          <ConnectionBadge state={sessionState} />
+            {/* Connection Status */}
+            <ConnectionBadge state={sessionState} />
 
-          {/* Session Name */}
-          {sessionState.sessionName && (
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs bg-gray-800 text-gray-400">
-              <Cloud className="w-3 h-3" />
-              <span className="font-mono">{sessionState.sessionName}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Session History */}
-          {availableSessions.length > 0 && (
-            <div className="relative">
-              <button
-                onClick={() => setShowSessionHistory(!showSessionHistory)}
-                className="p-1.5 hover:bg-gray-800 rounded transition-all"
-                title="Session history"
-              >
-                <History className="w-4 h-4 text-gray-400" />
-              </button>
-
-              {showSessionHistory && (
-                <SessionHistoryDropdown
-                  sessions={availableSessions}
-                  currentSession={sessionState.sessionName}
-                  onSelect={handleRestoreSession}
-                  onClose={() => setShowSessionHistory(false)}
-                />
-              )}
-            </div>
-          )}
-
-          {/* Reconnect Button */}
-          <button
-            onClick={handleReconnect}
-            className="p-1.5 hover:bg-gray-800 rounded transition-all"
-            title="Reconnect"
-            disabled={sessionState.connecting}
-          >
-            <RefreshCw
-              className={`w-4 h-4 text-gray-400 ${sessionState.connecting ? "animate-spin" : ""}`}
-            />
-          </button>
-
-          {/* Expand/Collapse */}
-          <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="p-1.5 hover:bg-gray-800 rounded transition-all"
-            title={isExpanded ? "Minimize" : "Maximize"}
-          >
-            {isExpanded ? (
-              <Minimize2 className="w-4 h-4 text-gray-400" />
-            ) : (
-              <Maximize2 className="w-4 h-4 text-gray-400" />
+            {/* Session Name */}
+            {sessionState.sessionName && (
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs bg-gray-800 text-gray-400">
+                <Cloud className="w-3 h-3" />
+                <span className="font-mono">{sessionState.sessionName}</span>
+              </div>
             )}
-          </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Session History */}
+            {availableSessions.length > 0 && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowSessionHistory(!showSessionHistory)}
+                  className="p-1.5 hover:bg-gray-800 rounded transition-all"
+                  title="Session history"
+                >
+                  <History className="w-4 h-4 text-gray-400" />
+                </button>
+
+                {showSessionHistory && (
+                  <SessionHistoryDropdown
+                    sessions={availableSessions}
+                    currentSession={sessionState.sessionName}
+                    onSelect={handleRestoreSession}
+                    onClose={() => setShowSessionHistory(false)}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Reconnect Button */}
+            <button
+              onClick={handleReconnect}
+              className="p-1.5 hover:bg-gray-800 rounded transition-all"
+              title="Reconnect"
+              disabled={sessionState.connecting}
+            >
+              <RefreshCw
+                className={`w-4 h-4 text-gray-400 ${sessionState.connecting ? "animate-spin" : ""}`}
+              />
+            </button>
+
+            {/* Expand/Collapse */}
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="p-1.5 hover:bg-gray-800 rounded transition-all"
+              title={isExpanded ? "Minimize" : "Maximize"}
+            >
+              {isExpanded ? (
+                <Minimize2 className="w-4 h-4 text-gray-400" />
+              ) : (
+                <Maximize2 className="w-4 h-4 text-gray-400" />
+              )}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Terminal */}
       <div
@@ -448,5 +481,11 @@ function formatRelativeTime(date: Date): string {
   if (diffHours < 24) return `${diffHours}h ago`;
   return `${diffDays}d ago`;
 }
+
+// Export ConnectionBadge for use in page headers
+export { ConnectionBadge };
+
+// Re-export SessionState type
+export type { SessionState };
 
 export default InfinityTerminal;

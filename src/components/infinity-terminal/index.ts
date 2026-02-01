@@ -9,6 +9,7 @@
 // Main component
 export {
   InfinityTerminal,
+  ConnectionBadge,
   default as InfinityTerminalDefault,
 } from "./InfinityTerminal";
 

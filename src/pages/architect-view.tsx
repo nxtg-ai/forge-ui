@@ -1030,6 +1030,7 @@ const ArchitectView: React.FC = () => {
 
       {/* Header */}
       <header
+        data-testid="architect-page-header"
         className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm flex-shrink-0 z-30"
         role="banner"
       >

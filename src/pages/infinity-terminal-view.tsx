@@ -20,6 +20,9 @@ import {
   Settings,
   Infinity,
   Brain,
+  RefreshCw,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 
 import {
@@ -27,7 +30,9 @@ import {
   InfinityTerminalLayout,
   SessionRestoreModal,
   useResponsiveLayout,
+  ConnectionBadge,
 } from "../components/infinity-terminal";
+import type { SessionState } from "../components/infinity-terminal/InfinityTerminal";
 import { Panel } from "../components/infinity-terminal/Panel";
 import { FooterPanel } from "../components/infinity-terminal/FooterPanel";
 import type { OracleMessage } from "../components/infinity-terminal/OracleFeedMarquee";
@@ -64,6 +69,11 @@ const InfinityTerminalView: React.FC = () => {
   const [lastSession, setLastSession] =
     useState<ReturnType<typeof getLastSession>>(null);
   const [sessionRestored, setSessionRestored] = useState(false);
+
+  // Terminal control state (exposed from InfinityTerminal)
+  const [terminalState, setTerminalState] = useState<SessionState | null>(null);
+  const [reconnectFn, setReconnectFn] = useState<(() => void) | null>(null);
+  const [isTerminalExpanded, setIsTerminalExpanded] = useState(false);
 
   // Mock oracle messages (will be replaced with real data from governance state)
   const [oracleMessages] = useState<OracleMessage[]>([
@@ -124,7 +134,7 @@ const InfinityTerminalView: React.FC = () => {
       data-testid="infinity-terminal-view"
     >
       {/* Header */}
-      <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm flex-shrink-0 z-30">
+      <header data-testid="terminal-page-header" className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm flex-shrink-0 z-30">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -141,6 +151,34 @@ const InfinityTerminalView: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Connection Status */}
+              {terminalState && <ConnectionBadge state={terminalState} />}
+
+              {/* Reconnect Button */}
+              <button
+                onClick={() => reconnectFn?.()}
+                className="p-1.5 hover:bg-gray-800 rounded transition-all"
+                title="Reconnect"
+                disabled={terminalState?.connecting}
+              >
+                <RefreshCw
+                  className={`w-4 h-4 text-gray-400 ${terminalState?.connecting ? "animate-spin" : ""}`}
+                />
+              </button>
+
+              {/* Expand/Collapse */}
+              <button
+                onClick={() => setIsTerminalExpanded(!isTerminalExpanded)}
+                className="p-1.5 hover:bg-gray-800 rounded transition-all"
+                title={isTerminalExpanded ? "Minimize" : "Maximize"}
+              >
+                {isTerminalExpanded ? (
+                  <Minimize2 className="w-4 h-4 text-gray-400" />
+                ) : (
+                  <Maximize2 className="w-4 h-4 text-gray-400" />
+                )}
+              </button>
+
               {/* Keyboard Shortcuts */}
               <button
                 onClick={() => setShowHelpOverlay(!showHelpOverlay)}
@@ -182,6 +220,11 @@ const InfinityTerminalView: React.FC = () => {
             onSessionRestore={handleSessionRestore}
             onConnectionChange={handleConnectionChange}
             className="h-full"
+            showHeader={false}
+            isExpanded={isTerminalExpanded}
+            onExpandedChange={setIsTerminalExpanded}
+            onReconnectRef={(fn) => setReconnectFn(() => fn)}
+            onSessionStateChange={setTerminalState}
           />
         </main>
 

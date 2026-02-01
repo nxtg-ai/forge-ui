@@ -179,65 +179,6 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
       className="min-h-screen bg-gray-950 text-gray-100"
       data-testid="dashboard-container"
     >
-      {/* Header Bar */}
-      <div
-        className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-50"
-        data-testid="dashboard-header"
-      >
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div
-                className="flex items-center gap-2"
-                data-testid="dashboard-logo"
-              >
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
-                  <Sparkles className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h1
-                    className="text-xl font-bold"
-                    data-testid="dashboard-title"
-                  >
-                    NXTG Chief of Staff
-                  </h1>
-                  <p
-                    className="text-xs text-gray-400"
-                    data-testid="dashboard-subtitle"
-                  >
-                    Orchestrating your vision
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* YOLO Mode Toggle */}
-            <div
-              className="flex items-center gap-4"
-              data-testid="dashboard-mode-selector"
-            >
-              <button
-                onClick={() => setAutoMode(!autoMode)}
-                className={`
-                  px-3 py-1.5 rounded-lg text-xs font-medium transition-all
-                  ${
-                    autoMode
-                      ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                      : "bg-gray-900 text-gray-500 border border-gray-800"
-                  }
-                `}
-                data-testid="dashboard-yolo-toggle-btn"
-              >
-                <div className="flex items-center gap-1">
-                  <Zap className="w-3 h-3" />
-                  YOLO Mode {autoMode ? "ON" : "OFF"}
-                </div>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Vision Reminder Card */}
         <motion.div
