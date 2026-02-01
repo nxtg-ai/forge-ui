@@ -203,6 +203,64 @@ app.post("/api/vision/capture", async (req, res) => {
   }
 });
 
+app.get("/api/vision/history", async (req, res) => {
+  try {
+    const history = await visionSystem.getVisionHistory();
+    res.json({
+      success: true,
+      data: history.map((event: any) => ({
+        id: event.id,
+        timestamp: event.timestamp,
+        type: event.type,
+        actor: event.actor || "system",
+        summary: event.type === "created" ? "Vision created" :
+                 event.type === "updated" ? "Vision updated" :
+                 event.type === "goal-added" ? "Goal added" :
+                 event.type === "goal-completed" ? "Goal completed" :
+                 event.type === "focus-changed" ? "Focus changed" : "Unknown event",
+        version: event.newVersion || event.previousVersion || "1.0",
+      })),
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+app.post("/api/vision/alignment", async (req, res) => {
+  try {
+    const { decision } = req.body;
+    const result = await visionSystem.checkAlignment({
+      id: `check-${Date.now()}`,
+      type: "user-check",
+      description: decision,
+      impact: "medium",
+      rationale: decision,
+    });
+    res.json({
+      success: true,
+      data: {
+        decision,
+        aligned: result.aligned,
+        score: result.score,
+        violations: result.violations?.map((v: any) => v.reason || v.principle),
+        suggestions: result.suggestions,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 // ============= MCP Suggestion Endpoints =============
 
 app.post("/api/mcp/suggestions", async (req, res) => {

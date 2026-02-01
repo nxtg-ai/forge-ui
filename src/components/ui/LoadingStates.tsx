@@ -400,6 +400,127 @@ export const AgentCardLoading: React.FC<{ className?: string }> = ({
 };
 
 /**
+ * VisionPageLoading
+ * Skeleton for Vision page content
+ */
+export const VisionPageLoading: React.FC<{ className?: string }> = ({
+  className = "",
+}) => {
+  return (
+    <div className={`max-w-4xl mx-auto px-6 py-8 space-y-8 ${className}`} data-testid="vision-page-loading">
+      {/* Mission Card */}
+      <div className="p-6 rounded-2xl bg-gradient-to-br from-purple-900/20 via-blue-900/10 to-cyan-900/10 border border-purple-500/20">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <Skeleton width={48} height={48} borderRadius={12} />
+            <div>
+              <Skeleton width={180} height={20} className="mb-2" />
+              <Skeleton width={120} height={12} />
+            </div>
+          </div>
+          <Skeleton width={100} height={32} borderRadius={8} />
+        </div>
+        <SkeletonText lines={3} lineHeight={18} lastLineWidth="75%" className="mb-6" />
+        <div className="flex gap-6 pt-4 border-t border-gray-800/50">
+          <Skeleton width={120} height={14} />
+          <Skeleton width={100} height={14} />
+          <Skeleton width={90} height={14} />
+        </div>
+      </div>
+
+      {/* Goals Grid */}
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <Skeleton width={20} height={20} borderRadius="50%" />
+          <Skeleton width={140} height={18} />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="p-4 rounded-xl bg-gray-900/50 border border-gray-800">
+              <div className="flex items-center justify-between mb-3">
+                <Skeleton width={80} height={24} borderRadius={8} />
+                <Skeleton width={40} height={14} />
+              </div>
+              <Skeleton width="90%" height={16} className="mb-2" />
+              <SkeletonText lines={2} lineHeight={12} lastLineWidth="80%" />
+              <Skeleton width="100%" height={4} borderRadius={9999} className="mt-4" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Metrics Grid */}
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <Skeleton width={20} height={20} borderRadius="50%" />
+          <Skeleton width={120} height={18} />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="p-4 rounded-xl bg-gray-900/50 border border-gray-800">
+              <div className="flex items-center justify-between mb-2">
+                <Skeleton width={100} height={14} />
+                <Skeleton width={16} height={16} borderRadius={4} />
+              </div>
+              <Skeleton width={80} height={28} className="mb-1" />
+              <Skeleton width={60} height={12} className="mb-2" />
+              <Skeleton width="100%" height={4} borderRadius={9999} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Constraints */}
+      <div className="p-4 rounded-xl bg-amber-900/10 border border-amber-500/20">
+        <div className="flex items-center gap-2 mb-4">
+          <Skeleton width={20} height={20} borderRadius="50%" />
+          <Skeleton width={160} height={18} />
+        </div>
+        <div className="space-y-2">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <Skeleton width={8} height={8} borderRadius="50%" />
+              <Skeleton width={`${70 + Math.random() * 20}%`} height={14} />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * VisionHistoryLoading
+ * Skeleton for Vision history panel
+ */
+export const VisionHistoryLoading: React.FC<{ className?: string }> = ({
+  className = "",
+}) => {
+  return (
+    <div className={`p-4 space-y-3 ${className}`} data-testid="vision-history-loading">
+      <div className="flex items-center gap-2 mb-4">
+        <Skeleton width={16} height={16} borderRadius="50%" />
+        <Skeleton width={100} height={14} />
+      </div>
+      {Array.from({ length: 5 }).map((_, index) => (
+        <div key={index} className="p-3 rounded-lg bg-gray-900/50 border border-gray-800">
+          <div className="flex items-start gap-3">
+            <Skeleton width={8} height={8} borderRadius="50%" className="mt-2" />
+            <div className="flex-1">
+              <Skeleton width="90%" height={14} className="mb-2" />
+              <div className="flex gap-2">
+                <Skeleton width={40} height={12} />
+                <Skeleton width={60} height={12} />
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+/**
  * ActivityFeedLoading
  * Skeleton for activity feed items
  */
@@ -464,5 +585,7 @@ export default {
   DashboardOverviewLoading,
   AgentCardLoading,
   ActivityFeedLoading,
+  VisionPageLoading,
+  VisionHistoryLoading,
   withLoadingState,
 };

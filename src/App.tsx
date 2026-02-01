@@ -28,6 +28,7 @@ import { MCPSelectionView } from "./components/onboarding/MCPSelectionView";
 import TerminalView from "./pages/terminal-view";
 import InfinityTerminalView from "./pages/infinity-terminal-view";
 import DashboardLive from "./pages/dashboard-live";
+import VisionPage from "./pages/vision-view";
 import {
   useVision,
   useProjectState,
@@ -697,22 +698,8 @@ const AppContent: React.FC<any> = (props) => {
         {/* Dashboard View - Full panel architecture with mode selector */}
         {currentView === "dashboard" && <DashboardLive />}
 
-        {/* Vision Display View */}
-        {currentView === "vision-display" && (
-          <VisionDisplay
-            vision={visionData}
-            progress={{
-              overallProgress: currentProjectState.progress,
-              phase: currentProjectState.phase,
-              daysElapsed: 0,
-              estimatedDaysRemaining: 30,
-              velocity: 1.0,
-              blockers: (currentProjectState.blockers || []).length,
-            }}
-            isLocked={false}
-            onVisionUpdate={forge.vision.updateVision}
-          />
-        )}
+        {/* Vision View - Full SOTA page with panel architecture */}
+        {currentView === "vision-display" && <VisionPage />}
 
         {/* Command Center View */}
         {currentView === "command" && (
