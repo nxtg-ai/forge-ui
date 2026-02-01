@@ -403,7 +403,7 @@ const QRCodeDisplay: React.FC<{ data: string; size: number }> = ({
   return (
     <div
       className="bg-white flex items-center justify-center"
-      style={{ width: size, height: size }}
+      style={{ width: `${size}px`, height: `${size}px` }}
     >
       <div className="text-center p-4">
         <QrCode className="w-24 h-24 text-gray-900 mx-auto mb-2" />

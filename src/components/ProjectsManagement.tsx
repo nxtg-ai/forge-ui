@@ -169,7 +169,7 @@ export const ProjectsManagement: React.FC<ProjectsManagementProps> = ({
                       ) : (
                         <div
                           className="w-12 h-12 rounded-lg flex items-center justify-center"
-                          style={{ backgroundColor: runspace.color }}
+                          style={{ backgroundColor: runspace.color || '#6366f1' }}
                         >
                           <FolderOpen className="w-6 h-6 text-white" />
                         </div>
