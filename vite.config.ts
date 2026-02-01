@@ -24,12 +24,14 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/ws': {
-        target: 'ws://localhost:5051',
+        target: 'http://localhost:5051',
         ws: true,
+        changeOrigin: true,
       },
       '/terminal': {
-        target: 'ws://localhost:5051',
+        target: 'http://localhost:5051',
         ws: true,
+        changeOrigin: true,
       },
     },
   },

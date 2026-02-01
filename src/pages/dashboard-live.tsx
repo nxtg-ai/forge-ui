@@ -334,9 +334,10 @@ const LiveDashboard: React.FC = () => {
   // Adaptive polling for non-WebSocket fallback
   const { isPolling, forceRefresh } = useAdaptivePolling(
     async () => {
-      const response = await fetch("/api/status");
-      const data = await response.json();
-      setProjectState(data);
+      const response = await fetch("/api/state");
+      if (!response.ok) return;
+      const result = await response.json();
+      if (result.success) setProjectState(result.data);
     },
     {
       enabled: !isConnected,
