@@ -11,11 +11,17 @@ That's it. The startup script will:
 - Show clear error if ports are blocked
 - Start both servers with correct configuration
 
-**If you see "Port in use" error:**
+**Stop servers / Kill ports (safe):**
 ```bash
-pkill -f "vite|tsx.*api-server"
+fuser -k 5050/tcp 5051/tcp
+```
+
+**Then restart:**
+```bash
 npm run dev
 ```
+
+> **Warning:** Never use `pkill -f node` - it kills WSL2/IDE processes!
 
 **Ports are STRICT and LOCKED:**
 - UI: 5050 (will NOT auto-increment)
