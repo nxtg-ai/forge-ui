@@ -18,7 +18,7 @@ check_port() {
         echo "ERROR: Port ${port} (${name}) is already in use!"
         echo ""
         echo "Run this to safely kill Forge dev servers:"
-        echo "  pkill -f 'NXTG-Forge/v3/node_modules'"
+        echo "  pkill -9 -f 'NXTG-Forge/v3'"
         echo ""
         exit 1
     fi
@@ -42,7 +42,7 @@ echo "Starting servers..."
 echo "  UI:  http://localhost:${UI_PORT}"
 echo "  API: http://localhost:${API_PORT}"
 echo ""
-echo "To stop: Ctrl+C or pkill -f 'NXTG-Forge/v3/node_modules'"
+echo "To stop: Ctrl+C or pkill -9 -f 'NXTG-Forge/v3'"
 echo ""
 
 # Start with concurrently
