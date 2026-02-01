@@ -1,0 +1,1196 @@
+/**
+ * Command View Page - SOTA Implementation
+ * Full command center with panel architecture and real API integration
+ *
+ * Features:
+ * - Left panel: Command History (collapsible, 320px)
+ * - Center: Main command interface with quick actions
+ * - Right panel: Command Queue + Execution Status (collapsible, 320px)
+ * - Footer: Oracle Feed + panel toggles
+ * - Responsive: Mobile (full-screen + overlays), Tablet (2-col), Desktop (3-col)
+ * - Full keyboard navigation and screen reader support
+ * - Real WebSocket updates for command execution
+ */
+
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Command,
+  Sparkles,
+  Brain,
+  Zap,
+  Shield,
+  Activity,
+  Users,
+  Terminal,
+  FileCode,
+  GitBranch,
+  Package,
+  Database,
+  Cloud,
+  Settings,
+  ChevronRight,
+  Search,
+  Plus,
+  Play,
+  Pause,
+  RotateCw,
+  CheckCircle,
+  AlertCircle,
+  Clock,
+  TrendingUp,
+  MessageSquare,
+  Layers,
+  Target,
+  BarChart3,
+  History,
+  Keyboard,
+  Trash2,
+  Copy,
+  ExternalLink,
+  Filter,
+  X,
+  Send,
+  LayoutDashboard,
+  Rocket,
+} from "lucide-react";
+
+import { Panel } from "../components/infinity-terminal/Panel";
+import { FooterPanel } from "../components/infinity-terminal/FooterPanel";
+import { useResponsiveLayout } from "../components/infinity-terminal/hooks";
+import { ErrorBoundary } from "../components/ErrorBoundary";
+import { ProgressBar } from "../components/ui/ProgressBar";
+import { KeyboardShortcutsHelp, type KeyboardShortcut } from "../components/ui/KeyboardShortcutsHelp";
+import { ToastProvider, useToast } from "../components/feedback/ToastSystem";
+import {
+  useRealtimeConnection,
+  useAdaptivePolling,
+} from "../hooks/useRealtimeConnection";
+import { apiClient } from "../services/api-client";
+import type { OracleMessage } from "../components/infinity-terminal/OracleFeedMarquee";
+import type { Command as CommandType } from "../components/types";
+
+// Command-specific keyboard shortcuts
+const COMMAND_SHORTCUTS: KeyboardShortcut[] = [
+  { key: "k", description: "Open command palette", category: "navigation", modifiers: ["ctrl"] },
+  { key: "[", description: "Toggle History panel", category: "navigation" },
+  { key: "]", description: "Toggle Queue panel", category: "navigation" },
+  { key: "/", description: "Focus search", category: "navigation" },
+  { key: "Enter", description: "Execute selected command", category: "actions" },
+  { key: "Escape", description: "Close panels / Cancel", category: "general" },
+  { key: "?", description: "Show keyboard shortcuts", category: "general" },
+  { key: "1-9", description: "Quick action shortcuts", category: "actions" },
+];
+
+// ============= Types =============
+
+interface ExecutedCommand {
+  id: string;
+  command: CommandType;
+  status: "pending" | "running" | "success" | "failed" | "cancelled";
+  startedAt: Date;
+  completedAt?: Date;
+  result?: any;
+  error?: string;
+  duration?: number;
+}
+
+interface CommandCategory {
+  id: string;
+  name: string;
+  icon: React.ReactNode;
+  color: string;
+  commands: CommandType[];
+}
+
+interface ProjectContext {
+  name: string;
+  phase: string;
+  activeAgents: number;
+  pendingTasks: number;
+  healthScore: number;
+  lastActivity: Date;
+}
+
+// ============= Default Commands =============
+
+const DEFAULT_COMMANDS: CommandCategory[] = [
+  {
+    id: "forge",
+    name: "Forge",
+    icon: <Sparkles className="w-4 h-4" />,
+    color: "purple",
+    commands: [
+      { id: "status", name: "Status Report", description: "Get current project status", category: "forge", icon: <Activity className="w-4 h-4" /> },
+      { id: "feature", name: "New Feature", description: "Start implementing a new feature", category: "forge", requiresConfirmation: true, icon: <Plus className="w-4 h-4" /> },
+      { id: "analyze", name: "Analyze Code", description: "Run static code analysis", category: "forge", icon: <Search className="w-4 h-4" /> },
+      { id: "vision-check", name: "Vision Check", description: "Verify alignment with project vision", category: "forge", icon: <Target className="w-4 h-4" /> },
+    ],
+  },
+  {
+    id: "git",
+    name: "Git",
+    icon: <GitBranch className="w-4 h-4" />,
+    color: "green",
+    commands: [
+      { id: "git-status", name: "Git Status", description: "Show current git status", category: "git", icon: <GitBranch className="w-4 h-4" /> },
+      { id: "git-commit", name: "Smart Commit", description: "AI-generated commit message", category: "git", icon: <CheckCircle className="w-4 h-4" /> },
+      { id: "git-push", name: "Push Changes", description: "Push to remote", category: "git", requiresConfirmation: true, icon: <Cloud className="w-4 h-4" /> },
+      { id: "git-pr", name: "Create PR", description: "Create pull request", category: "git", requiresConfirmation: true, icon: <ExternalLink className="w-4 h-4" /> },
+    ],
+  },
+  {
+    id: "test",
+    name: "Test",
+    icon: <Shield className="w-4 h-4" />,
+    color: "blue",
+    commands: [
+      { id: "test-all", name: "Run All Tests", description: "Execute full test suite", category: "test", icon: <Play className="w-4 h-4" /> },
+      { id: "test-unit", name: "Unit Tests", description: "Run unit tests only", category: "test", icon: <FileCode className="w-4 h-4" /> },
+      { id: "test-integration", name: "Integration Tests", description: "Run integration tests", category: "test", icon: <Layers className="w-4 h-4" /> },
+      { id: "test-coverage", name: "Coverage Report", description: "Generate test coverage report", category: "test", icon: <BarChart3 className="w-4 h-4" /> },
+    ],
+  },
+  {
+    id: "deploy",
+    name: "Deploy",
+    icon: <Rocket className="w-4 h-4" />,
+    color: "orange",
+    commands: [
+      { id: "deploy-preview", name: "Deploy Preview", description: "Deploy to preview environment", category: "deploy", icon: <Cloud className="w-4 h-4" /> },
+      { id: "deploy-staging", name: "Deploy Staging", description: "Deploy to staging", category: "deploy", requiresConfirmation: true, icon: <Cloud className="w-4 h-4" /> },
+      { id: "deploy-production", name: "Deploy Production", description: "Deploy to production", category: "deploy", requiresConfirmation: true, icon: <Rocket className="w-4 h-4" /> },
+      { id: "rollback", name: "Rollback", description: "Rollback last deployment", category: "deploy", requiresConfirmation: true, icon: <RotateCw className="w-4 h-4" /> },
+    ],
+  },
+];
+
+const CATEGORY_COLORS: Record<string, string> = {
+  forge: "text-purple-400 bg-purple-500/10 border-purple-500/20",
+  git: "text-green-400 bg-green-500/10 border-green-500/20",
+  test: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+  deploy: "text-orange-400 bg-orange-500/10 border-orange-500/20",
+  analyze: "text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
+};
+
+// ============= Sub-components =============
+
+// Command History Panel
+const CommandHistoryPanel: React.FC<{
+  history: ExecutedCommand[];
+  loading: boolean;
+  onRerun: (command: CommandType) => void;
+  onClear: () => void;
+}> = ({ history, loading, onRerun, onClear }) => {
+  const getStatusIcon = (status: ExecutedCommand["status"]) => {
+    switch (status) {
+      case "success":
+        return <CheckCircle className="w-4 h-4 text-green-400" />;
+      case "failed":
+        return <AlertCircle className="w-4 h-4 text-red-400" />;
+      case "running":
+        return <RotateCw className="w-4 h-4 text-blue-400 animate-spin" />;
+      case "cancelled":
+        return <X className="w-4 h-4 text-gray-400" />;
+      default:
+        return <Clock className="w-4 h-4 text-gray-400" />;
+    }
+  };
+
+  const getStatusColor = (status: ExecutedCommand["status"]) => {
+    switch (status) {
+      case "success":
+        return "border-green-500/30 bg-green-500/5";
+      case "failed":
+        return "border-red-500/30 bg-red-500/5";
+      case "running":
+        return "border-blue-500/30 bg-blue-500/5";
+      default:
+        return "border-gray-800 bg-gray-900/50";
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-4 space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="animate-pulse h-16 bg-gray-800 rounded-lg" />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col" data-testid="command-history-panel">
+      <div className="p-4 border-b border-gray-800 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-gray-400 flex items-center gap-2">
+          <History className="w-4 h-4" />
+          Command History
+        </h3>
+        {history.length > 0 && (
+          <button
+            onClick={onClear}
+            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+        {history.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <Terminal className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">No commands executed yet</p>
+          </div>
+        ) : (
+          history.map((executed, index) => (
+            <motion.div
+              key={executed.id}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.03 }}
+              className={`
+                p-3 rounded-lg border transition-all
+                ${getStatusColor(executed.status)}
+              `}
+              data-testid={`history-item-${executed.id}`}
+            >
+              <div className="flex items-start justify-between gap-2 mb-1">
+                <div className="flex items-center gap-2">
+                  {getStatusIcon(executed.status)}
+                  <span className="font-medium text-sm text-gray-200">
+                    {executed.command.name}
+                  </span>
+                </div>
+                <button
+                  onClick={() => onRerun(executed.command)}
+                  className="p-1 hover:bg-gray-700 rounded transition-colors"
+                  title="Run again"
+                >
+                  <RotateCw className="w-3 h-3 text-gray-400" />
+                </button>
+              </div>
+              <div className="text-xs text-gray-500 flex items-center gap-2">
+                <span>{formatTimeAgo(executed.startedAt)}</span>
+                {executed.duration !== undefined && (
+                  <>
+                    <span>-</span>
+                    <span>{executed.duration}ms</span>
+                  </>
+                )}
+              </div>
+              {executed.error && (
+                <div className="mt-2 text-xs text-red-400 bg-red-500/10 p-2 rounded">
+                  {executed.error}
+                </div>
+              )}
+            </motion.div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Command Queue Panel
+const CommandQueuePanel: React.FC<{
+  queue: ExecutedCommand[];
+  running: ExecutedCommand | null;
+  onCancel: (id: string) => void;
+}> = ({ queue, running, onCancel }) => {
+  return (
+    <div className="h-full flex flex-col" data-testid="command-queue-panel">
+      <div className="p-4 border-b border-gray-800">
+        <h3 className="text-sm font-semibold text-gray-400 flex items-center gap-2">
+          <Layers className="w-4 h-4" />
+          Execution Queue
+        </h3>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Currently Running */}
+        {running && (
+          <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <RotateCw className="w-4 h-4 text-blue-400 animate-spin" />
+                <span className="font-medium text-blue-300">Running</span>
+              </div>
+              <button
+                onClick={() => onCancel(running.id)}
+                className="px-2 py-1 text-xs bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+            <div className="text-sm text-gray-200">{running.command.name}</div>
+            <div className="text-xs text-gray-500 mt-1">{running.command.description}</div>
+            <div className="mt-3">
+              <ProgressBar
+                value={50}
+                max={100}
+                className="h-1"
+                fillColor="bg-blue-500"
+                animated={true}
+                testIdPrefix="running-progress"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Queued Commands */}
+        {queue.length > 0 ? (
+          <div>
+            <div className="text-xs font-medium text-gray-500 mb-2">Queued ({queue.length})</div>
+            <div className="space-y-2">
+              {queue.map((item, index) => (
+                <div
+                  key={item.id}
+                  className="p-3 rounded-lg bg-gray-900/50 border border-gray-800 flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500">#{index + 1}</span>
+                    <span className="text-sm text-gray-300">{item.command.name}</span>
+                  </div>
+                  <button
+                    onClick={() => onCancel(item.id)}
+                    className="p-1 hover:bg-gray-700 rounded transition-colors"
+                    title="Remove from queue"
+                  >
+                    <X className="w-3 h-3 text-gray-400" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : !running ? (
+          <div className="text-center py-8 text-gray-500">
+            <CheckCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">No commands in queue</p>
+          </div>
+        ) : null}
+
+        {/* Quick Stats */}
+        <div className="mt-auto pt-4 border-t border-gray-800">
+          <div className="text-xs font-medium text-gray-500 mb-2">Session Stats</div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="p-2 rounded bg-gray-900/50 border border-gray-800">
+              <div className="text-lg font-bold text-green-400">
+                {queue.filter((q) => q.status === "success").length}
+              </div>
+              <div className="text-xs text-gray-500">Completed</div>
+            </div>
+            <div className="p-2 rounded bg-gray-900/50 border border-gray-800">
+              <div className="text-lg font-bold text-red-400">
+                {queue.filter((q) => q.status === "failed").length}
+              </div>
+              <div className="text-xs text-gray-500">Failed</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Command Palette Modal
+const CommandPalette: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  categories: CommandCategory[];
+  onExecute: (command: CommandType) => void;
+  isExecuting: boolean;
+  projectContext: ProjectContext;
+}> = ({ isOpen, onClose, categories, onExecute, isExecuting, projectContext }) => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const filteredCommands = useMemo(() => {
+    const allCommands = categories.flatMap((cat) => cat.commands);
+    if (!searchQuery) return allCommands;
+
+    const lower = searchQuery.toLowerCase();
+    return allCommands.filter(
+      (cmd) =>
+        cmd.name.toLowerCase().includes(lower) ||
+        cmd.description.toLowerCase().includes(lower) ||
+        cmd.category.toLowerCase().includes(lower)
+    );
+  }, [categories, searchQuery]);
+
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          setSelectedIndex((prev) => Math.min(prev + 1, filteredCommands.length - 1));
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setSelectedIndex((prev) => Math.max(prev - 1, 0));
+          break;
+        case "Enter":
+          e.preventDefault();
+          if (filteredCommands[selectedIndex]) {
+            onExecute(filteredCommands[selectedIndex]);
+            onClose();
+          }
+          break;
+        case "Escape":
+          e.preventDefault();
+          onClose();
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, filteredCommands, selectedIndex, onExecute, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: -20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: -20 }}
+        transition={{ type: "spring", duration: 0.3 }}
+        className="fixed inset-x-0 top-20 mx-auto w-full max-w-2xl z-50 px-4"
+        data-testid="command-palette"
+      >
+        <div className="bg-gray-900 rounded-2xl border border-gray-800 shadow-2xl overflow-hidden">
+          {/* Search Header */}
+          <div className="p-4 border-b border-gray-800">
+            <div className="flex items-center gap-3">
+              <Search className="w-5 h-5 text-gray-400" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Type a command or search..."
+                className="flex-1 bg-transparent outline-none text-gray-100 placeholder-gray-500 text-lg"
+                data-testid="command-palette-search"
+              />
+              <div className="flex items-center gap-2">
+                {isExecuting && (
+                  <div className="px-3 py-1 rounded-lg bg-yellow-500/20 text-yellow-400 text-xs flex items-center gap-1">
+                    <Clock className="w-3 h-3 animate-spin" />
+                    Executing...
+                  </div>
+                )}
+                <kbd className="px-2 py-1 bg-gray-800 rounded text-xs text-gray-400">ESC</kbd>
+              </div>
+            </div>
+          </div>
+
+          {/* Context Bar */}
+          <div className="px-4 py-2 bg-gray-800/50 border-b border-gray-800">
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1">
+                  <Target className="w-3 h-3 text-purple-400" />
+                  <span className="text-gray-400">Project:</span>
+                  <span className="text-gray-200 font-medium">{projectContext.name}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Activity className="w-3 h-3 text-blue-400" />
+                  <span className="text-gray-400">Phase:</span>
+                  <span className="text-gray-200 font-medium">{projectContext.phase}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1">
+                  <Users className="w-3 h-3 text-green-400" />
+                  <span className="text-gray-200">{projectContext.activeAgents}</span>
+                  <span className="text-gray-400">agents</span>
+                </div>
+                <div className={`
+                  px-2 py-0.5 rounded-full text-xs
+                  ${projectContext.healthScore >= 80
+                    ? "bg-green-500/20 text-green-400"
+                    : projectContext.healthScore >= 60
+                      ? "bg-yellow-500/20 text-yellow-400"
+                      : "bg-red-500/20 text-red-400"}
+                `}>
+                  {projectContext.healthScore}% health
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Commands List */}
+          <div className="max-h-96 overflow-y-auto p-2">
+            {filteredCommands.length > 0 ? (
+              filteredCommands.map((command, idx) => (
+                <button
+                  key={command.id}
+                  onClick={() => {
+                    onExecute(command);
+                    onClose();
+                  }}
+                  className={`
+                    w-full px-3 py-2.5 rounded-lg flex items-center gap-3 transition-all
+                    ${selectedIndex === idx
+                      ? "bg-gray-800 text-gray-100"
+                      : "hover:bg-gray-800/50 text-gray-300"}
+                  `}
+                  data-testid={`command-option-${command.id}`}
+                >
+                  <div className={`
+                    w-8 h-8 rounded-lg flex items-center justify-center border
+                    ${CATEGORY_COLORS[command.category] || CATEGORY_COLORS.forge}
+                  `}>
+                    {command.icon}
+                  </div>
+                  <div className="flex-1 text-left">
+                    <div className="font-medium text-sm flex items-center gap-2">
+                      {command.name}
+                      {command.requiresConfirmation && (
+                        <span className="text-xs text-orange-400">(requires confirm)</span>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500">{command.description}</div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-600" />
+                </button>
+              ))
+            ) : (
+              <div className="p-8 text-center">
+                <Search className="w-8 h-8 mx-auto mb-4 text-gray-600" />
+                <p className="text-gray-400 mb-2">No commands found</p>
+                <p className="text-sm text-gray-500">Try a different search term</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+
+// Quick Actions Grid
+const QuickActionsGrid: React.FC<{
+  categories: CommandCategory[];
+  onExecute: (command: CommandType) => void;
+  isExecuting: boolean;
+}> = ({ categories, onExecute, isExecuting }) => {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="quick-actions-grid">
+      {categories.map((category) => (
+        <div
+          key={category.id}
+          className="p-4 rounded-xl bg-gray-900/50 border border-gray-800 hover:border-gray-700 transition-all"
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <div className={`p-2 rounded-lg ${CATEGORY_COLORS[category.id] || CATEGORY_COLORS.forge}`}>
+              {category.icon}
+            </div>
+            <h3 className="font-semibold text-gray-200">{category.name}</h3>
+          </div>
+          <div className="space-y-2">
+            {category.commands.slice(0, 3).map((command) => (
+              <button
+                key={command.id}
+                onClick={() => onExecute(command)}
+                disabled={isExecuting}
+                className="w-full text-left px-3 py-2 rounded-lg bg-gray-900 border border-gray-800
+                           hover:border-gray-700 hover:bg-gray-800 transition-all
+                           disabled:opacity-50 disabled:cursor-not-allowed
+                           flex items-center justify-between group"
+                data-testid={`quick-action-${command.id}`}
+              >
+                <span className="text-sm text-gray-300 group-hover:text-gray-100">
+                  {command.name}
+                </span>
+                <Play className="w-3 h-3 text-gray-500 group-hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ============= Helper Functions =============
+
+function formatTimeAgo(date: Date): string {
+  const now = new Date();
+  const diff = now.getTime() - new Date(date).getTime();
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+
+  if (hours > 0) return `${hours}h ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  if (seconds > 10) return `${seconds}s ago`;
+  return "just now";
+}
+
+// ============= Main Component =============
+
+const CommandView: React.FC = () => {
+  const { toast } = useToast();
+
+  // Layout management
+  const {
+    layout,
+    contextPanelVisible: historyPanelVisible,
+    hudVisible: queuePanelVisible,
+    footerVisible,
+    toggleContextPanel: toggleHistoryPanel,
+    toggleHUD: toggleQueuePanel,
+  } = useResponsiveLayout({
+    defaultHUDVisible: true,
+    defaultSidebarVisible: true,
+  });
+
+  // State
+  const [commandHistory, setCommandHistory] = useState<ExecutedCommand[]>([]);
+  const [commandQueue, setCommandQueue] = useState<ExecutedCommand[]>([]);
+  const [runningCommand, setRunningCommand] = useState<ExecutedCommand | null>(null);
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [announcement, setAnnouncement] = useState("");
+  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+
+  // Project context (would come from API in real implementation)
+  const [projectContext] = useState<ProjectContext>({
+    name: "NXTG-Forge",
+    phase: "building",
+    activeAgents: 3,
+    pendingTasks: 12,
+    healthScore: 87,
+    lastActivity: new Date(),
+  });
+
+  // Oracle messages for footer
+  const [oracleMessages] = useState<OracleMessage[]>([
+    {
+      id: "1",
+      type: "info",
+      message: "Command center active",
+      timestamp: new Date(),
+    },
+  ]);
+
+  // WebSocket connection
+  const { isConnected, sendMessage, messages, clearMessages } = useRealtimeConnection({
+    url: import.meta.env.VITE_WS_URL || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`,
+    onOpen: () => {
+      toast.success("Connected to Forge", { message: "Real-time updates enabled" });
+    },
+  });
+
+  // Execute command
+  const executeCommand = useCallback(async (command: CommandType) => {
+    // Confirmation if needed
+    if (command.requiresConfirmation) {
+      const confirmed = window.confirm(`Execute "${command.name}"?\n${command.description}`);
+      if (!confirmed) return;
+    }
+
+    const executedCommand: ExecutedCommand = {
+      id: `exec-${Date.now()}`,
+      command,
+      status: "running",
+      startedAt: new Date(),
+    };
+
+    setIsExecuting(true);
+    setRunningCommand(executedCommand);
+    setAnnouncement(`Executing ${command.name}`);
+
+    try {
+      const startTime = Date.now();
+      const response = await apiClient.executeCommand(command);
+      const duration = Date.now() - startTime;
+
+      const completedCommand: ExecutedCommand = {
+        ...executedCommand,
+        status: response.success ? "success" : "failed",
+        completedAt: new Date(),
+        result: response.data,
+        error: response.error,
+        duration,
+      };
+
+      setCommandHistory((prev) => [completedCommand, ...prev].slice(0, 50));
+
+      if (response.success) {
+        toast.success(`${command.name} completed`, {
+          message: `Executed in ${duration}ms`,
+          duration: 3000,
+        });
+      } else {
+        throw new Error(response.error || "Command failed");
+      }
+
+      // Broadcast via WebSocket
+      if (isConnected) {
+        sendMessage({ type: "command.executed", payload: { command, result: response.data } });
+      }
+    } catch (error: any) {
+      const failedCommand: ExecutedCommand = {
+        ...executedCommand,
+        status: "failed",
+        completedAt: new Date(),
+        error: error.message,
+        duration: Date.now() - executedCommand.startedAt.getTime(),
+      };
+
+      setCommandHistory((prev) => [failedCommand, ...prev].slice(0, 50));
+      toast.error(`${command.name} failed`, {
+        message: error.message,
+        actions: [
+          { label: "Retry", onClick: () => executeCommand(command) },
+        ],
+      });
+    } finally {
+      setIsExecuting(false);
+      setRunningCommand(null);
+    }
+  }, [isConnected, sendMessage, toast]);
+
+  // Cancel command
+  const cancelCommand = useCallback((id: string) => {
+    if (runningCommand?.id === id) {
+      // Would need backend support for actual cancellation
+      setRunningCommand(null);
+      setIsExecuting(false);
+      toast.info("Command cancelled");
+    } else {
+      setCommandQueue((prev) => prev.filter((c) => c.id !== id));
+    }
+  }, [runningCommand, toast]);
+
+  // Clear history
+  const clearHistory = useCallback(() => {
+    setCommandHistory([]);
+    toast.info("History cleared");
+  }, [toast]);
+
+  // Process WebSocket messages
+  useEffect(() => {
+    if (messages.length > 0) {
+      messages.forEach((message: any) => {
+        if (message.type === "command.executed") {
+          // Handle external command execution updates
+          toast.info("Command executed", { message: message.payload?.command?.name });
+        }
+      });
+      clearMessages();
+    }
+  }, [messages, clearMessages, toast]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle shortcuts when typing in inputs
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        if (e.key !== "Escape") return;
+      }
+
+      // Ctrl/Cmd + K for palette
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        setIsPaletteOpen(true);
+        return;
+      }
+
+      switch (e.key) {
+        case "[":
+          e.preventDefault();
+          toggleHistoryPanel();
+          setAnnouncement(`History panel ${!historyPanelVisible ? "opened" : "closed"}`);
+          break;
+        case "]":
+          e.preventDefault();
+          toggleQueuePanel();
+          setAnnouncement(`Queue panel ${!queuePanelVisible ? "opened" : "closed"}`);
+          break;
+        case "/":
+          e.preventDefault();
+          setIsPaletteOpen(true);
+          break;
+        case "Escape":
+          if (isPaletteOpen) {
+            setIsPaletteOpen(false);
+          } else if (showKeyboardHelp) {
+            setShowKeyboardHelp(false);
+          }
+          break;
+        case "?":
+          e.preventDefault();
+          setShowKeyboardHelp(true);
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    historyPanelVisible,
+    queuePanelVisible,
+    isPaletteOpen,
+    showKeyboardHelp,
+    toggleHistoryPanel,
+    toggleQueuePanel,
+  ]);
+
+  return (
+    <div
+      className="h-screen bg-gray-950 text-white flex flex-col"
+      data-testid="command-view-container"
+    >
+      {/* Screen reader announcements */}
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {announcement}
+      </div>
+
+      {/* Header */}
+      <header
+        className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm flex-shrink-0 z-30"
+        role="banner"
+      >
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Command className="w-6 h-6 text-purple-400" />
+                <Zap className="w-3 h-3 text-cyan-400 absolute -bottom-1 -right-1" />
+              </div>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
+                Command Center
+              </h1>
+              <span className="px-2 py-0.5 text-xs bg-cyan-500/10 text-cyan-400 rounded-full border border-cyan-500/20">
+                {commandHistory.filter((c) => c.status === "success").length} executed
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Open Palette Button */}
+              <button
+                onClick={() => setIsPaletteOpen(true)}
+                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300
+                           rounded-lg transition-all flex items-center gap-2"
+                data-testid="open-palette-btn"
+              >
+                <Search className="w-4 h-4" />
+                <span className="text-sm">Commands</span>
+                <kbd className="px-1.5 py-0.5 bg-gray-700 rounded text-xs text-gray-400">
+                  Ctrl+K
+                </kbd>
+              </button>
+
+              {/* Panel toggles (desktop) */}
+              {!layout.isMobile && (
+                <div className="flex gap-2 ml-2" role="group" aria-label="Panel toggles">
+                  <button
+                    onClick={() => {
+                      toggleHistoryPanel();
+                      setAnnouncement(`History panel ${!historyPanelVisible ? "opened" : "closed"}`);
+                    }}
+                    aria-pressed={historyPanelVisible}
+                    aria-label="Toggle History panel"
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      historyPanelVisible
+                        ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+                        : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                    }`}
+                    data-testid="toggle-history-panel"
+                  >
+                    <History className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      toggleQueuePanel();
+                      setAnnouncement(`Queue panel ${!queuePanelVisible ? "opened" : "closed"}`);
+                    }}
+                    aria-pressed={queuePanelVisible}
+                    aria-label="Toggle Queue panel"
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                      queuePanelVisible
+                        ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+                        : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                    }`}
+                    data-testid="toggle-queue-panel"
+                  >
+                    <Layers className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* Keyboard shortcuts button */}
+              <button
+                onClick={() => setShowKeyboardHelp(true)}
+                className="px-3 py-1.5 rounded-lg bg-gray-800 text-gray-400 hover:bg-gray-700 transition-all"
+                aria-label="Show keyboard shortcuts (press ?)"
+                title="Keyboard shortcuts (?)"
+                data-testid="keyboard-shortcuts-btn"
+              >
+                <Keyboard className="w-4 h-4" />
+              </button>
+
+              {/* Connection status */}
+              <div
+                role="status"
+                aria-label={isConnected ? "Connected" : "Disconnected"}
+                className={`
+                  flex items-center gap-2 px-3 py-1.5 rounded-lg
+                  ${isConnected
+                    ? "bg-green-900/20 border border-green-500/30"
+                    : "bg-red-900/20 border border-red-500/30"}
+                `}
+              >
+                <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500 animate-pulse"}`} />
+                <span className="text-xs font-medium">
+                  {isConnected ? "Live" : "Offline"}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Layout */}
+      <div className="flex-1 min-h-0 flex">
+        {/* Left Panel - History */}
+        <Panel
+          side="left"
+          mode={layout.panelMode}
+          visible={historyPanelVisible}
+          width={320}
+          onClose={toggleHistoryPanel}
+          title="Command History"
+        >
+          <CommandHistoryPanel
+            history={commandHistory}
+            loading={false}
+            onRerun={executeCommand}
+            onClear={clearHistory}
+          />
+        </Panel>
+
+        {/* Main Content */}
+        <main
+          className="flex-1 min-w-0 bg-gray-950 overflow-y-auto pb-16 md:pb-0"
+          role="main"
+          aria-label="Command center"
+        >
+          <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
+            {/* Hero Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center"
+            >
+              <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-purple-500/20 to-cyan-500/20 border border-purple-500/30 flex items-center justify-center">
+                <Command className="w-10 h-10 text-purple-400" />
+              </div>
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent mb-3">
+                Forge Command Center
+              </h2>
+              <p className="text-gray-400 max-w-lg mx-auto mb-6">
+                Execute commands, run tests, deploy code, and manage your development workflow.
+                Press <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-xs">Ctrl+K</kbd> to open the command palette.
+              </p>
+
+              {/* Quick Stats */}
+              <div className="flex items-center justify-center gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-400" />
+                  <span className="text-gray-300">{commandHistory.filter((c) => c.status === "success").length} successful</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-400" />
+                  <span className="text-gray-300">{commandHistory.filter((c) => c.status === "failed").length} failed</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-blue-400" />
+                  <span className="text-gray-300">{projectContext.activeAgents} agents active</span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Quick Actions */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Zap className="w-5 h-5 text-yellow-400" />
+                Quick Actions
+              </h3>
+              <QuickActionsGrid
+                categories={DEFAULT_COMMANDS}
+                onExecute={executeCommand}
+                isExecuting={isExecuting}
+              />
+            </motion.div>
+
+            {/* Recent Commands */}
+            {commandHistory.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <History className="w-5 h-5 text-gray-400" />
+                  Recent Commands
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {commandHistory.slice(0, 4).map((executed) => (
+                    <button
+                      key={executed.id}
+                      onClick={() => executeCommand(executed.command)}
+                      className="p-3 rounded-lg bg-gray-900/50 border border-gray-800 hover:border-gray-700
+                                 text-left transition-all flex items-center justify-between group"
+                    >
+                      <div className="flex items-center gap-3">
+                        {executed.status === "success" ? (
+                          <CheckCircle className="w-4 h-4 text-green-400" />
+                        ) : (
+                          <AlertCircle className="w-4 h-4 text-red-400" />
+                        )}
+                        <div>
+                          <div className="font-medium text-sm text-gray-200">
+                            {executed.command.name}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {formatTimeAgo(executed.startedAt)}
+                            {executed.duration && ` - ${executed.duration}ms`}
+                          </div>
+                        </div>
+                      </div>
+                      <RotateCw className="w-4 h-4 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </div>
+        </main>
+
+        {/* Right Panel - Queue */}
+        <Panel
+          side="right"
+          mode={layout.panelMode}
+          visible={queuePanelVisible}
+          width={320}
+          onClose={toggleQueuePanel}
+          title="Execution Queue"
+        >
+          <ErrorBoundary fallbackMessage="Queue panel error">
+            <CommandQueuePanel
+              queue={commandQueue}
+              running={runningCommand}
+              onCancel={cancelCommand}
+            />
+          </ErrorBoundary>
+        </Panel>
+      </div>
+
+      {/* Footer Panel */}
+      {footerVisible && (
+        <FooterPanel
+          sessionName="command"
+          isConnected={isConnected}
+          oracleMessages={oracleMessages}
+          onToggleContext={toggleHistoryPanel}
+          onToggleGovernance={toggleQueuePanel}
+          contextVisible={historyPanelVisible}
+          governanceVisible={queuePanelVisible}
+          isMobile={layout.isMobile}
+        />
+      )}
+
+      {/* Command Palette */}
+      <CommandPalette
+        isOpen={isPaletteOpen}
+        onClose={() => setIsPaletteOpen(false)}
+        categories={DEFAULT_COMMANDS}
+        onExecute={executeCommand}
+        isExecuting={isExecuting}
+        projectContext={projectContext}
+      />
+
+      {/* Mobile Bottom Navigation */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 h-14 bg-gray-900/95 backdrop-blur-sm
+                   border-t border-gray-800 z-50 md:hidden pb-safe"
+        role="navigation"
+        aria-label="Mobile navigation"
+      >
+        <div className="h-full flex items-center justify-around px-4">
+          <button
+            onClick={toggleHistoryPanel}
+            className={`flex flex-col items-center gap-1 flex-1 h-full justify-center
+                        ${historyPanelVisible ? "text-purple-400" : "text-gray-400"}`}
+          >
+            <History className="w-5 h-5" />
+            <span className="text-xs">History</span>
+          </button>
+          <button
+            onClick={() => setIsPaletteOpen(true)}
+            className="flex flex-col items-center gap-1 flex-1 h-full justify-center text-gray-400"
+          >
+            <Search className="w-5 h-5" />
+            <span className="text-xs">Commands</span>
+          </button>
+          <button
+            onClick={toggleQueuePanel}
+            className={`flex flex-col items-center gap-1 flex-1 h-full justify-center
+                        ${queuePanelVisible ? "text-purple-400" : "text-gray-400"}`}
+          >
+            <Layers className="w-5 h-5" />
+            <span className="text-xs">Queue</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* Keyboard Shortcuts Help Modal */}
+      <KeyboardShortcutsHelp
+        isOpen={showKeyboardHelp}
+        onClose={() => setShowKeyboardHelp(false)}
+        customShortcuts={COMMAND_SHORTCUTS}
+      />
+    </div>
+  );
+};
+
+// Wrap with providers
+const CommandPage: React.FC = () => {
+  return (
+    <ToastProvider>
+      <CommandView />
+    </ToastProvider>
+  );
+};
+
+export default CommandPage;

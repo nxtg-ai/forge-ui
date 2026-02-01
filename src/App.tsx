@@ -29,6 +29,9 @@ import TerminalView from "./pages/terminal-view";
 import InfinityTerminalView from "./pages/infinity-terminal-view";
 import DashboardLive from "./pages/dashboard-live";
 import VisionPage from "./pages/vision-view";
+import ArchitectPage from "./pages/architect-view";
+import ArchitectDemo from "./pages/architect-demo";
+import CommandPage from "./pages/command-view";
 import {
   useVision,
   useProjectState,
@@ -128,6 +131,7 @@ function IntegratedApp() {
     | "mcp-selection"
     | "dashboard"
     | "architect"
+    | "architect-demo"
     | "command"
     | "vision-display"
     | "yolo"
@@ -639,7 +643,8 @@ const AppContent: React.FC<any> = (props) => {
                   { id: "infinity-terminal", label: "Terminal", icon: <Infinity className="w-4 h-4" /> },
                   { id: "command", label: "Command", icon: <Zap className="w-4 h-4" /> },
                   { id: "architect", label: "Architect", icon: <Building2 className="w-4 h-4" /> },
-                  { id: "yolo", label: "YOLO", icon: <Rocket className="w-4 h-4" /> },
+                  { id: "architect-demo", label: "Demo", icon: <Rocket className="w-4 h-4" /> },
+                  { id: "yolo", label: "YOLO", icon: <Shield className="w-4 h-4" /> },
                 ].map((nav) => (
                   <button
                     key={nav.id}
@@ -701,95 +706,14 @@ const AppContent: React.FC<any> = (props) => {
         {/* Vision View - Full SOTA page with panel architecture */}
         {currentView === "vision-display" && <VisionPage />}
 
-        {/* Command Center View */}
-        {currentView === "command" && (
-          <CommandCenter
-            onCommandExecute={(commandId: string) => {
-              console.log("Executing command:", commandId);
-              // Handle command execution through forge integration
-              handleCommandExecution({
-                id: commandId,
-                name: commandId,
-                description: "",
-                category: "forge",
-                icon: null,
-              } as Command);
-            }}
-            availableCommands={
-              [
-                {
-                  id: "status",
-                  name: "Status Report",
-                  description: "Get current project status",
-                  category: "forge",
-                  icon: null,
-                },
-                {
-                  id: "feature",
-                  name: "New Feature",
-                  description: "Start implementing a new feature",
-                  category: "forge",
-                  requiresConfirmation: true,
-                  icon: null,
-                },
-                {
-                  id: "test",
-                  name: "Run Tests",
-                  description: "Execute all test suites",
-                  category: "test",
-                  icon: null,
-                },
-                {
-                  id: "deploy",
-                  name: "Deploy",
-                  description: "Deploy to production",
-                  category: "deploy",
-                  requiresConfirmation: true,
-                  icon: null,
-                },
-                {
-                  id: "analyze",
-                  name: "Analyze Code",
-                  description: "Run static code analysis",
-                  category: "analyze",
-                  icon: null,
-                },
-              ] as Command[]
-            }
-            projectContext={{
-              name: "NXTG-Forge Project",
-              phase: currentProjectState.phase,
-              activeAgents: (currentProjectState.activeAgents || []).length,
-              pendingTasks: 0,
-              healthScore: currentProjectState.healthScore,
-              lastActivity: new Date(),
-            }}
-            isExecuting={forge.commandExecution.executing || false}
-          />
-        )}
+        {/* Command Center View - SOTA Page with panel architecture */}
+        {currentView === "command" && <CommandPage />}
 
-        {/* Architect Discussion View */}
-        {currentView === "architect" && (
-          <ArchitectDiscussion
-            topic="System Architecture Design"
-            participants={architects.map((a: Architect) => ({
-              id: a.id,
-              name: a.name,
-              specialty: a.role,
-              avatar: a.avatar,
-              confidence: 85,
-            }))}
-            onDecision={(decision) => {
-              console.log("Architecture decision made:", decision);
-              // Handle the decision through forge integration
-              forge.architectureDecisions.proposeDecision({
-                ...decision,
-                id: `decision-${Date.now()}`,
-              });
-            }}
-            humanRole="observer"
-          />
-        )}
+        {/* Architect View - SOTA Page with real API integration */}
+        {currentView === "architect" && <ArchitectPage />}
+
+        {/* Architect Demo - For marketing videos */}
+        {currentView === "architect-demo" && <ArchitectDemo />}
 
         {/* YOLO Mode View */}
         {currentView === "yolo" && (
