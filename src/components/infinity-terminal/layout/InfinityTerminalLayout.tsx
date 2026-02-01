@@ -54,7 +54,7 @@ export const InfinityTerminalLayout: React.FC<InfinityTerminalLayoutProps> = ({
             exit={{ x: -layout.sidebarWidth, opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="flex-shrink-0 border-r border-gray-800 bg-gray-950 overflow-y-auto"
-            style={{ width: layout.sidebarWidth }}
+            style={{ width: `${layout.sidebarWidth}px` }}
           >
             {sidebar}
           </motion.aside>
@@ -73,7 +73,7 @@ export const InfinityTerminalLayout: React.FC<InfinityTerminalLayoutProps> = ({
             exit={{ x: layout.hudWidth, opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="flex-shrink-0 border-l border-gray-800 bg-gray-950 overflow-y-auto"
-            style={{ width: layout.hudWidth }}
+            style={{ width: `${layout.hudWidth}px` }}
           >
             {hud}
           </motion.aside>
