@@ -124,22 +124,8 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
     xtermRef.current = term;
     fitAddonRef.current = fitAddon;
 
-    // Welcome message
-    term.writeln(
-      "\x1b[1;36m╔═══════════════════════════════════════════════════════════════╗\x1b[0m",
-    );
-    term.writeln(
-      "\x1b[1;36m║\x1b[0m \x1b[1;35m♾️  INFINITY TERMINAL - Persistent Sessions\x1b[0m               \x1b[1;36m║\x1b[0m",
-    );
-    term.writeln(
-      "\x1b[1;36m║\x1b[0m \x1b[36mPowered by Zellij + ttyd\x1b[0m                                  \x1b[1;36m║\x1b[0m",
-    );
-    term.writeln(
-      "\x1b[1;36m╚═══════════════════════════════════════════════════════════════╝\x1b[0m",
-    );
-    term.writeln("");
-    term.writeln("\x1b[90mConnecting to persistent session...\x1b[0m");
-    term.writeln("");
+    // Minimal status - UI chrome shows identity + connection badges
+    term.writeln("\x1b[90m● Connecting...\x1b[0m");
 
     // Handle resize
     const handleResize = () => {
@@ -206,10 +192,10 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
 
     ws.addEventListener("message", handleMessage);
 
-    term.writeln("\x1b[32m✓ Connected to persistent session\x1b[0m");
-    term.writeln(`\x1b[90mSession: ${sessionState.sessionName}\x1b[0m`);
+    // Clear "Connecting..." and show session ready
+    term.write("\x1b[1A\x1b[2K"); // Move up, clear line
+    term.writeln(`\x1b[32m● Session: ${sessionState.sessionName}\x1b[0m`);
     term.writeln("");
-    term.write("$ ");
 
     // Send initial resize
     if (ws.readyState === WebSocket.OPEN) {
