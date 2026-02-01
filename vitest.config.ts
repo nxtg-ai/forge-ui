@@ -32,8 +32,8 @@ export default defineConfig({
         statements: 85
       }
     },
-    include: ['**/*.{test,spec}.{ts,tsx}'],
-    exclude: ['node_modules', 'dist', '.claude'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['**/node_modules/**', 'dist', '.claude', '.asif'],
     testTimeout: 10000,
     hookTimeout: 10000,
     isolate: true,

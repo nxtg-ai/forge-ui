@@ -45,7 +45,7 @@ interface Command {
   category: "forge" | "git" | "test" | "deploy" | "analyze";
   hotkey?: string;
   requiresConfirmation?: boolean;
-  icon: JSX.Element;
+  icon: React.ReactNode;
 }
 
 interface ProjectContext {

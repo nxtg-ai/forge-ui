@@ -37,6 +37,7 @@ export interface AgentTask {
   retryCount?: number;
   maxRetries?: number;
   metadata?: Record<string, unknown>;
+  payload?: Record<string, unknown>; // Task-specific payload data
   createdAt: Date;
   assignedAt?: Date;
   startedAt?: Date;

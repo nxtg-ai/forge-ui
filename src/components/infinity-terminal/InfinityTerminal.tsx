@@ -72,7 +72,7 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
   } = useSessionPersistence({
     projectName,
     layout,
-    config: { ttydPort, ttydHost },
+    config: { wsPort: ttydPort, wsHost: ttydHost },
     onSessionRestore,
     onConnectionChange,
   });

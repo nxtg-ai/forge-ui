@@ -322,12 +322,12 @@ function IntegratedApp() {
   const loadRunspaces = useCallback(async () => {
     try {
       setLoadingRunspaces(true);
-      const response = await apiClient.get("/api/runspaces");
+      const response = await apiClient.get<{ runspaces: Runspace[]; activeRunspaceId?: string }>("/api/runspaces");
       if (response.success && response.data) {
         setRunspaces(response.data.runspaces || []);
         if (response.data.activeRunspaceId) {
           const active = (response.data.runspaces || []).find(
-            (r: Runspace) => r.id === response.data.activeRunspaceId,
+            (r) => r.id === response.data?.activeRunspaceId,
           );
           setActiveRunspace(active || null);
         }
@@ -713,12 +713,12 @@ function IntegratedApp() {
           <div className="space-y-2">
             {(activities || []).slice(0, 5).map((activity, idx) => (
               <div
-                key={activity.id || idx}
+                key={activity.agentId || idx}
                 className="flex items-start space-x-2"
               >
                 <div className="h-2 w-2 bg-green-500 rounded-full mt-1 animate-pulse" />
                 <div className="flex-1">
-                  <p className="text-xs text-white">{activity.agent}</p>
+                  <p className="text-xs text-white">{activity.agentId}</p>
                   <p className="text-xs text-gray-400">{activity.action}</p>
                 </div>
               </div>

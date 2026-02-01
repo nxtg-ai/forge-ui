@@ -5,6 +5,7 @@
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { StateManager } from "@core/state";
+import { TaskStatus } from "../../types/state";
 import { promises as fs } from "fs";
 
 describe("State Integration: Dashboard -> StateManager -> File System", () => {
@@ -127,10 +128,10 @@ describe("State Integration: Dashboard -> StateManager -> File System", () => {
             id: "task-1",
             title: "Test Task",
             description: "Test",
-            status: "in_progress",
+            status: TaskStatus.IN_PROGRESS,
             priority: 5,
             dependencies: [],
-            assignedTo: "developer",
+            assignedAgent: "developer",
             createdAt: new Date(),
             updatedAt: new Date(),
           },
@@ -176,10 +177,10 @@ describe("State Integration: Dashboard -> StateManager -> File System", () => {
             id: "task-1",
             title: "Test Task",
             description: "Test",
-            status: "in_progress",
+            status: TaskStatus.IN_PROGRESS,
             priority: 5,
             dependencies: [],
-            assignedTo: "developer",
+            assignedAgent: "developer",
             createdAt: new Date(),
             updatedAt: new Date(),
           },
@@ -209,10 +210,10 @@ describe("State Integration: Dashboard -> StateManager -> File System", () => {
             id: "task-1",
             title: "Task 1",
             description: "Test",
-            status: "in_progress",
+            status: TaskStatus.IN_PROGRESS,
             priority: 5,
             dependencies: [],
-            assignedTo: "dev1",
+            assignedAgent: "dev1",
             createdAt: new Date(),
             updatedAt: new Date(),
           },
@@ -220,10 +221,10 @@ describe("State Integration: Dashboard -> StateManager -> File System", () => {
             id: "task-2",
             title: "Task 2",
             description: "Test",
-            status: "completed",
+            status: TaskStatus.COMPLETED,
             priority: 5,
             dependencies: [],
-            assignedTo: "dev2",
+            assignedAgent: "dev2",
             createdAt: new Date(),
             updatedAt: new Date(),
           },
@@ -231,10 +232,10 @@ describe("State Integration: Dashboard -> StateManager -> File System", () => {
             id: "task-3",
             title: "Task 3",
             description: "Test",
-            status: "blocked",
+            status: TaskStatus.BLOCKED,
             priority: 5,
             dependencies: [],
-            assignedTo: "dev3",
+            assignedAgent: "dev3",
             createdAt: new Date(),
             updatedAt: new Date(),
           },
@@ -262,10 +263,10 @@ describe("State Integration: Dashboard -> StateManager -> File System", () => {
             id: "task-1",
             title: "Pending Task 1",
             description: "Test",
-            status: "pending",
+            status: TaskStatus.PENDING,
             priority: 5,
             dependencies: [],
-            assignedTo: "dev1",
+            assignedAgent: "dev1",
             createdAt: new Date(),
             updatedAt: new Date(),
           },
@@ -282,7 +283,7 @@ describe("State Integration: Dashboard -> StateManager -> File System", () => {
     it("should record all state changes as events", async () => {
       await stateManager.initialize(mockProjectPath);
 
-      stateManager.updateTaskStatus("task-1", "completed");
+      stateManager.updateTaskStatus("task-1", TaskStatus.COMPLETED);
 
       const events = stateManager.getEvents();
 
@@ -291,7 +292,7 @@ describe("State Integration: Dashboard -> StateManager -> File System", () => {
           type: "task-status-changed",
           data: {
             taskId: "task-1",
-            status: "completed",
+            status: TaskStatus.COMPLETED,
           },
         }),
       );
@@ -300,7 +301,7 @@ describe("State Integration: Dashboard -> StateManager -> File System", () => {
     it("should write events to append-only log", async () => {
       await stateManager.initialize(mockProjectPath);
 
-      stateManager.updateTaskStatus("task-1", "in_progress");
+      stateManager.updateTaskStatus("task-1", TaskStatus.IN_PROGRESS);
 
       await vi.waitFor(() => {
         expect(fs.appendFile).toHaveBeenCalledWith(
@@ -324,7 +325,7 @@ describe("State Integration: Dashboard -> StateManager -> File System", () => {
       await stateManager.initialize(mockProjectPath);
 
       const start = Date.now();
-      stateManager.updateTaskStatus("task-1", "completed");
+      stateManager.updateTaskStatus("task-1", TaskStatus.COMPLETED);
       const duration = Date.now() - start;
 
       expect(duration).toBeLessThan(100);
@@ -333,11 +334,11 @@ describe("State Integration: Dashboard -> StateManager -> File System", () => {
     it("should handle auto-save without blocking", async () => {
       await stateManager.initialize(mockProjectPath);
 
-      stateManager.updateTaskStatus("task-1", "in_progress");
+      stateManager.updateTaskStatus("task-1", TaskStatus.IN_PROGRESS);
 
       // Should not block
       const start = Date.now();
-      stateManager.updateTaskStatus("task-2", "completed");
+      stateManager.updateTaskStatus("task-2", TaskStatus.COMPLETED);
       const duration = Date.now() - start;
 
       expect(duration).toBeLessThan(10);
@@ -360,7 +361,7 @@ describe("State Integration: Dashboard -> StateManager -> File System", () => {
 
       // Generate many events
       for (let i = 0; i < 1000; i++) {
-        stateManager.updateTaskStatus(`task-${i}`, "completed");
+        stateManager.updateTaskStatus(`task-${i}`, TaskStatus.COMPLETED);
       }
 
       const events = stateManager.getEvents();

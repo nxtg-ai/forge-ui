@@ -84,7 +84,7 @@ export const YoloMode: React.FC<YoloModeProps> = ({
       label: string;
       description: string;
       color: string;
-      icon: JSX.Element;
+      icon: React.ReactNode;
       permissions: string[];
     }
   > = {

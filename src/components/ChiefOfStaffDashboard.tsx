@@ -113,7 +113,7 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
 
   const modeConfig: Record<
     EngagementMode,
-    { label: string; icon: JSX.Element; color: string; description: string }
+    { label: string; icon: React.ReactNode; color: string; description: string }
   > = {
     ceo: {
       label: "CEO",

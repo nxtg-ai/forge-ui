@@ -141,7 +141,7 @@ export class CheckpointManager {
 
           checkpoints.push(checkpoint);
         } catch (error) {
-          logger.warn(`Failed to read checkpoint file ${file}`, error);
+          logger.warn(`Failed to read checkpoint file ${file}`, { error: String(error) });
         }
       }
 
@@ -169,8 +169,8 @@ export class CheckpointManager {
       await fs.unlink(filePath);
       logger.debug("Checkpoint cleared", { taskId });
     } catch (error) {
-      if ((error as any).code !== "ENOENT") {
-        logger.warn(`Failed to clear checkpoint for task ${taskId}`, error);
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        logger.warn(`Failed to clear checkpoint for task ${taskId}`, { error: String(error) });
       }
     }
   }
@@ -191,7 +191,7 @@ export class CheckpointManager {
           await fs.unlink(filePath);
           cleared++;
         } catch (error) {
-          logger.warn(`Failed to delete checkpoint file ${file}`, error);
+          logger.warn(`Failed to delete checkpoint file ${file}`, { error: String(error) });
         }
       }
 
