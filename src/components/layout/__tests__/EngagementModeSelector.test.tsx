@@ -133,16 +133,16 @@ describe("EngagementModeSelector", () => {
         ).toBeInTheDocument();
       });
 
-      // First option should be highlighted by default
-      const firstOption = screen.getByTestId("engagement-mode-ceo");
-      expect(firstOption).toHaveClass("ring-2", "ring-purple-500/50");
+      // Current mode (engineer, index 2) should be highlighted by default
+      const engineerOption = screen.getByTestId("engagement-mode-engineer");
+      expect(engineerOption).toHaveClass("ring-2", "ring-purple-500/50");
 
       // Press ArrowDown to move to next option
       fireEvent.keyDown(window, { key: "ArrowDown" });
 
-      // Second option should now be highlighted
-      const secondOption = screen.getByTestId("engagement-mode-vp");
-      expect(secondOption).toHaveClass("ring-2", "ring-purple-500/50");
+      // Builder option (index 3) should now be highlighted
+      const builderOption = screen.getByTestId("engagement-mode-builder");
+      expect(builderOption).toHaveClass("ring-2", "ring-purple-500/50");
     });
 
     test("navigates options with ArrowUp", async () => {
@@ -158,12 +158,16 @@ describe("EngagementModeSelector", () => {
         ).toBeInTheDocument();
       });
 
-      // Press ArrowUp (should wrap to last option)
+      // Current mode (engineer, index 2) should be highlighted by default
+      const engineerOption = screen.getByTestId("engagement-mode-engineer");
+      expect(engineerOption).toHaveClass("ring-2", "ring-purple-500/50");
+
+      // Press ArrowUp to move to previous option
       fireEvent.keyDown(window, { key: "ArrowUp" });
 
-      // Last option should be highlighted
-      const lastOption = screen.getByTestId("engagement-mode-founder");
-      expect(lastOption).toHaveClass("ring-2", "ring-purple-500/50");
+      // VP option (index 1) should now be highlighted
+      const vpOption = screen.getByTestId("engagement-mode-vp");
+      expect(vpOption).toHaveClass("ring-2", "ring-purple-500/50");
     });
 
     test("selects option with Enter key", async () => {
@@ -182,7 +186,11 @@ describe("EngagementModeSelector", () => {
         ).toBeInTheDocument();
       });
 
-      // Press Enter to select first option (CEO)
+      // Navigate to CEO option
+      fireEvent.keyDown(window, { key: "ArrowUp" });
+      fireEvent.keyDown(window, { key: "ArrowUp" });
+
+      // Press Enter to select CEO option
       fireEvent.keyDown(window, { key: "Enter" });
 
       await waitFor(() => {
@@ -209,7 +217,11 @@ describe("EngagementModeSelector", () => {
         ).toBeInTheDocument();
       });
 
-      // Press Space to select first option
+      // Navigate to CEO option
+      fireEvent.keyDown(window, { key: "ArrowUp" });
+      fireEvent.keyDown(window, { key: "ArrowUp" });
+
+      // Press Space to select CEO option
       fireEvent.keyDown(window, { key: " " });
 
       await waitFor(() => {
@@ -553,16 +565,40 @@ describe("EngagementModeSelector", () => {
 
       renderWithProvider(<EngagementModeSelector />);
 
+      // Verify button shows Engineer mode
       const button = screen.getByTestId("engagement-mode-button");
+      expect(button).toHaveTextContent("Engineer");
+
+      // Open dropdown
       fireEvent.click(button);
 
       await waitFor(() => {
-        const engineerOption = screen.getByTestId("engagement-mode-engineer");
-        // Check for CheckCircle icon (visual indicator)
         expect(
-          engineerOption.querySelector(".lucide-check-circle"),
+          screen.getByTestId("engagement-mode-dropdown"),
         ).toBeInTheDocument();
       });
+
+      // Wait for the engineer option to have aria-selected="true"
+      await waitFor(() => {
+        const engineerOption = screen.getByTestId("engagement-mode-engineer");
+        expect(engineerOption).toHaveAttribute("aria-selected", "true");
+      });
+
+      // Now check for the CheckCircle icon
+      const engineerOption = screen.getByTestId("engagement-mode-engineer");
+      const svgElements = engineerOption.querySelectorAll("svg");
+
+      // The engineer option should have at least 2 SVG elements: the Code2 icon and CheckCircle
+      expect(svgElements.length).toBe(2);
+
+      // The second SVG should be the CheckCircle (lucide-react renders it with different class names)
+      const checkCircle = svgElements[1];
+      const classList = checkCircle.classList.toString();
+      // Check for either the old name or the new name from lucide-react
+      expect(
+        classList.includes("lucide-check-circle") ||
+          classList.includes("lucide-circle-check-big"),
+      ).toBe(true);
     });
 
     test("applies correct styling to open button", async () => {

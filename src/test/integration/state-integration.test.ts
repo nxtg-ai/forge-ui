@@ -306,6 +306,22 @@ describe("State Integration: Dashboard -> StateManager -> File System", () => {
     it("should record all state changes as events", async () => {
       await stateManager.initialize(mockProjectPath);
 
+      // Add a task to the state first
+      const state = stateManager.getState();
+      if (state) {
+        state.currentTasks.push({
+          id: "task-1",
+          title: "Test Task",
+          description: "Test task for event sourcing",
+          status: TaskStatus.PENDING,
+          priority: "medium" as const,
+          created: new Date(),
+          updated: new Date(),
+          dependencies: [],
+          tags: [],
+        });
+      }
+
       stateManager.updateTaskStatus("task-1", TaskStatus.COMPLETED);
 
       const events = stateManager.getEvents();
@@ -323,6 +339,22 @@ describe("State Integration: Dashboard -> StateManager -> File System", () => {
 
     it("should write events to append-only log", async () => {
       await stateManager.initialize(mockProjectPath);
+
+      // Add a task to the state first
+      const state = stateManager.getState();
+      if (state) {
+        state.currentTasks.push({
+          id: "task-1",
+          title: "Test Task",
+          description: "Test task for event sourcing",
+          status: TaskStatus.PENDING,
+          priority: "medium" as const,
+          created: new Date(),
+          updated: new Date(),
+          dependencies: [],
+          tags: [],
+        });
+      }
 
       stateManager.updateTaskStatus("task-1", TaskStatus.IN_PROGRESS);
 

@@ -148,6 +148,9 @@ export class StateBridgeService extends BaseService {
   async updateProjectState(
     update: Partial<ProjectState>,
   ): Promise<Result<ProjectState, IntegrationError>> {
+    if (this.disposed) {
+      return Result.err(new StateError("Service is disposed"));
+    }
     if (!this.currentState) {
       return Result.err(new StateError("No current state to update"));
     }
