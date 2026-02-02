@@ -3,13 +3,14 @@
  */
 
 import React from "react";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { AppShell } from "./AppShell";
 import { Terminal, Brain, Layers } from "lucide-react";
 import type { OracleMessage } from "../infinity-terminal/OracleFeedMarquee";
 
 // Mock the hooks and components
-jest.mock("../infinity-terminal/hooks/useResponsiveLayout", () => ({
+vi.mock("../infinity-terminal/hooks/useResponsiveLayout", () => ({
   useResponsiveLayout: () => ({
     layout: {
       isMobile: false,
@@ -28,31 +29,31 @@ jest.mock("../infinity-terminal/hooks/useResponsiveLayout", () => ({
     sidebarVisible: true,
     hudVisible: true,
     footerVisible: true,
-    toggleSidebar: jest.fn(),
-    toggleHUD: jest.fn(),
-    toggleFooter: jest.fn(),
-    setSidebar: jest.fn(),
-    setHUD: jest.fn(),
-    setFooter: jest.fn(),
-    getResponsiveClasses: jest.fn(),
+    toggleSidebar: vi.fn(),
+    toggleHUD: vi.fn(),
+    toggleFooter: vi.fn(),
+    setSidebar: vi.fn(),
+    setHUD: vi.fn(),
+    setFooter: vi.fn(),
+    getResponsiveClasses: vi.fn(),
     breakpoints: {},
   }),
 }));
 
-jest.mock("../infinity-terminal/Panel", () => ({
+vi.mock("../infinity-terminal/Panel", () => ({
   Panel: ({ children, visible, title }: any) =>
     visible ? (
       <div data-testid={`panel-${title || "untitled"}`}>{children}</div>
     ) : null,
 }));
 
-jest.mock("../infinity-terminal/FooterPanel", () => ({
+vi.mock("../infinity-terminal/FooterPanel", () => ({
   FooterPanel: (props: any) => (
     <div data-testid="footer-panel">Footer: {props.sessionName}</div>
   ),
 }));
 
-jest.mock("../ui/KeyboardShortcutsHelp", () => ({
+vi.mock("../ui/KeyboardShortcutsHelp", () => ({
   KeyboardShortcutsHelp: ({ isOpen, onClose }: any) =>
     isOpen ? (
       <div data-testid="keyboard-help">

@@ -444,28 +444,41 @@ export class VisionManager {
 
     const previousVersion = this.currentVision.version;
 
-    // Apply updates
+    // Create a candidate vision with updates applied
+    const candidateVision: CanonicalVision = {
+      ...this.currentVision,
+      updated: new Date(),
+      version: this.incrementVersion(this.currentVision.version),
+    };
+
+    // Apply updates to candidate
     if (updates.mission !== undefined) {
-      this.currentVision.mission = updates.mission;
+      candidateVision.mission = updates.mission;
     }
     if (updates.principles !== undefined) {
-      this.currentVision.principles = updates.principles;
+      candidateVision.principles = updates.principles;
     }
     if (updates.strategicGoals !== undefined) {
-      this.currentVision.strategicGoals = updates.strategicGoals;
+      candidateVision.strategicGoals = updates.strategicGoals;
     }
     if (updates.currentFocus !== undefined) {
-      this.currentVision.currentFocus = updates.currentFocus;
+      candidateVision.currentFocus = updates.currentFocus;
     }
     if (updates.successMetrics !== undefined) {
-      this.currentVision.successMetrics = updates.successMetrics;
+      candidateVision.successMetrics = updates.successMetrics;
     }
 
-    // Update metadata
-    this.currentVision.updated = new Date();
-    this.currentVision.version = this.incrementVersion(
-      this.currentVision.version,
-    );
+    // Validate the updated vision before applying
+    const validationResult = CanonicalVisionSchema.safeParse(candidateVision);
+    if (!validationResult.success) {
+      const errors = validationResult.error.issues
+        .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+        .join("; ");
+      throw new Error(`Invalid vision data: ${errors}`);
+    }
+
+    // Validation passed - apply the update
+    this.currentVision = validationResult.data;
 
     // Save to file
     await this.saveVision(this.currentVision);

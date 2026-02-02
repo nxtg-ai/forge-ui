@@ -1,11 +1,18 @@
 /**
  * Health Monitoring System Tests
  * Integration tests for health checks and monitoring
+ *
+ * @vitest-environment node
  */
 
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { HealthMonitor, HealthStatus, HealthCheckType } from "../health";
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
+
+// Unmock fs for this file - we need real file system access for integration tests
+vi.unmock("fs");
+vi.unmock("node:fs");
 
 describe("HealthMonitor", () => {
   let healthMonitor: HealthMonitor;

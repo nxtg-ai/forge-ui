@@ -1,12 +1,35 @@
 /**
  * State Management Integration Tests
  * Tests Dashboard -> StateManager -> state persistence
+ *
+ * Unit-style integration test: Verifies StateManager business logic
+ * with mocked fs to control file system behavior.
+ *
+ * @vitest-environment node
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { StateManager } from "@core/state";
 import { TaskStatus } from "../../types/state";
-import { promises as fs } from "fs";
+import { promises as fs } from "node:fs";
+
+// Mock fs module for controlled testing of StateManager logic
+// Note: Do NOT use vi.unmock() when intending to mock - this creates a circular pattern
+vi.mock("node:fs", () => ({
+  promises: {
+    readFile: vi.fn(),
+    writeFile: vi.fn().mockResolvedValue(undefined),
+    mkdir: vi.fn().mockResolvedValue(undefined),
+    access: vi.fn().mockResolvedValue(undefined),
+    stat: vi.fn().mockResolvedValue({ isFile: () => true }),
+    rename: vi.fn().mockResolvedValue(undefined),
+    unlink: vi.fn().mockResolvedValue(undefined),
+    appendFile: vi.fn().mockResolvedValue(undefined),
+    readdir: vi.fn().mockResolvedValue([]),
+    rm: vi.fn().mockResolvedValue(undefined),
+    copyFile: vi.fn().mockResolvedValue(undefined),
+  },
+}));
 
 describe("State Integration: Dashboard -> StateManager -> File System", () => {
   let stateManager: StateManager;

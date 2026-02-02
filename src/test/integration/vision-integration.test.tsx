@@ -1,6 +1,11 @@
 /**
  * Vision System Integration Tests
  * Tests VisionCapture UI -> VisionManager -> .claude/VISION.md
+ *
+ * Unit-style integration test: Verifies VisionManager business logic
+ * with mocked fs to control file system behavior.
+ *
+ * Uses jsdom environment (default) for React component rendering.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -10,6 +15,30 @@ import { VisionManager } from '@core/vision';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+// Mock fs module for controlled testing
+// Uses partial mocking to preserve module structure while controlling fs behavior
+vi.mock("fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("fs")>();
+  const mockPromises = {
+    readFile: vi.fn().mockRejectedValue({ code: "ENOENT" }),
+    writeFile: vi.fn().mockResolvedValue(undefined),
+    mkdir: vi.fn().mockResolvedValue(undefined),
+    access: vi.fn().mockResolvedValue(undefined),
+    stat: vi.fn().mockResolvedValue({ isFile: () => true }),
+    rename: vi.fn().mockResolvedValue(undefined),
+    unlink: vi.fn().mockResolvedValue(undefined),
+    appendFile: vi.fn().mockResolvedValue(undefined),
+    readdir: vi.fn().mockResolvedValue([]),
+    rm: vi.fn().mockResolvedValue(undefined),
+    copyFile: vi.fn().mockResolvedValue(undefined),
+  };
+  return {
+    ...actual,
+    default: { ...actual, promises: mockPromises },
+    promises: mockPromises,
+  };
+});
+
 describe('Vision Integration: UI -> Backend -> File System', () => {
   let visionManager: VisionManager;
   let mockProjectPath: string;
@@ -18,6 +47,11 @@ describe('Vision Integration: UI -> Backend -> File System', () => {
     mockProjectPath = '/test/project';
     visionManager = new VisionManager(mockProjectPath);
     vi.clearAllMocks();
+    // Reset mock implementations to defaults (ENOENT = file not found)
+    (fs.readFile as any).mockRejectedValue({ code: "ENOENT" });
+    (fs.writeFile as any).mockResolvedValue(undefined);
+    (fs.mkdir as any).mockResolvedValue(undefined);
+    (fs.appendFile as any).mockResolvedValue(undefined);
   });
 
   describe('VisionCapture -> VISION.md workflow', () => {

@@ -1,13 +1,57 @@
 /**
  * Performance Testing Framework
  * Tests for latency, throughput, memory usage, and UI rendering
+ *
+ * Uses jsdom environment (default) because:
+ * - UI rendering tests require DOM APIs
+ * - fs mocking works correctly in jsdom via vi.mock
+ * - All StateManager/VisionManager tests work in both environments
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { StateManager } from '@core/state';
 import { VisionManager } from '@core/vision';
 import { AgentCoordinationProtocol } from '@core/coordination';
+import { VisionCapture } from '@components/VisionCapture';
+
+// Mock fs module for controlled testing
+// Uses partial mocking to preserve module structure while controlling fs behavior
+vi.mock("fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("fs")>();
+  return {
+    ...actual,
+    default: {
+      ...actual,
+      promises: {
+        readFile: vi.fn().mockRejectedValue({ code: "ENOENT" }),
+        writeFile: vi.fn().mockResolvedValue(undefined),
+        mkdir: vi.fn().mockResolvedValue(undefined),
+        access: vi.fn().mockResolvedValue(undefined),
+        stat: vi.fn().mockResolvedValue({ isFile: () => true }),
+        rename: vi.fn().mockResolvedValue(undefined),
+        unlink: vi.fn().mockResolvedValue(undefined),
+        appendFile: vi.fn().mockResolvedValue(undefined),
+        readdir: vi.fn().mockResolvedValue([]),
+        rm: vi.fn().mockResolvedValue(undefined),
+        copyFile: vi.fn().mockResolvedValue(undefined),
+      },
+    },
+    promises: {
+      readFile: vi.fn().mockRejectedValue({ code: "ENOENT" }),
+      writeFile: vi.fn().mockResolvedValue(undefined),
+      mkdir: vi.fn().mockResolvedValue(undefined),
+      access: vi.fn().mockResolvedValue(undefined),
+      stat: vi.fn().mockResolvedValue({ isFile: () => true }),
+      rename: vi.fn().mockResolvedValue(undefined),
+      unlink: vi.fn().mockResolvedValue(undefined),
+      appendFile: vi.fn().mockResolvedValue(undefined),
+      readdir: vi.fn().mockResolvedValue([]),
+      rm: vi.fn().mockResolvedValue(undefined),
+      copyFile: vi.fn().mockResolvedValue(undefined),
+    },
+  };
+});
 
 describe('Performance Tests', () => {
   describe('State Update Latency', () => {
@@ -169,8 +213,6 @@ describe('Performance Tests', () => {
 
   describe('UI Rendering Performance', () => {
     it('should render VisionCapture in less than 100ms', () => {
-      const { VisionCapture } = require('@components/VisionCapture');
-
       const start = performance.now();
       const { unmount } = render(
         <VisionCapture

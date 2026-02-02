@@ -10,7 +10,7 @@
  * - Context integration
  */
 
-import { describe, test, expect, jest, beforeEach } from "@jest/globals";
+import { describe, test, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EngagementModeSelector } from "../EngagementModeSelector";
@@ -167,7 +167,7 @@ describe("EngagementModeSelector", () => {
     });
 
     test("selects option with Enter key", async () => {
-      const handleChange = jest.fn();
+      const handleChange = vi.fn();
       renderWithProvider(
         <EngagementModeSelector onModeChange={handleChange} />,
       );
@@ -194,7 +194,7 @@ describe("EngagementModeSelector", () => {
     });
 
     test("selects option with Space key", async () => {
-      const handleChange = jest.fn();
+      const handleChange = vi.fn();
       renderWithProvider(
         <EngagementModeSelector onModeChange={handleChange} />,
       );
@@ -286,7 +286,7 @@ describe("EngagementModeSelector", () => {
     });
 
     test("selects mode on option click", async () => {
-      const handleChange = jest.fn();
+      const handleChange = vi.fn();
       renderWithProvider(
         <EngagementModeSelector onModeChange={handleChange} />,
       );
@@ -522,7 +522,7 @@ describe("EngagementModeSelector", () => {
     });
 
     test("calls onModeChange callback", async () => {
-      const handleChange = jest.fn();
+      const handleChange = vi.fn();
       renderWithProvider(
         <EngagementModeSelector onModeChange={handleChange} />,
       );

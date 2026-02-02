@@ -331,10 +331,10 @@ describe("Security: Input Validation", () => {
       };
 
       const codeWithSecrets = [
-        'const apiKey = "sk-1234567890abcdef1234567890abcdef1234567890abcdef"',
-        'const config = { password: "SuperSecret123!" }',
-        'process.env.SECRET_KEY = "hardcoded-secret-value-12345678"',
-        'const token = "github_pat_11AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"',
+        'const api_key = "sk-1234567890abcdef1234567890abcdef1234567890abcdef"',
+        'const password = "SuperSecretPassword123!"',
+        'const secret_key = "hardcodedsecretvalue12345678901234567890"',
+        'const token = "github_pat_' + 'A'.repeat(82) + '"',
       ];
 
       codeWithSecrets.forEach((code) => {

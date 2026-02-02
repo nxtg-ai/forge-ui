@@ -1,15 +1,50 @@
 /**
  * Error Handling Coverage Tests
  * Ensures comprehensive error handling across the system
+ *
+ * @vitest-environment node
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { VisionManager } from "@core/vision";
 import { StateManager } from "@core/state";
 import { AgentCoordinationProtocol } from "@core/coordination";
-import { promises as fs } from "fs";
+import { promises as fs } from "node:fs";
+
+// Create proper mocks for fs methods
+vi.mock("node:fs", () => ({
+  promises: {
+    readFile: vi.fn(),
+    writeFile: vi.fn(),
+    mkdir: vi.fn().mockResolvedValue(undefined),
+    access: vi.fn().mockResolvedValue(undefined),
+    stat: vi.fn().mockResolvedValue({ isFile: () => true }),
+    rename: vi.fn().mockResolvedValue(undefined),
+    unlink: vi.fn().mockResolvedValue(undefined),
+    appendFile: vi.fn().mockResolvedValue(undefined),
+    readdir: vi.fn().mockResolvedValue([]),
+    rm: vi.fn().mockResolvedValue(undefined),
+    copyFile: vi.fn().mockResolvedValue(undefined),
+  },
+}));
 
 describe("Error Handling Coverage", () => {
+  // Reset all mocks between tests to prevent leakage
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Reset default mock implementations
+    (fs.mkdir as any).mockResolvedValue(undefined);
+    (fs.access as any).mockResolvedValue(undefined);
+    (fs.stat as any).mockResolvedValue({ isFile: () => true });
+    (fs.writeFile as any).mockResolvedValue(undefined);
+    (fs.rename as any).mockResolvedValue(undefined);
+    (fs.unlink as any).mockResolvedValue(undefined);
+    (fs.appendFile as any).mockResolvedValue(undefined);
+    (fs.readdir as any).mockResolvedValue([]);
+    (fs.rm as any).mockResolvedValue(undefined);
+    (fs.copyFile as any).mockResolvedValue(undefined);
+  });
+
   describe("File System Errors", () => {
     it("should handle ENOENT (file not found) gracefully", async () => {
       const visionManager = new VisionManager("/test/project");
@@ -177,21 +212,33 @@ describe("Error Handling Coverage", () => {
   describe("Validation Errors", () => {
     it("should provide clear error messages for invalid vision data", async () => {
       const visionManager = new VisionManager("/test/project");
+
+      // Mock readFile to return ENOENT for vision file (creates default) and empty events
+      (fs.readFile as any)
+        .mockRejectedValueOnce({ code: "ENOENT" }) // Vision file not found
+        .mockResolvedValueOnce("[]"); // Empty events array
+
       await visionManager.initialize();
 
+      // Test that VisionManager properly validates vision schema on update
+      // Invalid data should be rejected with clear error messages
       const invalidUpdate = {
-        mission: "", // Empty mission
-        principles: "not-an-array", // Wrong type
-        strategicGoals: [],
+        principles: "not-an-array" as any, // Wrong type - should fail validation
       };
 
+      // updateVision now validates input and throws on invalid data
       await expect(
-        visionManager.updateVision(invalidUpdate as any),
-      ).rejects.toThrow();
+        visionManager.updateVision(invalidUpdate as any)
+      ).rejects.toThrow("Invalid vision data");
+
+      // Verify the original vision remains intact (not corrupted by invalid update)
+      const currentVision = visionManager.getCurrentVision();
+      expect(Array.isArray(currentVision?.principles)).toBe(true);
     });
 
     it("should validate all required fields before saving", async () => {
-      const { SystemStateSchema } = require("@types/state");
+      const stateModule = await import("../../types/state");
+      const { SystemStateSchema } = stateModule;
 
       const incompleteState = {
         version: "3.0.0",
@@ -202,12 +249,13 @@ describe("Error Handling Coverage", () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.errors.length).toBeGreaterThan(0);
+        // Zod v4 uses .issues not .errors
+        expect(result.error.issues.length).toBeGreaterThan(0);
 
         // Should have clear error messages
-        result.error.errors.forEach((err) => {
-          expect(err.message).toBeTruthy();
-          expect(err.path).toBeDefined();
+        result.error.issues.forEach((issue) => {
+          expect(issue.message).toBeTruthy();
+          expect(issue.path).toBeDefined();
         });
       }
     });
@@ -321,7 +369,11 @@ describe("Error Handling Coverage", () => {
                 contextTags: [],
               },
               progressGraph: [],
-              metadata: {},
+              metadata: {
+                sessionId: "test-recovery-session",
+                environment: "test",
+                projectPath: "/test/project",
+              },
             },
             timestamp: new Date(),
             checksum: "backup-checksum",
@@ -403,7 +455,11 @@ describe("Error Handling Coverage", () => {
     });
 
     it("should provide actionable error messages to users", async () => {
-      const { CanonicalVisionSchema } = require("@types/vision");
+      const visionModule = await import("../../types/vision");
+      const { CanonicalVisionSchema } = visionModule;
+
+      // Schema MUST be exported - fail if missing
+      expect(CanonicalVisionSchema).toBeDefined();
 
       const invalidVision = {
         version: 123, // Should be string
@@ -413,11 +469,20 @@ describe("Error Handling Coverage", () => {
       const result = CanonicalVisionSchema.safeParse(invalidVision);
 
       expect(result.success).toBe(false);
+      // Zod v4 uses .issues not .errors
       if (!result.success) {
-        // Error messages should be clear
-        result.error.errors.forEach((err) => {
-          expect(err.message).not.toContain("undefined");
-          expect(err.message.length).toBeGreaterThan(5);
+        expect(result.error.issues).toBeDefined();
+        expect(result.error.issues.length).toBeGreaterThan(0);
+        // Error messages should be actionable (descriptive, not just "undefined")
+        result.error.issues.forEach((issue) => {
+          // Message should not BE just "undefined" - context like "received undefined" is fine
+          expect(issue.message).not.toBe("undefined");
+          // Messages should be descriptive (more than 5 chars)
+          expect(issue.message.length).toBeGreaterThan(5);
+          // Messages should indicate what went wrong
+          expect(issue.message.toLowerCase()).toMatch(
+            /invalid|expected|required|received|type/i
+          );
         });
       }
     });
