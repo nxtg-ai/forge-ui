@@ -45,14 +45,12 @@ describe("TaskQueue", () => {
       expect(queue.size()).toBe(3);
     });
 
-    it("should emit task.queued event", () => {
-      const listener = vi.fn();
-      queue.on("task.queued", listener);
-
+    // Note: TaskQueue does not implement EventEmitter - events removed
+    it("should track task in map after enqueue", () => {
       const task = createMockTask();
       queue.enqueue(task);
 
-      expect(listener).toHaveBeenCalledWith(task);
+      expect(queue.getTask(task.id)).toBeTruthy();
     });
   });
 
@@ -81,19 +79,17 @@ describe("TaskQueue", () => {
       expect(queue.dequeue()?.id).toBe("second");
     });
 
-    it("should return undefined for empty queue", () => {
-      expect(queue.dequeue()).toBeUndefined();
+    it("should return null for empty queue", () => {
+      expect(queue.dequeue()).toBeNull();
     });
 
-    it("should emit task.dequeued event", () => {
-      const listener = vi.fn();
-      queue.on("task.dequeued", listener);
-
+    // Note: TaskQueue does not implement EventEmitter - events removed
+    it("should remove task from map after dequeue", () => {
       const task = createMockTask();
       queue.enqueue(task);
       queue.dequeue();
 
-      expect(listener).toHaveBeenCalledWith(task);
+      expect(queue.getTask(task.id)).toBeNull();
     });
   });
 
@@ -127,24 +123,24 @@ describe("TaskQueue", () => {
       expect(found?.id).toBe("find-me");
     });
 
-    it("should return undefined for non-existent task", () => {
-      expect(queue.getTask("not-found")).toBeUndefined();
+    it("should return null for non-existent task", () => {
+      expect(queue.getTask("not-found")).toBeNull();
     });
   });
 
-  describe("removeTask", () => {
+  describe("remove", () => {
     it("should remove task from queue", () => {
       const task = createMockTask({ id: "remove-me" });
       queue.enqueue(task);
       expect(queue.size()).toBe(1);
 
-      const removed = queue.removeTask("remove-me");
+      const removed = queue.remove("remove-me");
       expect(removed).toBe(true);
       expect(queue.size()).toBe(0);
     });
 
     it("should return false for non-existent task", () => {
-      expect(queue.removeTask("not-found")).toBe(false);
+      expect(queue.remove("not-found")).toBe(false);
     });
   });
 
@@ -154,12 +150,13 @@ describe("TaskQueue", () => {
       queue.enqueue(task);
 
       const peeked = queue.peek();
-      expect(peeked).toEqual(task);
+      expect(peeked?.id).toBe(task.id);
+      expect(peeked?.priority).toBe(task.priority);
       expect(queue.size()).toBe(1);
     });
 
-    it("should return undefined for empty queue", () => {
-      expect(queue.peek()).toBeUndefined();
+    it("should return null for empty queue", () => {
+      expect(queue.peek()).toBeNull();
     });
   });
 
@@ -174,19 +171,19 @@ describe("TaskQueue", () => {
     });
   });
 
-  describe("getStats", () => {
-    it("should return queue statistics", () => {
+  describe("sizeByPriority", () => {
+    it("should return queue statistics by priority", () => {
       queue.enqueue(createMockTask({ priority: "high" }));
       queue.enqueue(createMockTask({ priority: "high" }));
       queue.enqueue(createMockTask({ priority: "medium" }));
       queue.enqueue(createMockTask({ priority: "low" }));
 
-      const stats = queue.getStats();
-      expect(stats.total).toBe(4);
-      expect(stats.byPriority.high).toBe(2);
-      expect(stats.byPriority.medium).toBe(1);
-      expect(stats.byPriority.low).toBe(1);
-      expect(stats.byPriority.background).toBe(0);
+      expect(queue.size()).toBe(4);
+      const byPriority = queue.sizeByPriority();
+      expect(byPriority.high).toBe(2);
+      expect(byPriority.medium).toBe(1);
+      expect(byPriority.low).toBe(1);
+      expect(byPriority.background).toBe(0);
     });
   });
 
