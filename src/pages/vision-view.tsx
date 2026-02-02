@@ -41,13 +41,11 @@ import {
   Keyboard,
 } from "lucide-react";
 
-import { Panel } from "../components/infinity-terminal/Panel";
-import { FooterPanel } from "../components/infinity-terminal/FooterPanel";
-import { useResponsiveLayout } from "../components/infinity-terminal/hooks";
+import { AppShell } from "../components/layout";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { ProgressBar } from "../components/ui/ProgressBar";
 import { VisionPageLoading, VisionHistoryLoading } from "../components/ui/LoadingStates";
-import { KeyboardShortcutsHelp, type KeyboardShortcut } from "../components/ui/KeyboardShortcutsHelp";
+import { type KeyboardShortcut } from "../components/ui/KeyboardShortcutsHelp";
 import { ToastProvider, useToast } from "../components/feedback/ToastSystem";
 import {
   useRealtimeConnection,
@@ -575,18 +573,11 @@ function formatTimeAgo(date: Date): string {
 const VisionView: React.FC = () => {
   const { toast } = useToast();
 
-  // Layout management
-  const {
-    layout,
-    contextPanelVisible: historyPanelVisible,
-    hudVisible: alignmentPanelVisible,
-    footerVisible,
-    toggleContextPanel: toggleHistoryPanel,
-    toggleHUD: toggleAlignmentPanel,
-  } = useResponsiveLayout({
-    defaultHUDVisible: true,
-    defaultSidebarVisible: false,
-  });
+  // Panel visibility state (managed by AppShell)
+  const [historyPanelVisible, setHistoryPanelVisible] = useState(false);
+  const [alignmentPanelVisible, setAlignmentPanelVisible] = useState(true);
+  const toggleHistoryPanel = useCallback(() => setHistoryPanelVisible((prev) => !prev), []);
+  const toggleAlignmentPanel = useCallback(() => setAlignmentPanelVisible((prev) => !prev), []);
 
   // Vision data from hook
   const {
@@ -604,7 +595,6 @@ const VisionView: React.FC = () => {
   const [selectedHistoryEvent, setSelectedHistoryEvent] = useState<string | null>(null);
   const [recentAlignmentChecks, setRecentAlignmentChecks] = useState<AlignmentCheck[]>([]);
   const [announcement, setAnnouncement] = useState("");
-  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
 
   // Oracle messages for footer
   const [oracleMessages] = useState<OracleMessage[]>([
@@ -723,7 +713,7 @@ const VisionView: React.FC = () => {
     fetchVisionHistory();
   }, [fetchVisionHistory]);
 
-  // Keyboard shortcuts
+  // Vision-specific keyboard shortcuts (panel toggles handled by AppShell)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't handle shortcuts when typing in inputs
@@ -735,16 +725,6 @@ const VisionView: React.FC = () => {
       }
 
       switch (e.key) {
-        case "[":
-          e.preventDefault();
-          toggleHistoryPanel();
-          setAnnouncement(`History panel ${!historyPanelVisible ? "opened" : "closed"}`);
-          break;
-        case "]":
-          e.preventDefault();
-          toggleAlignmentPanel();
-          setAnnouncement(`Alignment panel ${!alignmentPanelVisible ? "opened" : "closed"}`);
-          break;
         case "e":
           if (!e.ctrlKey && !e.metaKey && !isEditing) {
             e.preventDefault();
@@ -771,30 +751,14 @@ const VisionView: React.FC = () => {
           if (isEditing) {
             setIsEditing(false);
             setAnnouncement("Edit mode cancelled");
-          } else if (showKeyboardHelp) {
-            setShowKeyboardHelp(false);
           }
-          break;
-        case "?":
-          e.preventDefault();
-          setShowKeyboardHelp(true);
           break;
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [
-    historyPanelVisible,
-    alignmentPanelVisible,
-    isEditing,
-    showKeyboardHelp,
-    toggleHistoryPanel,
-    toggleAlignmentPanel,
-    refreshVision,
-    fetchVisionHistory,
-    toast,
-  ]);
+  }, [isEditing, refreshVision, fetchVisionHistory, toast]);
 
   // Progress calculation
   const progress = useMemo(() => {
@@ -811,147 +775,98 @@ const VisionView: React.FC = () => {
     };
   }, [vision]);
 
+  // Header actions
+  const headerActions = (
+    <>
+      {/* Connection status */}
+      <div
+        role="status"
+        aria-label={isConnected ? "Connected" : "Disconnected"}
+        className={`
+          flex items-center gap-2 px-3 py-1.5 rounded-lg
+          ${isConnected
+            ? "bg-green-900/20 border border-green-500/30"
+            : "bg-red-900/20 border border-red-500/30"}
+        `}
+      >
+        <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500 animate-pulse"}`} />
+        <span className="text-xs font-medium">
+          {isConnected ? "Live" : "Offline"}
+        </span>
+      </div>
+
+      {/* Refresh button */}
+      <button
+        onClick={() => {
+          refreshVision();
+          fetchVisionHistory();
+          toast.info("Refreshing vision data...");
+        }}
+        className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-all"
+        aria-label="Refresh vision data"
+        data-testid="vision-refresh-btn"
+      >
+        <RefreshCw className={`w-4 h-4 text-gray-400 ${visionLoading ? "animate-spin" : ""}`} />
+      </button>
+    </>
+  );
+
+  // Left panel content (History)
+  const leftPanelContent = (
+    <VisionHistoryPanel
+      events={visionHistory}
+      loading={historyLoading}
+      onSelectEvent={handleHistorySelect}
+      selectedEventId={selectedHistoryEvent}
+    />
+  );
+
+  // Right panel content (Alignment)
+  const rightPanelContent = (
+    <ErrorBoundary fallbackMessage="Alignment panel error">
+      <AlignmentPanel
+        vision={vision}
+        recentChecks={recentAlignmentChecks}
+        onCheckAlignment={checkAlignment}
+      />
+    </ErrorBoundary>
+  );
+
   return (
-    <div
-      className="h-screen bg-gray-950 text-white flex flex-col"
-      data-testid="vision-view-container"
-    >
+    <>
       {/* Screen reader announcements */}
       <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
         {announcement}
       </div>
 
-      {/* Header */}
-      <header
-        data-testid="vision-page-header"
-        className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm flex-shrink-0 z-30"
-        role="banner"
-      >
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Mountain className="w-6 h-6 text-purple-400" />
-                <Compass className="w-3 h-3 text-cyan-400 absolute -bottom-1 -right-1" />
-              </div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                Vision
-              </h1>
-              <span className="px-2 py-0.5 text-xs bg-cyan-500/10 text-cyan-400 rounded-full border border-cyan-500/20">
-                North Star
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Panel toggles (desktop) */}
-              {!layout.isMobile && (
-                <div className="flex gap-2" role="group" aria-label="Panel toggles">
-                  <button
-                    onClick={() => {
-                      toggleHistoryPanel();
-                      setAnnouncement(`History panel ${!historyPanelVisible ? "opened" : "closed"}`);
-                    }}
-                    aria-pressed={historyPanelVisible}
-                    aria-label="Toggle History panel"
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      historyPanelVisible
-                        ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
-                        : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                    }`}
-                    data-testid="toggle-history-panel"
-                  >
-                    <History className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      toggleAlignmentPanel();
-                      setAnnouncement(`Alignment panel ${!alignmentPanelVisible ? "opened" : "closed"}`);
-                    }}
-                    aria-pressed={alignmentPanelVisible}
-                    aria-label="Toggle Alignment panel"
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      alignmentPanelVisible
-                        ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
-                        : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                    }`}
-                    data-testid="toggle-alignment-panel"
-                  >
-                    <Shield className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-
-              {/* Keyboard shortcuts button */}
-              <button
-                onClick={() => setShowKeyboardHelp(true)}
-                className="px-3 py-1.5 rounded-lg bg-gray-800 text-gray-400 hover:bg-gray-700 transition-all"
-                aria-label="Show keyboard shortcuts (press ?)"
-                title="Keyboard shortcuts (?)"
-                data-testid="keyboard-shortcuts-btn"
-              >
-                <Keyboard className="w-4 h-4" />
-              </button>
-
-              {/* Connection status */}
-              <div
-                role="status"
-                aria-label={isConnected ? "Connected" : "Disconnected"}
-                className={`
-                  flex items-center gap-2 px-3 py-1.5 rounded-lg
-                  ${isConnected
-                    ? "bg-green-900/20 border border-green-500/30"
-                    : "bg-red-900/20 border border-red-500/30"}
-                `}
-              >
-                <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500 animate-pulse"}`} />
-                <span className="text-xs font-medium">
-                  {isConnected ? "Live" : "Offline"}
-                </span>
-              </div>
-
-              {/* Refresh button */}
-              <button
-                onClick={() => {
-                  refreshVision();
-                  fetchVisionHistory();
-                  toast.info("Refreshing vision data...");
-                }}
-                className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-all"
-                aria-label="Refresh vision data"
-                data-testid="vision-refresh-btn"
-              >
-                <RefreshCw className={`w-4 h-4 text-gray-400 ${visionLoading ? "animate-spin" : ""}`} />
-              </button>
-            </div>
+      <AppShell
+        title="Vision"
+        icon={
+          <div className="relative">
+            <Mountain className="w-6 h-6 text-purple-400" />
+            <Compass className="w-3 h-3 text-cyan-400 absolute -bottom-1 -right-1" />
           </div>
-        </div>
-      </header>
-
-      {/* Main Layout */}
-      <div className="flex-1 min-h-0 flex">
-        {/* Left Panel - History */}
-        <Panel
-          side="left"
-          mode={layout.panelMode}
-          visible={historyPanelVisible}
-          width={320}
-          onClose={toggleHistoryPanel}
-          title="Vision History"
-        >
-          <VisionHistoryPanel
-            events={visionHistory}
-            loading={historyLoading}
-            onSelectEvent={handleHistorySelect}
-            selectedEventId={selectedHistoryEvent}
-          />
-        </Panel>
-
-        {/* Main Vision Content */}
-        <main
-          className="flex-1 min-w-0 bg-gray-950 overflow-y-auto pb-16 md:pb-0"
-          role="main"
-          aria-label="Vision content"
-        >
+        }
+        badge="North Star"
+        headerActions={headerActions}
+        leftPanel={leftPanelContent}
+        rightPanel={rightPanelContent}
+        showLeftPanel={historyPanelVisible}
+        showRightPanel={alignmentPanelVisible}
+        leftPanelWidth={320}
+        rightPanelWidth={320}
+        leftPanelTitle="Vision History"
+        rightPanelTitle="Alignment & Progress"
+        showFooter={true}
+        sessionName="vision"
+        isConnected={isConnected}
+        oracleMessages={oracleMessages}
+        onToggleContext={toggleHistoryPanel}
+        onToggleGovernance={toggleAlignmentPanel}
+        contextVisible={historyPanelVisible}
+        governanceVisible={alignmentPanelVisible}
+        customShortcuts={VISION_SHORTCUTS}
+      >
           <div className="max-w-4xl mx-auto px-6 py-8 space-y-8">
             {/* Loading State */}
             {visionLoading && !vision && (
@@ -1127,84 +1042,10 @@ const VisionView: React.FC = () => {
               </div>
             )}
           </div>
-        </main>
-
-        {/* Right Panel - Alignment */}
-        <Panel
-          side="right"
-          mode={layout.panelMode}
-          visible={alignmentPanelVisible}
-          width={320}
-          onClose={toggleAlignmentPanel}
-          title="Alignment & Progress"
-        >
-          <ErrorBoundary fallbackMessage="Alignment panel error">
-            <AlignmentPanel
-              vision={vision}
-              recentChecks={recentAlignmentChecks}
-              onCheckAlignment={checkAlignment}
-            />
-          </ErrorBoundary>
-        </Panel>
-      </div>
-
-      {/* Footer Panel */}
-      {footerVisible && (
-        <FooterPanel
-          sessionName="vision"
-          isConnected={isConnected}
-          oracleMessages={oracleMessages}
-          onToggleContext={toggleHistoryPanel}
-          onToggleGovernance={toggleAlignmentPanel}
-          contextVisible={historyPanelVisible}
-          governanceVisible={alignmentPanelVisible}
-          isMobile={layout.isMobile}
-        />
-      )}
-
-      {/* Mobile Bottom Navigation */}
-      <nav
-        className="fixed bottom-0 left-0 right-0 h-14 bg-gray-900/95 backdrop-blur-sm
-                   border-t border-gray-800 z-50 md:hidden pb-safe"
-        role="navigation"
-        aria-label="Mobile navigation"
-      >
-        <div className="h-full flex items-center justify-around px-4">
-          <button
-            onClick={toggleHistoryPanel}
-            className={`flex flex-col items-center gap-1 flex-1 h-full justify-center
-                        ${historyPanelVisible ? "text-purple-400" : "text-gray-400"}`}
-          >
-            <History className="w-5 h-5" />
-            <span className="text-xs">History</span>
-          </button>
-          <button
-            onClick={() => setIsEditing(!isEditing)}
-            className="flex flex-col items-center gap-1 flex-1 h-full justify-center text-gray-400"
-          >
-            <Edit3 className="w-5 h-5" />
-            <span className="text-xs">Edit</span>
-          </button>
-          <button
-            onClick={toggleAlignmentPanel}
-            className={`flex flex-col items-center gap-1 flex-1 h-full justify-center
-                        ${alignmentPanelVisible ? "text-purple-400" : "text-gray-400"}`}
-          >
-            <Shield className="w-5 h-5" />
-            <span className="text-xs">Align</span>
-          </button>
-        </div>
-      </nav>
-
-      {/* Keyboard Shortcuts Help Modal */}
-      <KeyboardShortcutsHelp
-        isOpen={showKeyboardHelp}
-        onClose={() => setShowKeyboardHelp(false)}
-        customShortcuts={VISION_SHORTCUTS}
-      />
-    </div>
-  );
-};
+        </AppShell>
+      </>
+    );
+  };
 
 // Wrap with providers
 const VisionPage: React.FC = () => {

@@ -78,6 +78,16 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
   const setIsExpanded = onExpandedChange || setInternalExpanded;
   const [showSessionHistory, setShowSessionHistory] = useState(false);
 
+  // Store callbacks in refs to avoid dependency issues causing infinite loops
+  const onReconnectRefCallback = useRef(onReconnectRef);
+  const onSessionStateChangeRef = useRef(onSessionStateChange);
+  const onConnectionChangeRef = useRef(onConnectionChange);
+  useEffect(() => {
+    onReconnectRefCallback.current = onReconnectRef;
+    onSessionStateChangeRef.current = onSessionStateChange;
+    onConnectionChangeRef.current = onConnectionChange;
+  });
+
   const {
     state: sessionState,
     connect,
@@ -244,19 +254,15 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
     }, 500);
   }, [connect, disconnect]);
 
-  // Expose reconnect function to parent
+  // Expose reconnect function to parent (using ref to avoid infinite loops)
   useEffect(() => {
-    if (onReconnectRef) {
-      onReconnectRef(handleReconnect);
-    }
-  }, [onReconnectRef, handleReconnect]);
+    onReconnectRefCallback.current?.(handleReconnect);
+  }, [handleReconnect]);
 
-  // Expose session state to parent
+  // Expose session state to parent (using ref to avoid infinite loops)
   useEffect(() => {
-    if (onSessionStateChange) {
-      onSessionStateChange(sessionState);
-    }
-  }, [onSessionStateChange, sessionState]);
+    onSessionStateChangeRef.current?.(sessionState);
+  }, [sessionState]);
 
   // Handle session restore
   const handleRestoreSession = useCallback(

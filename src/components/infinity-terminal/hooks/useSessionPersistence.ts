@@ -76,6 +76,16 @@ export function useSessionPersistence(
 
   const config = { ...DEFAULT_CONFIG, ...userConfig };
 
+  // Store callbacks in refs to avoid dependency issues causing infinite loops
+  const onConnectionChangeRef = useRef(onConnectionChange);
+  const onSessionRestoreRef = useRef(onSessionRestore);
+  const onErrorRef = useRef(onError);
+  useEffect(() => {
+    onConnectionChangeRef.current = onConnectionChange;
+    onSessionRestoreRef.current = onSessionRestore;
+    onErrorRef.current = onError;
+  });
+
   const [state, setState] = useState<SessionState>({
     sessionId: "",
     sessionName: "",
@@ -230,14 +240,14 @@ export function useSessionPersistence(
           reconnectAttempts: 0,
         }));
 
-        onConnectionChange?.(true);
+        onConnectionChangeRef.current?.(true);
       };
 
       ws.onclose = (event) => {
         console.log(`[InfinityTerminal] Disconnected: ${event.code}`);
 
         setState((prev) => ({ ...prev, connected: false, connecting: false }));
-        onConnectionChange?.(false);
+        onConnectionChangeRef.current?.(false);
 
         // Don't auto-reconnect if manually disconnected or max attempts reached
         if (isManualDisconnectRef.current) {
@@ -281,7 +291,7 @@ export function useSessionPersistence(
     } catch (error) {
       const errorMsg = `Failed to connect: ${error}`;
       setState((prev) => ({ ...prev, error: errorMsg, connecting: false }));
-      onError?.(errorMsg);
+      onErrorRef.current?.(errorMsg);
     }
   }, [
     generateSessionName,
@@ -292,8 +302,7 @@ export function useSessionPersistence(
     config.autoReconnect,
     config.maxReconnectAttempts,
     config.reconnectDelay,
-    onConnectionChange,
-    onError,
+    // Note: onConnectionChange and onError removed - using refs to avoid infinite loops
   ]);
 
   // Disconnect

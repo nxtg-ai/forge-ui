@@ -51,6 +51,8 @@ import type {
 } from "./components/types";
 import type { Runspace } from "./core/runspace";
 import { EngagementProvider, useEngagement } from "./contexts/EngagementContext";
+import { LayoutProvider, useLayout } from "./contexts/LayoutContext";
+import { AppHeader } from "./components/layout";
 
 // Loading component
 const LoadingOverlay: React.FC<{ message?: string }> = ({
@@ -89,36 +91,7 @@ const ErrorDisplay: React.FC<{ errors: string[] }> = ({ errors }) => {
   );
 };
 
-// Header status component with engagement mode indicator
-const AppHeaderStatus: React.FC<{ forge: any }> = ({ forge }) => {
-  const { mode: engagementMode } = useEngagement();
-
-  return (
-    <div className="flex items-center space-x-4">
-      <div
-        data-testid="app-connection-status"
-        className="flex items-center space-x-2"
-      >
-        <div
-          className={`h-2 w-2 rounded-full ${
-            forge.isConnected ? "bg-green-500" : "bg-red-500"
-          } animate-pulse`}
-        />
-        <span className="text-sm text-gray-400">
-          {forge.isConnected ? "Connected" : "Disconnected"}
-        </span>
-      </div>
-
-      {/* Mode Indicator */}
-      <div className="px-3 py-1 bg-gray-800 rounded-full">
-        <span className="text-xs text-gray-400">Mode: </span>
-        <span className="text-xs font-semibold text-blue-400">
-          {engagementMode.toUpperCase()}
-        </span>
-      </div>
-    </div>
-  );
-};
+// Note: AppHeaderStatus removed - now handled by unified AppHeader component
 
 // Main integrated app component
 function IntegratedApp() {
@@ -471,18 +444,19 @@ function IntegratedApp() {
   }
 
   return (
-    <EngagementProvider
-      onModeChange={(mode, automation) => {
-        // Sync to backend when mode changes
-        if (forge.projectState.projectState) {
-          apiClient.sendWSMessage("state.update", {
-            engagementMode: mode,
-            automationLevel: automation,
-          });
-        }
-      }}
-    >
-      <AppContent
+    <LayoutProvider>
+      <EngagementProvider
+        onModeChange={(mode, automation) => {
+          // Sync to backend when mode changes
+          if (forge.projectState.projectState) {
+            apiClient.sendWSMessage("state.update", {
+              engagementMode: mode,
+              automationLevel: automation,
+            });
+          }
+        }}
+      >
+        <AppContent
         currentView={currentView}
         setCurrentView={setCurrentView}
         selectedArchitect={selectedArchitect}
@@ -517,8 +491,9 @@ function IntegratedApp() {
         handleModeChange={handleModeChange}
         architects={architects}
         forge={forge}
-      />
-    </EngagementProvider>
+        />
+      </EngagementProvider>
+    </LayoutProvider>
   );
 }
 
@@ -615,59 +590,21 @@ const AppContent: React.FC<any> = (props) => {
       data-testid="app-container"
       className="min-h-screen bg-black text-white"
     >
-      {/* Navigation Header */}
-      <header
-        data-testid="app-header"
-        className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-40"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-8">
-              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                NXTG-Forge
-              </h1>
-
-              {/* Project Switcher for multi-project support */}
-              <ProjectSwitcher
-                currentRunspace={activeRunspace}
-                runspaces={runspaces}
-                onSwitch={handleRunspaceSwitch}
-                onNew={handleNewProject}
-                onManage={handleManageProjects}
-              />
-
-              <nav className="flex space-x-4">
-                {[
-                  { id: "dashboard", label: "Dashboard", icon: <BarChart3 className="w-4 h-4" /> },
-                  { id: "vision-display", label: "Vision", icon: <Target className="w-4 h-4" /> },
-                  { id: "infinity-terminal", label: "Terminal", icon: <Infinity className="w-4 h-4" /> },
-                  { id: "command", label: "Command", icon: <Zap className="w-4 h-4" /> },
-                  { id: "architect", label: "Architect", icon: <Building2 className="w-4 h-4" /> },
-                  { id: "architect-demo", label: "Demo", icon: <Rocket className="w-4 h-4" /> },
-                  { id: "yolo", label: "YOLO", icon: <Shield className="w-4 h-4" /> },
-                ].map((nav) => (
-                  <button
-                    key={nav.id}
-                    data-testid={`app-nav-btn-${nav.id}`}
-                    onClick={() => setCurrentView(nav.id as any)}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center ${
-                      currentView === nav.id
-                        ? "bg-gray-800 text-white"
-                        : "text-gray-400 hover:text-white hover:bg-gray-800/50"
-                    }`}
-                  >
-                    <span className="mr-2">{nav.icon}</span>
-                    {nav.label}
-                  </button>
-                ))}
-              </nav>
-            </div>
-
-            {/* Connection Status */}
-            <AppHeaderStatus forge={forge} />
-          </div>
-        </div>
-      </header>
+      {/* Unified Navigation Header */}
+      <AppHeader
+        currentView={currentView}
+        onNavigate={(viewId) => setCurrentView(viewId as any)}
+        currentRunspace={activeRunspace}
+        runspaces={runspaces}
+        onRunspaceSwitch={handleRunspaceSwitch}
+        onNewProject={handleNewProject}
+        onManageProjects={handleManageProjects}
+        showNavigation={true}
+        showProjectSwitcher={true}
+        showConnectionStatus={true}
+        showEngagementSelector={true}
+        isConnected={forge.isConnected}
+      />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -737,32 +674,6 @@ const AppContent: React.FC<any> = (props) => {
         {/* Infinity Terminal View (Persistent Sessions) */}
         {currentView === "infinity-terminal" && <InfinityTerminalView />}
       </main>
-
-      {/* Error Display */}
-      <ErrorDisplay errors={forge.errors} />
-
-      {/* Real-time Activity Feed (floating) */}
-      {(activities || []).length > 0 && currentView === "dashboard" && (
-        <div className="fixed bottom-4 left-4 max-w-sm bg-gray-900/90 backdrop-blur-sm border border-gray-700 rounded-lg p-4 max-h-64 overflow-y-auto">
-          <h4 className="text-sm font-semibold text-gray-400 mb-2">
-            Live Activity
-          </h4>
-          <div className="space-y-2">
-            {(activities || []).slice(0, 5).map((activity: AgentActivity, idx: number) => (
-              <div
-                key={activity.agentId || idx}
-                className="flex items-start space-x-2"
-              >
-                <div className="h-2 w-2 bg-green-500 rounded-full mt-1 animate-pulse" />
-                <div className="flex-1">
-                  <p className="text-xs text-white">{activity.agentId}</p>
-                  <p className="text-xs text-gray-400">{activity.action}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Projects Management Modal */}
       <ProjectsManagement

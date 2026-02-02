@@ -51,12 +51,10 @@ import {
   Lightbulb,
 } from "lucide-react";
 
-import { Panel } from "../components/infinity-terminal/Panel";
-import { FooterPanel } from "../components/infinity-terminal/FooterPanel";
-import { useResponsiveLayout } from "../components/infinity-terminal/hooks";
+import { AppShell } from "../components/layout";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { ProgressBar } from "../components/ui/ProgressBar";
-import { KeyboardShortcutsHelp, type KeyboardShortcut } from "../components/ui/KeyboardShortcutsHelp";
+import { type KeyboardShortcut } from "../components/ui/KeyboardShortcutsHelp";
 import { ToastProvider, useToast } from "../components/feedback/ToastSystem";
 import {
   useRealtimeConnection,
@@ -65,6 +63,7 @@ import {
 import { apiClient } from "../services/api-client";
 import type { OracleMessage } from "../components/infinity-terminal/OracleFeedMarquee";
 import type { ArchitectureDecision } from "../components/types";
+import { useLayout } from "../contexts/LayoutContext";
 
 // Architect-specific keyboard shortcuts
 const ARCHITECT_SHORTCUTS: KeyboardShortcut[] = [
@@ -748,18 +747,15 @@ function formatTimeAgo(date: Date): string {
 const ArchitectView: React.FC = () => {
   const { toast } = useToast();
 
-  // Layout management
+  // Layout management from centralized LayoutContext
   const {
-    layout,
     contextPanelVisible: historyPanelVisible,
-    hudVisible: impactPanelVisible,
+    governancePanelVisible: impactPanelVisible,
     footerVisible,
     toggleContextPanel: toggleHistoryPanel,
-    toggleHUD: toggleImpactPanel,
-  } = useResponsiveLayout({
-    defaultHUDVisible: true,
-    defaultSidebarVisible: true,
-  });
+    toggleGovernancePanel: toggleImpactPanel,
+    layout,
+  } = useLayout();
 
   // State
   const [decisions, setDecisions] = useState<ArchitectDecision[]>([]);
@@ -1019,145 +1015,20 @@ const ArchitectView: React.FC = () => {
   ]);
 
   return (
-    <div
-      className="h-screen bg-gray-950 text-white flex flex-col"
-      data-testid="architect-view-container"
-    >
+    <>
       {/* Screen reader announcements */}
       <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
         {announcement}
       </div>
 
-      {/* Header */}
-      <header
-        data-testid="architect-page-header"
-        className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm flex-shrink-0 z-30"
-        role="banner"
-      >
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Building2 className="w-6 h-6 text-purple-400" />
-                <Brain className="w-3 h-3 text-cyan-400 absolute -bottom-1 -right-1" />
-              </div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                Architecture Decisions
-              </h1>
-              <span className="px-2 py-0.5 text-xs bg-cyan-500/10 text-cyan-400 rounded-full border border-cyan-500/20">
-                {decisions.filter((d) => d.status === "proposed" || d.status === "discussing").length} pending
-              </span>
-            </div>
+      <AppShell
+        // Page identity
+        title="Architecture Decisions"
+        icon={<Building2 className="w-6 h-6" />}
+        badge={`${decisions.filter(d => d.status === 'pending').length} Pending`}
 
-            <div className="flex items-center gap-2">
-              {/* New Proposal Button */}
-              <button
-                onClick={() => {
-                  setShowProposalForm(true);
-                  setSelectedDecision(null);
-                }}
-                className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white
-                           rounded-lg font-medium transition-all flex items-center gap-2"
-                data-testid="new-proposal-btn"
-              >
-                <Plus className="w-4 h-4" />
-                New Proposal
-              </button>
-
-              {/* Panel toggles (desktop) */}
-              {!layout.isMobile && (
-                <div className="flex gap-2 ml-2" role="group" aria-label="Panel toggles">
-                  <button
-                    onClick={() => {
-                      toggleHistoryPanel();
-                      setAnnouncement(`History panel ${!historyPanelVisible ? "opened" : "closed"}`);
-                    }}
-                    aria-pressed={historyPanelVisible}
-                    aria-label="Toggle History panel"
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      historyPanelVisible
-                        ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
-                        : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                    }`}
-                    data-testid="toggle-history-panel"
-                  >
-                    <History className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      toggleImpactPanel();
-                      setAnnouncement(`Impact panel ${!impactPanelVisible ? "opened" : "closed"}`);
-                    }}
-                    aria-pressed={impactPanelVisible}
-                    aria-label="Toggle Impact panel"
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      impactPanelVisible
-                        ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
-                        : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                    }`}
-                    data-testid="toggle-impact-panel"
-                  >
-                    <Scale className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-
-              {/* Keyboard shortcuts button */}
-              <button
-                onClick={() => setShowKeyboardHelp(true)}
-                className="px-3 py-1.5 rounded-lg bg-gray-800 text-gray-400 hover:bg-gray-700 transition-all"
-                aria-label="Show keyboard shortcuts (press ?)"
-                title="Keyboard shortcuts (?)"
-                data-testid="keyboard-shortcuts-btn"
-              >
-                <Keyboard className="w-4 h-4" />
-              </button>
-
-              {/* Connection status */}
-              <div
-                role="status"
-                aria-label={isConnected ? "Connected" : "Disconnected"}
-                className={`
-                  flex items-center gap-2 px-3 py-1.5 rounded-lg
-                  ${isConnected
-                    ? "bg-green-900/20 border border-green-500/30"
-                    : "bg-red-900/20 border border-red-500/30"}
-                `}
-              >
-                <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500 animate-pulse"}`} />
-                <span className="text-xs font-medium">
-                  {isConnected ? "Live" : "Offline"}
-                </span>
-              </div>
-
-              {/* Refresh button */}
-              <button
-                onClick={() => {
-                  fetchDecisions();
-                  toast.info("Refreshing decisions...");
-                }}
-                className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-all"
-                aria-label="Refresh decisions"
-                data-testid="refresh-btn"
-              >
-                <RefreshCw className={`w-4 h-4 text-gray-400 ${loading ? "animate-spin" : ""}`} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Layout */}
-      <div className="flex-1 min-h-0 flex">
-        {/* Left Panel - History */}
-        <Panel
-          side="left"
-          mode={layout.panelMode}
-          visible={historyPanelVisible}
-          width={320}
-          onClose={toggleHistoryPanel}
-          title="Decision History"
-        >
+        // Left Panel - History
+        leftPanel={
           <DecisionHistoryPanel
             decisions={decisions}
             loading={loading}
@@ -1166,69 +1037,13 @@ const ArchitectView: React.FC = () => {
             filter={searchFilter}
             onFilterChange={setSearchFilter}
           />
-        </Panel>
+        }
+        showLeftPanel={historyPanelVisible}
+        leftPanelWidth={320}
+        leftPanelTitle="Decision History"
 
-        {/* Main Content */}
-        <main
-          className="flex-1 min-w-0 bg-gray-950 overflow-y-auto pb-16 md:pb-0"
-          role="main"
-          aria-label="Architecture decisions"
-        >
-          <div className="max-w-4xl mx-auto px-6 py-8">
-            <AnimatePresence mode="wait">
-              {showProposalForm ? (
-                <ProposalForm
-                  key="proposal-form"
-                  onSubmit={handleProposalSubmit}
-                  onCancel={() => setShowProposalForm(false)}
-                  isSubmitting={isSubmitting}
-                />
-              ) : selectedDecision ? (
-                <DecisionDetailView
-                  key={selectedDecision.id}
-                  decision={selectedDecision}
-                  onApprove={handleApprove}
-                  onReject={handleReject}
-                  isApproving={isApproving}
-                />
-              ) : (
-                <motion.div
-                  key="empty-state"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-center py-16"
-                >
-                  <Building2 className="w-16 h-16 mx-auto text-gray-700 mb-4" />
-                  <h2 className="text-2xl font-bold text-gray-400 mb-2">
-                    Architecture Decision Records
-                  </h2>
-                  <p className="text-gray-500 mb-6 max-w-md mx-auto">
-                    Select a decision from the history panel or create a new proposal
-                    to start making architecture decisions.
-                  </p>
-                  <button
-                    onClick={() => setShowProposalForm(true)}
-                    className="px-6 py-3 bg-purple-500 hover:bg-purple-600
-                               text-white rounded-lg font-medium transition-all inline-flex items-center gap-2"
-                  >
-                    <Plus className="w-5 h-5" />
-                    Create New Proposal
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </main>
-
-        {/* Right Panel - Impact Analysis */}
-        <Panel
-          side="right"
-          mode={layout.panelMode}
-          visible={impactPanelVisible}
-          width={320}
-          onClose={toggleImpactPanel}
-          title="Impact Analysis"
-        >
+        // Right Panel - Impact Analysis
+        rightPanel={
           <ErrorBoundary fallbackMessage="Impact panel error">
             <ImpactAnalysisPanel
               decision={selectedDecision}
@@ -1236,64 +1051,74 @@ const ArchitectView: React.FC = () => {
               loading={impactLoading}
             />
           </ErrorBoundary>
-        </Panel>
-      </div>
+        }
+        showRightPanel={impactPanelVisible}
+        rightPanelWidth={320}
+        rightPanelTitle="Impact Analysis"
 
-      {/* Footer Panel */}
-      {footerVisible && (
-        <FooterPanel
-          sessionName="architect"
-          isConnected={isConnected}
-          oracleMessages={oracleMessages}
-          onToggleContext={toggleHistoryPanel}
-          onToggleGovernance={toggleImpactPanel}
-          contextVisible={historyPanelVisible}
-          governanceVisible={impactPanelVisible}
-          isMobile={layout.isMobile}
-        />
-      )}
+        // Footer
+        showFooter={footerVisible}
+        sessionName="architect"
+        isConnected={isConnected}
+        oracleMessages={oracleMessages}
+        onToggleContext={toggleHistoryPanel}
+        onToggleGovernance={toggleImpactPanel}
+        contextVisible={historyPanelVisible}
+        governanceVisible={impactPanelVisible}
 
-      {/* Mobile Bottom Navigation */}
-      <nav
-        className="fixed bottom-0 left-0 right-0 h-14 bg-gray-900/95 backdrop-blur-sm
-                   border-t border-gray-800 z-50 md:hidden pb-safe"
-        role="navigation"
-        aria-label="Mobile navigation"
-      >
-        <div className="h-full flex items-center justify-around px-4">
-          <button
-            onClick={toggleHistoryPanel}
-            className={`flex flex-col items-center gap-1 flex-1 h-full justify-center
-                        ${historyPanelVisible ? "text-purple-400" : "text-gray-400"}`}
-          >
-            <History className="w-5 h-5" />
-            <span className="text-xs">History</span>
-          </button>
-          <button
-            onClick={() => setShowProposalForm(true)}
-            className="flex flex-col items-center gap-1 flex-1 h-full justify-center text-gray-400"
-          >
-            <Plus className="w-5 h-5" />
-            <span className="text-xs">New</span>
-          </button>
-          <button
-            onClick={toggleImpactPanel}
-            className={`flex flex-col items-center gap-1 flex-1 h-full justify-center
-                        ${impactPanelVisible ? "text-purple-400" : "text-gray-400"}`}
-          >
-            <Scale className="w-5 h-5" />
-            <span className="text-xs">Impact</span>
-          </button>
-        </div>
-      </nav>
-
-      {/* Keyboard Shortcuts Help Modal */}
-      <KeyboardShortcutsHelp
-        isOpen={showKeyboardHelp}
-        onClose={() => setShowKeyboardHelp(false)}
+        // Keyboard shortcuts
         customShortcuts={ARCHITECT_SHORTCUTS}
-      />
-    </div>
+
+        className="h-screen"
+        data-testid="architect-view-container"
+      >
+        {/* Main Content */}
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          <AnimatePresence mode="wait">
+            {showProposalForm ? (
+              <ProposalForm
+                key="proposal-form"
+                onSubmit={handleProposalSubmit}
+                onCancel={() => setShowProposalForm(false)}
+                isSubmitting={isSubmitting}
+              />
+            ) : selectedDecision ? (
+              <DecisionDetailView
+                key={selectedDecision.id}
+                decision={selectedDecision}
+                onApprove={handleApprove}
+                onReject={handleReject}
+                isApproving={isApproving}
+              />
+            ) : (
+              <motion.div
+                key="empty-state"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-16"
+              >
+                <Building2 className="w-16 h-16 mx-auto text-gray-700 mb-4" />
+                <h2 className="text-2xl font-bold text-gray-400 mb-2">
+                  Architecture Decision Records
+                </h2>
+                <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                  Select a decision from the history panel or create a new proposal
+                  to start making architecture decisions.
+                </p>
+                <button
+                  onClick={() => setShowProposalForm(true)}
+                  className="px-6 py-3 bg-purple-500 hover:bg-purple-600
+                             text-white rounded-lg font-medium transition-all inline-flex items-center gap-2"
+                >
+                  <Plus className="w-5 h-5" />
+                  Create New Proposal
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </AppShell>
+    </>
   );
 };
 

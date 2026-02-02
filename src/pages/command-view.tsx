@@ -55,12 +55,11 @@ import {
   Rocket,
 } from "lucide-react";
 
-import { Panel } from "../components/infinity-terminal/Panel";
-import { FooterPanel } from "../components/infinity-terminal/FooterPanel";
-import { useResponsiveLayout } from "../components/infinity-terminal/hooks";
+import { AppShell } from "../components/layout";
+import { useLayout } from "../contexts/LayoutContext";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { ProgressBar } from "../components/ui/ProgressBar";
-import { KeyboardShortcutsHelp, type KeyboardShortcut } from "../components/ui/KeyboardShortcutsHelp";
+import { type KeyboardShortcut } from "../components/ui/KeyboardShortcutsHelp";
 import { ToastProvider, useToast } from "../components/feedback/ToastSystem";
 import {
   useRealtimeConnection,
@@ -72,13 +71,9 @@ import type { Command as CommandType } from "../components/types";
 
 // Command-specific keyboard shortcuts
 const COMMAND_SHORTCUTS: KeyboardShortcut[] = [
-  { key: "k", description: "Open command palette", category: "navigation", modifiers: ["ctrl"] },
-  { key: "[", description: "Toggle History panel", category: "navigation" },
-  { key: "]", description: "Toggle Queue panel", category: "navigation" },
-  { key: "/", description: "Focus search", category: "navigation" },
+  { key: "/", description: "Focus search / Open command palette", category: "navigation" },
   { key: "Enter", description: "Execute selected command", category: "actions" },
   { key: "Escape", description: "Close panels / Cancel", category: "general" },
-  { key: "?", description: "Show keyboard shortcuts", category: "general" },
   { key: "1-9", description: "Quick action shortcuts", category: "actions" },
 ];
 
@@ -655,18 +650,15 @@ function formatTimeAgo(date: Date): string {
 const CommandView: React.FC = () => {
   const { toast } = useToast();
 
-  // Layout management
+  // Layout management from centralized context
   const {
-    layout,
     contextPanelVisible: historyPanelVisible,
-    hudVisible: queuePanelVisible,
+    governancePanelVisible: queuePanelVisible,
     footerVisible,
     toggleContextPanel: toggleHistoryPanel,
-    toggleHUD: toggleQueuePanel,
-  } = useResponsiveLayout({
-    defaultHUDVisible: true,
-    defaultSidebarVisible: true,
-  });
+    toggleGovernancePanel: toggleQueuePanel,
+    layout,
+  } = useLayout();
 
   // State
   const [commandHistory, setCommandHistory] = useState<ExecutedCommand[]>([]);
@@ -675,7 +667,6 @@ const CommandView: React.FC = () => {
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [announcement, setAnnouncement] = useState("");
-  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
 
   // Project context (would come from API in real implementation)
   const [projectContext] = useState<ProjectContext>({
@@ -806,7 +797,7 @@ const CommandView: React.FC = () => {
     }
   }, [messages, clearMessages, toast]);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts (AppShell handles panel toggles, we just handle command palette)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't handle shortcuts when typing in inputs
@@ -814,24 +805,7 @@ const CommandView: React.FC = () => {
         if (e.key !== "Escape") return;
       }
 
-      // Ctrl/Cmd + K for palette
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-        e.preventDefault();
-        setIsPaletteOpen(true);
-        return;
-      }
-
       switch (e.key) {
-        case "[":
-          e.preventDefault();
-          toggleHistoryPanel();
-          setAnnouncement(`History panel ${!historyPanelVisible ? "opened" : "closed"}`);
-          break;
-        case "]":
-          e.preventDefault();
-          toggleQueuePanel();
-          setAnnouncement(`Queue panel ${!queuePanelVisible ? "opened" : "closed"}`);
-          break;
         case "/":
           e.preventDefault();
           setIsPaletteOpen(true);
@@ -839,168 +813,74 @@ const CommandView: React.FC = () => {
         case "Escape":
           if (isPaletteOpen) {
             setIsPaletteOpen(false);
-          } else if (showKeyboardHelp) {
-            setShowKeyboardHelp(false);
           }
-          break;
-        case "?":
-          e.preventDefault();
-          setShowKeyboardHelp(true);
           break;
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [
-    historyPanelVisible,
-    queuePanelVisible,
-    isPaletteOpen,
-    showKeyboardHelp,
-    toggleHistoryPanel,
-    toggleQueuePanel,
-  ]);
+  }, [isPaletteOpen]);
 
   return (
-    <div
-      className="h-screen bg-gray-950 text-white flex flex-col"
-      data-testid="command-view-container"
-    >
+    <>
       {/* Screen reader announcements */}
       <div role="status" aria-live="polite" aria-atomic="true" className="sr-only">
         {announcement}
       </div>
 
-      {/* Header */}
-      <header
-        data-testid="command-page-header"
-        className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm flex-shrink-0 z-30"
-        role="banner"
-      >
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Command className="w-6 h-6 text-purple-400" />
-                <Zap className="w-3 h-3 text-cyan-400 absolute -bottom-1 -right-1" />
-              </div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                Command Center
-              </h1>
-              <span className="px-2 py-0.5 text-xs bg-cyan-500/10 text-cyan-400 rounded-full border border-cyan-500/20">
-                {commandHistory.filter((c) => c.status === "success").length} executed
-              </span>
-            </div>
+      <AppShell
+        // Page identity
+        title="Command Center"
+        icon={<Command className="w-6 h-6" />}
+        badge="Live"
 
-            <div className="flex items-center gap-2">
-              {/* Open Palette Button */}
-              <button
-                onClick={() => setIsPaletteOpen(true)}
-                className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300
-                           rounded-lg transition-all flex items-center gap-2"
-                data-testid="open-palette-btn"
-              >
-                <Search className="w-4 h-4" />
-                <span className="text-sm">Commands</span>
-                <kbd className="px-1.5 py-0.5 bg-gray-700 rounded text-xs text-gray-400">
-                  Ctrl+K
-                </kbd>
-              </button>
-
-              {/* Panel toggles (desktop) */}
-              {!layout.isMobile && (
-                <div className="flex gap-2 ml-2" role="group" aria-label="Panel toggles">
-                  <button
-                    onClick={() => {
-                      toggleHistoryPanel();
-                      setAnnouncement(`History panel ${!historyPanelVisible ? "opened" : "closed"}`);
-                    }}
-                    aria-pressed={historyPanelVisible}
-                    aria-label="Toggle History panel"
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      historyPanelVisible
-                        ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
-                        : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                    }`}
-                    data-testid="toggle-history-panel"
-                  >
-                    <History className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      toggleQueuePanel();
-                      setAnnouncement(`Queue panel ${!queuePanelVisible ? "opened" : "closed"}`);
-                    }}
-                    aria-pressed={queuePanelVisible}
-                    aria-label="Toggle Queue panel"
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      queuePanelVisible
-                        ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
-                        : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                    }`}
-                    data-testid="toggle-queue-panel"
-                  >
-                    <Layers className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-
-              {/* Keyboard shortcuts button */}
-              <button
-                onClick={() => setShowKeyboardHelp(true)}
-                className="px-3 py-1.5 rounded-lg bg-gray-800 text-gray-400 hover:bg-gray-700 transition-all"
-                aria-label="Show keyboard shortcuts (press ?)"
-                title="Keyboard shortcuts (?)"
-                data-testid="keyboard-shortcuts-btn"
-              >
-                <Keyboard className="w-4 h-4" />
-              </button>
-
-              {/* Connection status */}
-              <div
-                role="status"
-                aria-label={isConnected ? "Connected" : "Disconnected"}
-                className={`
-                  flex items-center gap-2 px-3 py-1.5 rounded-lg
-                  ${isConnected
-                    ? "bg-green-900/20 border border-green-500/30"
-                    : "bg-red-900/20 border border-red-500/30"}
-                `}
-              >
-                <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500 animate-pulse"}`} />
-                <span className="text-xs font-medium">
-                  {isConnected ? "Live" : "Offline"}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Layout */}
-      <div className="flex-1 min-h-0 flex">
-        {/* Left Panel - History */}
-        <Panel
-          side="left"
-          mode={layout.panelMode}
-          visible={historyPanelVisible}
-          width={320}
-          onClose={toggleHistoryPanel}
-          title="Command History"
-        >
+        // Left Panel - History
+        leftPanel={
           <CommandHistoryPanel
             history={commandHistory}
             loading={false}
             onRerun={executeCommand}
             onClear={clearHistory}
           />
-        </Panel>
+        }
+        showLeftPanel={historyPanelVisible}
+        leftPanelWidth={320}
+        leftPanelTitle="Command History"
 
+        // Right Panel - Queue
+        rightPanel={
+          <ErrorBoundary fallbackMessage="Queue panel error">
+            <CommandQueuePanel
+              queue={commandQueue}
+              running={runningCommand}
+              onCancel={cancelCommand}
+            />
+          </ErrorBoundary>
+        }
+        showRightPanel={queuePanelVisible}
+        rightPanelWidth={320}
+        rightPanelTitle="Execution Queue"
+
+        // Footer
+        showFooter={footerVisible}
+        sessionName="command"
+        isConnected={isConnected}
+        oracleMessages={oracleMessages}
+        onToggleContext={toggleHistoryPanel}
+        onToggleGovernance={toggleQueuePanel}
+        contextVisible={historyPanelVisible}
+        governanceVisible={queuePanelVisible}
+
+        // Keyboard shortcuts
+        customShortcuts={COMMAND_SHORTCUTS}
+      >
         {/* Main Content */}
-        <main
+        <div
           className="flex-1 min-w-0 bg-gray-950 overflow-y-auto pb-16 md:pb-0"
           role="main"
           aria-label="Command center"
+          data-testid="command-view-container"
         >
           <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
             {/* Hero Section */}
@@ -1096,40 +976,8 @@ const CommandView: React.FC = () => {
               </motion.div>
             )}
           </div>
-        </main>
-
-        {/* Right Panel - Queue */}
-        <Panel
-          side="right"
-          mode={layout.panelMode}
-          visible={queuePanelVisible}
-          width={320}
-          onClose={toggleQueuePanel}
-          title="Execution Queue"
-        >
-          <ErrorBoundary fallbackMessage="Queue panel error">
-            <CommandQueuePanel
-              queue={commandQueue}
-              running={runningCommand}
-              onCancel={cancelCommand}
-            />
-          </ErrorBoundary>
-        </Panel>
-      </div>
-
-      {/* Footer Panel */}
-      {footerVisible && (
-        <FooterPanel
-          sessionName="command"
-          isConnected={isConnected}
-          oracleMessages={oracleMessages}
-          onToggleContext={toggleHistoryPanel}
-          onToggleGovernance={toggleQueuePanel}
-          contextVisible={historyPanelVisible}
-          governanceVisible={queuePanelVisible}
-          isMobile={layout.isMobile}
-        />
-      )}
+        </div>
+      </AppShell>
 
       {/* Command Palette */}
       <CommandPalette
@@ -1174,14 +1022,7 @@ const CommandView: React.FC = () => {
           </button>
         </div>
       </nav>
-
-      {/* Keyboard Shortcuts Help Modal */}
-      <KeyboardShortcutsHelp
-        isOpen={showKeyboardHelp}
-        onClose={() => setShowKeyboardHelp(false)}
-        customShortcuts={COMMAND_SHORTCUTS}
-      />
-    </div>
+    </>
   );
 };
 

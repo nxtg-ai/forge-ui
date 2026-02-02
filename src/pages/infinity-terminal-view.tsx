@@ -7,19 +7,16 @@
  * - Multi-device access
  * - Responsive layout (mobile/tablet/desktop)
  * - Integrated Governance HUD
+ * - Unified AppShell layout integration
  */
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Terminal,
-  Info,
   X,
-  Layout,
   Keyboard,
-  Settings,
   Infinity,
-  Brain,
   RefreshCw,
   Maximize2,
   Minimize2,
@@ -27,19 +24,18 @@ import {
 
 import {
   InfinityTerminal,
-  InfinityTerminalLayout,
   SessionRestoreModal,
-  useResponsiveLayout,
   ConnectionBadge,
 } from "../components/infinity-terminal";
 import type { SessionState } from "../components/infinity-terminal/InfinityTerminal";
-import { Panel } from "../components/infinity-terminal/Panel";
-import { FooterPanel } from "../components/infinity-terminal/FooterPanel";
 import type { OracleMessage } from "../components/infinity-terminal/OracleFeedMarquee";
 import { GovernanceHUD } from "../components/governance";
 import { ContextWindowHUD } from "../components/terminal";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { useToast } from "../components/feedback/ToastSystem";
+import { AppShell } from "../components/layout";
+import { useLayout } from "../contexts/LayoutContext";
+import type { KeyboardShortcut } from "../components/ui/KeyboardShortcutsHelp";
 
 // Check for stored session
 function getLastSession() {
@@ -55,16 +51,17 @@ function getLastSession() {
 
 const InfinityTerminalView: React.FC = () => {
   const { toast } = useToast();
-  const {
-    layout,
-    hudVisible,
-    contextPanelVisible,
-    footerVisible,
-    toggleHUD,
-    toggleContextPanel,
-  } = useResponsiveLayout();
 
-  const [showHelpOverlay, setShowHelpOverlay] = useState(false);
+  // Use centralized layout context for panel state
+  const {
+    contextPanelVisible,
+    governancePanelVisible,
+    footerVisible,
+    toggleContextPanel,
+    toggleGovernancePanel,
+    layout,
+  } = useLayout();
+
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [lastSession, setLastSession] =
     useState<ReturnType<typeof getLastSession>>(null);
@@ -128,92 +125,110 @@ const InfinityTerminalView: React.FC = () => {
     localStorage.removeItem("infinity-terminal-sessions");
   }, []);
 
+  // Stable callback for reconnect ref
+  const handleReconnectRef = useCallback((fn: () => void) => {
+    setReconnectFn(() => fn);
+  }, []);
+
+  // Terminal-specific keyboard shortcuts (memoized to prevent re-renders)
+  const terminalShortcuts: KeyboardShortcut[] = useMemo(() => [
+    { key: "Ctrl+C", description: "Cancel command", category: "terminal" },
+    { key: "Ctrl+L", description: "Clear terminal", category: "terminal" },
+    { key: "Ctrl+O D", description: "Detach session (Zellij)", category: "terminal" },
+    { key: "Alt+H/J/K/L", description: "Navigate panes (Zellij)", category: "terminal" },
+    { key: "Ctrl+P N", description: "New pane (Zellij)", category: "terminal" },
+    { key: "Ctrl+P X", description: "Close pane (Zellij)", category: "terminal" },
+    { key: "↑ / ↓", description: "Command history", category: "terminal" },
+  ], []);
+
+  // Terminal header actions (connection status, controls)
+  const terminalActions = (
+    <>
+      {/* Connection Status */}
+      {terminalState && <ConnectionBadge state={terminalState} />}
+
+      {/* Reconnect Button */}
+      <button
+        onClick={() => reconnectFn?.()}
+        className="p-1.5 hover:bg-gray-800 rounded transition-all"
+        title="Reconnect"
+        disabled={terminalState?.connecting}
+      >
+        <RefreshCw
+          className={`w-4 h-4 text-gray-400 ${terminalState?.connecting ? "animate-spin" : ""}`}
+        />
+      </button>
+
+      {/* Expand/Collapse */}
+      <button
+        onClick={() => setIsTerminalExpanded(!isTerminalExpanded)}
+        className="p-1.5 hover:bg-gray-800 rounded transition-all"
+        title={isTerminalExpanded ? "Minimize" : "Maximize"}
+      >
+        {isTerminalExpanded ? (
+          <Minimize2 className="w-4 h-4 text-gray-400" />
+        ) : (
+          <Maximize2 className="w-4 h-4 text-gray-400" />
+        )}
+      </button>
+    </>
+  );
+
+  // Left Panel Content - Memory & Context
+  const leftPanelContent = (
+    <div className="h-full p-4">
+      <ContextWindowHUD className="h-full" />
+    </div>
+  );
+
+  // Right Panel Content - Governance HUD
+  const rightPanelContent = (
+    <ErrorBoundary fallbackMessage="Governance HUD encountered an error.">
+      <div className="h-full p-4">
+        <GovernanceHUD />
+      </div>
+    </ErrorBoundary>
+  );
+
   return (
-    <div
-      className="h-screen bg-gray-950 text-white flex flex-col"
-      data-testid="infinity-terminal-view"
-    >
-      {/* Header */}
-      <header data-testid="terminal-page-header" className="border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm flex-shrink-0 z-30">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Terminal className="w-6 h-6 text-purple-400" />
-                <Infinity className="w-3 h-3 text-cyan-400 absolute -bottom-1 -right-1" />
-              </div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                Infinity Terminal
-              </h1>
-              <span className="px-2 py-0.5 text-xs bg-cyan-500/10 text-cyan-400 rounded-full border border-cyan-500/20">
-                Persistent
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Connection Status */}
-              {terminalState && <ConnectionBadge state={terminalState} />}
-
-              {/* Reconnect Button */}
-              <button
-                onClick={() => reconnectFn?.()}
-                className="p-1.5 hover:bg-gray-800 rounded transition-all"
-                title="Reconnect"
-                disabled={terminalState?.connecting}
-              >
-                <RefreshCw
-                  className={`w-4 h-4 text-gray-400 ${terminalState?.connecting ? "animate-spin" : ""}`}
-                />
-              </button>
-
-              {/* Expand/Collapse */}
-              <button
-                onClick={() => setIsTerminalExpanded(!isTerminalExpanded)}
-                className="p-1.5 hover:bg-gray-800 rounded transition-all"
-                title={isTerminalExpanded ? "Minimize" : "Maximize"}
-              >
-                {isTerminalExpanded ? (
-                  <Minimize2 className="w-4 h-4 text-gray-400" />
-                ) : (
-                  <Maximize2 className="w-4 h-4 text-gray-400" />
-                )}
-              </button>
-
-              {/* Keyboard Shortcuts */}
-              <button
-                onClick={() => setShowHelpOverlay(!showHelpOverlay)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  showHelpOverlay
-                    ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
-                    : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                }`}
-                title="Keyboard shortcuts"
-              >
-                <Keyboard className="w-4 h-4" />
-              </button>
-            </div>
+    <>
+      <AppShell
+        // Page identity
+        title="Infinity Terminal"
+        icon={
+          <div className="relative">
+            <Terminal className="w-6 h-6" />
+            <Infinity className="w-3 h-3 text-cyan-400 absolute -bottom-1 -right-1" />
           </div>
-        </div>
-      </header>
-
-      {/* Main Layout */}
-      <div className="flex-1 min-h-0 flex">
-        {/* Left Panel - Memory & Context */}
-        <Panel
-          side="left"
-          mode={layout.panelMode}
-          visible={contextPanelVisible}
-          width={320}
-          onClose={toggleContextPanel}
-          title="Memory & Context"
-        >
-          <div className="h-full p-4">
-            <ContextWindowHUD className="h-full" />
-          </div>
-        </Panel>
-
-        {/* Terminal */}
-        <main className="flex-1 min-w-0 bg-black">
+        }
+        badge="Persistent"
+        // Header actions
+        headerActions={terminalActions}
+        // Left panel configuration
+        leftPanel={leftPanelContent}
+        showLeftPanel={contextPanelVisible}
+        leftPanelWidth={320}
+        leftPanelTitle="Memory & Context"
+        // Right panel configuration
+        rightPanel={rightPanelContent}
+        showRightPanel={governancePanelVisible}
+        rightPanelWidth={320}
+        rightPanelTitle="Governance HUD"
+        // Footer configuration
+        showFooter={footerVisible}
+        sessionName="nxtg-forge-v3"
+        isConnected={true}
+        oracleMessages={oracleMessages}
+        onToggleContext={toggleContextPanel}
+        onToggleGovernance={toggleGovernancePanel}
+        contextVisible={contextPanelVisible}
+        governanceVisible={governancePanelVisible}
+        // Keyboard shortcuts
+        customShortcuts={terminalShortcuts}
+        className="h-screen"
+      >
+        {/* Terminal Content */}
+        <div className="h-full bg-black" data-testid="infinity-terminal-view">
           <InfinityTerminal
             projectName="nxtg-forge-v3"
             layout="default"
@@ -223,48 +238,11 @@ const InfinityTerminalView: React.FC = () => {
             showHeader={false}
             isExpanded={isTerminalExpanded}
             onExpandedChange={setIsTerminalExpanded}
-            onReconnectRef={(fn) => setReconnectFn(() => fn)}
+            onReconnectRef={handleReconnectRef}
             onSessionStateChange={setTerminalState}
           />
-        </main>
-
-        {/* Right Panel - Governance HUD */}
-        <Panel
-          side="right"
-          mode={layout.panelMode}
-          visible={hudVisible}
-          width={320}
-          onClose={toggleHUD}
-          title="Governance HUD"
-        >
-          <ErrorBoundary fallbackMessage="Governance HUD encountered an error.">
-            <div className="h-full p-4">
-              <GovernanceHUD />
-            </div>
-          </ErrorBoundary>
-        </Panel>
-      </div>
-
-      {/* Footer Panel */}
-      {footerVisible && (
-        <FooterPanel
-          sessionName="nxtg-forge-v3"
-          isConnected={true}
-          oracleMessages={oracleMessages}
-          onToggleContext={toggleContextPanel}
-          onToggleGovernance={toggleHUD}
-          contextVisible={contextPanelVisible}
-          governanceVisible={hudVisible}
-          isMobile={layout.isMobile}
-        />
-      )}
-
-      {/* Help Overlay */}
-      <AnimatePresence>
-        {showHelpOverlay && (
-          <HelpOverlay onClose={() => setShowHelpOverlay(false)} />
-        )}
-      </AnimatePresence>
+        </div>
+      </AppShell>
 
       {/* Session Restore Modal */}
       {showRestoreModal && lastSession && (
@@ -275,75 +253,7 @@ const InfinityTerminalView: React.FC = () => {
           onClose={() => setShowRestoreModal(false)}
         />
       )}
-    </div>
-  );
-};
-
-// Help overlay with keyboard shortcuts
-const HelpOverlay: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-  const shortcuts = [
-    { key: "Ctrl+C", description: "Cancel command" },
-    { key: "Ctrl+L", description: "Clear terminal" },
-    { key: "Ctrl+O D", description: "Detach session (Zellij)" },
-    { key: "Alt+H/J/K/L", description: "Navigate panes (Zellij)" },
-    { key: "Ctrl+P N", description: "New pane (Zellij)" },
-    { key: "Ctrl+P X", description: "Close pane (Zellij)" },
-    { key: "↑ / ↓", description: "Command history" },
-  ];
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ scale: 0.9, y: 20 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.9, y: 20 }}
-        className="bg-gray-900 border border-gray-700 rounded-xl max-w-md w-full p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Keyboard className="w-5 h-5 text-purple-400" />
-            Keyboard Shortcuts
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-gray-800 rounded transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-400" />
-          </button>
-        </div>
-
-        <div className="space-y-2">
-          {shortcuts.map(({ key, description }) => (
-            <div
-              key={key}
-              className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0"
-            >
-              <span className="text-gray-300">{description}</span>
-              <kbd className="px-2 py-1 bg-gray-800 rounded text-sm text-gray-400 font-mono">
-                {key}
-              </kbd>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-4 pt-4 border-t border-gray-800">
-          <p className="text-xs text-gray-500">
-            Sessions persist even after closing the browser. Reattach anytime
-            with:
-          </p>
-          <code className="block mt-2 px-3 py-2 bg-gray-800 rounded text-sm text-cyan-400 font-mono">
-            zellij attach forge-nxtg-forge-v3
-          </code>
-        </div>
-      </motion.div>
-    </motion.div>
+    </>
   );
 };
 
