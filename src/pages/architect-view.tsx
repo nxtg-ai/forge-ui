@@ -91,7 +91,7 @@ interface ArchitectDecision extends ArchitectureDecision {
   proposedBy: string;
   proposedAt: Date;
   approvedBy?: string[];
-  consensus?: number;
+  consensus: number;
   votes?: { approve: number; reject: number; abstain: number };
   relatedDecisions?: string[];
   tags?: string[];
@@ -1025,7 +1025,7 @@ const ArchitectView: React.FC = () => {
         // Page identity
         title="Architecture Decisions"
         icon={<Building2 className="w-6 h-6" />}
-        badge={`${decisions.filter(d => d.status === 'pending').length} Pending`}
+        badge={`${decisions.filter(d => d.status === 'proposed').length} Pending`}
 
         // Left Panel - History
         leftPanel={
