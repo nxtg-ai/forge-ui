@@ -34,6 +34,18 @@ interface ContextWindowHUDProps {
   className?: string;
 }
 
+/**
+ * Raw memory item from JSON/localStorage (dates are strings before parsing)
+ */
+interface RawMemoryItem {
+  id: string;
+  content: string;
+  created: string;
+  updated: string;
+  category?: MemoryItem["category"];
+  tags?: string[];
+}
+
 export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = ({
   className = "",
 }) => {
@@ -52,10 +64,13 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = ({
       const stored = localStorage.getItem("forge-memory");
       if (stored) {
         try {
-          const parsed = JSON.parse(stored);
+          const parsed = JSON.parse(stored) as RawMemoryItem[];
           setMemoryItems(
-            parsed.map((item: any) => ({
-              ...item,
+            parsed.map((item) => ({
+              id: item.id,
+              content: item.content,
+              category: item.category || "other",
+              tags: item.tags || [],
               created: new Date(item.created),
               updated: new Date(item.updated),
             })),
@@ -70,8 +85,12 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = ({
           if (response.ok) {
             const data = await response.json();
             if (data.success && data.data) {
-              const items = data.data.map((item: any) => ({
-                ...item,
+              const rawItems = data.data as RawMemoryItem[];
+              const items = rawItems.map((item) => ({
+                id: item.id,
+                content: item.content,
+                category: item.category || "other",
+                tags: item.tags || [],
                 created: new Date(item.created),
                 updated: new Date(item.updated),
               }));

@@ -38,6 +38,22 @@ interface AgentActivityFeedProps {
   maxEntries?: number;
 }
 
+/**
+ * Worker event received from WebSocket
+ */
+interface WorkerEvent {
+  type: "task.started" | "task.completed" | "task.failed" | "worker.status" | "pool.scaled";
+  workerId?: string;
+  taskId?: string;
+  status?: string;
+  error?: string;
+  direction?: string;
+  count?: number;
+  result?: {
+    duration?: number;
+  };
+}
+
 export const AgentActivityFeed: React.FC<AgentActivityFeedProps> = ({
   className = "",
   maxEntries = 20,
@@ -138,22 +154,24 @@ export const AgentActivityFeed: React.FC<AgentActivityFeedProps> = ({
   }, [maxEntries]);
 
   // Parse worker event to activity
-  const parseWorkerEvent = (event: any): WorkerActivity | null => {
+  const parseWorkerEvent = (event: WorkerEvent): WorkerActivity | null => {
     if (!event || !event.type) return null;
 
     const id = `${event.type}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const timestamp = new Date();
 
     switch (event.type) {
-      case "task.started":
+      case "task.started": {
+        const workerId = event.workerId || "unknown";
         return {
           id,
           timestamp,
-          workerId: event.workerId,
+          workerId,
           type: "task.started",
-          message: `Worker ${event.workerId.slice(-8)} started task`,
+          message: `Worker ${workerId.slice(-8)} started task`,
           taskId: event.taskId,
         };
+      }
 
       case "task.completed":
         return {
@@ -176,14 +194,16 @@ export const AgentActivityFeed: React.FC<AgentActivityFeedProps> = ({
           taskId: event.taskId,
         };
 
-      case "worker.status":
+      case "worker.status": {
+        const workerId = event.workerId || "unknown";
         return {
           id,
           timestamp,
-          workerId: event.workerId,
+          workerId,
           type: "worker.status",
-          message: `Worker ${event.workerId.slice(-8)} → ${event.status}`,
+          message: `Worker ${workerId.slice(-8)} → ${event.status}`,
         };
+      }
 
       case "pool.scaled":
         return {
