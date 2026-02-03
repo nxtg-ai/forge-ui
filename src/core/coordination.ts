@@ -58,7 +58,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
   private approvalRequestIds: Map<string, string> = new Map(); // artifactId -> approvalRequestId
   private agentRegistry: Map<string, Agent> = new Map();
   private status: CoordinationStatus = CoordinationStatus.IDLE;
-  private messageHandlers: Map<string, (message: Message) => Promise<any>> =
+  private messageHandlers: Map<string, (message: Message) => Promise<unknown>> =
     new Map();
 
   constructor() {
@@ -98,7 +98,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
    */
   registerAgent(
     agent: Agent,
-    handler?: (message: Message) => Promise<any>,
+    handler?: (message: Message) => Promise<unknown>,
   ): void {
     this.agentRegistry.set(agent.id, agent);
     if (handler) {
@@ -320,7 +320,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
   /**
    * Coordinate parallel work among agents
    */
-  async coordinateParallel(agents: Agent[], task: Task): Promise<any> {
+  async coordinateParallel(agents: Agent[], task: Task): Promise<unknown> {
     this.status = CoordinationStatus.COORDINATING;
     logger.info(`Coordinating parallel work for ${agents.length} agents`);
 

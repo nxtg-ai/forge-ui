@@ -138,8 +138,8 @@ export class BootstrapOrchestrator {
    */
   private async detectCurrentState(
     projectPath: string,
-  ): Promise<Record<string, any>> {
-    const state: Record<string, any> = {
+  ): Promise<Record<string, unknown>> {
+    const state: Record<string, unknown> = {
       exists: false,
       hasGit: false,
       hasNodeModules: false,
@@ -194,7 +194,7 @@ export class BootstrapOrchestrator {
    */
   private createInstallationSteps(
     options: BootstrapOptions,
-    currentState: Record<string, any>,
+    currentState: Record<string, unknown>,
   ): InstallationStep[] {
     const steps: InstallationStep[] = [];
 
@@ -342,7 +342,7 @@ export class BootstrapOrchestrator {
    * Clone repository from GitHub
    */
   private async cloneRepository(options: BootstrapOptions): Promise<void> {
-    const cloneOptions: any = {
+    const cloneOptions: Record<string, string | number> = {
       "--branch": options.branch,
     };
 

@@ -11,6 +11,17 @@ import { StateManager } from "@core/state";
 import { AgentCoordinationProtocol } from "@core/coordination";
 import { promises as fs } from "node:fs";
 
+/**
+ * Create a proper Node.js-style error with a code property.
+ * VisionManager checks for `error instanceof Error && 'code' in error`,
+ * so plain objects won't work.
+ */
+function createNodeError(code: string, message?: string): Error & { code: string } {
+  const error = new Error(message || code) as Error & { code: string };
+  error.code = code;
+  return error;
+}
+
 // Create proper mocks for fs methods
 vi.mock("node:fs", () => ({
   promises: {
@@ -49,7 +60,7 @@ describe("Error Handling Coverage", () => {
     it("should handle ENOENT (file not found) gracefully", async () => {
       const visionManager = new VisionManager("/test/project");
 
-      (fs.readFile as any).mockRejectedValue({ code: "ENOENT" });
+      (fs.readFile as any).mockRejectedValue(createNodeError("ENOENT"));
 
       // Should create default vision instead of throwing
       await expect(visionManager.initialize()).resolves.not.toThrow();
@@ -62,10 +73,7 @@ describe("Error Handling Coverage", () => {
     it("should handle EACCES (permission denied) with clear error", async () => {
       const visionManager = new VisionManager("/test/project");
 
-      (fs.readFile as any).mockRejectedValue({
-        code: "EACCES",
-        message: "Permission denied",
-      });
+      (fs.readFile as any).mockRejectedValue(createNodeError("EACCES", "Permission denied"));
 
       await expect(visionManager.loadVision()).rejects.toThrow();
     });
@@ -74,10 +82,7 @@ describe("Error Handling Coverage", () => {
       const stateManager = new StateManager("/test/project");
       await stateManager.initialize("/test/project");
 
-      (fs.writeFile as any).mockRejectedValue({
-        code: "ENOSPC",
-        message: "No space left on device",
-      });
+      (fs.writeFile as any).mockRejectedValue(createNodeError("ENOSPC", "No space left on device"));
 
       await expect(stateManager.saveState()).rejects.toThrow();
     });
@@ -90,10 +95,7 @@ describe("Error Handling Coverage", () => {
       (fs.writeFile as any).mockImplementation(() => {
         attempts++;
         if (attempts < 3) {
-          return Promise.reject({
-            code: "EAGAIN",
-            message: "Resource temporarily unavailable",
-          });
+          return Promise.reject(createNodeError("EAGAIN", "Resource temporarily unavailable"));
         }
         return Promise.resolve();
       });
@@ -215,7 +217,7 @@ describe("Error Handling Coverage", () => {
 
       // Mock readFile to return ENOENT for vision file (creates default) and empty events
       (fs.readFile as any)
-        .mockRejectedValueOnce({ code: "ENOENT" }) // Vision file not found
+        .mockRejectedValueOnce(createNodeError("ENOENT")) // Vision file not found
         .mockResolvedValueOnce("[]"); // Empty events array
 
       await visionManager.initialize();
@@ -265,7 +267,7 @@ describe("Error Handling Coverage", () => {
     it("should continue operation when vision file is unavailable", async () => {
       const visionManager = new VisionManager("/test/project");
 
-      (fs.readFile as any).mockRejectedValue({ code: "ENOENT" });
+      (fs.readFile as any).mockRejectedValue(createNodeError("ENOENT"));
 
       await visionManager.initialize();
 
@@ -289,7 +291,7 @@ describe("Error Handling Coverage", () => {
     it("should handle missing state with fresh initialization", async () => {
       const stateManager = new StateManager("/test/project");
 
-      (fs.readFile as any).mockRejectedValue({ code: "ENOENT" });
+      (fs.readFile as any).mockRejectedValue(createNodeError("ENOENT"));
 
       await stateManager.initialize("/test/project");
 

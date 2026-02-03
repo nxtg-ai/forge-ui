@@ -18,6 +18,8 @@ import {
   CanonicalVisionSchema,
   VisionEventSchema,
   AlignmentResultSchema,
+  StrategicGoal,
+  Priority,
 } from "../types/vision";
 
 const logger = new Logger("VisionManager");
@@ -84,7 +86,7 @@ export class VisionManager {
 
       return this.currentVision;
     } catch (error) {
-      if ((error as any).code === "ENOENT") {
+      if (error instanceof Error && 'code' in error && error.code === "ENOENT") {
         // Create default vision
         logger.info("No vision file found, creating default");
         return await this.createDefaultVision();
@@ -226,10 +228,10 @@ export class VisionManager {
   /**
    * Parse strategic goals from markdown
    */
-  private parseStrategicGoals(content: string): any[] {
+  private parseStrategicGoals(content: string): StrategicGoal[] {
     const lines = content.split("\n");
-    const goals: any[] = [];
-    let currentGoal: any = null;
+    const goals: StrategicGoal[] = [];
+    let currentGoal: Partial<StrategicGoal> | null = null;
 
     for (const line of lines) {
       const trimmed = line.trim();
@@ -237,14 +239,16 @@ export class VisionManager {
       // Parse goal line (e.g., "1. [Goal Title] - Priority: High, Deadline: Q1 2026")
       const goalMatch = trimmed.match(/^\d+\.\s+\[([^\]]+)\](.*)$/);
       if (goalMatch) {
-        if (currentGoal) goals.push(currentGoal);
+        if (currentGoal && this.isCompleteGoal(currentGoal)) {
+          goals.push(currentGoal as StrategicGoal);
+        }
 
         currentGoal = {
           id: crypto.randomBytes(8).toString("hex"),
           title: goalMatch[1],
           description: "",
-          priority: "medium" as any,
-          status: "not-started" as any,
+          priority: Priority.MEDIUM,
+          status: "not-started",
           progress: 0,
           metrics: [],
         };
@@ -255,20 +259,40 @@ export class VisionManager {
         const deadlineMatch = metadata.match(/Deadline:\s*([^,]+)/i);
 
         if (priorityMatch) {
-          currentGoal.priority = priorityMatch[1].toLowerCase();
+          const priorityStr = priorityMatch[1].toLowerCase();
+          if (priorityStr in Priority) {
+            currentGoal.priority = Priority[priorityStr.toUpperCase() as keyof typeof Priority];
+          }
         }
         if (deadlineMatch) {
           currentGoal.deadline = new Date(deadlineMatch[1]);
         }
       } else if (currentGoal && trimmed) {
         // Add to description
-        currentGoal.description +=
-          (currentGoal.description ? " " : "") + trimmed;
+        currentGoal.description =
+          (currentGoal.description || "") + (currentGoal.description ? " " : "") + trimmed;
       }
     }
 
-    if (currentGoal) goals.push(currentGoal);
+    if (currentGoal && this.isCompleteGoal(currentGoal)) {
+      goals.push(currentGoal as StrategicGoal);
+    }
     return goals;
+  }
+
+  /**
+   * Check if parsed goal has all required fields
+   */
+  private isCompleteGoal(goal: Partial<StrategicGoal>): goal is StrategicGoal {
+    return !!(
+      goal.id &&
+      goal.title &&
+      goal.description !== undefined &&
+      goal.priority &&
+      goal.status &&
+      goal.progress !== undefined &&
+      goal.metrics
+    );
   }
 
   /**
@@ -316,7 +340,7 @@ export class VisionManager {
           id: "goal-1",
           title: "Launch NXTG-Forge v3.0",
           description: "Complete core infrastructure and orchestration engine",
-          priority: "critical" as any,
+          priority: Priority.CRITICAL,
           deadline: new Date("2026-02-01"),
           status: "in-progress",
           progress: 30,
@@ -331,7 +355,7 @@ export class VisionManager {
           title: "Build AI Agent Ecosystem",
           description:
             "Create 20+ specialized agents for different development tasks",
-          priority: "high" as any,
+          priority: Priority.HIGH,
           deadline: new Date("2026-03-01"),
           status: "not-started",
           progress: 0,
@@ -630,7 +654,7 @@ export class VisionManager {
    */
   private checkGoalAlignment(
     decision: Decision,
-    goals: any[],
+    goals: StrategicGoal[],
   ): {
     aligned: boolean;
     suggestions: string[];
@@ -726,17 +750,20 @@ export class VisionManager {
   private async loadEvents(): Promise<void> {
     try {
       const content = await fs.readFile(this.eventsPath, "utf-8");
-      const events = JSON.parse(content);
+      const events = JSON.parse(content) as unknown[];
 
-      // Parse dates
-      this.events = events.map((e: any) => ({
-        ...e,
-        timestamp: new Date(e.timestamp),
-      }));
+      // Parse dates and validate
+      this.events = events.map((e) => {
+        const event = e as Record<string, unknown>;
+        return {
+          ...event,
+          timestamp: new Date(event.timestamp as string),
+        } as VisionEvent;
+      });
 
       logger.info(`Loaded ${this.events.length} vision events`);
     } catch (error) {
-      if ((error as any).code === "ENOENT") {
+      if (error instanceof Error && 'code' in error && error.code === "ENOENT") {
         this.events = [];
       } else {
         throw error;

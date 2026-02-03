@@ -6,6 +6,7 @@
  */
 
 import { spawn } from "node-pty";
+import * as os from "os";
 import {
   Runspace,
   IRunspaceBackend,
@@ -148,11 +149,23 @@ export class WSLBackend implements IRunspaceBackend {
       runspace.status === "active" &&
       (!session || session.pty.pid !== undefined);
 
+    // Get system-level metrics
+    const cpuCount = os.cpus().length;
+    const loadAvg = os.loadavg()[0]; // 1-minute load average
+    const cpuUsagePercent = Math.min(100, (loadAvg / cpuCount) * 100);
+
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const memoryUsagePercent = ((totalMem - freeMem) / totalMem) * 100;
+
+    // Disk usage would require fs.statfs or similar - set reasonable default
+    const diskUsagePercent = 0; // Per-runspace disk tracking not implemented
+
     return {
       status: isHealthy ? "healthy" : "unhealthy",
-      cpu: 0, // TODO: Implement actual metrics
-      memory: 0,
-      disk: 0,
+      cpu: Math.round(cpuUsagePercent),
+      memory: Math.round(memoryUsagePercent),
+      disk: diskUsagePercent,
       uptime: session ? (Date.now() - session.createdAt.getTime()) / 1000 : 0,
       lastCheck: new Date(),
     };

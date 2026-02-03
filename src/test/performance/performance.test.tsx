@@ -15,16 +15,29 @@ import { VisionManager } from '@core/vision';
 import { AgentCoordinationProtocol } from '@core/coordination';
 import { VisionCapture } from '@components/VisionCapture';
 
+/**
+ * Create a proper Node.js-style error with a code property.
+ * VisionManager checks for `error instanceof Error && 'code' in error`,
+ * so plain objects won't work.
+ */
+function createNodeError(code: string, message?: string): Error & { code: string } {
+  const error = new Error(message || code) as Error & { code: string };
+  error.code = code;
+  return error;
+}
+
 // Mock fs module for controlled testing
 // Uses partial mocking to preserve module structure while controlling fs behavior
 vi.mock("fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("fs")>();
+  // Create ENOENT error inside the mock factory to avoid hoisting issues
+  const enoentError = Object.assign(new Error("ENOENT"), { code: "ENOENT" });
   return {
     ...actual,
     default: {
       ...actual,
       promises: {
-        readFile: vi.fn().mockRejectedValue({ code: "ENOENT" }),
+        readFile: vi.fn().mockRejectedValue(enoentError),
         writeFile: vi.fn().mockResolvedValue(undefined),
         mkdir: vi.fn().mockResolvedValue(undefined),
         access: vi.fn().mockResolvedValue(undefined),
@@ -38,7 +51,7 @@ vi.mock("fs", async (importOriginal) => {
       },
     },
     promises: {
-      readFile: vi.fn().mockRejectedValue({ code: "ENOENT" }),
+      readFile: vi.fn().mockRejectedValue(enoentError),
       writeFile: vi.fn().mockResolvedValue(undefined),
       mkdir: vi.fn().mockResolvedValue(undefined),
       access: vi.fn().mockResolvedValue(undefined),

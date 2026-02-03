@@ -36,7 +36,7 @@ export interface ExecutionResult {
   pattern: ExecutionPattern;
   success: boolean;
   duration: number;
-  result?: any;
+  result?: unknown;
   error?: string;
   artifacts?: string[];
   agentResults?: Array<{
@@ -88,7 +88,7 @@ export interface WorkflowResult {
   steps: Array<{
     stepId: string;
     status: TaskStatus;
-    result?: any;
+    result?: unknown;
     error?: string;
   }>;
 }
@@ -152,20 +152,23 @@ class AgentPool {
   }
 }
 
+// Command history entry
+interface CommandHistoryEntry {
+  command: unknown;
+  result: unknown;
+  timestamp: Date;
+}
+
 export class MetaOrchestrator extends EventEmitter {
   private agentPool: AgentPool = new AgentPool();
   private coordinationProtocol: AgentCoordinationProtocol;
   private visionManager: VisionManager;
   private activeTasks: Map<string, Task> = new Map();
-  private taskResults: Map<string, any> = new Map();
+  private taskResults: Map<string, ExecutionResult> = new Map();
   private workflows: Map<string, Workflow> = new Map();
   private executionQueue: Task[] = [];
   private isProcessing: boolean = false;
-  private commandHistory: Array<{
-    command: any;
-    result: any;
-    timestamp: Date;
-  }> = [];
+  private commandHistory: CommandHistoryEntry[] = [];
 
   constructor(
     visionManager: VisionManager,
@@ -328,7 +331,7 @@ export class MetaOrchestrator extends EventEmitter {
 
     let iteration = 0;
     const maxIterations = 5;
-    let result: any = null;
+    let result: unknown = null;
     let success = false;
 
     while (iteration < maxIterations && !success) {
@@ -374,7 +377,7 @@ export class MetaOrchestrator extends EventEmitter {
     const hierarchy = await this.createTaskHierarchy(task);
 
     // Execute from top to bottom
-    const results: any[] = [];
+    const results: ParallelResult[] = [];
     for (const level of hierarchy) {
       const levelResults = await this.executeParallel(level);
       results.push(levelResults);
@@ -425,7 +428,7 @@ export class MetaOrchestrator extends EventEmitter {
     const agentResults: Array<{
       agentId: string;
       status: "success" | "failure" | "timeout" | "skipped";
-      result?: any;
+      result?: unknown;
       error?: string;
       duration: number;
     }> = [];
@@ -689,11 +692,12 @@ export class MetaOrchestrator extends EventEmitter {
   /**
    * Refine task based on feedback
    */
-  private async refineTask(task: Task, feedback: any): Promise<Task> {
+  private async refineTask(task: Task, feedback: unknown): Promise<Task> {
     // Simplified refinement - in production would use AI
+    const feedbackStr = typeof feedback === 'string' ? feedback : JSON.stringify(feedback);
     return {
       ...task,
-      description: `${task.description} (refined based on feedback)`,
+      description: `${task.description} (refined based on feedback: ${feedbackStr})`,
     };
   }
 
@@ -846,7 +850,7 @@ export class MetaOrchestrator extends EventEmitter {
   /**
    * Execute command (for API compatibility)
    */
-  async executeCommand(command: any): Promise<any> {
+  async executeCommand(command: unknown): Promise<{ success: boolean; output: string }> {
     const result = {
       success: true,
       output: `Command executed: ${JSON.stringify(command)}`,
@@ -858,14 +862,16 @@ export class MetaOrchestrator extends EventEmitter {
   /**
    * Get command history
    */
-  async getCommandHistory(): Promise<any[]> {
+  async getCommandHistory(): Promise<CommandHistoryEntry[]> {
     return this.commandHistory;
   }
 
   /**
    * Get command suggestions
    */
-  async getCommandSuggestions(context: any): Promise<string[]> {
+  async getCommandSuggestions(context: unknown): Promise<string[]> {
+    // Context is intentionally unused for now - reserved for future AI-powered suggestions
+    void context;
     return [
       "/[FRG]-init",
       "/[FRG]-feature",
@@ -878,7 +884,14 @@ export class MetaOrchestrator extends EventEmitter {
   /**
    * Get YOLO statistics
    */
-  async getYoloStatistics(): Promise<any> {
+  async getYoloStatistics(): Promise<{
+    actionsToday: number;
+    successRate: number;
+    timesSaved: number;
+    issuesFixed: number;
+    performanceGain: number;
+    costSaved: number;
+  }> {
     return {
       actionsToday: 42,
       successRate: 0.95,
@@ -892,7 +905,13 @@ export class MetaOrchestrator extends EventEmitter {
   /**
    * Execute YOLO action
    */
-  async executeYoloAction(action: any): Promise<any> {
+  async executeYoloAction(action: unknown): Promise<{
+    actionId: string;
+    success: boolean;
+    result: string;
+  }> {
+    // Action is intentionally unused for now - reserved for future implementation
+    void action;
     return {
       actionId: crypto.randomBytes(8).toString("hex"),
       success: true,
@@ -903,7 +922,7 @@ export class MetaOrchestrator extends EventEmitter {
   /**
    * Get YOLO history
    */
-  async getYoloHistory(): Promise<any[]> {
+  async getYoloHistory(): Promise<unknown[]> {
     return [];
   }
 

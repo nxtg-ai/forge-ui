@@ -127,13 +127,12 @@ export class ErrorBoundary extends Component<Props, State> {
 
     // Send error to monitoring service in production
     if (process.env.NODE_ENV === "production") {
-      // TODO: Send to error tracking service (Sentry, LogRocket, etc.)
-      console.error("Production error:", {
+      this.reportErrorToService(error, errorInfo);
+    } else {
+      console.error("Development error:", {
         error: error.toString(),
         componentStack: errorInfo.componentStack,
         timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent,
-        url: window.location.href,
       });
     }
   }
@@ -154,6 +153,37 @@ export class ErrorBoundary extends Component<Props, State> {
   handleGoHome = () => {
     window.location.href = "/";
   };
+
+  /**
+   * Report error to external tracking service
+   * Currently sends to /api/errors endpoint
+   * Can be extended to use Sentry, LogRocket, etc.
+   */
+  private reportErrorToService(error: Error, errorInfo: ErrorInfo): void {
+    const errorPayload = {
+      error: error.toString(),
+      message: error.message,
+      name: error.name,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+      timestamp: new Date().toISOString(),
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+      environment: process.env.NODE_ENV,
+    };
+
+    // Send to backend error tracking endpoint
+    fetch("/api/errors", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(errorPayload),
+    }).catch((err) => {
+      console.error("Failed to report error to tracking service:", err);
+    });
+
+    // Log to console as fallback
+    console.error("Production error reported:", errorPayload);
+  }
 
   copyErrorDetails = async () => {
     const { error, errorInfo } = this.state;

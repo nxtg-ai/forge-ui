@@ -1033,6 +1033,49 @@ app.get("/api/diffs/pending", async (req, res) => {
   }
 });
 
+// ============= Error Tracking Endpoint =============
+
+app.post("/api/errors", async (req, res) => {
+  try {
+    const errorData = req.body;
+
+    // Log error with structured format
+    console.error("🚨 Frontend Error Reported:", {
+      message: errorData.message,
+      name: errorData.name,
+      url: errorData.url,
+      timestamp: errorData.timestamp,
+      environment: errorData.environment,
+    });
+
+    // In production, this would forward to Sentry/LogRocket/etc.
+    // For now, we just log it
+    if (process.env.NODE_ENV === "production") {
+      // TODO: Forward to external error tracking service
+      // Example: Sentry.captureException(errorData);
+    }
+
+    // Broadcast error event for monitoring dashboard
+    broadcast("error.reported", {
+      message: errorData.message,
+      timestamp: errorData.timestamp,
+    });
+
+    res.json({
+      success: true,
+      message: "Error reported successfully",
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Failed to log error:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to log error",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 // ============= Runspace Endpoints =============
 
 app.post("/api/runspaces", async (req, res) => {

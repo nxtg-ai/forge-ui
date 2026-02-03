@@ -155,15 +155,26 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
     // Minimal status - UI chrome shows identity + connection badges
     term.writeln("\x1b[90m● Connecting...\x1b[0m");
 
-    // Handle resize
+    // Handle resize with both window events and ResizeObserver for panel toggles
     const handleResize = () => {
       fitAddon.fit();
     };
 
     window.addEventListener("resize", handleResize);
 
+    // Watch terminal container for size changes (e.g., when panels toggle)
+    const resizeObserver = new ResizeObserver(() => {
+      // Use requestAnimationFrame to ensure DOM has updated
+      requestAnimationFrame(() => {
+        fitAddon.fit();
+      });
+    });
+
+    resizeObserver.observe(terminalRef.current);
+
     return () => {
       window.removeEventListener("resize", handleResize);
+      resizeObserver.disconnect();
     };
   }, []);
 

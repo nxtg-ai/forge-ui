@@ -33,8 +33,11 @@ export const Panel: React.FC<PanelProps> = ({
   title,
 }) => {
   // Dispatch resize event to notify terminal of layout change
+  // Use requestAnimationFrame to ensure DOM layout is complete
   const handleAnimationComplete = useCallback(() => {
-    window.dispatchEvent(new Event("resize"));
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("resize"));
+    });
   }, []);
 
   if (!visible) {

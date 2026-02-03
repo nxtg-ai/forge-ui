@@ -41,8 +41,8 @@ interface StateEvent {
   id: string;
   timestamp: Date;
   type: string;
-  data: any;
-  metadata?: Record<string, any>;
+  data: unknown;
+  metadata?: Record<string, unknown>;
 }
 
 // State snapshot
@@ -254,7 +254,7 @@ export class StateManager extends EventEmitter {
 
       return validatedState;
     } catch (error) {
-      if ((error as any).code === "ENOENT") {
+      if (error instanceof Error && 'code' in error && error.code === "ENOENT") {
         logger.info("No existing state found");
         return null;
       }
@@ -523,9 +523,9 @@ export class StateManager extends EventEmitter {
   }
 
   /**
-   * Parse dates in state object
+   * Parse dates in state object (mutates the object)
    */
-  private parseDates(obj: any): void {
+  private parseDates(obj: unknown): void {
     if (obj === null || obj === undefined) return;
 
     if (typeof obj === "string" && this.isISODate(obj)) {
@@ -535,7 +535,8 @@ export class StateManager extends EventEmitter {
     if (Array.isArray(obj)) {
       obj.forEach((item) => this.parseDates(item));
     } else if (typeof obj === "object") {
-      for (const key in obj) {
+      const record = obj as Record<string, unknown>;
+      for (const key in record) {
         if (
           key === "createdAt" ||
           key === "updatedAt" ||
@@ -548,11 +549,11 @@ export class StateManager extends EventEmitter {
           key === "lastInteraction" ||
           key === "lastActive"
         ) {
-          if (typeof obj[key] === "string") {
-            obj[key] = new Date(obj[key]);
+          if (typeof record[key] === "string") {
+            record[key] = new Date(record[key] as string);
           }
         } else {
-          this.parseDates(obj[key]);
+          this.parseDates(record[key]);
         }
       }
     }
@@ -663,7 +664,13 @@ export class StateManager extends EventEmitter {
     return this.currentState;
   }
 
-  async getHealthMetrics(): Promise<any> {
+  async getHealthMetrics(): Promise<{
+    healthy: boolean;
+    taskCompletion: number;
+    failedTasks: number;
+    totalTasks: number;
+    timestamp: Date;
+  }> {
     const tasks = this.currentState?.currentTasks || [];
     const completed = tasks.filter((t) => t.status === "completed").length;
     const failed = tasks.filter((t) => t.status === "failed").length;

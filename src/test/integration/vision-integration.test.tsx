@@ -19,8 +19,11 @@ import path from 'path';
 // Uses partial mocking to preserve module structure while controlling fs behavior
 vi.mock("fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("fs")>();
+  // Create ENOENT error inside the mock factory to avoid hoisting issues
+  // VisionManager checks for `error instanceof Error && 'code' in error`
+  const enoentError = Object.assign(new Error("ENOENT"), { code: "ENOENT" });
   const mockPromises = {
-    readFile: vi.fn().mockRejectedValue({ code: "ENOENT" }),
+    readFile: vi.fn().mockRejectedValue(enoentError),
     writeFile: vi.fn().mockResolvedValue(undefined),
     mkdir: vi.fn().mockResolvedValue(undefined),
     access: vi.fn().mockResolvedValue(undefined),
@@ -48,7 +51,9 @@ describe('Vision Integration: UI -> Backend -> File System', () => {
     visionManager = new VisionManager(mockProjectPath);
     vi.clearAllMocks();
     // Reset mock implementations to defaults (ENOENT = file not found)
-    (fs.readFile as any).mockRejectedValue({ code: "ENOENT" });
+    // VisionManager checks for `error instanceof Error && 'code' in error`
+    const enoentError = Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+    (fs.readFile as any).mockRejectedValue(enoentError);
     (fs.writeFile as any).mockResolvedValue(undefined);
     (fs.mkdir as any).mockResolvedValue(undefined);
     (fs.appendFile as any).mockResolvedValue(undefined);
@@ -314,7 +319,8 @@ describe('Vision Integration: UI -> Backend -> File System', () => {
 
   describe('Error handling and recovery', () => {
     it('should create default vision if file does not exist', async () => {
-      (fs.readFile as any).mockRejectedValue({ code: 'ENOENT' });
+      const enoentError = Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+      (fs.readFile as any).mockRejectedValue(enoentError);
 
       await visionManager.initialize();
       const vision = visionManager.getCurrentVision();

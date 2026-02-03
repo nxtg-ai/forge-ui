@@ -53,6 +53,11 @@ export const InfinityTerminalLayout: React.FC<InfinityTerminalLayoutProps> = ({
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -layout.sidebarWidth, opacity: 0 }}
             transition={{ duration: 0.2 }}
+            onAnimationComplete={() => {
+              requestAnimationFrame(() => {
+                window.dispatchEvent(new Event("resize"));
+              });
+            }}
             className="flex-shrink-0 border-r border-gray-800 bg-gray-950 overflow-y-auto"
             style={{ width: `${layout.sidebarWidth}px` }}
           >
@@ -72,6 +77,11 @@ export const InfinityTerminalLayout: React.FC<InfinityTerminalLayoutProps> = ({
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: layout.hudWidth, opacity: 0 }}
             transition={{ duration: 0.2 }}
+            onAnimationComplete={() => {
+              requestAnimationFrame(() => {
+                window.dispatchEvent(new Event("resize"));
+              });
+            }}
             className="flex-shrink-0 border-l border-gray-800 bg-gray-950 overflow-y-auto"
             style={{ width: `${layout.hudWidth}px` }}
           >
