@@ -21,8 +21,34 @@ import * as path from "path";
 import { GovernanceState } from "../types/governance.types";
 import { GovernanceStateManager } from "../services/governance-state-manager";
 import { AgentWorkerPool, PoolStatus, AgentTask } from "./workers";
+import {
+  initSentryServer,
+  captureException,
+  setTag,
+  addBreadcrumb,
+  flushSentry,
+} from "../monitoring/sentry";
 
 const app = express();
+
+// Initialize Sentry early (before other middleware)
+let sentryReady = false;
+initSentryServer()
+  .then((ready) => {
+    sentryReady = ready;
+    if (ready) {
+      setTag("server", "api-server");
+      addBreadcrumb({
+        category: "lifecycle",
+        message: "API server starting",
+        level: "info",
+      });
+      console.log("[Sentry] Error tracking ready");
+    }
+  })
+  .catch((err) => {
+    console.warn("[Sentry] Initialization failed:", err);
+  });
 const server = createServer(app);
 const wss = new WebSocketServer({ noServer: true });
 
@@ -1049,11 +1075,19 @@ app.post("/api/errors", async (req, res) => {
       environment: errorData.environment,
     });
 
-    // In production, forward to Sentry/LogRocket/etc.
-    // Configure via SENTRY_DSN environment variable
-    if (process.env.NODE_ENV === "production" && process.env.SENTRY_DSN) {
-      // Error tracking integration point: import Sentry and call captureException
-      console.log("[ErrorTracking] Would send to Sentry:", errorData.message);
+    // Send to Sentry if initialized
+    if (sentryReady) {
+      const error = new Error(errorData.message);
+      error.name = errorData.name || "FrontendError";
+      error.stack = errorData.stack;
+
+      captureException(error, {
+        url: errorData.url,
+        userAgent: errorData.userAgent,
+        componentStack: errorData.componentStack,
+        timestamp: errorData.timestamp,
+        source: "frontend",
+      });
     }
 
     // Broadcast error event for monitoring dashboard
@@ -1670,6 +1704,12 @@ server.listen(PORT, "0.0.0.0", async () => {
 // Graceful shutdown
 process.on("SIGTERM", async () => {
   console.log("SIGTERM received, closing server...");
+
+  // Flush Sentry events before shutdown
+  if (sentryReady) {
+    console.log("Flushing Sentry events...");
+    await flushSentry(2000);
+  }
 
   // Shutdown worker pool
   if (workerPool) {
