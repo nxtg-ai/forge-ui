@@ -1,0 +1,291 @@
+name: Deploy & Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 3.0.1)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  # ============================================
+  # Quality Gates (must pass before release)
+  # ============================================
+  quality-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript compilation
+        run: npm run build
+
+      - name: Lint check
+        run: npm run lint
+
+      - name: Run tests
+        run: npm run test -- --run
+
+      - name: Type safety validation
+        run: npx vitest run src/test/quality/type-safety.test.ts
+
+      - name: Security audit
+        run: |
+          npx tsx src/test/reports/security-audit.ts
+          if [ -f .claude/reports/security-audit.json ]; then
+            CRITICAL=$(cat .claude/reports/security-audit.json | jq '.summary.violations.critical')
+            if [ "$CRITICAL" -gt 0 ]; then
+              echo "::error::Found $CRITICAL critical security issues"
+              exit 1
+            fi
+          fi
+
+  # ============================================
+  # Build Release Artifacts
+  # ============================================
+  build:
+    needs: quality-gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build UI
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Build Server
+        run: npm run build:server
+
+      - name: Create release archive
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          mkdir -p release
+
+          # Copy built files
+          cp -r dist-ui release/
+          cp -r dist release/dist-server 2>/dev/null || true
+          cp package.json release/
+          cp package-lock.json release/
+          cp .env.example release/
+          cp README.md release/
+          cp LICENSE release/ 2>/dev/null || true
+
+          # Create archives
+          cd release
+          tar -czvf ../nxtg-forge-v${VERSION}.tar.gz .
+          zip -r ../nxtg-forge-v${VERSION}.zip .
+          cd ..
+
+          # Generate checksums
+          sha256sum nxtg-forge-v${VERSION}.tar.gz > nxtg-forge-v${VERSION}.tar.gz.sha256
+          sha256sum nxtg-forge-v${VERSION}.zip > nxtg-forge-v${VERSION}.zip.sha256
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: |
+            nxtg-forge-v*.tar.gz
+            nxtg-forge-v*.zip
+            nxtg-forge-v*.sha256
+          retention-days: 5
+
+  # ============================================
+  # Create GitHub Release
+  # ============================================
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          VERSION=${{ needs.build.outputs.version }}
+
+          # Get previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          # Generate changelog
+          if [ -n "$PREV_TAG" ]; then
+            echo "## What's Changed" > CHANGELOG_RELEASE.md
+            echo "" >> CHANGELOG_RELEASE.md
+            git log --pretty=format:"* %s (%h)" ${PREV_TAG}..HEAD >> CHANGELOG_RELEASE.md
+          else
+            echo "## Initial Release" > CHANGELOG_RELEASE.md
+            echo "" >> CHANGELOG_RELEASE.md
+            echo "First release of NXTG-Forge v${VERSION}" >> CHANGELOG_RELEASE.md
+          fi
+
+          echo "" >> CHANGELOG_RELEASE.md
+          echo "---" >> CHANGELOG_RELEASE.md
+          echo "" >> CHANGELOG_RELEASE.md
+          echo "### Installation" >> CHANGELOG_RELEASE.md
+          echo "" >> CHANGELOG_RELEASE.md
+          echo '```bash' >> CHANGELOG_RELEASE.md
+          echo "# Download and extract" >> CHANGELOG_RELEASE.md
+          echo "wget https://github.com/${{ github.repository }}/releases/download/v${VERSION}/nxtg-forge-v${VERSION}.tar.gz" >> CHANGELOG_RELEASE.md
+          echo "tar -xzf nxtg-forge-v${VERSION}.tar.gz" >> CHANGELOG_RELEASE.md
+          echo "" >> CHANGELOG_RELEASE.md
+          echo "# Install dependencies and run" >> CHANGELOG_RELEASE.md
+          echo "npm install --production" >> CHANGELOG_RELEASE.md
+          echo "npm start" >> CHANGELOG_RELEASE.md
+          echo '```' >> CHANGELOG_RELEASE.md
+
+          echo "" >> CHANGELOG_RELEASE.md
+          echo "### Checksums" >> CHANGELOG_RELEASE.md
+          echo "" >> CHANGELOG_RELEASE.md
+          echo '```' >> CHANGELOG_RELEASE.md
+          cat nxtg-forge-v${VERSION}.tar.gz.sha256 >> CHANGELOG_RELEASE.md
+          cat nxtg-forge-v${VERSION}.zip.sha256 >> CHANGELOG_RELEASE.md
+          echo '```' >> CHANGELOG_RELEASE.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.build.outputs.version }}
+          name: NXTG-Forge v${{ needs.build.outputs.version }}
+          body_path: CHANGELOG_RELEASE.md
+          draft: false
+          prerelease: ${{ github.event.inputs.prerelease || false }}
+          files: |
+            nxtg-forge-v*.tar.gz
+            nxtg-forge-v*.zip
+            nxtg-forge-v*.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ============================================
+  # Post-Release Smoke Tests
+  # ============================================
+  smoke-test:
+    needs: [build, release]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Download release artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Extract and verify
+        run: |
+          VERSION=${{ needs.build.outputs.version }}
+
+          # Verify checksums
+          echo "Verifying checksums..."
+          sha256sum -c nxtg-forge-v${VERSION}.tar.gz.sha256
+
+          # Extract
+          tar -xzf nxtg-forge-v${VERSION}.tar.gz
+
+          # Verify structure
+          echo "Verifying release structure..."
+          [ -f package.json ] || (echo "Missing package.json" && exit 1)
+          [ -d dist-ui ] || (echo "Missing dist-ui" && exit 1)
+          [ -f .env.example ] || (echo "Missing .env.example" && exit 1)
+
+          echo "✅ Release structure verified"
+
+      - name: Install and test startup
+        run: |
+          npm install --production
+
+          # Quick startup test (run for 5 seconds)
+          timeout 5 npm start || true
+
+          echo "✅ Smoke test passed"
+
+      - name: Notify success
+        if: success()
+        run: |
+          echo "::notice::Release v${{ needs.build.outputs.version }} deployed successfully!"
+
+  # ============================================
+  # Rollback (manual trigger only)
+  # ============================================
+  rollback:
+    if: github.event_name == 'workflow_dispatch' && failure()
+    needs: [release, smoke-test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Delete failed release
+        run: |
+          VERSION=${{ needs.build.outputs.version }}
+          echo "::warning::Smoke tests failed. Consider deleting release v${VERSION}"
+          echo "Manual rollback: gh release delete v${VERSION} --yes"

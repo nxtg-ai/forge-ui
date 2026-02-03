@@ -1,0 +1,75 @@
+name: Staging Build
+
+on:
+  push:
+    branches: [develop, release/*]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  # ============================================
+  # Build and Test (Staging Environment)
+  # ============================================
+  staging-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: |
+          npm run build
+          npm run build:server
+        env:
+          NODE_ENV: staging
+
+      - name: Run full test suite
+        run: npm run test -- --run --coverage
+
+      - name: Security audit
+        run: npx tsx src/test/reports/security-audit.ts
+
+      - name: Performance tests
+        run: npx vitest run src/test/performance/
+
+      - name: Integration tests
+        run: npx vitest run src/test/integration/
+
+      - name: Upload staging build
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-build-${{ github.sha }}
+          path: |
+            dist-ui/
+            dist/
+            package.json
+          retention-days: 7
+
+      - name: Summary
+        run: |
+          echo "### Staging Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Performance | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Ready for release: \`git tag v$(cat package.json | jq -r .version) && git push --tags\`" >> $GITHUB_STEP_SUMMARY
