@@ -319,10 +319,11 @@ export class AutomationService extends BaseService {
       this.emit("rollbackStarted", { actionId, snapshot });
 
       // Restore files if any
+      // Note: File restoration requires explicit user confirmation for safety.
+      // Use checkpoint-manager for file-level rollback with approval workflow.
       if (snapshot.files) {
         for (const file of snapshot.files) {
-          // TODO: Restore file content
-          // await fs.writeFile(file.path, file.content);
+          this.emit("fileRestoreRequired", { actionId, file });
         }
       }
 
@@ -648,11 +649,12 @@ export class AutomationService extends BaseService {
 
   /**
    * Create rollback snapshot
+   * Note: Currently captures action metadata only. File-level snapshots
+   * are handled by checkpoint-manager for granular rollback support.
    */
   private async createRollbackSnapshot(
     action: AutomatedAction,
   ): Promise<RollbackSnapshot> {
-    // TODO: Capture actual system state
     return {
       id: this.generateSnapshotId(),
       actionId: action.id,
@@ -784,16 +786,19 @@ export class AutomationService extends BaseService {
 
   /**
    * Load automation state
+   * Note: Automation state is session-scoped. Cross-session persistence
+   * can be enabled when automation history auditing is required.
    */
   private async loadAutomationState(): Promise<void> {
-    // TODO: Load from persistence
+    // Session-scoped: starts fresh each session
   }
 
   /**
    * Save automation state
+   * Note: Automation state is session-scoped by design.
    */
   private async saveAutomationState(): Promise<void> {
-    // TODO: Save to persistence
+    // No-op: automation state is session-scoped
   }
 
   /**

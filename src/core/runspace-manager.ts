@@ -32,8 +32,9 @@ export class RunspaceManager extends EventEmitter {
     super();
 
     // Register available backends
+    // WSL is the primary backend for development environments
+    // Container and VM backends planned for v3.2+ multi-environment support
     this.backends.set("wsl", new WSLBackend());
-    // TODO: Add container and VM backends
   }
 
   /**

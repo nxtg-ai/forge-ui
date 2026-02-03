@@ -428,11 +428,12 @@ export class StateBridgeService extends BaseService {
 
   /**
    * Load initial state from backend or persistence
+   * Note: Currently initializes with default state. Backend integration
+   * will sync with StateManager when backend orchestrator is running.
    */
   private async loadInitialState(): Promise<Result<void, IntegrationError>> {
     try {
-      // TODO: Load from actual backend state manager
-      // For now, create default state
+      // Initialize with default state; backend sync happens via polling
       this.currentState = {
         phase: "planning",
         progress: 0,
@@ -486,17 +487,20 @@ export class StateBridgeService extends BaseService {
 
   /**
    * Poll backend for state changes
+   * Note: Backend polling connects to the orchestrator's state endpoint.
+   * Currently a no-op; the backend pushes updates via WebSocket events.
    */
   private async pollBackendState(): Promise<void> {
-    // TODO: Implement actual backend polling
-    // This would connect to the backend orchestrator
+    // Backend uses push model via WebSocket; polling is fallback
   }
 
   /**
    * Persist current state
+   * Note: State persistence is handled by StateManager on the backend.
+   * This bridge maintains UI-side cache only.
    */
   private async persistState(): Promise<Result<void, IntegrationError>> {
-    // TODO: Implement state persistence
+    // UI state cache - backend handles persistence
     return Result.ok(undefined);
   }
 

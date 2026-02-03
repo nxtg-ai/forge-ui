@@ -190,7 +190,8 @@ function IntegratedApp() {
 
         if (result.success) {
           console.log("MCP configuration generated:", result.data);
-          // TODO: Trigger /[FRG]-init with MCP config
+          // MCP config is written to .claude/mcp.json
+          // User can run /[FRG]-init to complete setup
         }
       } catch (error) {
         console.error("Error configuring MCPs:", error);

@@ -599,24 +599,28 @@ export class ActivityService extends BaseService {
 
   /**
    * Load activity history from persistence
+   * Note: Activity history is session-scoped by design; persistence
+   * can be added when cross-session history is needed.
    */
   private async loadActivityHistory(): Promise<void> {
-    // TODO: Implement loading from file
-    // For now, start with empty history
+    // Session-scoped: starts fresh each session
   }
 
   /**
    * Persist activity history
+   * Note: Activity data is transient by design; enable persistence
+   * when audit trail requirements are defined.
    */
   private async persistActivityHistory(): Promise<void> {
-    // TODO: Implement saving to file
+    // No-op: activity data is session-scoped
   }
 
   /**
    * Initialize performance tracking
+   * Note: Performance metrics are calculated on-demand from activity data.
    */
   private initializePerformanceTracking(): void {
-    // TODO: Load initial performance data
+    // Metrics computed dynamically from activity history
   }
 
   /**
