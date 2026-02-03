@@ -1,0 +1,1378 @@
+openapi: 3.1.0
+info:
+  title: NXTG-Forge API
+  description: |
+    REST API for NXTG-Forge - AI-Orchestrated Development System.
+
+    ## Authentication
+    Currently no authentication required for local development.
+    Production deployments should configure JWT authentication.
+
+    ## WebSocket
+    Real-time updates available at `ws://localhost:5051/ws`
+
+    ## Terminal
+    PTY terminal sessions at `ws://localhost:5051/terminal`
+  version: 3.0.0
+  contact:
+    name: NXTG Team
+    url: https://github.com/nxtg-ai/forge
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:5051
+    description: Local development server
+  - url: http://{host}:5051
+    description: Custom host
+    variables:
+      host:
+        default: localhost
+
+tags:
+  - name: Vision
+    description: Project vision and goals management
+  - name: State
+    description: Application state management
+  - name: Agents
+    description: AI agent coordination
+  - name: Commands
+    description: Command execution and history
+  - name: Architecture
+    description: Architecture decisions
+  - name: YOLO Mode
+    description: Autonomous execution mode
+  - name: Governance
+    description: Project governance and compliance
+  - name: Runspaces
+    description: Multi-project workspace management
+  - name: Workers
+    description: Agent worker pool management
+  - name: MCP
+    description: Model Context Protocol suggestions
+  - name: System
+    description: Health and error reporting
+
+paths:
+  # ==================== Vision ====================
+  /api/vision:
+    get:
+      tags: [Vision]
+      summary: Get current vision
+      description: Retrieve the current project vision including mission, goals, and principles
+      responses:
+        '200':
+          description: Vision retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                success: true
+                data:
+                  mission: "Build the Ultimate Chief of Staff for Developers"
+                  goals: ["Launch v3.0", "Build Agent Ecosystem"]
+                  principles: ["Ship fast", "Iterate faster"]
+                  currentFocus: "Production Polish"
+                timestamp: "2026-02-03T00:00:00Z"
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      tags: [Vision]
+      summary: Update vision
+      description: Update the entire project vision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Vision'
+      responses:
+        '200':
+          description: Vision updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/vision/capture:
+    post:
+      tags: [Vision]
+      summary: Capture vision from text
+      description: Parse and capture vision from natural language text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                  description: Natural language vision description
+                  example: "Build a SaaS platform for developer productivity"
+      responses:
+        '200':
+          description: Vision captured successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/vision/history:
+    get:
+      tags: [Vision]
+      summary: Get vision history
+      description: Retrieve the history of vision changes
+      responses:
+        '200':
+          description: Vision history retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/vision/alignment:
+    post:
+      tags: [Vision]
+      summary: Check decision alignment
+      description: Check if a proposed decision aligns with the project vision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision:
+                  type: string
+                  description: The decision to check for alignment
+                  example: "Add GraphQL support to the API"
+      responses:
+        '200':
+          description: Alignment check completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                success: true
+                data:
+                  decision: "Add GraphQL support to the API"
+                  aligned: true
+                  score: 0.85
+                  suggestions: ["Consider REST-first approach"]
+                timestamp: "2026-02-03T00:00:00Z"
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ==================== State ====================
+  /api/state:
+    get:
+      tags: [State]
+      summary: Get application state
+      description: Retrieve the current application state
+      responses:
+        '200':
+          description: State retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/state/phase:
+    patch:
+      tags: [State]
+      summary: Update project phase
+      description: Update the current project phase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phase]
+              properties:
+                phase:
+                  type: string
+                  enum: [planning, development, testing, deployment, maintenance]
+                  example: development
+      responses:
+        '200':
+          description: Phase updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/state/health:
+    get:
+      tags: [State]
+      summary: Get health metrics
+      description: Retrieve application health metrics
+      responses:
+        '200':
+          description: Health metrics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ==================== Agents ====================
+  /api/agents/activities:
+    get:
+      tags: [Agents]
+      summary: Get agent activities
+      description: Retrieve paginated list of agent activities
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            default: timestamp
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Activities retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/agents/active:
+    get:
+      tags: [Agents]
+      summary: Get active agents
+      description: Retrieve list of currently active agents
+      responses:
+        '200':
+          description: Active agents retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/agents/{agentId}/tasks:
+    post:
+      tags: [Agents]
+      summary: Assign task to agent
+      description: Assign a new task to a specific agent
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentTask'
+      responses:
+        '200':
+          description: Task assigned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ==================== Commands ====================
+  /api/commands/execute:
+    post:
+      tags: [Commands]
+      summary: Execute command
+      description: Execute a command through the orchestrator
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Command'
+      responses:
+        '200':
+          description: Command executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/commands/history:
+    get:
+      tags: [Commands]
+      summary: Get command history
+      description: Retrieve history of executed commands
+      responses:
+        '200':
+          description: Command history retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/commands/suggestions:
+    post:
+      tags: [Commands]
+      summary: Get command suggestions
+      description: Get AI-powered command suggestions based on context
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                context:
+                  type: string
+                  description: Current context for suggestions
+      responses:
+        '200':
+          description: Suggestions retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ==================== Architecture ====================
+  /api/architecture/decisions:
+    get:
+      tags: [Architecture]
+      summary: Get architecture decisions
+      description: Retrieve all architecture decision records (ADRs)
+      responses:
+        '200':
+          description: Decisions retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/architecture/propose:
+    post:
+      tags: [Architecture]
+      summary: Propose architecture decision
+      description: Propose a new architecture decision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArchitectureDecision'
+      responses:
+        '200':
+          description: Decision proposed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/architecture/decisions/{decisionId}/approve:
+    post:
+      tags: [Architecture]
+      summary: Approve architecture decision
+      description: Approve a pending architecture decision
+      parameters:
+        - name: decisionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Decision approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ==================== YOLO Mode ====================
+  /api/yolo/statistics:
+    get:
+      tags: [YOLO Mode]
+      summary: Get YOLO statistics
+      description: Retrieve YOLO mode execution statistics
+      responses:
+        '200':
+          description: Statistics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/yolo/execute:
+    post:
+      tags: [YOLO Mode]
+      summary: Execute YOLO action
+      description: Execute an action in autonomous YOLO mode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  description: Action to execute
+      responses:
+        '200':
+          description: Action executed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/yolo/history:
+    get:
+      tags: [YOLO Mode]
+      summary: Get YOLO history
+      description: Retrieve history of YOLO mode executions
+      responses:
+        '200':
+          description: History retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ==================== Governance ====================
+  /api/governance/state:
+    get:
+      tags: [Governance]
+      summary: Get governance state
+      description: Retrieve current governance state
+      responses:
+        '200':
+          description: Governance state retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Governance state not found
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/governance/config:
+    get:
+      tags: [Governance]
+      summary: Get governance config
+      description: Retrieve governance configuration
+      responses:
+        '200':
+          description: Config retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/governance/sentinel:
+    post:
+      tags: [Governance]
+      summary: Add sentinel log entry
+      description: Add a new entry to the sentinel log
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, source, message]
+              properties:
+                type:
+                  type: string
+                  enum: [info, warning, violation, success]
+                source:
+                  type: string
+                message:
+                  type: string
+      responses:
+        '200':
+          description: Log entry added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Missing required fields
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/governance/validate:
+    get:
+      tags: [Governance]
+      summary: Validate governance state
+      description: Validate the integrity of governance state
+      responses:
+        '200':
+          description: Validation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/governance/backup/latest:
+    get:
+      tags: [Governance]
+      summary: Get latest backup
+      description: Retrieve the most recent governance backup
+      responses:
+        '200':
+          description: Backup retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: No backups found
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ==================== Runspaces ====================
+  /api/runspaces:
+    get:
+      tags: [Runspaces]
+      summary: List all runspaces
+      description: Retrieve all runspaces and active runspace ID
+      responses:
+        '200':
+          description: Runspaces retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Runspaces]
+      summary: Create runspace
+      description: Create a new runspace for a project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RunspaceConfig'
+      responses:
+        '200':
+          description: Runspace created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/runspaces/{id}:
+    get:
+      tags: [Runspaces]
+      summary: Get runspace
+      description: Retrieve a specific runspace by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Runspace retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Runspace not found
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      tags: [Runspaces]
+      summary: Update runspace
+      description: Update runspace configuration
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RunspaceConfig'
+      responses:
+        '200':
+          description: Runspace updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Runspaces]
+      summary: Delete runspace
+      description: Delete a runspace
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: deleteFiles
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Also delete project files
+      responses:
+        '200':
+          description: Runspace deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/runspaces/{id}/switch:
+    post:
+      tags: [Runspaces]
+      summary: Switch to runspace
+      description: Switch the active runspace
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Switched successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/runspaces/{id}/start:
+    post:
+      tags: [Runspaces]
+      summary: Start runspace
+      description: Start a runspace
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Runspace started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/runspaces/{id}/stop:
+    post:
+      tags: [Runspaces]
+      summary: Stop runspace
+      description: Stop a runspace
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Runspace stopped
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/runspaces/{id}/suspend:
+    post:
+      tags: [Runspaces]
+      summary: Suspend runspace
+      description: Suspend a runspace (pause without stopping)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Runspace suspended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/runspaces/{id}/health:
+    get:
+      tags: [Runspaces]
+      summary: Get runspace health
+      description: Get health status of a specific runspace
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Health status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ==================== Workers ====================
+  /api/workers:
+    get:
+      tags: [Workers]
+      summary: Get worker pool status
+      description: Retrieve current status of the worker pool
+      responses:
+        '200':
+          description: Status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/workers/init:
+    post:
+      tags: [Workers]
+      summary: Initialize worker pool
+      description: Initialize the agent worker pool
+      responses:
+        '200':
+          description: Pool initialized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/workers/metrics:
+    get:
+      tags: [Workers]
+      summary: Get pool metrics
+      description: Retrieve worker pool metrics
+      responses:
+        '200':
+          description: Metrics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Worker pool not initialized
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/workers/health:
+    get:
+      tags: [Workers]
+      summary: Get worker pool health
+      description: Get health status of the worker pool
+      responses:
+        '200':
+          description: Health status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/workers/{workerId}:
+    get:
+      tags: [Workers]
+      summary: Get worker details
+      description: Get details of a specific worker
+      parameters:
+        - name: workerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Worker details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Worker not found
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/workers/tasks:
+    post:
+      tags: [Workers]
+      summary: Submit task to pool
+      description: Submit a new task to the worker pool
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkerTask'
+      responses:
+        '200':
+          description: Task submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+              example:
+                success: true
+                data:
+                  taskId: "task-abc123"
+                timestamp: "2026-02-03T00:00:00Z"
+        '400':
+          description: Missing required fields
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/workers/tasks/{taskId}:
+    get:
+      tags: [Workers]
+      summary: Get task status
+      description: Get status of a submitted task
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Task not found
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Workers]
+      summary: Cancel task
+      description: Cancel a pending or running task
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Task not found
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/workers/scale/up:
+    post:
+      tags: [Workers]
+      summary: Scale up workers
+      description: Add more workers to the pool
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                count:
+                  type: integer
+                  default: 2
+                  description: Number of workers to add
+      responses:
+        '200':
+          description: Scaled up successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/workers/scale/down:
+    post:
+      tags: [Workers]
+      summary: Scale down workers
+      description: Remove workers from the pool
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                count:
+                  type: integer
+                  default: 1
+                  description: Number of workers to remove
+      responses:
+        '200':
+          description: Scaled down successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '404':
+          description: Worker pool not initialized
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/workers/shutdown:
+    post:
+      tags: [Workers]
+      summary: Shutdown worker pool
+      description: Gracefully shutdown the entire worker pool
+      responses:
+        '200':
+          description: Pool shutdown complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ==================== MCP ====================
+  /api/mcp/suggestions:
+    post:
+      tags: [MCP]
+      summary: Get MCP suggestions
+      description: Get AI-powered MCP server suggestions based on vision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [vision]
+              properties:
+                vision:
+                  type: object
+                  description: Project vision context
+      responses:
+        '200':
+          description: Suggestions retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/mcp/configure:
+    post:
+      tags: [MCP]
+      summary: Configure MCP servers
+      description: Generate MCP configuration for selected servers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [selectedServers]
+              properties:
+                selectedServers:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Configuration generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ==================== System ====================
+  /api/health:
+    get:
+      tags: [System]
+      summary: Health check
+      description: Check the health status of all services
+      responses:
+        '200':
+          description: Health status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, unhealthy, degraded]
+                  timestamp:
+                    type: string
+                    format: date-time
+                  services:
+                    type: object
+                    properties:
+                      orchestrator:
+                        type: boolean
+                      vision:
+                        type: boolean
+                      state:
+                        type: boolean
+                      coordination:
+                        type: boolean
+                      websocket:
+                        type: boolean
+              example:
+                status: healthy
+                timestamp: "2026-02-03T00:00:00Z"
+                services:
+                  orchestrator: true
+                  vision: true
+                  state: true
+                  coordination: true
+                  websocket: true
+
+  /api/errors:
+    post:
+      tags: [System]
+      summary: Report error
+      description: Report a frontend error for tracking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                name:
+                  type: string
+                stack:
+                  type: string
+                url:
+                  type: string
+                userAgent:
+                  type: string
+                timestamp:
+                  type: string
+                environment:
+                  type: string
+      responses:
+        '200':
+          description: Error reported
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/memory/seed:
+    get:
+      tags: [System]
+      summary: Get memory seed data
+      description: Get seed data for the memory system
+      responses:
+        '200':
+          description: Seed data retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/diffs/apply:
+    post:
+      tags: [System]
+      summary: Apply diff
+      description: Apply a pending diff to a file
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [filePath]
+              properties:
+                filePath:
+                  type: string
+                timestamp:
+                  type: string
+      responses:
+        '200':
+          description: Diff applied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Missing filePath
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/diffs/reject:
+    post:
+      tags: [System]
+      summary: Reject diff
+      description: Reject a pending diff
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [filePath]
+              properties:
+                filePath:
+                  type: string
+                timestamp:
+                  type: string
+      responses:
+        '200':
+          description: Diff rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Missing filePath
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/diffs/pending:
+    get:
+      tags: [System]
+      summary: Get pending diffs
+      description: Get list of pending diffs awaiting approval
+      responses:
+        '200':
+          description: Pending diffs retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+        error:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    Vision:
+      type: object
+      properties:
+        mission:
+          type: string
+        goals:
+          type: array
+          items:
+            type: string
+        principles:
+          type: array
+          items:
+            type: string
+        currentFocus:
+          type: string
+        techStack:
+          type: object
+
+    AgentTask:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+        deadline:
+          type: string
+          format: date-time
+
+    Command:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+        payload:
+          type: object
+        correlationId:
+          type: string
+
+    ArchitectureDecision:
+      type: object
+      required: [title, context, decision]
+      properties:
+        title:
+          type: string
+        context:
+          type: string
+        decision:
+          type: string
+        consequences:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [proposed, accepted, rejected, deprecated]
+
+    RunspaceConfig:
+      type: object
+      required: [name, projectPath]
+      properties:
+        name:
+          type: string
+        projectPath:
+          type: string
+        description:
+          type: string
+        backend:
+          type: string
+          enum: [wsl, container, vm]
+          default: wsl
+
+    WorkerTask:
+      type: object
+      required: [type, command]
+      properties:
+        type:
+          type: string
+        command:
+          type: string
+        args:
+          type: array
+          items:
+            type: string
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+          default: medium
+        workstreamId:
+          type: string
+        timeout:
+          type: integer
+        env:
+          type: object
+        metadata:
+          type: object
+
+  responses:
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+          example:
+            success: false
+            error: "Internal server error"
+            timestamp: "2026-02-03T00:00:00Z"

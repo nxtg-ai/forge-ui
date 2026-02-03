@@ -28,6 +28,7 @@ import {
   addBreadcrumb,
   flushSentry,
 } from "../monitoring/sentry";
+import swaggerRouter from "./swagger";
 
 const app = express();
 
@@ -85,6 +86,9 @@ app.use(
   }),
 );
 app.use(express.json());
+
+// API Documentation (Swagger UI)
+app.use(swaggerRouter);
 
 // Initialize core services
 const visionManager = new VisionSystem(process.cwd());
