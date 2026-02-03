@@ -19,7 +19,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+
 import {
   BarChart3,
   Target,
@@ -265,69 +265,64 @@ const EngagementModeSelector: React.FC = () => {
         />
       </button>
 
-      {/* Mode Selector Dropdown */}
-      <AnimatePresence>
-        {showModeSelector && (
-          <motion.div
-            ref={modeDropdownRef}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            role="listbox"
-            aria-label="Engagement mode options"
-            className="absolute top-full right-0 mt-2 w-80 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-[100] overflow-hidden"
-            data-testid="engagement-mode-dropdown"
-          >
-            <div className="p-2">
-              <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider" aria-hidden="true">
-                Engagement Mode
-              </div>
-              {(modeKeys.map((modeKey, index) => {
-                const config = ENGAGEMENT_MODE_CONFIG[modeKey];
-                return (
-                  <button
-                    key={modeKey}
-                    onClick={() => handleModeChange(modeKey)}
-                    onMouseEnter={() => setSelectedModeIndex(index)}
-                    role="option"
-                    aria-selected={mode === modeKey}
-                    aria-label={`${config.label} mode: ${config.description}`}
-                    className={`
-                      w-full flex items-start gap-3 px-3 py-3 rounded-lg
-                      transition-all text-left
-                      ${
-                        selectedModeIndex === index
-                          ? "bg-gray-800 ring-2 ring-purple-500/50"
-                          : mode === modeKey
-                          ? "bg-purple-500/20 border border-purple-500/30"
-                          : "hover:bg-gray-800"
-                      }
-                    `}
-                    data-testid={`engagement-mode-${modeKey}`}
-                  >
-                    <div className={`mt-0.5 ${mode === modeKey ? "text-purple-400" : "text-gray-400"}`} aria-hidden="true">
-                      {config.icon}
-                    </div>
-                    <div className="flex-1">
-                      <div className={`font-semibold text-sm mb-1 ${mode === modeKey ? "text-purple-400" : "text-gray-200"}`}>
-                        {config.label}
-                      </div>
-                      <div className="text-xs text-gray-400">
-                        {config.description}
-                      </div>
-                    </div>
-                    {mode === modeKey && (
-                      <div className="text-purple-400" aria-hidden="true">
-                        <CheckCircle className="w-4 h-4" />
-                      </div>
-                    )}
-                  </button>
-                );
-              }))}
+      {/* Mode Selector Dropdown - uses CSS transitions to avoid AnimatePresence hooks bug with React 19 */}
+      {showModeSelector && (
+        <div
+          ref={modeDropdownRef}
+          role="listbox"
+          aria-label="Engagement mode options"
+          className="absolute top-full right-0 mt-2 w-80 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-[100] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150"
+          data-testid="engagement-mode-dropdown"
+        >
+          <div className="p-2">
+            <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider" aria-hidden="true">
+              Engagement Mode
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {(modeKeys.map((modeKey, index) => {
+              const config = ENGAGEMENT_MODE_CONFIG[modeKey];
+              return (
+                <button
+                  key={modeKey}
+                  onClick={() => handleModeChange(modeKey)}
+                  onMouseEnter={() => setSelectedModeIndex(index)}
+                  role="option"
+                  aria-selected={mode === modeKey}
+                  aria-label={`${config.label} mode: ${config.description}`}
+                  className={`
+                    w-full flex items-start gap-3 px-3 py-3 rounded-lg
+                    transition-all text-left
+                    ${
+                      selectedModeIndex === index
+                        ? "bg-gray-800 ring-2 ring-purple-500/50"
+                        : mode === modeKey
+                        ? "bg-purple-500/20 border border-purple-500/30"
+                        : "hover:bg-gray-800"
+                    }
+                  `}
+                  data-testid={`engagement-mode-${modeKey}`}
+                >
+                  <div className={`mt-0.5 ${mode === modeKey ? "text-purple-400" : "text-gray-400"}`} aria-hidden="true">
+                    {config.icon}
+                  </div>
+                  <div className="flex-1">
+                    <div className={`font-semibold text-sm mb-1 ${mode === modeKey ? "text-purple-400" : "text-gray-200"}`}>
+                      {config.label}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {config.description}
+                    </div>
+                  </div>
+                  {mode === modeKey && (
+                    <div className="text-purple-400" aria-hidden="true">
+                      <CheckCircle className="w-4 h-4" />
+                    </div>
+                  )}
+                </button>
+              );
+            }))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -425,32 +420,24 @@ const MobileDrawer: React.FC<{
     onClose();
   };
 
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/60 z-[90] md:hidden"
-            onClick={onClose}
-            aria-hidden="true"
-          />
+  if (!isOpen) return null;
 
-          {/* Drawer */}
-          <motion.div
-            initial={{ x: "-100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "-100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="fixed top-0 left-0 bottom-0 w-80 bg-gray-900 border-r border-gray-800 z-[100] md:hidden overflow-y-auto"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Navigation menu"
-          >
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/60 z-[90] md:hidden animate-in fade-in duration-200"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* Drawer */}
+      <div
+        className="fixed top-0 left-0 bottom-0 w-80 bg-gray-900 border-r border-gray-800 z-[100] md:hidden overflow-y-auto animate-in slide-in-from-left duration-300"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Navigation menu"
+      >
             {/* Drawer Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-800">
               <h2 className="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
@@ -519,10 +506,8 @@ const MobileDrawer: React.FC<{
                 <span>Press Cmd+K for shortcuts</span>
               </div>
             </div>
-          </motion.div>
+          </div>
         </>
-      )}
-    </AnimatePresence>
   );
 };
 
