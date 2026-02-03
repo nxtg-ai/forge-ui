@@ -177,10 +177,11 @@ export class BootstrapOrchestrator {
       // Check for configuration
       const configPath = path.join(projectPath, ".claude", "forge.config.json");
       try {
-        const config = await fs.readFile(configPath, "utf-8");
+        const configContent = await fs.readFile(configPath, "utf-8");
+        const config = JSON.parse(configContent) as { version?: string };
         state.hasConfig = true;
-        state.config = JSON.parse(config);
-        state.version = state.config.version;
+        state.config = config;
+        state.version = config.version ?? null;
       } catch {}
     } catch {
       // Directory doesn't exist

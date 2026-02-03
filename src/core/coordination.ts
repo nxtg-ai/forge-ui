@@ -23,8 +23,58 @@ import {
   ApproverRole,
   ApprovalStatus,
 } from "../types/approval";
+import { AgentActivity } from "../types/dashboard";
 
 const logger = new Logger("AgentCoordination");
+
+/**
+ * Parameters for querying agent activities
+ */
+export interface AgentActivityParams {
+  agentId?: string;
+  limit?: number;
+  page?: number;
+  since?: Date;
+  status?: AgentActivity["status"];
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}
+
+/**
+ * Architecture decision for review/approval
+ */
+export interface ArchitectureDecision {
+  id: string;
+  title: string;
+  description: string;
+  rationale: string;
+  impact: "low" | "medium" | "high";
+  status: "proposed" | "approved" | "rejected" | "implemented";
+  timestamp: Date;
+  proposedBy?: string;
+  approvedBy?: string;
+}
+
+/**
+ * Input for proposing a new architecture decision
+ */
+export interface ArchitectureDecisionProposal {
+  title: string;
+  description: string;
+  rationale: string;
+  impact: "low" | "medium" | "high";
+  proposedBy?: string;
+}
+
+/**
+ * Result from task assignment
+ */
+export interface TaskAssignmentResult {
+  taskId: string;
+  agentId: string;
+  status: "assigned" | "queued" | "failed" | "completed";
+  result?: string;
+}
 
 // Message priority levels
 export enum MessagePriority {
@@ -58,7 +108,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
   private approvalRequestIds: Map<string, string> = new Map(); // artifactId -> approvalRequestId
   private agentRegistry: Map<string, Agent> = new Map();
   private status: CoordinationStatus = CoordinationStatus.IDLE;
-  private messageHandlers: Map<string, (message: Message) => Promise<unknown>> =
+  private messageHandlers: Map<string, (message: Message) => Promise<AgentResponse>> =
     new Map();
 
   constructor() {
@@ -98,7 +148,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
    */
   registerAgent(
     agent: Agent,
-    handler?: (message: Message) => Promise<unknown>,
+    handler?: (message: Message) => Promise<AgentResponse>,
   ): void {
     this.agentRegistry.set(agent.id, agent);
     if (handler) {
@@ -400,7 +450,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
   /**
    * Handle message response
    */
-  private handleMessageResponse(originalMessage: Message, response: any): void {
+  private handleMessageResponse(originalMessage: Message, response: AgentResponse): void {
     if (originalMessage.replyTo) {
       // This is a response to another message
       this.emit("responseReceived", {
@@ -448,7 +498,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
   /**
    * Assign task to agent
    */
-  private async assignTaskToAgent(agent: Agent, task: Task): Promise<any> {
+  private async assignTaskToAgent(agent: Agent, task: Task): Promise<TaskAssignmentResult> {
     const message: Message = {
       id: crypto.randomBytes(8).toString("hex"),
       from: "orchestrator",
@@ -468,7 +518,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
   /**
    * Simulate agent execution (for testing)
    */
-  private async simulateAgentExecution(agent: Agent, task: Task): Promise<any> {
+  private async simulateAgentExecution(agent: Agent, task: Task): Promise<TaskAssignmentResult> {
     // Simulate processing time based on task complexity
     const processingTime = Math.random() * 2000 + 1000; // 1-3 seconds
     await new Promise((resolve) => setTimeout(resolve, processingTime));
@@ -523,7 +573,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
   }
 
   // API compatibility methods
-  async getAgentActivities(params: any): Promise<any[]> {
+  async getAgentActivities(params: AgentActivityParams): Promise<AgentActivity[]> {
     return [];
   }
 
@@ -531,7 +581,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
     return Array.from(this.agentRegistry.values());
   }
 
-  async assignTask(agentId: string, task: any): Promise<any> {
+  async assignTask(agentId: string, task: Task): Promise<TaskAssignmentResult> {
     const agent = this.agentRegistry.get(agentId);
     if (!agent) {
       throw new Error(`Agent ${agentId} not found`);
@@ -539,11 +589,11 @@ export class AgentCoordinationProtocol extends EventEmitter {
     return await this.assignTaskToAgent(agent, task);
   }
 
-  async getArchitectureDecisions(): Promise<any[]> {
+  async getArchitectureDecisions(): Promise<ArchitectureDecision[]> {
     return [];
   }
 
-  async proposeArchitectureDecision(decision: any): Promise<any> {
+  async proposeArchitectureDecision(decision: ArchitectureDecisionProposal): Promise<ArchitectureDecision> {
     return {
       id: crypto.randomBytes(8).toString("hex"),
       ...decision,
@@ -552,7 +602,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
     };
   }
 
-  async approveArchitectureDecision(decisionId: string): Promise<any> {
+  async approveArchitectureDecision(decisionId: string): Promise<Partial<ArchitectureDecision>> {
     return {
       id: decisionId,
       status: "approved",

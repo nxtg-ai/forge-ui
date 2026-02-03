@@ -585,7 +585,7 @@ export class MetaOrchestrator extends EventEmitter {
     const stepResults: Array<{
       stepId: string;
       status: TaskStatus;
-      result?: any;
+      result?: unknown;
       error?: string;
     }> = [];
 

@@ -400,8 +400,9 @@ cache/
       }
 
       this.activeRunspaceId = registry.activeRunspaceId;
-    } catch (error: any) {
-      if (error.code !== "ENOENT") {
+    } catch (error: unknown) {
+      const isNodeError = error instanceof Error && "code" in error;
+      if (!isNodeError || (error as NodeJS.ErrnoException).code !== "ENOENT") {
         console.error("[RunspaceManager] Error loading registry:", error);
       }
       // File doesn't exist yet, that's fine

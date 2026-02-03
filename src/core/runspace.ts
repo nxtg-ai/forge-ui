@@ -8,6 +8,9 @@
  * - Isolated context
  */
 
+import type { IPty } from "node-pty";
+import type { WebSocket } from "ws";
+
 export type RunspaceBackendType = "wsl" | "container" | "vm";
 export type RunspaceStatus = "active" | "suspended" | "stopped";
 
@@ -134,8 +137,8 @@ export interface IRunspaceBackend {
 export interface PTYSession {
   id: string;
   runspaceId: string;
-  pty: any; // IPty from node-pty
-  ws?: any; // WebSocket connection
+  pty: IPty;
+  ws?: WebSocket;
   createdAt: Date;
 }
 
