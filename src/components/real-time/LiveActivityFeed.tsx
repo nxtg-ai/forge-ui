@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { SafeAnimatePresence as AnimatePresence } from "../ui/SafeAnimatePresence";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   Activity,

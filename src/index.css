@@ -27,6 +27,20 @@
   }
 }
 
+@layer components {
+  /* Force xterm.js to fill its container */
+  .xterm {
+    width: 100% !important;
+    height: 100% !important;
+  }
+  .xterm-viewport {
+    width: 100% !important;
+  }
+  .xterm-screen {
+    width: 100% !important;
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

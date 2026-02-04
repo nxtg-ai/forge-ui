@@ -1,11 +1,12 @@
 /**
  * Panel Component
  * Reusable side panel with fixed and overlay modes
- * Dispatches window resize event after animation completes
+ * Dispatches window resize event after transitions for terminal compatibility
  */
 
 import React, { useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { SafeAnimatePresence as AnimatePresence } from "../ui/SafeAnimatePresence";
 import { X } from "lucide-react";
 
 export type PanelMode = "fixed" | "overlay";
@@ -32,25 +33,25 @@ export const Panel: React.FC<PanelProps> = ({
   className = "",
   title,
 }) => {
-  // Dispatch resize event to notify terminal of layout change
-  // Use requestAnimationFrame to ensure DOM layout is complete
-  const handleAnimationComplete = useCallback(() => {
-    requestAnimationFrame(() => {
-      window.dispatchEvent(new Event("resize"));
-    });
-  }, []);
-
-  if (!visible) {
-    return null;
-  }
+  // Dispatch resize event after width transition for terminal fit
+  const handleTransitionEnd = useCallback(
+    (e: React.TransitionEvent<HTMLElement>) => {
+      if (e.propertyName !== "width") return;
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new Event("resize"));
+      });
+    },
+    [],
+  );
 
   // Overlay mode: Full-screen backdrop + side drawer
   if (mode === "overlay") {
+    if (!visible) return null;
+
     return (
       <AnimatePresence>
         {visible && (
           <>
-            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -59,26 +60,23 @@ export const Panel: React.FC<PanelProps> = ({
               onClick={onClose}
               data-testid={`panel-backdrop-${side}`}
             />
-
-            {/* Drawer */}
             <motion.div
               initial={{ x: side === "left" ? "-100%" : "100%" }}
               animate={{ x: 0 }}
               exit={{ x: side === "left" ? "-100%" : "100%" }}
               transition={{ type: "spring", damping: 25 }}
-              onAnimationComplete={handleAnimationComplete}
-              className={`fixed top-0 ${side === "left" ? "left-0" : "right-0"} bottom-0 z-40 bg-gray-900 border-${side === "left" ? "r" : "l"} border-gray-700 ${className}`}
+              onAnimationComplete={() => {
+                requestAnimationFrame(() => {
+                  window.dispatchEvent(new Event("resize"));
+                });
+              }}
+              className={`fixed top-0 ${side === "left" ? "left-0" : "right-0"} bottom-0 z-40 bg-gray-900 ${side === "left" ? "border-r" : "border-l"} border-gray-700 ${className}`}
               style={{ width: `${width}px` }}
               data-testid={`panel-drawer-${side}`}
             >
-              {/* Header with close button */}
               {(title || onClose) && (
                 <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-                  {title && (
-                    <h3 className="text-sm font-semibold text-white">
-                      {title}
-                    </h3>
-                  )}
+                  {title && <h3 className="text-sm font-semibold text-white">{title}</h3>}
                   {onClose && (
                     <button
                       onClick={onClose}
@@ -90,7 +88,6 @@ export const Panel: React.FC<PanelProps> = ({
                   )}
                 </div>
               )}
-
               <div className="h-full overflow-hidden">{children}</div>
             </motion.div>
           </>
@@ -99,24 +96,20 @@ export const Panel: React.FC<PanelProps> = ({
     );
   }
 
-  // Fixed mode: Slides in from side, part of flex layout
+  // Fixed mode: Always in DOM, width transitions between 0 and target.
+  // This ensures transitionend fires, triggering terminal resize via fitAddon.fit().
+  const borderClass = side === "left" ? "border-r" : "border-l";
+  const resolvedWidth = visible ? width : 0;
+
   return (
-    <AnimatePresence>
-      {visible && (
-        <motion.aside
-          initial={{ x: side === "left" ? -width : width, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: side === "left" ? -width : width, opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          onAnimationComplete={handleAnimationComplete}
-          className={`flex-shrink-0 border-${side === "left" ? "r" : "l"} border-gray-800 bg-gray-950 ${className}`}
-          style={{ width: `${width}px` }}
-          data-testid={`panel-fixed-${side}`}
-        >
-          <div className="h-full overflow-hidden">{children}</div>
-        </motion.aside>
-      )}
-    </AnimatePresence>
+    <aside
+      className={`flex-shrink-0 ${borderClass} border-gray-800 bg-gray-950 overflow-hidden transition-[width] duration-200 ease-in-out ${className}`}
+      style={{ width: `${resolvedWidth}px` }}
+      data-testid={`panel-fixed-${side}`}
+      onTransitionEnd={handleTransitionEnd}
+    >
+      <div className="h-full overflow-hidden">{children}</div>
+    </aside>
   );
 };
 

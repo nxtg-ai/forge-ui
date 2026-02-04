@@ -4,7 +4,8 @@
  */
 
 import React, { ReactNode, useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { SafeAnimatePresence as AnimatePresence } from "../../ui/SafeAnimatePresence";
 import { Menu, X, Layers, Settings } from "lucide-react";
 import { useResponsiveLayout, Breakpoint } from "../hooks/useResponsiveLayout";
 

@@ -11,7 +11,8 @@
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { SafeAnimatePresence as AnimatePresence } from "../components/ui/SafeAnimatePresence";
 import {
   Terminal,
   X,
@@ -204,15 +205,15 @@ const InfinityTerminalView: React.FC = () => {
         badge="Persistent"
         // Header actions
         headerActions={terminalActions}
-        // Left panel configuration
+        // Left panel configuration (25% of viewport)
         leftPanel={leftPanelContent}
         showLeftPanel={contextPanelVisible}
-        leftPanelWidth={320}
+        leftPanelWidth={Math.round(layout.width * 0.25)}
         leftPanelTitle="Memory & Context"
-        // Right panel configuration
+        // Right panel configuration (25% of viewport)
         rightPanel={rightPanelContent}
         showRightPanel={governancePanelVisible}
-        rightPanelWidth={320}
+        rightPanelWidth={Math.round(layout.width * 0.25)}
         rightPanelTitle="Governance HUD"
         // Footer configuration
         showFooter={footerVisible}

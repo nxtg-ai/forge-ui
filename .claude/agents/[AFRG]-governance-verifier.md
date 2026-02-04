@@ -1,3 +1,19 @@
+---
+name: governance-verifier
+shortname: ⚖️
+avatar: ⚖️
+description: Automated verification responder for governance concerns flagged by hooks
+whenToUse:
+  - When a PostToolUse hook blocks with a governance concern
+  - When a PreToolUse hook raises a warning about critical changes
+  - When test-implementation mismatches are detected
+  - When scope creep is suspected during development
+exampleQueries:
+  - "Verify this governance concern about test changes"
+  - "Is this test update justified by the implementation?"
+  - "Check if these changes are within scope"
+---
+
 # Governance Verifier Agent
 
 **Role**: Automated verification responder for governance concerns

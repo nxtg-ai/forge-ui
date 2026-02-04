@@ -171,16 +171,20 @@ export function useSessionPersistence(
     [getStoredSessions],
   );
 
-  // Get terminal WebSocket URL
-  const getWsUrl = useCallback(() => {
+  // Get terminal WebSocket URL (with optional sessionId for reconnection)
+  const getWsUrl = useCallback((sessionId?: string) => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    return `${protocol}//${config.wsHost}:${config.wsPort}${config.wsPath}`;
+    const base = `${protocol}//${config.wsHost}:${config.wsPort}${config.wsPath}`;
+    if (sessionId) {
+      return `${base}?sessionId=${encodeURIComponent(sessionId)}`;
+    }
+    return base;
   }, [config.wsHost, config.wsPort, config.wsPath]);
 
   // Alias for backward compatibility
   const getTtydUrl = getWsUrl;
 
-  // Connect to ttyd
+  // Connect to terminal - reuses existing session if available
   const connect = useCallback(() => {
     if (
       wsRef.current?.readyState === WebSocket.CONNECTING ||
@@ -205,11 +209,19 @@ export function useSessionPersistence(
     setState((prev) => ({ ...prev, connecting: true, error: null }));
 
     const sessionName = generateSessionName();
-    const sessionId = generateSessionId();
-    const url = getWsUrl();
+
+    // Check for existing stored session to reconnect to
+    const storedSessions = getStoredSessions();
+    const existingSession = storedSessions.find(
+      (s) => s.sessionName === sessionName,
+    );
+    const sessionId = existingSession?.sessionId || generateSessionId();
+
+    // Pass sessionId to backend so it can reattach to existing PTY
+    const url = getWsUrl(sessionId);
 
     console.log(
-      `[InfinityTerminal] Connecting to ${url} (attempt ${reconnectAttemptsRef.current + 1}/${config.maxReconnectAttempts})`,
+      `[InfinityTerminal] Connecting to ${url} (attempt ${reconnectAttemptsRef.current + 1}/${config.maxReconnectAttempts})${existingSession ? " [reconnecting]" : " [new]"}`,
     );
 
     try {
@@ -296,13 +308,13 @@ export function useSessionPersistence(
   }, [
     generateSessionName,
     generateSessionId,
+    getStoredSessions,
     getWsUrl,
     saveSession,
     layout,
     config.autoReconnect,
     config.maxReconnectAttempts,
     config.reconnectDelay,
-    // Note: onConnectionChange and onError removed - using refs to avoid infinite loops
   ]);
 
   // Disconnect
@@ -335,14 +347,14 @@ export function useSessionPersistence(
     setState((prev) => ({ ...prev, reconnectAttempts: 0, error: null }));
   }, []);
 
-  // Restore session
+  // Restore session - reconnects to existing PTY via stored sessionId
   const restoreSession = useCallback(
     (sessionName: string) => {
       const sessions = getStoredSessions();
       const session = sessions.find((s) => s.sessionName === sessionName);
 
       if (session) {
-        console.log(`[InfinityTerminal] Restoring session: ${sessionName}`);
+        console.log(`[InfinityTerminal] Restoring session: ${sessionName} (id: ${session.sessionId})`);
 
         setState((prev) => ({
           ...prev,
@@ -354,6 +366,7 @@ export function useSessionPersistence(
         }));
 
         onSessionRestore?.(session.sessionId);
+        // connect() will find this session in localStorage and pass sessionId to backend
         connect();
       }
     },
@@ -373,13 +386,18 @@ export function useSessionPersistence(
     setState((prev) => ({ ...prev, lastActivity: new Date() }));
   }, []);
 
-  // Cleanup on unmount
+  // Cleanup on unmount — close WebSocket to prevent zombie reconnection loops.
+  // The PTY session persists on the backend; reconnecting with the stored sessionId restores it.
   useEffect(() => {
     return () => {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
-      // Don't close WebSocket on unmount - session persists
+      isManualDisconnectRef.current = true;
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
     };
   }, []);
 

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { SafeAnimatePresence as AnimatePresence } from "./ui/SafeAnimatePresence";
 import {
   Target,
   Sparkles,

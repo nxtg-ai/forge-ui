@@ -13,7 +13,8 @@
  */
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { SafeAnimatePresence as AnimatePresence } from "../components/ui/SafeAnimatePresence";
 import {
   Target,
   Compass,

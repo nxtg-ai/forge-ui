@@ -114,6 +114,7 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
       cursorBlink: true,
       fontSize: 14,
       fontFamily: '"Cascadia Code", "Fira Code", "Consolas", monospace',
+      scrollback: 5000,
       theme: {
         background: "#0a0a0a",
         foreground: "#e5e7eb",
@@ -147,10 +148,12 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
     term.loadAddon(webLinksAddon);
 
     term.open(terminalRef.current);
-    fitAddon.fit();
 
     xtermRef.current = term;
     fitAddonRef.current = fitAddon;
+
+    // Defer initial fit to next frame so the browser has laid out the container
+    requestAnimationFrame(() => fitAddon.fit());
 
     // Minimal status - UI chrome shows identity + connection badges
     term.writeln("\x1b[90m● Connecting...\x1b[0m");
@@ -203,6 +206,17 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
           case "output":
             term.write(message.data);
             break;
+          case "session":
+            // Session info from backend — clear "Connecting..." line
+            term.write("\x1b[1A\x1b[2K");
+            if (message.restored) {
+              // Restored session — scrollback replay follows automatically
+              term.writeln(`\x1b[32m● Session restored\x1b[0m`);
+            } else {
+              term.writeln(`\x1b[32m● Session: ${sessionState.sessionName}\x1b[0m`);
+              term.writeln("");
+            }
+            break;
           case "cost":
             // Could display cost info if needed
             break;
@@ -231,16 +245,13 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
 
     ws.addEventListener("message", handleMessage);
 
-    // Clear "Connecting..." and show session ready
-    term.write("\x1b[1A\x1b[2K"); // Move up, clear line
-    term.writeln(`\x1b[32m● Session: ${sessionState.sessionName}\x1b[0m`);
-    term.writeln("");
-
     // Send initial resize
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(
         JSON.stringify({ type: "resize", cols: term.cols, rows: term.rows }),
       );
+      // Signal backend that message handler is attached — safe to send scrollback
+      ws.send(JSON.stringify({ type: "ready" }));
     }
 
     // Fit after connection
@@ -369,7 +380,7 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
       {/* Terminal */}
       <div
         ref={terminalRef}
-        className="flex-1 bg-[#0a0a0a] p-2"
+        className="flex-1 w-full min-w-0 bg-[#0a0a0a] p-2 overflow-hidden"
         style={{ minHeight: isExpanded ? "calc(100vh - 120px)" : "400px" }}
         data-testid="infinity-terminal-container"
       />

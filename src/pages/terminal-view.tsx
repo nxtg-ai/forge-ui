@@ -7,7 +7,8 @@ import React, { useState } from "react";
 import { ClaudeTerminal, ContextWindowHUD } from "../components/terminal";
 import { GovernanceHUD } from "../components/governance";
 import { ErrorBoundary } from "../components/ErrorBoundary";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { SafeAnimatePresence as AnimatePresence } from "../components/ui/SafeAnimatePresence";
 import { Terminal, X, Layout, Maximize2, Info } from "lucide-react";
 import { useToast } from "../components/feedback/ToastSystem";
 

@@ -14,9 +14,18 @@ import { WSLBackend } from "../core/backends/wsl-backend";
 interface TerminalSession {
   runspaceId: string;
   sessionId: string;
-  ws: WebSocket;
+  ws: WebSocket | null;
+  pty: { pty: { onData: (cb: (data: string) => void) => void; onExit: (cb: (info: { exitCode: number; signal?: number }) => void) => void; write: (data: string) => void; resize: (cols: number, rows: number) => void; kill: () => void } };
   commandBuffer: string;
+  cleanupTimer: ReturnType<typeof setTimeout> | null;
+  scrollbackBuffer: string[];
+  scrollbackSize: number;
 }
+
+// How long to keep a PTY alive after WebSocket disconnects (5 minutes)
+const SESSION_KEEPALIVE_MS = 5 * 60 * 1000;
+// Max scrollback buffer size in bytes (~100KB)
+const MAX_SCROLLBACK_SIZE = 100 * 1024;
 
 const sessions = new Map<string, TerminalSession>();
 const wslBackend = new WSLBackend();
@@ -46,15 +55,130 @@ export function createPTYBridge(
     console.error("[PTY Bridge] WebSocket server error:", error);
   });
 
+  /**
+   * Wire a WebSocket to a session: message forwarding, close/error handling.
+   * Does NOT register PTY onData/onExit — those are registered once at session creation
+   * and read from session.ws which gets swapped on reattach.
+   */
+  function wireWebSocket(ws: WebSocket, session: TerminalSession, pendingScrollback?: string) {
+    // Forward WebSocket messages to PTY
+    ws.on("message", (message: Buffer) => {
+      try {
+        const data = JSON.parse(message.toString());
+        switch (data.type) {
+          case "input":
+            session.pty.pty.write(data.data);
+            session.commandBuffer += data.data;
+            break;
+          case "resize":
+            session.pty.pty.resize(data.cols, data.rows);
+            break;
+          case "execute":
+            executeCommand(session.pty, session, data.command);
+            break;
+          case "ready":
+            // Client signals its message handler is attached — safe to send scrollback
+            if (pendingScrollback) {
+              ws.send(JSON.stringify({ type: "output", data: pendingScrollback }));
+              pendingScrollback = undefined;
+            }
+            break;
+        }
+      } catch (error) {
+        console.error("[PTY Bridge] Error handling message:", error);
+      }
+    });
+
+    // On close: only act if this ws is still the active one for the session.
+    // If session.ws has already been swapped to a new ws (reattach), this is a no-op.
+    ws.on("close", () => {
+      if (session.ws !== ws) {
+        console.log(`[PTY Bridge] Stale WebSocket closed for session ${session.sessionId}, ignoring`);
+        return;
+      }
+      console.log(`[PTY Bridge] WebSocket closed for session ${session.sessionId}, keeping PTY alive`);
+      session.ws = null;
+
+      session.cleanupTimer = setTimeout(() => {
+        console.log(`[PTY Bridge] Session ${session.sessionId} timed out, cleaning up`);
+        session.pty.pty.kill();
+        sessions.delete(session.sessionId);
+        wslBackend.removeSession(session.runspaceId);
+      }, SESSION_KEEPALIVE_MS);
+    });
+
+    ws.on("error", (error) => {
+      console.error(`[PTY Bridge] WebSocket error for session ${session.sessionId}:`, error);
+      if (session.ws === ws) {
+        session.ws = null;
+      }
+    });
+  }
+
+  /**
+   * Append data to session scrollback buffer (capped at MAX_SCROLLBACK_SIZE).
+   */
+  function appendScrollback(session: TerminalSession, data: string) {
+    session.scrollbackBuffer.push(data);
+    session.scrollbackSize += data.length;
+    // Trim from front if over limit
+    while (session.scrollbackSize > MAX_SCROLLBACK_SIZE && session.scrollbackBuffer.length > 1) {
+      const removed = session.scrollbackBuffer.shift()!;
+      session.scrollbackSize -= removed.length;
+    }
+  }
+
   wss.on("connection", async (ws: WebSocket, request: http.IncomingMessage) => {
     console.log("[PTY Bridge] New terminal connection");
 
     try {
-      // Extract runspace ID from query params
       const url = new URL(request.url!, `http://${request.headers.host}`);
       const runspaceId = url.searchParams.get("runspace");
+      const requestedSessionId = url.searchParams.get("sessionId");
 
-      // Get runspace (use active runspace if not specified)
+      // --- REATTACH to existing session ---
+      if (requestedSessionId) {
+        const existingSession = sessions.get(requestedSessionId);
+        if (existingSession) {
+          console.log(`[PTY Bridge] Reattaching to session: ${requestedSessionId}`);
+
+          // Cancel cleanup timer
+          if (existingSession.cleanupTimer) {
+            clearTimeout(existingSession.cleanupTimer);
+            existingSession.cleanupTimer = null;
+          }
+
+          // Swap WebSocket — old ws close handler will see session.ws !== ws and no-op
+          const oldWs = existingSession.ws;
+          existingSession.ws = ws;
+
+          // Close old WebSocket after swapping (its close handler is now a no-op)
+          if (oldWs && oldWs.readyState === WebSocket.OPEN) {
+            oldWs.close();
+          }
+
+          // Send session info
+          ws.send(JSON.stringify({
+            type: "session",
+            sessionId: requestedSessionId,
+            restored: true,
+          }));
+
+          // Collect scrollback — will be sent when client sends "ready" message
+          const scrollback = existingSession.scrollbackBuffer.length > 0
+            ? existingSession.scrollbackBuffer.join("")
+            : undefined;
+
+          // Wire new WebSocket (message forwarding + close/error handlers)
+          wireWebSocket(ws, existingSession, scrollback);
+
+          return;
+        } else {
+          console.log(`[PTY Bridge] Session ${requestedSessionId} not found, creating new`);
+        }
+      }
+
+      // --- NEW session ---
       let runspace: Runspace | null | undefined = null;
       let useDefaultShell = false;
 
@@ -62,23 +186,14 @@ export function createPTYBridge(
         runspace = runspaceManager.getRunspace(runspaceId);
         if (!runspace) {
           console.error(`[PTY Bridge] Runspace not found: ${runspaceId}`);
-          ws.send(
-            JSON.stringify({
-              type: "error",
-              data: `Runspace not found: ${runspaceId}`,
-            }),
-          );
+          ws.send(JSON.stringify({ type: "error", data: `Runspace not found: ${runspaceId}` }));
           ws.close();
           return;
         }
       } else {
-        // Try to use active runspace
         runspace = runspaceManager.getActiveRunspace();
         if (!runspace) {
-          // No runspace specified and none active - use default shell mode
-          console.log(
-            "[PTY Bridge] No active runspace, using default shell mode",
-          );
+          console.log("[PTY Bridge] No active runspace, using default shell mode");
           useDefaultShell = true;
         }
       }
@@ -86,62 +201,55 @@ export function createPTYBridge(
       let ptySession: any;
 
       if (useDefaultShell) {
-        // Default mode: spawn a basic PTY in current working directory
         console.log("[PTY Bridge] Creating default PTY session");
         ptySession = await wslBackend.createDefaultPTY();
       } else {
-        // Runspace mode: attach PTY to specific runspace
-        console.log(
-          `[PTY Bridge] Attaching PTY to runspace: ${runspace!.displayName} (${runspace!.id})`,
-        );
+        console.log(`[PTY Bridge] Attaching PTY to runspace: ${runspace!.displayName} (${runspace!.id})`);
         ptySession = await wslBackend.attachPTY(runspace!);
       }
 
-      // Generate session ID
-      const sessionId = Math.random().toString(36).substring(7);
+      const sessionId = requestedSessionId || Math.random().toString(36).substring(7);
 
-      // Store session
       const session: TerminalSession = {
         runspaceId: runspace?.id || "default",
         sessionId,
         ws,
+        pty: ptySession,
         commandBuffer: "",
+        cleanupTimer: null,
+        scrollbackBuffer: [],
+        scrollbackSize: 0,
       };
       sessions.set(sessionId, session);
 
-      // Send PTY output to WebSocket
-      ptySession.pty.onData((data: string) => {
-        // Only log errors, not every keystroke/output
-        if (ws.readyState === WebSocket.OPEN) {
-          // Intercept special patterns for enhanced UI
-          const enrichedData = interceptOutput(data, ws);
+      // Send session info
+      ws.send(JSON.stringify({ type: "session", sessionId, restored: false }));
 
-          ws.send(
-            JSON.stringify({
-              type: "output",
-              data: enrichedData,
-            }),
-          );
-        } else {
-          console.error(
-            `[PTY Bridge] Cannot send data, WebSocket state: ${ws.readyState}`,
-          );
+      // PTY output → active WebSocket (registered ONCE, reads session.ws on each call)
+      ptySession.pty.onData((data: string) => {
+        // Always buffer for scrollback replay
+        appendScrollback(session, data);
+
+        const currentWs = session.ws;
+        if (currentWs && currentWs.readyState === WebSocket.OPEN) {
+          const enrichedData = interceptOutput(data, currentWs);
+          currentWs.send(JSON.stringify({ type: "output", data: enrichedData }));
         }
       });
 
-      // Handle PTY exit
+      // PTY exit → cleanup
       ptySession.pty.onExit(({ exitCode, signal }: any) => {
-        console.log(
-          `[PTY Bridge] PTY exited: code=${exitCode}, signal=${signal}`,
-        );
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(
-            JSON.stringify({
-              type: "output",
-              data: `\r\n[Process exited with code ${exitCode}]\r\n`,
-            }),
-          );
-          ws.close();
+        console.log(`[PTY Bridge] PTY exited: code=${exitCode}, signal=${signal}`);
+        const currentWs = session.ws;
+        if (currentWs && currentWs.readyState === WebSocket.OPEN) {
+          currentWs.send(JSON.stringify({
+            type: "output",
+            data: `\r\n[Process exited with code ${exitCode}]\r\n`,
+          }));
+          currentWs.close();
+        }
+        if (session.cleanupTimer) {
+          clearTimeout(session.cleanupTimer);
         }
         sessions.delete(sessionId);
         if (runspace) {
@@ -149,50 +257,9 @@ export function createPTYBridge(
         }
       });
 
-      // Handle WebSocket messages
-      ws.on("message", (message: Buffer) => {
-        try {
-          const data = JSON.parse(message.toString());
+      // Wire WebSocket (message forwarding + close/error handlers)
+      wireWebSocket(ws, session);
 
-          switch (data.type) {
-            case "input":
-              // Forward input to PTY
-              ptySession.pty.write(data.data);
-              session.commandBuffer += data.data;
-              break;
-
-            case "resize":
-              // Resize PTY
-              ptySession.pty.resize(data.cols, data.rows);
-              break;
-
-            case "execute":
-              // Execute command
-              executeCommand(ptySession, session, data.command);
-              break;
-          }
-        } catch (error) {
-          console.error("[PTY Bridge] Error handling message:", error);
-        }
-      });
-
-      // Handle WebSocket close
-      ws.on("close", () => {
-        console.log("[PTY Bridge] WebSocket closed");
-        ptySession.pty.kill();
-        sessions.delete(sessionId);
-        // Remove session from backend (use 'default' if no runspace)
-        wslBackend.removeSession(runspace?.id || "default");
-      });
-
-      // Handle WebSocket errors
-      ws.on("error", (error) => {
-        console.error("[PTY Bridge] WebSocket error:", error);
-        ptySession.pty.kill();
-        sessions.delete(sessionId);
-        // Remove session from backend (use 'default' if no runspace)
-        wslBackend.removeSession(runspace?.id || "default");
-      });
     } catch (error) {
       console.error("[PTY Bridge] Fatal error in connection handler:", error);
       if (ws.readyState === WebSocket.OPEN) {
@@ -313,8 +380,18 @@ function executeCommand(
 export function cleanupPTYBridge() {
   console.log("[PTY Bridge] Cleaning up sessions...");
   sessions.forEach((session) => {
+    // Cancel cleanup timers
+    if (session.cleanupTimer) {
+      clearTimeout(session.cleanupTimer);
+    }
+    // Kill PTY
+    try {
+      session.pty.pty.kill();
+    } catch {
+      // PTY may already be dead
+    }
     // Close WebSocket
-    if (session.ws.readyState === WebSocket.OPEN) {
+    if (session.ws && session.ws.readyState === WebSocket.OPEN) {
       session.ws.close();
     }
     // Remove runspace session from backend
