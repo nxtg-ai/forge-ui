@@ -40,7 +40,7 @@ export interface TrackedError {
   message: string;
   stack?: string;
   timestamp: Date;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
   recovered: boolean;
   recoveryAttempts: number;
   firstOccurrence: Date;
@@ -211,7 +211,7 @@ export class ErrorTracker extends EventEmitter {
     error: Error | string,
     category: ErrorCategory = ErrorCategory.UNKNOWN,
     severity: ErrorSeverity = ErrorSeverity.MEDIUM,
-    context?: Record<string, any>,
+    context?: Record<string, unknown>,
   ): TrackedError {
     const message = typeof error === "string" ? error : error.message;
     const stack = typeof error === "string" ? undefined : error.stack;

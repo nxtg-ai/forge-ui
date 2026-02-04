@@ -143,7 +143,7 @@ export type LearningEntry = z.infer<typeof LearningEntrySchema>;
 // Rollback context
 export interface RollbackContext {
   actionId: string;
-  originalState: any;
+  originalState: Record<string, unknown>;
   changedFiles: string[];
   commands: string[];
   timestamp: Date;

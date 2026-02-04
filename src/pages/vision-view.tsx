@@ -615,10 +615,15 @@ const VisionView: React.FC = () => {
     },
   });
 
+  // WebSocket message type
+  interface VisionMessage {
+    type: string;
+  }
+
   // Process WebSocket messages
   useEffect(() => {
     if (messages.length > 0) {
-      messages.forEach((message: any) => {
+      messages.forEach((message: VisionMessage) => {
         if (message.type === "vision.change") {
           refreshVision();
           toast.info("Vision updated", { message: "Changes synced from server" });
@@ -637,7 +642,7 @@ const VisionView: React.FC = () => {
       if (response.ok) {
         const result = await response.json();
         if (result.success && result.data) {
-          setVisionHistory(result.data.map((e: any) => ({
+          setVisionHistory(result.data.map((e: { timestamp: string; [key: string]: unknown }) => ({
             ...e,
             timestamp: new Date(e.timestamp),
           })));

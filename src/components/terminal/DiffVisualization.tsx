@@ -55,10 +55,10 @@ export const DiffVisualization: React.FC<DiffVisualizationProps> = ({
       setExpandedFiles((prev) => new Set(prev).add(diffData.filePath));
     };
 
-    window.addEventListener("claude-diff" as any, handleDiff);
+    window.addEventListener("claude-diff", handleDiff as EventListener);
 
     return () => {
-      window.removeEventListener("claude-diff" as any, handleDiff);
+      window.removeEventListener("claude-diff", handleDiff as EventListener);
     };
   }, []);
 

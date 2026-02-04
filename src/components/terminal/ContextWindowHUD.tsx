@@ -149,10 +149,10 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = ({
       setContextData(data);
     };
 
-    window.addEventListener("claude-context" as any, handleContext);
+    window.addEventListener("context-window-update", handleContext as EventListener);
 
     return () => {
-      window.removeEventListener("claude-context" as any, handleContext);
+      window.removeEventListener("context-window-update", handleContext as EventListener);
     };
   }, []);
 

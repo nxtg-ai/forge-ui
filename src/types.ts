@@ -40,5 +40,5 @@ export interface Agent {
 export interface Command {
   name: string;
   description: string;
-  handler: (args: any) => Promise<void>;
+  handler: (args: Record<string, unknown>) => Promise<void>;
 }

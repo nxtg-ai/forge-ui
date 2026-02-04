@@ -40,7 +40,7 @@ export class GovernanceStateManager {
         throw new Error("Invalid state structure");
       }
     } catch (error) {
-      if ((error as any).code === "ENOENT") {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         throw new Error("Governance state not found");
       }
       throw error;
@@ -202,16 +202,16 @@ export class GovernanceStateManager {
   /**
    * Validate state structure
    */
-  private isValidState(state: any): state is GovernanceState {
+  private isValidState(state: unknown): state is GovernanceState {
     return (
       typeof state === "object" &&
       state !== null &&
-      typeof state.version === "number" &&
-      typeof state.timestamp === "string" &&
-      typeof state.constitution === "object" &&
-      Array.isArray(state.workstreams) &&
-      Array.isArray(state.sentinelLog) &&
-      typeof state.metadata === "object"
+      typeof (state as GovernanceState).version === "number" &&
+      typeof (state as GovernanceState).timestamp === "string" &&
+      typeof (state as GovernanceState).constitution === "object" &&
+      Array.isArray((state as GovernanceState).workstreams) &&
+      Array.isArray((state as GovernanceState).sentinelLog) &&
+      typeof (state as GovernanceState).metadata === "object"
     );
   }
 

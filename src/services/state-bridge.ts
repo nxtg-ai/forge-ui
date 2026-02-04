@@ -76,7 +76,7 @@ export class StateBridgeService extends BaseService {
   private projectContext: ProjectContext | null = null;
   private updateBuffer: StateUpdate[] = [];
   private subscribers = new Map<string, (update: StateUpdate) => void>();
-  private pollingTimer?: NodeJS.Timer;
+  private pollingTimer?: NodeJS.Timeout;
   private stateVersion = 0;
 
   constructor(config: StateBridgeConfig = { name: "StateBridge" }) {
@@ -480,7 +480,7 @@ export class StateBridgeService extends BaseService {
    */
   private stopPolling(): void {
     if (this.pollingTimer) {
-      clearInterval(this.pollingTimer as any);
+      clearInterval(this.pollingTimer);
       this.pollingTimer = undefined;
     }
   }

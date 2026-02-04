@@ -65,7 +65,7 @@ export type WSMessageType =
   | "decision.made"
   | "yolo.action";
 
-export interface WSMessage<T = any> {
+export interface WSMessage<T = unknown> {
   type: WSMessageType;
   payload: T;
   timestamp: string;
@@ -80,7 +80,7 @@ export class ApiClient {
   private wsReconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000; // Start with 1 second
-  private eventHandlers: Map<WSMessageType, Set<(data: any) => void>> =
+  private eventHandlers: Map<WSMessageType, Set<(data: unknown) => void>> =
     new Map();
   private requestQueue: Array<() => Promise<void>> = [];
   private isProcessingQueue = false;
@@ -108,11 +108,12 @@ export class ApiClient {
         credentials: "include", // For session management
       });
 
-      const data: any = await response.json();
+      const data: unknown = await response.json();
 
       if (!response.ok) {
+        const errorData = data as { error?: string };
         throw new Error(
-          data.error || `HTTP ${response.status}: ${response.statusText}`,
+          errorData.error || `HTTP ${response.status}: ${response.statusText}`,
         );
       }
 
@@ -212,7 +213,7 @@ export class ApiClient {
 
   async assignAgentTask(
     agentId: string,
-    task: any,
+    task: Record<string, unknown>,
   ): Promise<ApiResponse<{ taskId: string }>> {
     return this.request<{ taskId: string }>(`/agents/${agentId}/tasks`, {
       method: "POST",
@@ -224,8 +225,8 @@ export class ApiClient {
 
   async executeCommand(
     command: Command,
-  ): Promise<ApiResponse<{ result: any }>> {
-    return this.request<{ result: any }>("/commands/execute", {
+  ): Promise<ApiResponse<{ result: unknown }>> {
+    return this.request<{ result: unknown }>("/commands/execute", {
       method: "POST",
       body: JSON.stringify(command),
     });
@@ -370,7 +371,7 @@ export class ApiClient {
 
   public subscribe(
     eventType: WSMessageType,
-    handler: (data: any) => void,
+    handler: (data: unknown) => void,
   ): () => void {
     if (!this.eventHandlers.has(eventType)) {
       this.eventHandlers.set(eventType, new Set());

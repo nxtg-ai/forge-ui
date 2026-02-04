@@ -145,7 +145,7 @@ export interface DashboardCard {
     width: number;
     height: number;
   };
-  content: any; // Specific to card type
+  content: Record<string, unknown>; // Specific to card type
   refreshInterval?: number; // in seconds
   interactive: boolean;
 }

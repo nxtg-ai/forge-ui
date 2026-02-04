@@ -101,7 +101,7 @@ export async function rejectDiff(filePath: string): Promise<DiffResult> {
  */
 export async function getPendingDiffs(): Promise<{
   success: boolean;
-  diffs: any[];
+  diffs: unknown[];
   error?: string;
 }> {
   try {

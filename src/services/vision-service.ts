@@ -561,8 +561,8 @@ export class VisionService extends BaseService {
   /**
    * Parse markdown sections
    */
-  private parseMarkdownSections(content: string): Record<string, any> {
-    const sections: Record<string, any> = {};
+  private parseMarkdownSections(content: string): Record<string, string | string[]> {
+    const sections: Record<string, string | string[]> = {};
     const lines = content.split("\n");
 
     let currentSection = "";
@@ -594,7 +594,7 @@ export class VisionService extends BaseService {
   /**
    * Parse section content
    */
-  private parseSectionContent(lines: string[]): any {
+  private parseSectionContent(lines: string[]): string | string[] {
     const content = lines.join("\n").trim();
 
     // Check if it's a list
@@ -673,7 +673,7 @@ export class VisionService extends BaseService {
             status:
               g.status === "pending"
                 ? ("not-started" as const)
-                : (g.status as any),
+                : (g.status as "not-started" | "in-progress" | "completed" | "blocked"),
             progress: g.progress,
           }));
 

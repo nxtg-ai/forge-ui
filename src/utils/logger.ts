@@ -19,7 +19,7 @@ export enum LogLevel {
 interface LogContext {
   module: string;
   timestamp: Date;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export class Logger {
@@ -84,7 +84,7 @@ export class Logger {
    */
   error(
     message: string,
-    error?: Error | any,
+    error?: Error | unknown,
     context?: Partial<LogContext>,
   ): void {
     this.log(LogLevel.ERROR, message, { error, ...context });
@@ -162,7 +162,7 @@ export class Logger {
   /**
    * Log method entry (for debugging)
    */
-  methodEntry(methodName: string, args?: any): void {
+  methodEntry(methodName: string, args?: unknown): void {
     if (process.env.LOG_LEVEL === "verbose") {
       this.verbose(`Entering ${methodName}`, { method: methodName, args });
     }
@@ -171,7 +171,7 @@ export class Logger {
   /**
    * Log method exit (for debugging)
    */
-  methodExit(methodName: string, result?: any): void {
+  methodExit(methodName: string, result?: unknown): void {
     if (process.env.LOG_LEVEL === "verbose") {
       this.verbose(`Exiting ${methodName}`, { method: methodName, result });
     }

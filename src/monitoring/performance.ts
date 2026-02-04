@@ -27,7 +27,7 @@ export interface PerformanceMetric {
   name: string;
   duration: number; // milliseconds
   timestamp: Date;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   success: boolean;
   error?: string;
 }
@@ -148,7 +148,7 @@ export class PerformanceMonitor extends EventEmitter {
   startOperation(
     id: string,
     type: MetricType,
-    metadata?: Record<string, any>,
+    metadata?: Record<string, unknown>,
   ): void {
     const markName = `${type}-${id}-start`;
     performance.mark(markName);
@@ -285,7 +285,7 @@ export class PerformanceMonitor extends EventEmitter {
   /**
    * Process performance entry from observer
    */
-  private processPerformanceEntry(entry: any): void {
+  private processPerformanceEntry(entry: PerformanceEntry): void {
     // Extract type from entry name
     const parts = entry.name.split("-");
     const typeStr = parts[0];

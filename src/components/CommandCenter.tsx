@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 
 interface CommandCenterProps {
-  onCommandExecute: (command: string, args?: any) => void;
+  onCommandExecute: (command: string, args?: Record<string, unknown>) => void;
   availableCommands: Command[];
   projectContext: ProjectContext;
   isExecuting: boolean;

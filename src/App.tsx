@@ -48,6 +48,10 @@ import type {
   Command,
   AutomationLevel,
   AgentActivity,
+  VisionData,
+  ProjectState,
+  YoloStatistics,
+  AutomatedAction,
 } from "./components/types";
 import type { Runspace } from "./core/runspace";
 import { EngagementProvider, useEngagement } from "./contexts/EngagementContext";
@@ -115,8 +119,8 @@ function IntegratedApp() {
     null,
   );
   const [visionSkipped, setVisionSkipped] = useState(false);
-  const [capturedVision, setCapturedVision] = useState<any>(null);
-  const [mcpSuggestions, setMcpSuggestions] = useState<any>(null);
+  const [capturedVision, setCapturedVision] = useState<VisionData | null>(null);
+  const [mcpSuggestions, setMcpSuggestions] = useState<Record<string, unknown> | null>(null);
   const [loadingMcpSuggestions, setLoadingMcpSuggestions] = useState(false);
 
   // Runspace state for multi-project support
@@ -127,7 +131,7 @@ function IntegratedApp() {
 
   // Handle vision capture
   const handleVisionCapture = useCallback(
-    async (visionData: any) => {
+    async (visionData: VisionData) => {
       // Save vision data
       setCapturedVision(visionData);
 
@@ -498,8 +502,46 @@ function IntegratedApp() {
   );
 }
 
+// Props interface for AppContent
+interface AppContentProps {
+  currentView: string;
+  setCurrentView: (view: string) => void;
+  selectedArchitect: Architect | null;
+  setSelectedArchitect: (architect: Architect | null) => void;
+  visionSkipped: boolean;
+  setVisionSkipped: (skipped: boolean) => void;
+  capturedVision: VisionData | null;
+  setCapturedVision: (vision: VisionData | null) => void;
+  mcpSuggestions: Record<string, unknown> | null;
+  setMcpSuggestions: (suggestions: Record<string, unknown> | null) => void;
+  loadingMcpSuggestions: boolean;
+  setLoadingMcpSuggestions: (loading: boolean) => void;
+  runspaces: Runspace[];
+  activeRunspace: Runspace | null;
+  loadingRunspaces: boolean;
+  showProjectsManagement: boolean;
+  setShowProjectsManagement: (show: boolean) => void;
+  handleVisionCapture: (vision: VisionData) => Promise<void>;
+  handleSkipVision: () => void;
+  handleMcpSelectionComplete: (selectedIds: string[]) => Promise<void>;
+  handleMcpSkip: () => void;
+  handleCommandExecution: (command: Command) => Promise<boolean>;
+  handleDecisionApproval: (decisionId: string) => Promise<boolean>;
+  handleYoloModeToggle: (active: boolean) => void;
+  handleRunspaceSwitch: (runspaceId: string) => Promise<void>;
+  handleNewProject: () => void;
+  handleManageProjects: () => void;
+  handleRunspaceStart: (runspaceId: string) => Promise<void>;
+  handleRunspaceStop: (runspaceId: string) => Promise<void>;
+  handleRunspaceDelete: (runspaceId: string) => Promise<void>;
+  loadRunspaces: () => Promise<void>;
+  handleModeChange: (mode: EngagementMode) => void;
+  architects: Architect[];
+  forge: ReturnType<typeof useForgeIntegration>;
+}
+
 // Separate component to use EngagementContext
-const AppContent: React.FC<any> = (props) => {
+const AppContent: React.FC<AppContentProps> = (props) => {
   const {
     currentView,
     setCurrentView,
@@ -594,7 +636,7 @@ const AppContent: React.FC<any> = (props) => {
       {/* Unified Navigation Header */}
       <AppHeader
         currentView={currentView}
-        onNavigate={(viewId) => setCurrentView(viewId as any)}
+        onNavigate={(viewId) => setCurrentView(viewId)}
         currentRunspace={activeRunspace}
         runspaces={runspaces}
         onRunspaceSwitch={handleRunspaceSwitch}
@@ -720,9 +762,9 @@ const AppContent: React.FC<any> = (props) => {
 
 // Dashboard wrapper that uses engagement context
 const DashboardWithEngagement: React.FC<{
-  visionData: any;
-  projectState: any;
-  agentActivity: any[];
+  visionData: VisionData;
+  projectState: ProjectState;
+  agentActivity: AgentActivity[];
 }> = ({ visionData, projectState, agentActivity }) => {
   const { mode, setMode } = useEngagement();
 
@@ -740,8 +782,8 @@ const DashboardWithEngagement: React.FC<{
 // YOLO Mode wrapper that uses engagement context
 const YoloModeWithEngagement: React.FC<{
   onToggle: (active: boolean) => void;
-  statistics: any;
-  recentActions: any[];
+  statistics: YoloStatistics;
+  recentActions: AutomatedAction[];
 }> = ({ onToggle, statistics, recentActions }) => {
   const { mode, automationLevel, setMode, setAutomationLevel } = useEngagement();
 

@@ -36,6 +36,12 @@ import {
 } from "../hooks/useRealtimeConnection";
 import { EngagementProvider, useEngagement } from "../contexts/EngagementContext";
 import { useLayout } from "../contexts/LayoutContext";
+import type {
+  Agent,
+  Blocker,
+  Command,
+  ProjectState,
+} from "../components/types";
 import {
   Activity,
   Users,
@@ -101,14 +107,7 @@ const LiveDashboard: React.FC = () => {
     timeframe: "Q1 2024",
   });
 
-  const [projectState, setProjectState] = useState<{
-    phase: "building";
-    progress: number;
-    blockers: any[];
-    recentDecisions: any[];
-    activeAgents: any[];
-    healthScore: number;
-  }>({
+  const [projectState, setProjectState] = useState<ProjectState>({
     phase: "building",
     progress: 65,
     blockers: [],
@@ -158,7 +157,7 @@ const LiveDashboard: React.FC = () => {
     });
 
   // Mock data updates - memoized callbacks
-  const updateAgentState = useCallback((agent: any) => {
+  const updateAgentState = useCallback((agent: Agent) => {
     setProjectState((prev) => ({
       ...prev,
       activeAgents: prev.activeAgents.map((a) =>
@@ -181,7 +180,7 @@ const LiveDashboard: React.FC = () => {
     }
   }, [toast]);
 
-  const handleNewBlocker = useCallback((blocker: any) => {
+  const handleNewBlocker = useCallback((blocker: Blocker) => {
     setProjectState((prev) => ({
       ...prev,
       blockers: [blocker, ...prev.blockers].slice(0, 5),
@@ -201,14 +200,20 @@ const LiveDashboard: React.FC = () => {
     });
   }, [toast]);
 
-  const handleTaskCompleted = useCallback((task: any) => {
+  const handleTaskCompleted = useCallback((task: { name: string }) => {
     toast.success(`Task completed: ${task.name}`, {
       duration: 3000,
     });
   }, [toast]);
 
+  // WebSocket message structure
+  interface RealtimeMessage {
+    type: 'agent_update' | 'project_progress' | 'blocker_detected' | 'task_completed';
+    payload: Agent | number | Blocker | { name: string };
+  }
+
   // Process incoming WebSocket messages
-  const handleRealtimeMessage = useCallback((message: any) => {
+  const handleRealtimeMessage = useCallback((message: RealtimeMessage) => {
     switch (message.type) {
       case "agent_update":
         updateAgentState(message.payload);
@@ -236,7 +241,7 @@ const LiveDashboard: React.FC = () => {
     value: commandQueue,
     update: updateCommandQueue,
     isUpdating: isCommandExecuting,
-  } = useOptimisticUpdate<any[]>([], async (commands) => {
+  } = useOptimisticUpdate<Command[]>([], async (commands) => {
     const response = await fetch("/api/commands/execute", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -266,7 +271,7 @@ const LiveDashboard: React.FC = () => {
   );
 
   // Command execution handler - memoized
-  const handleCommandExecute = useCallback(async (command: string, args?: any) => {
+  const handleCommandExecute = useCallback(async (command: string, args?: Record<string, unknown>) => {
     setIsExecuting(true);
 
     // Show executing toast
@@ -303,10 +308,11 @@ const LiveDashboard: React.FC = () => {
       toast.success(`${command} completed successfully`, {
         duration: 3000,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
       toast.error(`${command} failed`, {
         message: "An error occurred while executing the command",
-        details: error?.message || "Unknown error",
+        details: errorMessage,
         actions: [
           {
             label: "Retry",

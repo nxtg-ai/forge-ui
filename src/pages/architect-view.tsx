@@ -793,10 +793,29 @@ const ArchitectView: React.FC = () => {
   const fetchDecisions = useCallback(async () => {
     setLoading(true);
     try {
+      interface BackendDecision {
+        id?: string;
+        title?: string;
+        description?: string;
+        approach?: string;
+        rationale?: string;
+        tradeoffs?: string[];
+        impact?: string;
+        status?: string;
+        proposedBy?: string;
+        proposedAt?: string;
+        approvedBy?: string[];
+        consensus?: number;
+        votes?: unknown;
+        relatedDecisions?: string[];
+        tags?: string[];
+        signedOffBy?: string[];
+      }
+
       const response = await apiClient.getArchitectureDecisions();
       if (response.success && response.data) {
         // Map backend data to our format
-        const mappedDecisions: ArchitectDecision[] = (response.data as any[]).map((d: any) => ({
+        const mappedDecisions: ArchitectDecision[] = (response.data as BackendDecision[]).map((d) => ({
           id: d.id || `decision-${Date.now()}`,
           title: d.title || d.approach || "Untitled Decision",
           description: d.description || "",
@@ -828,7 +847,7 @@ const ArchitectView: React.FC = () => {
   const handleProposalSubmit = useCallback(async (proposal: Partial<ArchitectDecision>) => {
     setIsSubmitting(true);
     try {
-      const response = await apiClient.proposeArchitecture(proposal as any);
+      const response = await apiClient.proposeArchitecture(proposal);
       if (response.success) {
         toast.success("Proposal submitted", { message: "Your architecture decision has been proposed" });
         setShowProposalForm(false);
@@ -841,8 +860,9 @@ const ArchitectView: React.FC = () => {
       } else {
         throw new Error(response.error);
       }
-    } catch (error: any) {
-      toast.error("Failed to submit proposal", { message: error.message });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      toast.error("Failed to submit proposal", { message: errorMessage });
     } finally {
       setIsSubmitting(false);
     }
@@ -866,8 +886,9 @@ const ArchitectView: React.FC = () => {
       } else {
         throw new Error(response.error);
       }
-    } catch (error: any) {
-      toast.error("Failed to approve", { message: error.message });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      toast.error("Failed to approve", { message: errorMessage });
     } finally {
       setIsApproving(false);
     }
@@ -920,9 +941,14 @@ const ArchitectView: React.FC = () => {
   }, []);
 
   // Process WebSocket messages
+  // WebSocket message type
+  interface DecisionMessage {
+    type: string;
+  }
+
   useEffect(() => {
     if (messages.length > 0) {
-      messages.forEach((message: any) => {
+      messages.forEach((message: DecisionMessage) => {
         if (message.type === "decision.made") {
           fetchDecisions();
           toast.info("Decision updated", { message: "Architecture decisions have been updated" });

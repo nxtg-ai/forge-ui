@@ -323,16 +323,19 @@ export class CommandService extends BaseService {
 
       this.emit("commandComplete", result);
       return Result.ok(result);
-    } catch (error: any) {
+    } catch (error: unknown) {
       result.status = "failed";
-      result.error = error.message;
-      result.exitCode = error.code ?? -1;
+      result.error = error instanceof Error ? error.message : String(error);
+      result.exitCode = (error as NodeJS.ErrnoException).code ?
+        parseInt((error as NodeJS.ErrnoException).code ?? "-1", 10) : -1;
+
+      const execError = error as { stdout?: string; stderr?: string };
       result.output =
-        error.stdout?.split("\n").filter((line: string) => line.length > 0) ??
+        execError.stdout?.split("\n").filter((line: string) => line.length > 0) ??
         [];
-      if (error.stderr) {
+      if (execError.stderr) {
         result.output.push(
-          ...error.stderr.split("\n").filter((line: string) => line.length > 0),
+          ...execError.stderr.split("\n").filter((line: string) => line.length > 0),
         );
       }
       result.endTime = new Date();

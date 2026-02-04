@@ -164,7 +164,7 @@ export abstract class BaseService extends EventEmitter {
     } catch (error) {
       if (error instanceof z.ZodError) {
         return Result.err(
-          new ValidationError("Validation failed", (error as any).errors),
+          new ValidationError("Validation failed", error.errors),
         );
       }
       return Result.err(
@@ -219,14 +219,14 @@ export abstract class BaseService extends EventEmitter {
   /**
    * Create a debounced version of a function
    */
-  protected debounce<T extends (...args: any[]) => any>(
-    fn: T,
+  protected debounce<TArgs extends unknown[]>(
+    fn: (...args: TArgs) => void | Promise<void>,
     delay?: number,
-  ): (...args: Parameters<T>) => void {
+  ): (...args: TArgs) => void {
     let timeoutId: NodeJS.Timeout | null = null;
     const debounceDelay = delay ?? this.config.debounceMs ?? 100;
 
-    return (...args: Parameters<T>): void => {
+    return (...args: TArgs): void => {
       if (timeoutId) {
         clearTimeout(timeoutId);
       }

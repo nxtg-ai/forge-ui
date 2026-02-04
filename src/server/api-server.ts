@@ -139,7 +139,7 @@ wss.on("connection", (ws) => {
 });
 
 // Broadcast to all connected clients
-function broadcast(type: string, payload: any) {
+function broadcast(type: string, payload: unknown) {
   const message = JSON.stringify({
     type,
     payload,
@@ -154,7 +154,7 @@ function broadcast(type: string, payload: any) {
 }
 
 // Handle WebSocket messages
-async function handleWSMessage(ws: WebSocket, message: any) {
+async function handleWSMessage(ws: WebSocket, message: Record<string, unknown>) {
   switch (message.type) {
     case "ping":
       // Respond to heartbeat
@@ -246,7 +246,7 @@ app.get("/api/vision/history", async (req, res) => {
     const history = await visionSystem.getVisionHistory();
     res.json({
       success: true,
-      data: history.map((event: any) => ({
+      data: history.map((event: Record<string, unknown>) => ({
         id: event.id,
         timestamp: event.timestamp,
         type: event.type,
@@ -285,7 +285,7 @@ app.post("/api/vision/alignment", async (req, res) => {
         decision,
         aligned: result.aligned,
         score: result.score,
-        violations: result.violations?.map((v: any) => v.reason || v.principle),
+        violations: result.violations?.map((v: { reason?: string; principle?: string }) => v.reason || v.principle),
         suggestions: result.suggestions,
       },
       timestamp: new Date().toISOString(),
@@ -367,7 +367,7 @@ app.post("/api/mcp/configure", async (req, res) => {
 });
 
 // Helper functions
-function extractTechStack(vision: any, category: string): string | undefined {
+function extractTechStack(vision: unknown, category: string): string | undefined {
   const text = JSON.stringify(vision).toLowerCase();
   const patterns: Record<string, string[]> = {
     backend: [
@@ -390,7 +390,7 @@ function extractTechStack(vision: any, category: string): string | undefined {
   return undefined;
 }
 
-function detectIndustry(vision: any): string | undefined {
+function detectIndustry(vision: unknown): string | undefined {
   const text = JSON.stringify(vision).toLowerCase();
   const industries: Record<string, string[]> = {
     healthcare: ["health", "medical", "hipaa", "patient"],
@@ -831,8 +831,8 @@ app.get("/api/governance/state", async (req, res) => {
         data: state,
         timestamp: new Date().toISOString(),
       });
-    } catch (error: any) {
-      if (error.code === "ENOENT") {
+    } catch (error: unknown) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         res.status(404).json({
           success: false,
           error: "Governance state not found",
@@ -867,8 +867,8 @@ app.get("/api/governance/config", async (req, res) => {
         data: config,
         timestamp: new Date().toISOString(),
       });
-    } catch (error: any) {
-      if (error.code === "ENOENT") {
+    } catch (error: unknown) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         // Return default config if file doesn't exist
         const { DEFAULT_GOVERNANCE_CONFIG } =
           await import("../types/governance.types.js");

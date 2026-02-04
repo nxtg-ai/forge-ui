@@ -108,7 +108,7 @@ export class CheckpointManager {
       logger.info("Checkpoint restored", { taskId });
       return new Ok(checkpoint);
     } catch (error) {
-      if ((error as any).code === "ENOENT") {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         const message = `No checkpoint found for task ${taskId}`;
         logger.debug(message);
         return new Err(message);
@@ -151,7 +151,7 @@ export class CheckpointManager {
       logger.debug("Listed checkpoints", { count: checkpoints.length });
       return checkpoints;
     } catch (error) {
-      if ((error as any).code === "ENOENT") {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return [];
       }
 
@@ -198,7 +198,7 @@ export class CheckpointManager {
       logger.info(`Cleared ${cleared} checkpoints`);
       return new Ok(cleared);
     } catch (error) {
-      if ((error as any).code === "ENOENT") {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return new Ok(0);
       }
 

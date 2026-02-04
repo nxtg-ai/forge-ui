@@ -175,14 +175,14 @@ export interface ExecutionContext {
   task: Task;
   agent: Agent;
   dependencies: string[];
-  environment: Record<string, any>;
+  environment: Record<string, unknown>;
   timeout: number;
 }
 
 // Agent response
 export interface AgentResponse {
   success: boolean;
-  result?: any;
+  result?: unknown;
   error?: string;
   artifacts?: string[];
   nextSteps?: string[];

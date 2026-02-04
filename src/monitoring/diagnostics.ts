@@ -7,9 +7,9 @@ import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
 import { performance } from "perf_hooks";
-import { Logger } from "../utils/logger";
+import { Logger, LogLevel } from "../utils/logger";
 import { HealthMonitor } from "./health";
-import { PerformanceMonitor } from "./performance";
+import { PerformanceMonitor, PerformanceReport } from "./performance";
 import { ErrorTracker } from "./errors";
 
 const logger = new Logger("Diagnostics");
@@ -21,7 +21,7 @@ export interface DiagnosticResult {
   passed: boolean;
   duration: number;
   message: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   recommendation?: string;
 }
 
@@ -722,7 +722,7 @@ export class DiagnosticTools {
     this.debugOptions = { ...this.debugOptions, ...options };
 
     if (this.debugOptions.verbose) {
-      Logger.setLevel("debug" as any);
+      Logger.setLevel(LogLevel.DEBUG);
     }
 
     logger.info("Debug mode enabled", this.debugOptions);
@@ -740,14 +740,14 @@ export class DiagnosticTools {
       collectLogs: false,
     };
 
-    Logger.setLevel("info" as any);
+    Logger.setLevel(LogLevel.INFO);
     logger.info("Debug mode disabled");
   }
 
   /**
    * Profile performance
    */
-  async profilePerformance(duration: number = 60000): Promise<any> {
+  async profilePerformance(duration: number = 60000): Promise<PerformanceReport> {
     logger.info("Starting performance profiling", { duration });
 
     this.performanceMonitor.start(1000); // Report every second

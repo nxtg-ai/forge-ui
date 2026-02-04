@@ -24,6 +24,13 @@ export interface ConfidenceThresholds {
 }
 
 /**
+ * Automation rule context
+ */
+export interface AutomationRuleContext {
+  [key: string]: unknown;
+}
+
+/**
  * Automation rule
  */
 export interface AutomationRule {
@@ -31,7 +38,7 @@ export interface AutomationRule {
   name: string;
   description: string;
   pattern: RegExp | string;
-  action: (context: any) => Promise<AutomatedAction>;
+  action: (context: AutomationRuleContext) => Promise<AutomatedAction>;
   confidenceModifier?: number;
   requiresConfirmation?: boolean;
   maxExecutionsPerHour?: number;

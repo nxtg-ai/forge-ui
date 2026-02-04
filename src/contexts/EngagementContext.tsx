@@ -86,8 +86,8 @@ export const EngagementProvider: React.FC<EngagementProviderProps> = ({
 
     // Send to WebSocket if available
     try {
-      if (window.WebSocket && (window as any).__forgeWS) {
-        const ws = (window as any).__forgeWS as WebSocket;
+      if (window.WebSocket && window.__forgeWS) {
+        const ws = window.__forgeWS;
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
             type: "engagement.mode.changed",
@@ -106,8 +106,8 @@ export const EngagementProvider: React.FC<EngagementProviderProps> = ({
 
     // Send to WebSocket if available
     try {
-      if (window.WebSocket && (window as any).__forgeWS) {
-        const ws = (window as any).__forgeWS as WebSocket;
+      if (window.WebSocket && window.__forgeWS) {
+        const ws = window.__forgeWS;
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
             type: "engagement.automation.changed",

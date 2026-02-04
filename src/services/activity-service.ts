@@ -270,7 +270,13 @@ export class ActivityService extends BaseService {
     });
 
     // Calculate events per type
-    const eventsPerType: Record<ActivityEventType, number> = {} as any;
+    const eventsPerType: Record<ActivityEventType, number> = Object.values(ActivityEventType).reduce(
+      (acc, type) => {
+        acc[type] = 0;
+        return acc;
+      },
+      {} as Record<ActivityEventType, number>
+    );
     events.forEach((event) => {
       eventsPerType[event.type] = (eventsPerType[event.type] || 0) + 1;
     });

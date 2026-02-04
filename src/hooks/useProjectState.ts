@@ -121,7 +121,7 @@ export function useProjectState(
         break;
       case StateUpdateType.PHASE_CHANGED:
         setState((prev) =>
-          prev ? { ...prev, phase: update.data as any } : null,
+          prev ? { ...prev, phase: update.data as ProjectState["phase"] } : null,
         );
         break;
       case StateUpdateType.PROGRESS_UPDATE:

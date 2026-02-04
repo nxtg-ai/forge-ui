@@ -16,14 +16,16 @@ import {
   PerformanceMonitor,
   PerformanceReport,
   MetricType,
+  PerformanceAlert,
 } from "./performance";
 import {
   ErrorTracker,
   ErrorReport,
   ErrorCategory,
   ErrorSeverity,
+  TrackedError,
 } from "./errors";
-import { AlertingSystem, AlertType, AlertSeverity } from "./alerts";
+import { AlertingSystem, AlertType, AlertSeverity, Alert } from "./alerts";
 import { DiagnosticTools, DiagnosticReport } from "./diagnostics";
 import { Logger } from "../utils/logger";
 
@@ -39,6 +41,49 @@ export interface MonitoringConfig {
   enableAutoRecovery?: boolean;
   enableAlerts?: boolean;
   persistMetrics?: boolean;
+}
+
+// Health status change event
+export interface HealthStatusChange {
+  previous: HealthStatus;
+  current: HealthStatus;
+  timestamp: Date;
+  reason?: string;
+}
+
+// Notification event
+export interface NotificationEvent {
+  type: string;
+  severity: AlertSeverity;
+  title: string;
+  message: string;
+  timestamp: Date;
+  metadata?: Record<string, unknown>;
+}
+
+// Rollback event
+export interface RollbackEvent {
+  alertId: string;
+  target?: string;
+  params?: Record<string, unknown>;
+  timestamp: Date;
+}
+
+// Restart event
+export interface RestartEvent {
+  alertId: string;
+  target?: string;
+  params?: Record<string, unknown>;
+  timestamp: Date;
+}
+
+// Debug options
+export interface DebugModeOptions {
+  verbose?: boolean;
+  traceErrors?: boolean;
+  profilePerformance?: boolean;
+  collectLogs?: boolean;
+  outputPath?: string;
 }
 
 // Monitoring status
@@ -57,7 +102,7 @@ export interface MonitoringReport {
   health: SystemHealth;
   performance: PerformanceReport;
   errors: ErrorReport;
-  alerts: any[];
+  alerts: Alert[];
   diagnostics?: DiagnosticReport;
 }
 
@@ -108,7 +153,7 @@ export class MonitoringSystem extends EventEmitter {
       this.handleHealthUpdate(health);
     });
 
-    this.healthMonitor.on("statusChange", (change: any) => {
+    this.healthMonitor.on("statusChange", (change: HealthStatusChange) => {
       this.handleStatusChange(change);
     });
 
@@ -120,16 +165,16 @@ export class MonitoringSystem extends EventEmitter {
       },
     );
 
-    this.performanceMonitor.on("performanceAlert", (alert: any) => {
+    this.performanceMonitor.on("performanceAlert", (alert: PerformanceAlert) => {
       this.handlePerformanceAlert(alert);
     });
 
     // Error tracker events
-    this.errorTracker.on("errorTracked", (error: any) => {
+    this.errorTracker.on("errorTracked", (error: TrackedError) => {
       this.handleErrorTracked(error);
     });
 
-    this.errorTracker.on("errorRecovered", (error: any) => {
+    this.errorTracker.on("errorRecovered", (error: TrackedError) => {
       this.handleErrorRecovered(error);
     });
 
@@ -138,19 +183,19 @@ export class MonitoringSystem extends EventEmitter {
     });
 
     // Alerting system events
-    this.alertingSystem.on("alert", (alert: any) => {
+    this.alertingSystem.on("alert", (alert: Alert) => {
       this.handleAlert(alert);
     });
 
-    this.alertingSystem.on("notification", (notification: any) => {
+    this.alertingSystem.on("notification", (notification: NotificationEvent) => {
       this.emit("notification", notification);
     });
 
-    this.alertingSystem.on("rollback", (rollback: any) => {
+    this.alertingSystem.on("rollback", (rollback: RollbackEvent) => {
       this.handleRollback(rollback);
     });
 
-    this.alertingSystem.on("restart", (restart: any) => {
+    this.alertingSystem.on("restart", (restart: RestartEvent) => {
       this.handleRestart(restart);
     });
   }
@@ -283,7 +328,7 @@ export class MonitoringSystem extends EventEmitter {
     error: Error | string,
     category?: ErrorCategory,
     severity?: ErrorSeverity,
-    context?: any,
+    context?: Record<string, unknown>,
   ): void {
     this.errorTracker.trackError(error, category, severity, context);
   }
@@ -296,7 +341,7 @@ export class MonitoringSystem extends EventEmitter {
     severity: AlertSeverity,
     title: string,
     message: string,
-    metadata?: any,
+    metadata?: Record<string, unknown>,
   ): void {
     if (this.config.enableAlerts) {
       this.alertingSystem.createAlert(type, severity, title, message, metadata);
@@ -327,7 +372,7 @@ export class MonitoringSystem extends EventEmitter {
   /**
    * Handle status change
    */
-  private handleStatusChange(change: any): void {
+  private handleStatusChange(change: HealthStatusChange): void {
     logger.info("Health status changed", change);
 
     if (change.current === HealthStatus.FAILED) {
@@ -336,7 +381,12 @@ export class MonitoringSystem extends EventEmitter {
         AlertSeverity.CRITICAL,
         "System Health Failed",
         "System health has failed",
-        { change },
+        {
+          previous: change.previous,
+          current: change.current,
+          timestamp: change.timestamp.toISOString(),
+          reason: change.reason,
+        },
       );
     }
 
@@ -375,7 +425,7 @@ export class MonitoringSystem extends EventEmitter {
   /**
    * Handle performance alert
    */
-  private handlePerformanceAlert(alert: any): void {
+  private handlePerformanceAlert(alert: PerformanceAlert): void {
     this.createAlert(
       AlertType.PERFORMANCE_DEGRADATION,
       alert.severity === "critical"
@@ -383,14 +433,20 @@ export class MonitoringSystem extends EventEmitter {
         : AlertSeverity.WARNING,
       "Performance Alert",
       alert.message,
-      { performanceAlert: alert },
+      {
+        type: alert.type,
+        severity: alert.severity,
+        threshold: alert.threshold,
+        actual: alert.actual,
+        timestamp: alert.timestamp.toISOString(),
+      },
     );
   }
 
   /**
    * Handle error tracked
    */
-  private handleErrorTracked(error: any): void {
+  private handleErrorTracked(error: TrackedError): void {
     // Auto-recovery if enabled
     if (this.config.enableAutoRecovery && error.recoveryAttempts === 0) {
       logger.info("Attempting auto-recovery", { errorId: error.id });
@@ -403,7 +459,7 @@ export class MonitoringSystem extends EventEmitter {
   /**
    * Handle error recovered
    */
-  private handleErrorRecovered(error: any): void {
+  private handleErrorRecovered(error: TrackedError): void {
     logger.info("Error recovered", { errorId: error.id });
     this.emit("errorRecovered", error);
   }
@@ -429,7 +485,7 @@ export class MonitoringSystem extends EventEmitter {
   /**
    * Handle alert
    */
-  private handleAlert(alert: any): void {
+  private handleAlert(alert: Alert): void {
     logger.info("Alert created", {
       type: alert.type,
       severity: alert.severity,
@@ -442,7 +498,7 @@ export class MonitoringSystem extends EventEmitter {
   /**
    * Handle rollback request
    */
-  private handleRollback(rollback: any): void {
+  private handleRollback(rollback: RollbackEvent): void {
     logger.warn("Rollback requested", rollback);
 
     if (this.config.enableAutoRecovery) {
@@ -454,7 +510,7 @@ export class MonitoringSystem extends EventEmitter {
   /**
    * Handle restart request
    */
-  private handleRestart(restart: any): void {
+  private handleRestart(restart: RestartEvent): void {
     logger.warn("Restart requested", restart);
 
     if (this.config.enableAutoRecovery) {
@@ -466,7 +522,7 @@ export class MonitoringSystem extends EventEmitter {
   /**
    * Enable debug mode
    */
-  enableDebugMode(options?: any): void {
+  enableDebugMode(options?: DebugModeOptions): void {
     this.diagnosticTools.enableDebugMode(options);
   }
 

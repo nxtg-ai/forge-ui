@@ -36,7 +36,7 @@ export type CommandCategory =
 export interface CommandAction {
   type: "function" | "route" | "external" | "composite";
   handler: string | (() => void) | (() => Promise<void>);
-  payload?: any;
+  payload?: unknown;
 }
 
 export interface CommandAvailability {
@@ -60,9 +60,9 @@ export interface CommandParameter {
   label: string;
   description?: string;
   required: boolean;
-  defaultValue?: any;
+  defaultValue?: unknown;
   options?: Array<{
-    value: any;
+    value: unknown;
     label: string;
     description?: string;
   }>;
@@ -70,7 +70,7 @@ export interface CommandParameter {
     pattern?: RegExp;
     min?: number;
     max?: number;
-    custom?: (value: any) => boolean | string;
+    custom?: (value: unknown) => boolean | string;
   };
 }
 
@@ -86,7 +86,7 @@ export interface CommandExecution {
 export interface CommandResult {
   success: boolean;
   message?: string;
-  data?: any;
+  data?: unknown;
   error?: string;
   actions?: Array<{
     label: string;

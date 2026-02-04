@@ -86,7 +86,7 @@ interface ExecutedCommand {
   status: "pending" | "running" | "success" | "failed" | "cancelled";
   startedAt: Date;
   completedAt?: Date;
-  result?: any;
+  result?: unknown;
   error?: string;
   duration?: number;
 }
@@ -745,18 +745,19 @@ const CommandView: React.FC = () => {
       if (isConnected) {
         sendMessage({ type: "command.executed", payload: { command, result: response.data } });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
       const failedCommand: ExecutedCommand = {
         ...executedCommand,
         status: "failed",
         completedAt: new Date(),
-        error: error.message,
+        error: errorMessage,
         duration: Date.now() - executedCommand.startedAt.getTime(),
       };
 
       setCommandHistory((prev) => [failedCommand, ...prev].slice(0, 50));
       toast.error(`${command.name} failed`, {
-        message: error.message,
+        message: errorMessage,
         actions: [
           { label: "Retry", onClick: () => executeCommand(command) },
         ],
@@ -785,10 +786,18 @@ const CommandView: React.FC = () => {
     toast.info("History cleared");
   }, [toast]);
 
+  // WebSocket message type
+  interface CommandMessage {
+    type: string;
+    payload?: {
+      command?: { name: string };
+    };
+  }
+
   // Process WebSocket messages
   useEffect(() => {
     if (messages.length > 0) {
-      messages.forEach((message: any) => {
+      messages.forEach((message: CommandMessage) => {
         if (message.type === "command.executed") {
           // Handle external command execution updates
           toast.info("Command executed", { message: message.payload?.command?.name });

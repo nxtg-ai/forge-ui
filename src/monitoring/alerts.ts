@@ -52,7 +52,7 @@ export interface Alert {
   timestamp: Date;
   acknowledged: boolean;
   resolved: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   actions?: AlertAction[];
 }
 
@@ -60,9 +60,9 @@ export interface Alert {
 export interface AlertAction {
   type: "rollback" | "restart" | "notify" | "execute" | "log";
   target?: string;
-  params?: Record<string, any>;
+  params?: Record<string, unknown>;
   executed: boolean;
-  result?: any;
+  result?: unknown;
 }
 
 // Alert rule
@@ -235,7 +235,7 @@ export class AlertingSystem extends EventEmitter {
     severity: AlertSeverity,
     title: string,
     message: string,
-    metadata?: Record<string, any>,
+    metadata?: Record<string, unknown>,
   ): Alert {
     const alert: Alert = {
       id: this.generateAlertId(),
