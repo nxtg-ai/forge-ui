@@ -48,7 +48,16 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
   const [isConnected, setIsConnected] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const pendingTimeoutsRef = useRef<Set<NodeJS.Timeout>>(new Set());
   const [filter, setFilter] = useState<"all" | "important" | "errors">("all");
+
+  // Clean up pending animation timeouts on unmount
+  useEffect(() => {
+    return () => {
+      pendingTimeoutsRef.current.forEach(clearTimeout);
+      pendingTimeoutsRef.current.clear();
+    };
+  }, []);
 
   // Virtual scrolling configuration
   const VIRTUAL_SCROLL_THRESHOLD = 50;
@@ -56,21 +65,33 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
 
   // WebSocket connection
   useEffect(() => {
-    let ws: WebSocket;
-    let reconnectTimer: NodeJS.Timeout;
+    let ws: WebSocket | null = null;
+    let reconnectTimer: NodeJS.Timeout | null = null;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 3;
+    let isCancelled = false;
 
     const connect = () => {
+      if (isCancelled) return;
+      if (reconnectAttempts >= maxReconnectAttempts) {
+        setIsReconnecting(false);
+        return;
+      }
+
       try {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = import.meta.env.VITE_WS_URL || `${wsProtocol}//${window.location.host}/ws`;
         ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
+          if (isCancelled) { ws?.close(); return; }
+          reconnectAttempts = 0;
           setIsConnected(true);
           setIsReconnecting(false);
         };
 
         ws.onmessage = (event) => {
+          if (isCancelled) return;
           try {
             const message = JSON.parse(event.data);
             // Only handle agent.activity messages
@@ -93,27 +114,33 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
         };
 
         ws.onerror = () => {
-          setIsConnected(false);
-          setIsReconnecting(true);
+          // Let onclose handle state
         };
 
         ws.onclose = () => {
+          if (isCancelled) return;
           setIsConnected(false);
-          // Exponential backoff reconnection
-          reconnectTimer = setTimeout(connect, 5000);
+          if (reconnectAttempts < maxReconnectAttempts) {
+            reconnectAttempts++;
+            const delay = 2000 * Math.pow(2, reconnectAttempts - 1);
+            setIsReconnecting(true);
+            reconnectTimer = setTimeout(connect, delay);
+          } else {
+            setIsReconnecting(false);
+          }
         };
       } catch (error) {
         console.error("WebSocket connection failed:", error);
-        setIsReconnecting(true);
-        reconnectTimer = setTimeout(connect, 5000);
+        setIsReconnecting(false);
       }
     };
 
     connect();
 
     return () => {
-      ws?.close();
-      clearTimeout(reconnectTimer);
+      isCancelled = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) ws.close();
     };
   }, []);
 
@@ -126,13 +153,15 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
         ];
 
         // Mark old activities as not new after animation
-        setTimeout(() => {
+        const timeout = setTimeout(() => {
+          pendingTimeoutsRef.current.delete(timeout);
           setActivities((current) =>
             current.map((a) =>
               a.id === activity.id ? { ...a, isNew: false } : a,
             ),
           );
         }, 2000);
+        pendingTimeoutsRef.current.add(timeout);
 
         return newActivities;
       });

@@ -181,11 +181,15 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
     };
   }, []);
 
-  // Connect to ttyd when terminal is ready
+  // Connect to ttyd when terminal is ready.
+  // Deferred via setTimeout so React StrictMode's unmount/remount cycle
+  // can cancel the first attempt before a WebSocket is created, avoiding
+  // a wasted connection that Firefox logs as "interrupted while loading."
   useEffect(() => {
     if (!xtermRef.current || !initializedRef.current) return;
 
-    connect();
+    const timer = setTimeout(() => connect(), 0);
+    return () => clearTimeout(timer);
   }, [connect]);
 
   // Connect terminal to WebSocket with JSON protocol

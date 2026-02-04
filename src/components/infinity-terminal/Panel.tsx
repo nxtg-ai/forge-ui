@@ -98,6 +98,8 @@ export const Panel: React.FC<PanelProps> = ({
 
   // Fixed mode: Always in DOM, width transitions between 0 and target.
   // This ensures transitionend fires, triggering terminal resize via fitAddon.fit().
+  // Children are only rendered when visible to prevent hidden components from
+  // running timers, WebSockets, and API polling while at width=0 (memory leak).
   const borderClass = side === "left" ? "border-r" : "border-l";
   const resolvedWidth = visible ? width : 0;
 
@@ -108,7 +110,7 @@ export const Panel: React.FC<PanelProps> = ({
       data-testid={`panel-fixed-${side}`}
       onTransitionEnd={handleTransitionEnd}
     >
-      <div className="h-full overflow-hidden">{children}</div>
+      {visible && <div className="h-full overflow-hidden">{children}</div>}
     </aside>
   );
 };

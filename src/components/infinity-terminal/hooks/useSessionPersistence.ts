@@ -190,7 +190,6 @@ export function useSessionPersistence(
       wsRef.current?.readyState === WebSocket.CONNECTING ||
       wsRef.current?.readyState === WebSocket.OPEN
     ) {
-      console.log("[InfinityTerminal] Already connected");
       return;
     }
 
