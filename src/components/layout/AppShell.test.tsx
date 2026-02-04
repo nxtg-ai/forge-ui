@@ -285,7 +285,7 @@ describe("AppShell", () => {
       const content = screen.getByTestId("app-shell-content");
       expect(content).toBeInTheDocument();
       expect(content).toHaveClass("flex-1");
-      expect(content).toHaveClass("overflow-auto");
+      expect(content).toHaveClass("overflow-hidden");
     });
   });
 

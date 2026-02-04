@@ -276,7 +276,7 @@ export const AppShell: React.FC<AppShellProps> = ({
 
         {/* Main Content Area */}
         <main
-          className="flex-1 min-w-0 overflow-auto bg-gray-950"
+          className="flex-1 min-w-0 overflow-hidden bg-gray-950 flex flex-col"
           data-testid="app-shell-content"
         >
           {children}

@@ -21,6 +21,7 @@ import {
   RefreshCw,
   Maximize2,
   Minimize2,
+  LayoutDashboard,
 } from "lucide-react";
 
 import {
@@ -50,7 +51,11 @@ function getLastSession() {
   }
 }
 
-const InfinityTerminalView: React.FC = () => {
+interface InfinityTerminalViewProps {
+  onNavigate?: (viewId: string) => void;
+}
+
+const InfinityTerminalView: React.FC<InfinityTerminalViewProps> = ({ onNavigate }) => {
   const { toast } = useToast();
 
   // Use centralized layout context for panel state
@@ -145,6 +150,20 @@ const InfinityTerminalView: React.FC = () => {
   // Terminal header actions (connection status, controls)
   const terminalActions = (
     <>
+      {/* Navigation back to dashboard */}
+      {onNavigate && (
+        <button
+          onClick={() => onNavigate("dashboard")}
+          className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-gray-800 rounded transition-all text-gray-400 hover:text-white text-xs"
+          title="Back to Dashboard"
+        >
+          <LayoutDashboard className="w-4 h-4" />
+          <span className="hidden sm:inline">Dashboard</span>
+        </button>
+      )}
+
+      <div className="w-px h-5 bg-gray-700" />
+
       {/* Connection Status */}
       {terminalState && <ConnectionBadge state={terminalState} />}
 
@@ -177,7 +196,7 @@ const InfinityTerminalView: React.FC = () => {
 
   // Left Panel Content - Memory & Context
   const leftPanelContent = (
-    <div className="h-full p-4">
+    <div className="h-full p-2 overflow-y-auto">
       <ContextWindowHUD className="h-full" />
     </div>
   );
@@ -185,7 +204,7 @@ const InfinityTerminalView: React.FC = () => {
   // Right Panel Content - Governance HUD
   const rightPanelContent = (
     <ErrorBoundary fallbackMessage="Governance HUD encountered an error.">
-      <div className="h-full p-4">
+      <div className="h-full p-2 overflow-y-auto">
         <GovernanceHUD />
       </div>
     </ErrorBoundary>
@@ -205,15 +224,15 @@ const InfinityTerminalView: React.FC = () => {
         badge="Persistent"
         // Header actions
         headerActions={terminalActions}
-        // Left panel configuration (25% of viewport)
+        // Left panel configuration - proportional to viewport
         leftPanel={leftPanelContent}
         showLeftPanel={contextPanelVisible}
-        leftPanelWidth={Math.round(layout.width * 0.25)}
+        leftPanelWidth={layout.isMobile ? layout.width : Math.round(layout.width * 0.2)}
         leftPanelTitle="Memory & Context"
-        // Right panel configuration (25% of viewport)
+        // Right panel configuration - proportional to viewport
         rightPanel={rightPanelContent}
         showRightPanel={governancePanelVisible}
-        rightPanelWidth={Math.round(layout.width * 0.25)}
+        rightPanelWidth={layout.isMobile ? layout.width : Math.round(layout.width * 0.2)}
         rightPanelTitle="Governance HUD"
         // Footer configuration
         showFooter={footerVisible}
@@ -226,16 +245,15 @@ const InfinityTerminalView: React.FC = () => {
         governanceVisible={governancePanelVisible}
         // Keyboard shortcuts
         customShortcuts={terminalShortcuts}
-        className="h-screen"
       >
         {/* Terminal Content */}
-        <div className="h-full bg-black" data-testid="infinity-terminal-view">
+        <div className="flex-1 min-h-0 bg-black flex flex-col" data-testid="infinity-terminal-view">
           <InfinityTerminal
             projectName="nxtg-forge-v3"
             layout="default"
             onSessionRestore={handleSessionRestore}
             onConnectionChange={handleConnectionChange}
-            className="h-full"
+            className="flex-1 min-h-0"
             showHeader={false}
             isExpanded={isTerminalExpanded}
             onExpandedChange={setIsTerminalExpanded}

@@ -384,8 +384,7 @@ export const InfinityTerminal: React.FC<InfinityTerminalProps> = ({
       {/* Terminal */}
       <div
         ref={terminalRef}
-        className="flex-1 w-full min-w-0 bg-[#0a0a0a] p-2 overflow-hidden"
-        style={{ minHeight: isExpanded ? "calc(100vh - 120px)" : "400px" }}
+        className="flex-1 w-full min-w-0 min-h-0 bg-[#0a0a0a] p-2 overflow-hidden"
         data-testid="infinity-terminal-container"
       />
 

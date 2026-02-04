@@ -633,24 +633,26 @@ const AppContent: React.FC<AppContentProps> = (props) => {
       data-testid="app-container"
       className="min-h-screen bg-black text-white"
     >
-      {/* Unified Navigation Header */}
-      <AppHeader
-        currentView={currentView}
-        onNavigate={(viewId) => setCurrentView(viewId)}
-        currentRunspace={activeRunspace}
-        runspaces={runspaces}
-        onRunspaceSwitch={handleRunspaceSwitch}
-        onNewProject={handleNewProject}
-        onManageProjects={handleManageProjects}
-        showNavigation={true}
-        showProjectSwitcher={true}
-        showConnectionStatus={true}
-        showEngagementSelector={true}
-        isConnected={forge.isConnected}
-      />
+      {/* Unified Navigation Header - hidden on terminal view (AppShell provides its own) */}
+      {currentView !== "infinity-terminal" && (
+        <AppHeader
+          currentView={currentView}
+          onNavigate={(viewId) => setCurrentView(viewId)}
+          currentRunspace={activeRunspace}
+          runspaces={runspaces}
+          onRunspaceSwitch={handleRunspaceSwitch}
+          onNewProject={handleNewProject}
+          onManageProjects={handleManageProjects}
+          showNavigation={true}
+          showProjectSwitcher={true}
+          showConnectionStatus={true}
+          showEngagementSelector={true}
+          isConnected={forge.isConnected}
+        />
+      )}
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Main Content - hidden on terminal view (terminal uses full-width layout) */}
+      <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ${currentView === "infinity-terminal" ? "hidden" : ""}`}>
         {/* Vision Capture View */}
         {currentView === "vision-capture" && (
           <VisionCapture onVisionSubmit={handleVisionCapture} mode="initial" />
@@ -713,10 +715,12 @@ const AppContent: React.FC<AppContentProps> = (props) => {
 
         {/* Terminal View (Legacy) */}
         {currentView === "terminal" && <TerminalView />}
-
-        {/* Infinity Terminal View (Persistent Sessions) */}
-        {currentView === "infinity-terminal" && <InfinityTerminalView />}
       </main>
+
+      {/* Infinity Terminal View - rendered outside max-w container for full-width layout */}
+      {currentView === "infinity-terminal" && (
+        <InfinityTerminalView onNavigate={(viewId) => setCurrentView(viewId)} />
+      )}
 
       {/* Projects Management Modal */}
       <ProjectsManagement

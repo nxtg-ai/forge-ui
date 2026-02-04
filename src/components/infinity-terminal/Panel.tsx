@@ -110,7 +110,7 @@ export const Panel: React.FC<PanelProps> = ({
       data-testid={`panel-fixed-${side}`}
       onTransitionEnd={handleTransitionEnd}
     >
-      {visible && <div className="h-full overflow-hidden">{children}</div>}
+      {visible && <div className="h-full overflow-y-auto">{children}</div>}
     </aside>
   );
 };
