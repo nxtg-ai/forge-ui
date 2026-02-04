@@ -9,7 +9,7 @@ description: |
   - "Should we ship this with known minor bugs?" → CEO-LOOP decides
   - "Strategic pivot: completely change product direction?" → Escalate to human
 model: opus
-color: red
+color: crimson
 tools: Read, Grep, Glob, TodoWrite, Task, Write, Edit
 ---
 

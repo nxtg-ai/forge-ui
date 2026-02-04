@@ -30,7 +30,7 @@ description: |
   </commentary>
   </example>
 model: sonnet
-color: cyan
+color: sky
 tools: Glob, Grep, Read, Bash, TodoWrite
 ---
 

@@ -3,6 +3,9 @@ name: governance-verifier
 shortname: ⚖️
 avatar: ⚖️
 description: Automated verification responder for governance concerns flagged by hooks
+model: haiku
+color: bronze
+tools: Glob, Grep, Read, Write, Edit, Bash, TodoWrite
 whenToUse:
   - When a PostToolUse hook blocks with a governance concern
   - When a PreToolUse hook raises a warning about critical changes

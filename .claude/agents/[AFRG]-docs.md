@@ -21,7 +21,7 @@ description: |
   </commentary>
   </example>
 model: sonnet
-color: blue
+color: slate
 tools: Glob, Grep, Read, Write, Edit, Bash, TodoWrite
 ---
 
