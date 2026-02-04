@@ -3,7 +3,7 @@
  * Full UI-Backend Integration with Real-time Updates
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, Suspense, lazy } from "react";
 import {
   BarChart3,
   Target,
@@ -25,13 +25,17 @@ import {
   ProjectsManagement,
 } from "./components";
 import { MCPSelectionView } from "./components/onboarding/MCPSelectionView";
+import { BetaFeedback, BetaBanner, Changelog } from "./components/feedback";
 import TerminalView from "./pages/terminal-view";
 import InfinityTerminalView from "./pages/infinity-terminal-view";
-import DashboardLive from "./pages/dashboard-live";
-import VisionPage from "./pages/vision-view";
-import ArchitectPage from "./pages/architect-view";
-import ArchitectDemo from "./pages/architect-demo";
-import CommandPage from "./pages/command-view";
+
+// Lazy load heavy pages for better initial load performance
+const DashboardLive = lazy(() => import("./pages/dashboard-live"));
+const VisionPage = lazy(() => import("./pages/vision-view"));
+const ArchitectPage = lazy(() => import("./pages/architect-view"));
+const ArchitectDemo = lazy(() => import("./pages/architect-demo"));
+const CommandPage = lazy(() => import("./pages/command-view"));
+const LandingPage = lazy(() => import("./pages/marketing/LandingPage"));
 import {
   useVision,
   useProjectState,
@@ -77,6 +81,16 @@ const LoadingOverlay: React.FC<{ message?: string }> = ({
   </div>
 );
 
+// Lazy load fallback component
+const LazyLoadFallback: React.FC = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="text-center">
+      <div className="animate-spin h-12 w-12 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-4" />
+      <p className="text-gray-400">Loading page...</p>
+    </div>
+  </div>
+);
+
 // Error boundary component
 const ErrorDisplay: React.FC<{ errors: string[] }> = ({ errors }) => {
   if (errors.length === 0) return null;
@@ -114,6 +128,7 @@ function IntegratedApp() {
     | "yolo"
     | "terminal"
     | "infinity-terminal"
+    | "marketing"
   >("dashboard");
   const [selectedArchitect, setSelectedArchitect] = useState<Architect | null>(
     null,
@@ -128,6 +143,8 @@ function IntegratedApp() {
   const [activeRunspace, setActiveRunspace] = useState<Runspace | null>(null);
   const [loadingRunspaces, setLoadingRunspaces] = useState(false);
   const [showProjectsManagement, setShowProjectsManagement] = useState(false);
+  const [showChangelog, setShowChangelog] = useState(false);
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
 
   // Handle vision capture
   const handleVisionCapture = useCallback(
@@ -496,6 +513,10 @@ function IntegratedApp() {
         handleModeChange={handleModeChange}
         architects={architects}
         forge={forge}
+        showChangelog={showChangelog}
+        setShowChangelog={setShowChangelog}
+        feedbackModalOpen={feedbackModalOpen}
+        setFeedbackModalOpen={setFeedbackModalOpen}
         />
       </EngagementProvider>
     </LayoutProvider>
@@ -538,6 +559,10 @@ interface AppContentProps {
   handleModeChange: (mode: EngagementMode) => void;
   architects: Architect[];
   forge: ReturnType<typeof useForgeIntegration>;
+  showChangelog: boolean;
+  setShowChangelog: (show: boolean) => void;
+  feedbackModalOpen: boolean;
+  setFeedbackModalOpen: (open: boolean) => void;
 }
 
 // Separate component to use EngagementContext
@@ -568,6 +593,10 @@ const AppContent: React.FC<AppContentProps> = (props) => {
     handleRunspaceStop,
     handleRunspaceDelete,
     loadRunspaces,
+    showChangelog,
+    setShowChangelog,
+    feedbackModalOpen,
+    setFeedbackModalOpen,
   } = props;
 
   // Use engagement context
@@ -633,8 +662,13 @@ const AppContent: React.FC<AppContentProps> = (props) => {
       data-testid="app-container"
       className="min-h-screen bg-black text-white"
     >
-      {/* Unified Navigation Header - hidden on terminal view (AppShell provides its own) */}
-      {currentView !== "infinity-terminal" && (
+      {/* Beta Banner */}
+      {currentView !== "marketing" && (
+        <BetaBanner onFeedbackClick={() => setFeedbackModalOpen(true)} />
+      )}
+
+      {/* Unified Navigation Header - hidden on terminal/marketing view (AppShell provides its own) */}
+      {currentView !== "infinity-terminal" && currentView !== "marketing" && (
         <AppHeader
           currentView={currentView}
           onNavigate={(viewId) => setCurrentView(viewId)}
@@ -651,8 +685,8 @@ const AppContent: React.FC<AppContentProps> = (props) => {
         />
       )}
 
-      {/* Main Content - hidden on terminal view (terminal uses full-width layout) */}
-      <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ${currentView === "infinity-terminal" ? "hidden" : ""}`}>
+      {/* Main Content - hidden on terminal/marketing view */}
+      <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ${currentView === "infinity-terminal" || currentView === "marketing" ? "hidden" : ""}`}>
         {/* Vision Capture View */}
         {currentView === "vision-capture" && (
           <VisionCapture onVisionSubmit={handleVisionCapture} mode="initial" />
@@ -682,36 +716,39 @@ const AppContent: React.FC<AppContentProps> = (props) => {
           </div>
         )}
 
-        {/* Dashboard View - Full panel architecture with mode selector */}
-        {currentView === "dashboard" && <DashboardLive />}
+        {/* Lazy-loaded pages wrapped in Suspense */}
+        <Suspense fallback={<LazyLoadFallback />}>
+          {/* Dashboard View - Full panel architecture with mode selector */}
+          {currentView === "dashboard" && <DashboardLive />}
 
-        {/* Vision View - Full SOTA page with panel architecture */}
-        {currentView === "vision-display" && <VisionPage />}
+          {/* Vision View - Full SOTA page with panel architecture */}
+          {currentView === "vision-display" && <VisionPage />}
 
-        {/* Command Center View - SOTA Page with panel architecture */}
-        {currentView === "command" && <CommandPage />}
+          {/* Command Center View - SOTA Page with panel architecture */}
+          {currentView === "command" && <CommandPage />}
 
-        {/* Architect View - SOTA Page with real API integration */}
-        {currentView === "architect" && <ArchitectPage />}
+          {/* Architect View - SOTA Page with real API integration */}
+          {currentView === "architect" && <ArchitectPage />}
 
-        {/* Architect Demo - For marketing videos */}
-        {currentView === "architect-demo" && <ArchitectDemo />}
+          {/* Architect Demo - For marketing videos */}
+          {currentView === "architect-demo" && <ArchitectDemo />}
 
-        {/* YOLO Mode View */}
-        {currentView === "yolo" && (
-          <YoloModeWithEngagement
-            onToggle={handleYoloModeToggle}
-            statistics={
-              forge.yoloMode.statistics || {
-                totalActions: 0,
-                successRate: 0,
-                averageTime: 0,
-                savedHours: 0,
+          {/* YOLO Mode View */}
+          {currentView === "yolo" && (
+            <YoloModeWithEngagement
+              onToggle={handleYoloModeToggle}
+              statistics={
+                forge.yoloMode.statistics || {
+                  totalActions: 0,
+                  successRate: 0,
+                  averageTime: 0,
+                  savedHours: 0,
+                }
               }
-            }
-            recentActions={forge.yoloMode.history || []}
-          />
-        )}
+              recentActions={forge.yoloMode.history || []}
+            />
+          )}
+        </Suspense>
 
         {/* Terminal View (Legacy) */}
         {currentView === "terminal" && <TerminalView />}
@@ -720,6 +757,13 @@ const AppContent: React.FC<AppContentProps> = (props) => {
       {/* Infinity Terminal View - rendered outside max-w container for full-width layout */}
       {currentView === "infinity-terminal" && (
         <InfinityTerminalView onNavigate={(viewId) => setCurrentView(viewId)} />
+      )}
+
+      {/* Marketing Landing Page - full-width standalone layout */}
+      {currentView === "marketing" && (
+        <Suspense fallback={<LazyLoadFallback />}>
+          <LandingPage />
+        </Suspense>
       )}
 
       {/* Projects Management Modal */}
@@ -737,6 +781,17 @@ const AppContent: React.FC<AppContentProps> = (props) => {
 
       {/* Error Display */}
       <ErrorDisplay errors={forge.errors} />
+
+      {/* Beta Feedback Components */}
+      {feedbackModalOpen && (
+        <BetaFeedback onClose={() => setFeedbackModalOpen(false)} />
+      )}
+      <Changelog isOpen={showChangelog} onClose={() => setShowChangelog(false)} />
+
+      {/* Floating Beta Feedback Button - only show when modal is closed */}
+      {!feedbackModalOpen && currentView !== "infinity-terminal" && currentView !== "marketing" && (
+        <BetaFeedback onClose={() => setFeedbackModalOpen(false)} />
+      )}
 
       {/* Real-time Activity Feed (floating) */}
       {(activities || []).length > 0 && currentView === "dashboard" && (

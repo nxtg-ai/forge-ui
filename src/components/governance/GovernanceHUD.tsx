@@ -93,8 +93,8 @@ export const GovernanceHUD: React.FC<GovernanceHUDProps> = ({ className }) => {
   );
 };
 
-// Helper components
-const LoadingState: React.FC = () => (
+// Helper components - memoized to prevent unnecessary re-renders
+const LoadingState: React.FC = React.memo(() => (
   <div
     className="h-full w-full bg-gray-950/95 backdrop-blur-sm border border-gray-800 rounded-xl shadow-2xl flex items-center justify-center"
     data-testid="governance-hud-loading"
@@ -104,9 +104,10 @@ const LoadingState: React.FC = () => (
       <p className="text-sm text-gray-500">Loading governance...</p>
     </div>
   </div>
-);
+));
+LoadingState.displayName = "LoadingState";
 
-const ErrorState: React.FC<{ message: string }> = ({ message }) => (
+const ErrorState: React.FC<{ message: string }> = React.memo(({ message }) => (
   <div
     className="h-full w-full bg-gray-950/95 backdrop-blur-sm border border-red-500/20 rounded-xl shadow-2xl flex items-center justify-center"
     data-testid="governance-hud-error"
@@ -116,6 +117,7 @@ const ErrorState: React.FC<{ message: string }> = ({ message }) => (
       <p className="text-xs text-gray-500">{message}</p>
     </div>
   </div>
-);
+));
+ErrorState.displayName = "ErrorState";
 
 export default GovernanceHUD;

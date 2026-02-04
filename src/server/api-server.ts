@@ -1669,6 +1669,176 @@ app.post("/api/workers/shutdown", async (req, res) => {
   }
 });
 
+// ============= Beta Feedback Endpoints =============
+
+const FEEDBACK_FILE = path.join(projectRoot, "data", "feedback.json");
+
+// Ensure feedback file exists
+async function ensureFeedbackFile() {
+  try {
+    await fs.mkdir(path.dirname(FEEDBACK_FILE), { recursive: true });
+    try {
+      await fs.access(FEEDBACK_FILE);
+    } catch {
+      await fs.writeFile(FEEDBACK_FILE, JSON.stringify([], null, 2));
+    }
+  } catch (error) {
+    console.error("Failed to initialize feedback file:", error);
+  }
+}
+
+// Initialize feedback file on startup
+ensureFeedbackFile();
+
+// Submit feedback
+app.post("/api/feedback", async (req, res) => {
+  try {
+    const {
+      rating,
+      category,
+      description,
+      url,
+      userAgent,
+      timestamp,
+    } = req.body;
+
+    // Validate required fields
+    if (!rating || !category || !description) {
+      return res.status(400).json({
+        success: false,
+        error: "Missing required fields: rating, category, description",
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // Create feedback entry
+    const feedback = {
+      id: `feedback-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+      rating: Number(rating),
+      category,
+      description,
+      url: url || "unknown",
+      userAgent: userAgent || "unknown",
+      timestamp: timestamp || new Date().toISOString(),
+      status: "new",
+    };
+
+    // Read existing feedback
+    await ensureFeedbackFile();
+    const data = await fs.readFile(FEEDBACK_FILE, "utf-8");
+    const feedbackList = JSON.parse(data);
+
+    // Add new feedback
+    feedbackList.push(feedback);
+
+    // Write back to file
+    await fs.writeFile(FEEDBACK_FILE, JSON.stringify(feedbackList, null, 2));
+
+    // Broadcast feedback event
+    broadcast("feedback.submitted", {
+      id: feedback.id,
+      category: feedback.category,
+      rating: feedback.rating,
+      timestamp: feedback.timestamp,
+    });
+
+    res.json({
+      success: true,
+      data: { id: feedback.id },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Failed to save feedback:", error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// Get all feedback (admin endpoint)
+app.get("/api/feedback", async (req, res) => {
+  try {
+    await ensureFeedbackFile();
+    const data = await fs.readFile(FEEDBACK_FILE, "utf-8");
+    const feedbackList = JSON.parse(data);
+
+    // Sort by timestamp descending
+    feedbackList.sort((a: { timestamp: string }, b: { timestamp: string }) =>
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    res.json({
+      success: true,
+      data: feedbackList,
+      count: feedbackList.length,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Failed to read feedback:", error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// Get feedback statistics
+app.get("/api/feedback/stats", async (req, res) => {
+  try {
+    await ensureFeedbackFile();
+    const data = await fs.readFile(FEEDBACK_FILE, "utf-8");
+    const feedbackList = JSON.parse(data);
+
+    // Calculate statistics
+    const totalCount = feedbackList.length;
+    const averageRating = totalCount > 0
+      ? feedbackList.reduce((sum: number, f: { rating: number }) => sum + f.rating, 0) / totalCount
+      : 0;
+
+    // Count by category
+    const byCategory: Record<string, number> = {};
+    feedbackList.forEach((f: { category: string }) => {
+      byCategory[f.category] = (byCategory[f.category] || 0) + 1;
+    });
+
+    // Count by rating
+    const byRating: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    feedbackList.forEach((f: { rating: number }) => {
+      byRating[f.rating] = (byRating[f.rating] || 0) + 1;
+    });
+
+    // Recent feedback (last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const recentCount = feedbackList.filter((f: { timestamp: string }) =>
+      new Date(f.timestamp) >= sevenDaysAgo
+    ).length;
+
+    res.json({
+      success: true,
+      data: {
+        totalCount,
+        averageRating: Math.round(averageRating * 10) / 10,
+        byCategory,
+        byRating,
+        recentCount,
+        lastSubmission: totalCount > 0 ? feedbackList[0].timestamp : null,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Failed to calculate feedback stats:", error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 // Start server
 const PORT = Number(process.env.PORT) || 5051; // NXTG-Forge dedicated API port
 

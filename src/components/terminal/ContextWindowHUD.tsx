@@ -47,7 +47,7 @@ interface RawMemoryItem {
   tags?: string[];
 }
 
-export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = ({
+export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = React.memo(({
   className = "",
 }) => {
   const [contextData, setContextData] = useState<ContextData>({
@@ -352,4 +352,4 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = ({
       )}
     </motion.div>
   );
-};
+});

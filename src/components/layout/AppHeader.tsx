@@ -37,6 +37,7 @@ import {
   MessageSquare,
   Command,
   Mountain,
+  Sparkles,
 } from "lucide-react";
 import { ProjectSwitcher } from "../ProjectSwitcher";
 import { useEngagement } from "../../contexts/EngagementContext";
@@ -52,6 +53,7 @@ const NAVIGATION_ROUTES = [
   { id: "architect", label: "Architect", icon: <Building2 className="w-4 h-4" />, testId: "architect" },
   { id: "architect-demo", label: "Demo", icon: <Rocket className="w-4 h-4" />, testId: "architect-demo" },
   { id: "yolo", label: "YOLO", icon: <Shield className="w-4 h-4" />, testId: "yolo" },
+  { id: "marketing", label: "Marketing", icon: <Sparkles className="w-4 h-4" />, testId: "marketing" },
 ] as const;
 
 // Engagement mode configuration
