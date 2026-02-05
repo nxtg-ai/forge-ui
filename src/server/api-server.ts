@@ -20,8 +20,6 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import { GovernanceState } from "../types/governance.types";
 import { GovernanceStateManager } from "../services/governance-state-manager";
-import { MemoryService } from "../services/memory-service";
-import type { MemoryItem } from "../services/memory-service";
 import { AgentWorkerPool, PoolStatus, AgentTask } from "./workers";
 import { InitService } from "../services/init-service";
 import type {
@@ -38,6 +36,8 @@ import {
   flushSentry,
 } from "../monitoring/sentry";
 import swaggerRouter from "./swagger";
+import { StatusService } from "../services/status-service";
+import type { ForgeStatus } from "../services/status-service";
 
 const app = express();
 
@@ -65,6 +65,32 @@ const wss = new WebSocketServer({ noServer: true });
 // Initialize Governance State Manager
 const projectRoot = process.cwd();
 const governanceStateManager = new GovernanceStateManager(projectRoot);
+
+// File watcher for governance.json changes
+import { watch } from "fs";
+let governanceWatcher: ReturnType<typeof watch> | null = null;
+
+function setupGovernanceWatcher() {
+  const governancePath = path.join(projectRoot, ".claude/governance.json");
+
+  governanceWatcher = watch(governancePath, async (eventType) => {
+    if (eventType === "change") {
+      try {
+        // Read updated state
+        const state = await governanceStateManager.readState();
+
+        // Broadcast to all WebSocket clients
+        broadcast("governance.update", state);
+
+        console.log("[Governance] State change detected and broadcast to clients");
+      } catch (error) {
+        console.error("[Governance] Failed to read state after change:", error);
+      }
+    }
+  });
+
+  console.log("[Governance] File watcher initialized");
+}
 
 // Initialize Worker Pool (lazy - starts on first request or explicit init)
 let workerPool: AgentWorkerPool | null = null;
@@ -112,6 +138,8 @@ const mcpSuggestionEngine = new MCPSuggestionEngine();
 const runspaceManager = new RunspaceManager();
 // Initialize init service for project setup
 const initService = new InitService(projectRoot);
+// Initialize status service for /frg-status command
+const statusService = new StatusService(projectRoot);
 
 // WebSocket connection management
 const clients = new Set<WebSocket>();
@@ -826,196 +854,9 @@ app.get("/api/memory/seed", async (_req, res) => {
   }
 });
 
-// ============= Memory Persistence Endpoints =============
-
-import { MemoryService } from "../services/memory-service";
-
-// Initialize Memory Service
-const memoryService = new MemoryService({ projectRoot: process.cwd() });
-memoryService.initialize().catch((error) => {
-  console.error("Failed to initialize memory service:", error);
-});
-
-app.get("/api/memory", async (_req, res) => {
-  try {
-    const result = await memoryService.readMemory();
-
-    if (!result.isOk()) {
-      throw result.error;
-    }
-
-    res.json({
-      success: true,
-      data: result.unwrap(),
-      count: result.unwrap().length,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
-
-app.post("/api/memory", async (req, res) => {
-  try {
-    const item = req.body;
-
-    // Write to file system
-    const result = await memoryService.writeMemory(item);
-
-    if (!result.isOk()) {
-      throw result.error;
-    }
-
-    // Sync to governance
-    await memoryService.syncToGovernance("memory.created", {
-      id: item.id,
-      category: item.category,
-      content: item.content.substring(0, 100),
-      tags: item.tags,
-    });
-
-    res.json({
-      success: true,
-      data: item,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
-
-app.put("/api/memory/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const item = { ...req.body, id };
-
-    const result = await memoryService.updateMemory(item);
-
-    if (!result.isOk()) {
-      throw result.error;
-    }
-
-    // Sync to governance
-    await memoryService.syncToGovernance("memory.updated", {
-      id: item.id,
-      category: item.category,
-    });
-
-    res.json({
-      success: true,
-      data: item,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
-
-app.delete("/api/memory/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { category } = req.query;
-
-    if (!category || typeof category !== "string") {
-      res.status(400).json({
-        success: false,
-        error: "Category parameter is required",
-        timestamp: new Date().toISOString(),
-      });
-      return;
-    }
-
-    const result = await memoryService.deleteMemory(id, category as MemoryItem["category"]);
-
-    if (!result.isOk()) {
-      throw result.error;
-    }
-
-    // Sync to governance
-    await memoryService.syncToGovernance("memory.deleted", {
-      id,
-      category,
-    });
-
-    res.json({
-      success: true,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
-
-app.get("/api/memory/export", async (_req, res) => {
-  try {
-    const result = await memoryService.exportForContext();
-
-    if (!result.isOk()) {
-      throw result.error;
-    }
-
-    res.json({
-      success: true,
-      data: result.unwrap(),
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
-
-app.post("/api/memory/snapshot", async (req, res) => {
-  try {
-    const { name } = req.body;
-
-    const result = await memoryService.createSnapshot(name);
-
-    if (!result.isOk()) {
-      throw result.error;
-    }
-
-    // Sync to governance
-    await memoryService.syncToGovernance("memory.snapshot", {
-      name: name || "auto-snapshot",
-      path: result.unwrap(),
-    });
-
-    res.json({
-      success: true,
-      data: {
-        path: result.unwrap(),
-        name: name || "auto-snapshot",
-      },
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
+// ============= Memory Endpoints (Read-Only) =============
+// Note: Memory persistence now uses Claude Code's native memory system via MCP
+// These endpoints provide read-only seed data for the UI widget only
 
 // ============= Governance Endpoints =============
 
@@ -1109,6 +950,10 @@ app.post("/api/governance/sentinel", async (req, res) => {
 
     // Append log using state manager (includes automatic rotation)
     await governanceStateManager.appendSentinelLog(entry);
+
+    // Broadcast governance update to all clients
+    const state = await governanceStateManager.readState();
+    broadcast("governance.update", state);
 
     res.json({
       success: true,
@@ -1978,6 +1823,42 @@ app.post("/api/forge/init", async (req, res) => {
   }
 });
 
+// Get project status (/frg-status command backend)
+app.get("/api/forge/status", async (req, res) => {
+  try {
+    const statusResult = await statusService.getStatus();
+
+    if (statusResult.isErr()) {
+      return res.status(500).json({
+        success: false,
+        error: statusResult.error.message,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const status = statusResult.unwrap();
+
+    // Support CLI format via query param
+    if (req.query.format === "cli") {
+      res.type("text/plain");
+      res.send(StatusService.formatForCLI(status));
+    } else {
+      res.json({
+        success: true,
+        data: status,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  } catch (error) {
+    captureException(error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Status retrieval failed",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 // ============= Beta Feedback Endpoints =============
 
 const FEEDBACK_FILE = path.join(projectRoot, "data", "feedback.json");
@@ -2181,6 +2062,9 @@ server.listen(PORT, "0.0.0.0", async () => {
   createPTYBridge(server, runspaceManager);
   console.log(`PTY Bridge initialized at ws://localhost:${PORT}/terminal`);
 
+  // Setup governance file watcher for real-time updates
+  setupGovernanceWatcher();
+
   console.log("All services initialized successfully");
 });
 
@@ -2203,6 +2087,12 @@ process.on("SIGTERM", async () => {
   // Shutdown runspace manager
   await runspaceManager.shutdown();
   console.log("RunspaceManager shutdown complete");
+
+  // Close governance watcher
+  if (governanceWatcher) {
+    governanceWatcher.close();
+    console.log("Governance watcher closed");
+  }
 
   // Close WebSocket connections
   clients.forEach((client) => {

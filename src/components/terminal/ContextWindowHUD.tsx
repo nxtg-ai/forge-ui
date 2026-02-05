@@ -1,6 +1,7 @@
 /**
  * Context Window HUD
  * Visualizes what files Claude is analyzing and token usage heat map
+ * Context notes are read-only - use Claude Code's native memory for persistence
  */
 
 import React, { useState, useEffect } from "react";
@@ -11,11 +12,9 @@ import {
   Brain,
   Activity,
   TrendingUp,
-  Folder,
   Eye,
-  Layers,
+  Download,
 } from "lucide-react";
-import { MemoryWidget, type MemoryItem } from "./MemoryWidget";
 
 interface ContextFile {
   path: string;
@@ -35,16 +34,13 @@ interface ContextWindowHUDProps {
   className?: string;
 }
 
-/**
- * Raw memory item from JSON/localStorage (dates are strings before parsing)
- */
-interface RawMemoryItem {
+interface ContextNote {
   id: string;
   content: string;
+  category: "instruction" | "learning" | "decision" | "context" | "other";
+  tags: string[];
   created: string;
   updated: string;
-  category?: MemoryItem["category"];
-  tags?: string[];
 }
 
 export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = React.memo(({
@@ -57,90 +53,39 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = React.memo(({
     currentThought: "",
   });
 
-  const [memoryItems, setMemoryItems] = useState<MemoryItem[]>([]);
+  const [contextNotes, setContextNotes] = useState<ContextNote[]>([]);
+  const [showExportInstructions, setShowExportInstructions] = useState(false);
 
-  // Load memory from localStorage on mount, or fetch seed data
+  // Load seed context notes on mount
   useEffect(() => {
-    const loadMemory = async () => {
-      const stored = localStorage.getItem("forge-memory");
+    const loadContextNotes = async () => {
+      const stored = localStorage.getItem("forge-context-notes");
       if (stored) {
         try {
-          const parsed = JSON.parse(stored) as RawMemoryItem[];
-          setMemoryItems(
-            parsed.map((item) => ({
-              id: item.id,
-              content: item.content,
-              category: item.category || "other",
-              tags: item.tags || [],
-              created: new Date(item.created),
-              updated: new Date(item.updated),
-            })),
-          );
+          const parsed = JSON.parse(stored);
+          setContextNotes(parsed);
         } catch (e) {
-          console.error("Failed to load memory:", e);
+          console.error("Failed to load context notes:", e);
         }
       } else {
-        // No memory stored, fetch seed data
+        // Fetch seed data
         try {
           const response = await fetch(`/api/memory/seed`);
           if (response.ok) {
             const data = await response.json();
             if (data.success && data.data) {
-              const rawItems = data.data as RawMemoryItem[];
-              const items = rawItems.map((item) => ({
-                id: item.id,
-                content: item.content,
-                category: item.category || "other",
-                tags: item.tags || [],
-                created: new Date(item.created),
-                updated: new Date(item.updated),
-              }));
-              setMemoryItems(items);
-              localStorage.setItem("forge-memory", JSON.stringify(data.data));
-              console.log(`✅ Loaded ${items.length} seed memory items`);
+              setContextNotes(data.data);
+              localStorage.setItem("forge-context-notes", JSON.stringify(data.data));
+              console.log(`Loaded ${data.data.length} context notes`);
             }
           }
         } catch (e) {
-          console.warn("Failed to fetch seed memory:", e);
+          console.warn("Failed to fetch seed context notes:", e);
         }
       }
     };
-    loadMemory();
+    loadContextNotes();
   }, []);
-
-  // Save memory to localStorage whenever it changes
-  const saveMemory = (items: MemoryItem[]) => {
-    setMemoryItems(items);
-    localStorage.setItem("forge-memory", JSON.stringify(items));
-  };
-
-  const handleAddMemory = (
-    content: string,
-    category: MemoryItem["category"],
-    tags: string[],
-  ) => {
-    const newItem: MemoryItem = {
-      id: crypto.randomUUID(),
-      content,
-      tags,
-      category,
-      created: new Date(),
-      updated: new Date(),
-    };
-    saveMemory([...memoryItems, newItem]);
-  };
-
-  const handleEditMemory = (id: string, content: string, tags: string[]) => {
-    saveMemory(
-      memoryItems.map((item) =>
-        item.id === id ? { ...item, content, tags, updated: new Date() } : item,
-      ),
-    );
-  };
-
-  const handleDeleteMemory = (id: string) => {
-    saveMemory(memoryItems.filter((item) => item.id !== id));
-  };
 
   useEffect(() => {
     // Listen for context events from ClaudeTerminal
@@ -155,6 +100,25 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = React.memo(({
       window.removeEventListener("context-window-update", handleContext as EventListener);
     };
   }, []);
+
+  const handleExportToClaudeMemory = () => {
+    setShowExportInstructions(true);
+  };
+
+  const getCategoryColor = (category: ContextNote["category"]) => {
+    switch (category) {
+      case "instruction":
+        return "bg-red-500/10 border-red-500/30 text-red-400";
+      case "learning":
+        return "bg-blue-500/10 border-blue-500/30 text-blue-400";
+      case "decision":
+        return "bg-purple-500/10 border-purple-500/30 text-purple-400";
+      case "context":
+        return "bg-green-500/10 border-green-500/30 text-green-400";
+      default:
+        return "bg-gray-500/10 border-gray-500/30 text-gray-400";
+    }
+  };
 
   const tokenPercentage =
     contextData.maxTokens > 0 && contextData.totalTokens != null
@@ -201,7 +165,7 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = React.memo(({
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Brain className="w-5 h-5 text-purple-400" />
-            <h3 className="font-semibold text-sm">Context & Memory</h3>
+            <h3 className="font-semibold text-sm">Context & Notes</h3>
           </div>
           <div className="text-xs text-gray-500">
             {contextData.files.length} files
@@ -248,7 +212,7 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = React.memo(({
         </div>
       )}
 
-      {/* Memory Section */}
+      {/* Context Notes Section (Read-Only) */}
       <div
         className={
           contextData.files.length > 0
@@ -256,13 +220,81 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = React.memo(({
             : "px-4 py-3 flex-1 min-h-0 overflow-y-auto"
         }
       >
-        <MemoryWidget
-          items={memoryItems}
-          onAdd={handleAddMemory}
-          onEdit={handleEditMemory}
-          onDelete={handleDeleteMemory}
-          hasFiles={contextData.files.length > 0}
-        />
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+            Context Notes
+          </h4>
+          <button
+            onClick={handleExportToClaudeMemory}
+            className="flex items-center gap-1 px-2 py-1 text-xs bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 rounded transition-colors"
+            title="Export to Claude Memory"
+          >
+            <Download className="w-3 h-3" />
+            Export
+          </button>
+        </div>
+
+        {showExportInstructions && (
+          <div className="mb-3 p-3 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+            <div className="flex items-start gap-2 mb-2">
+              <Brain className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <h5 className="text-sm font-semibold text-purple-400 mb-1">
+                  Export to Claude Code Memory
+                </h5>
+                <p className="text-xs text-gray-300 mb-2">
+                  To persist these notes using Claude Code's native memory system:
+                </p>
+                <ol className="text-xs text-gray-300 space-y-1 list-decimal list-inside">
+                  <li>Open a new Claude Code chat</li>
+                  <li>
+                    Copy the notes below and paste them with: "Store these in
+                    your memory for the nxtg-forge project"
+                  </li>
+                  <li>Claude will save them to the MCP memory server</li>
+                </ol>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowExportInstructions(false)}
+              className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          {contextNotes.length === 0 ? (
+            <div className="text-center py-8 text-gray-500 text-sm">
+              No context notes available
+            </div>
+          ) : (
+            contextNotes.map((note) => (
+              <div
+                key={note.id}
+                className={`p-2 rounded border ${getCategoryColor(note.category)}`}
+              >
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <span className="text-xs font-semibold uppercase tracking-wide">
+                    {note.category}
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {note.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="text-xs px-1.5 py-0.5 bg-gray-800/50 rounded"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-sm text-gray-300">{note.content}</p>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {/* Files Heat Map + Footer Stats - Only show when files exist */}

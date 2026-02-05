@@ -58,6 +58,7 @@ interface StoredSession {
   projectRoot: string;
   createdAt: string;
   lastAccess: string;
+  authToken?: string;
 }
 
 const STORAGE_KEY = "infinity-terminal-sessions";
@@ -172,13 +173,18 @@ export function useSessionPersistence(
   );
 
   // Get terminal WebSocket URL (with optional sessionId for reconnection)
-  const getWsUrl = useCallback((sessionId?: string) => {
+  const getWsUrl = useCallback((sessionId?: string, authToken?: string) => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const base = `${protocol}//${config.wsHost}:${config.wsPort}${config.wsPath}`;
+    const params = new URLSearchParams();
     if (sessionId) {
-      return `${base}?sessionId=${encodeURIComponent(sessionId)}`;
+      params.set("sessionId", sessionId);
     }
-    return base;
+    if (authToken) {
+      params.set("token", authToken);
+    }
+    const queryString = params.toString();
+    return queryString ? `${base}?${queryString}` : base;
   }, [config.wsHost, config.wsPort, config.wsPath]);
 
   // Alias for backward compatibility
@@ -215,9 +221,10 @@ export function useSessionPersistence(
       (s) => s.sessionName === sessionName,
     );
     const sessionId = existingSession?.sessionId || generateSessionId();
+    const authToken = existingSession?.authToken;
 
-    // Pass sessionId to backend so it can reattach to existing PTY
-    const url = getWsUrl(sessionId);
+    // Pass sessionId and token to backend so it can reattach to existing PTY
+    const url = getWsUrl(sessionId, authToken);
 
     console.log(
       `[InfinityTerminal] Connecting to ${url} (attempt ${reconnectAttemptsRef.current + 1}/${config.maxReconnectAttempts})${existingSession ? " [reconnecting]" : " [new]"}`,
@@ -232,22 +239,13 @@ export function useSessionPersistence(
         console.log("[InfinityTerminal] Connected");
         reconnectAttemptsRef.current = 0;
 
-        const session = saveSession({
-          sessionId,
-          sessionName,
-          layout,
-          projectRoot: window.location.pathname,
-        });
-
         setState((prev) => ({
           ...prev,
-          sessionId: session.sessionId,
-          sessionName: session.sessionName,
+          sessionId,
+          sessionName,
           connected: true,
           connecting: false,
           error: null,
-          createdAt: new Date(session.createdAt),
-          lastActivity: new Date(),
           reconnectAttempts: 0,
         }));
 
