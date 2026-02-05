@@ -1,104 +1,28 @@
 {
   "version": 1,
-  "timestamp": "2026-01-29T08:00:00Z",
+  "timestamp": "2026-02-04T06:00:00Z",
   "constitution": {
-    "directive": "Build production-ready Governance HUD for strategic AI oversight",
+    "directive": "Ship NXTG-Forge as a production-ready developer tool with proper licensing, deployment strategy, and governance visibility",
     "vision": [
-      "Real-time visibility into agent orchestration",
-      "Risk assessment and early warning system",
-      "Strategic alignment verification"
+      "Ultimate Chief of Staff for Developers - AI-orchestrated productivity 10x",
+      "Production planning and legal compliance as first-class features (no one else does this)",
+      "100% transparency in all decisions and operations"
     ],
-    "status": "EXECUTION",
-    "confidence": 85,
-    "updatedBy": "NXTG-Forge Orchestrator",
-    "updatedAt": "2026-01-29T08:00:00Z"
+    "status": "BLOCKED",
+    "confidence": 65,
+    "updatedBy": "Strategic Audit 2026-02-04",
+    "updatedAt": "2026-02-04T06:00:00Z"
   },
   "workstreams": [
     {
-      "id": "gov-001",
-      "name": "Governance HUD Implementation",
-      "description": "Build the core governance visualization system",
-      "status": "active",
+      "id": "ws-roadmap",
+      "name": "v3 Post-Launch Roadmap (Weeks 1-4)",
+      "description": "Complete 4-week roadmap: production polish, agent ecosystem, infrastructure, marketing",
+      "status": "completed",
       "risk": "low",
       "owner": "forge-builder",
       "dependencies": [],
-      "startedAt": "2026-01-29T08:00:00Z",
-      "progress": 100,
-      "metrics": {
-        "progress": 100,
-        "tasksCompleted": 11,
-        "totalTasks": 11,
-        "blockers": 0
-      },
-      "tasks": [
-        {
-          "id": "t1",
-          "name": "Create governance data schema",
-          "status": "completed"
-        },
-        {
-          "id": "t2",
-          "name": "Build GovernanceHUD container component",
-          "status": "completed"
-        },
-        {
-          "id": "t3",
-          "name": "Implement ConstitutionCard component",
-          "status": "completed"
-        },
-        {
-          "id": "t4",
-          "name": "Implement ImpactMatrix component",
-          "status": "completed"
-        },
-        {
-          "id": "t5",
-          "name": "Implement OracleFeed component",
-          "status": "completed"
-        },
-        {
-          "id": "t6",
-          "name": "Create API endpoint for governance state",
-          "status": "completed"
-        },
-        {
-          "id": "t7",
-          "name": "Fix Vite proxy configuration",
-          "status": "completed"
-        },
-        {
-          "id": "t8",
-          "name": "Integrate with terminal-view page",
-          "status": "completed"
-        },
-        {
-          "id": "t9",
-          "name": "Add configuration system (Stability #1)",
-          "status": "completed"
-        },
-        {
-          "id": "t10",
-          "name": "Add state rotation and backups (Stability #2)",
-          "status": "completed"
-        },
-        {
-          "id": "t11",
-          "name": "Add error boundary and documentation (Stability #3-4)",
-          "status": "completed"
-        }
-      ]
-    },
-    {
-      "id": "gov-002",
-      "name": "Agent Integration Layer",
-      "description": "Enable agents to update governance state",
-      "status": "active",
-      "risk": "low",
-      "owner": "forge-oracle",
-      "dependencies": [
-        "gov-001"
-      ],
-      "startedAt": "2026-01-29T08:00:00Z",
+      "startedAt": "2026-02-01T00:00:00Z",
       "progress": 100,
       "metrics": {
         "progress": 100,
@@ -108,141 +32,432 @@
       },
       "tasks": [
         {
+          "id": "w1",
+          "name": "Week 1: Production Polish (any types, TODOs, tests)",
+          "status": "completed"
+        },
+        {
+          "id": "w2",
+          "name": "Week 2: Agent Ecosystem (22 agents, CI/CD, Sentry, API docs)",
+          "status": "completed"
+        },
+        {
+          "id": "w3",
+          "name": "Week 3: Agent Testing + Communication + Marketplace",
+          "status": "completed"
+        },
+        {
+          "id": "w4",
+          "name": "Week 4: E2E Tests + Performance + Marketing + Beta + Docs",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "id": "ws-terminal-ux",
+      "name": "Terminal UX Fixes",
+      "description": "Full-width viewport containment, panel layout, double header fix",
+      "status": "completed",
+      "risk": "low",
+      "owner": "forge-builder",
+      "dependencies": [],
+      "startedAt": "2026-02-04T00:00:00Z",
+      "progress": 100,
+      "metrics": {
+        "progress": 100,
+        "tasksCompleted": 5,
+        "totalTasks": 5,
+        "blockers": 0
+      },
+      "tasks": [
+        {
           "id": "t1",
-          "name": "Create forge-oracle agent definition",
+          "name": "Remove max-w-7xl container for terminal view",
           "status": "completed"
         },
         {
           "id": "t2",
-          "name": "Wire hooks in settings.json",
+          "name": "Fix double header (hide AppHeader on terminal)",
           "status": "completed"
         },
         {
           "id": "t3",
-          "name": "Integrate oracle with orchestrator",
+          "name": "Fix viewport overflow with flex min-h-0 chain",
           "status": "completed"
         },
         {
           "id": "t4",
-          "name": "Document agent protocol guidelines (AGENT_PROTOCOL.md)",
+          "name": "Expand panels to full browser width",
           "status": "completed"
+        },
+        {
+          "id": "t5",
+          "name": "Add Dashboard nav button to terminal header",
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "id": "ws-license",
+      "name": "BLOCKING: License & Monetization Decision",
+      "description": "Determine open-source vs monetization strategy. Analyze tech stack licenses. Produce decision framework. Create LICENSE file.",
+      "status": "blocked",
+      "risk": "critical",
+      "owner": "CEO-LOOP",
+      "dependencies": [],
+      "startedAt": "2026-02-04T06:00:00Z",
+      "progress": 40,
+      "metrics": {
+        "progress": 40,
+        "tasksCompleted": 2,
+        "totalTasks": 5,
+        "blockers": 1
+      },
+      "tasks": [
+        {
+          "id": "l1",
+          "name": "Tech stack license inventory",
+          "status": "completed"
+        },
+        {
+          "id": "l2",
+          "name": "Monetization framework document",
+          "status": "completed"
+        },
+        {
+          "id": "l3",
+          "name": "CEO decision session",
+          "status": "pending"
+        },
+        {
+          "id": "l4",
+          "name": "Create LICENSE file",
+          "status": "pending"
+        },
+        {
+          "id": "l5",
+          "name": "Create SECURITY.md",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "ws-deployment",
+      "name": "BLOCKING: Deployment Medium Decision",
+      "description": "Determine distribution channel: npm, Claude Code plugin, GitHub Release, VS Code extension, or multi-channel. This decision blocks all downstream deployment work.",
+      "status": "blocked",
+      "risk": "critical",
+      "owner": "CEO-LOOP",
+      "dependencies": [],
+      "startedAt": "2026-02-04T06:00:00Z",
+      "progress": 20,
+      "metrics": {
+        "progress": 20,
+        "tasksCompleted": 1,
+        "totalTasks": 5,
+        "blockers": 1
+      },
+      "tasks": [
+        {
+          "id": "d1",
+          "name": "Produce pros/cons analysis per medium",
+          "status": "completed"
+        },
+        {
+          "id": "d2",
+          "name": "Brainstorming session with vision alignment",
+          "status": "pending"
+        },
+        {
+          "id": "d3",
+          "name": "Technical feasibility assessment",
+          "status": "pending"
+        },
+        {
+          "id": "d4",
+          "name": "CEO decision",
+          "status": "pending"
+        },
+        {
+          "id": "d5",
+          "name": "Implementation plan for chosen medium",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "ws-governance-pipeline",
+      "name": "Governance HUD Data Pipeline",
+      "description": "Wire real data into governance HUD. Currently shows stale Jan 29 data. Need: auto-update from sessions, git state, test metrics, blocking decisions.",
+      "status": "active",
+      "risk": "high",
+      "owner": "forge-builder",
+      "dependencies": [],
+      "startedAt": "2026-02-04T06:00:00Z",
+      "progress": 16,
+      "metrics": {
+        "progress": 16,
+        "tasksCompleted": 1,
+        "totalTasks": 6,
+        "blockers": 0
+      },
+      "tasks": [
+        {
+          "id": "g1",
+          "name": "Update governance.json with current state",
+          "status": "completed"
+        },
+        {
+          "id": "g2",
+          "name": "Wire session events to sentinel API",
+          "status": "pending"
+        },
+        {
+          "id": "g3",
+          "name": "Add git state tracking to HUD",
+          "status": "pending"
+        },
+        {
+          "id": "g4",
+          "name": "Add test metrics to HUD",
+          "status": "pending"
+        },
+        {
+          "id": "g5",
+          "name": "Connect context memory to governance",
+          "status": "pending"
+        },
+        {
+          "id": "g6",
+          "name": "Add blocking decision visibility",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "ws-doc-hygiene",
+      "name": "Documentation Hygiene & Organization",
+      "description": "Clean up 39 root markdown files, organize into docs/ subdirectories, clean .claude/forge/ duplication, ensure fresh install enforces structure.",
+      "status": "active",
+      "risk": "medium",
+      "owner": "forge-builder",
+      "dependencies": [],
+      "startedAt": "2026-02-04T06:00:00Z",
+      "progress": 16,
+      "metrics": {
+        "progress": 16,
+        "tasksCompleted": 1,
+        "totalTasks": 6,
+        "blockers": 0
+      },
+      "tasks": [
+        {
+          "id": "h1",
+          "name": "Audit complete (39 files cataloged)",
+          "status": "completed"
+        },
+        {
+          "id": "h2",
+          "name": "Move reports to docs/reports/",
+          "status": "pending"
+        },
+        {
+          "id": "h3",
+          "name": "Move arch docs to docs/architecture/",
+          "status": "pending"
+        },
+        {
+          "id": "h4",
+          "name": "Move ops docs to docs/operations/",
+          "status": "pending"
+        },
+        {
+          "id": "h5",
+          "name": "Move guides to docs/guides/",
+          "status": "pending"
+        },
+        {
+          "id": "h6",
+          "name": "Clean .claude/forge/ duplication",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "ws-compliance-feature",
+      "name": "Production Compliance Feature (Dog-food)",
+      "description": "Capture production planning + legal compliance as an nxtg-forge feature. Tech stack scanning, license checks, SBOM generation, deployment readiness.",
+      "status": "pending",
+      "risk": "medium",
+      "owner": "forge-planner",
+      "dependencies": [
+        "ws-license",
+        "ws-deployment"
+      ],
+      "startedAt": "2026-02-04T06:00:00Z",
+      "progress": 0,
+      "metrics": {
+        "progress": 0,
+        "tasksCompleted": 0,
+        "totalTasks": 4,
+        "blockers": 2
+      },
+      "tasks": [
+        {
+          "id": "c1",
+          "name": "Design /frg-compliance command",
+          "status": "pending"
+        },
+        {
+          "id": "c2",
+          "name": "Implement tech stack scanner",
+          "status": "pending"
+        },
+        {
+          "id": "c3",
+          "name": "Implement license compatibility checker",
+          "status": "pending"
+        },
+        {
+          "id": "c4",
+          "name": "Implement SBOM generation",
+          "status": "pending"
         }
       ]
     }
   ],
   "sentinelLog": [
     {
-      "id": "log-001",
-      "timestamp": 1738224000000,
-      "type": "INFO",
-      "severity": "low",
-      "source": "System",
-      "message": "Governance system initialized successfully",
-      "context": {
-        "version": "1.0.0",
-        "mode": "development"
-      },
-      "actionRequired": false
-    },
-    {
-      "id": "log-002",
-      "timestamp": 1738224060000,
-      "type": "INFO",
-      "severity": "low",
-      "source": "forge-orchestrator",
-      "message": "Beginning parallel agent deployment for Governance HUD",
-      "context": {
-        "agents": [
-          "forge-builder",
-          "nxtg-design-vanguard"
-        ],
-        "tasks": 11
-      },
-      "actionRequired": false
-    },
-    {
-      "id": "log-003",
-      "timestamp": 1738224120000,
+      "id": "log-100",
+      "timestamp": 1738627200000,
       "type": "SUCCESS",
       "severity": "low",
-      "source": "forge-detective",
-      "message": "Architecture analysis complete - no blocking issues found",
+      "category": "milestone",
+      "source": "forge-builder",
+      "message": "Week 1-4 Roadmap COMPLETE: 595 tests passing, 26 skipped, 0 failures. Bundle 1263KB (18% reduction).",
       "context": {
-        "filesAnalyzed": 47,
-        "patternsDetected": 12
-      },
-      "actionRequired": false
-    },
-    {
-      "id": "log-004",
-      "timestamp": 1738234567000,
-      "type": "SUCCESS",
-      "severity": "low",
-      "source": "forge-oracle",
-      "message": "Oracle agent initialized and integrated with Governance HUD",
-      "context": {
-        "capabilities": [
-          "scope_validation",
-          "drift_detection",
-          "governance_compliance"
+        "commits": [
+          "12840e6",
+          "6aafc18",
+          "d9f5a02"
         ],
-        "mode": "event-driven",
-        "status": "active"
+        "testsTotal": 595,
+        "testsPassing": 595,
+        "testsSkipped": 26,
+        "bundleSize": "1263KB"
       },
       "actionRequired": false
     },
     {
-      "id": "log-005",
-      "timestamp": 1738235000000,
+      "id": "log-101",
+      "timestamp": 1738627260000,
+      "type": "WARN",
+      "severity": "critical",
+      "category": "governance",
+      "source": "strategic-audit",
+      "message": "BLOCKING DECISION: License model undecided. Cannot create LICENSE file or proceed with open-source release.",
+      "context": {
+        "options": [
+          "MIT",
+          "Open-Core",
+          "BSL/SSPL",
+          "Dual License"
+        ],
+        "techStackClean": true,
+        "noGPL": true
+      },
+      "actionRequired": true
+    },
+    {
+      "id": "log-102",
+      "timestamp": 1738627320000,
+      "type": "WARN",
+      "severity": "critical",
+      "category": "governance",
+      "source": "strategic-audit",
+      "message": "BLOCKING DECISION: Deployment medium undecided. npm vs Claude Plugin vs GitHub Release vs multi-channel.",
+      "context": {
+        "options": [
+          "npm",
+          "Claude Code Plugin",
+          "GitHub Release",
+          "VS Code Extension",
+          "Multi-channel"
+        ],
+        "nativeDep": "node-pty requires C++ compilation"
+      },
+      "actionRequired": true
+    },
+    {
+      "id": "log-103",
+      "timestamp": 1738627380000,
+      "type": "ERROR",
+      "severity": "high",
+      "category": "governance",
+      "source": "strategic-audit",
+      "message": "Governance HUD shows STALE DATA from Jan 29. No real-time data pipeline exists. HUD is a beautiful dashboard with no live data source.",
+      "context": {
+        "lastUpdate": "2026-01-29",
+        "daysStale": 6,
+        "uiScore": "7/10",
+        "dataScore": "3/10",
+        "actionabilityScore": "2/10"
+      },
+      "actionRequired": true
+    },
+    {
+      "id": "log-104",
+      "timestamp": 1738627440000,
+      "type": "WARN",
+      "severity": "medium",
+      "category": "scope",
+      "source": "strategic-audit",
+      "message": "Root directory clutter: 39 markdown files. Target: ~10. Reorganization plan created.",
+      "context": {
+        "currentFiles": 39,
+        "targetFiles": 10,
+        "toMove": 27,
+        "toDelete": 2
+      },
+      "actionRequired": true
+    },
+    {
+      "id": "log-105",
+      "timestamp": 1738627500000,
       "type": "INFO",
       "severity": "medium",
       "category": "scope",
-      "source": "forge-oracle",
-      "message": "Governance status update: Core HUD at 73%, Agent layer at 75%",
+      "source": "strategic-audit",
+      "message": "Context Memory cards confirmed display-only. Not pulled into Claude context. User observation validated.",
       "context": {
-        "workstreams": {
-          "gov-001": "8/11 tasks complete - UI fully functional with polling",
-          "gov-002": "3/4 tasks complete - Oracle monitoring active"
-        },
-        "pending": [
-          "WebSocket real-time updates",
-          "Governance rule configuration",
-          "Historical trend visualization",
-          "Agent helper library for sentinel logs"
-        ],
-        "mvp_status": "Operational - HUD displays live data, Oracle monitors changes"
+        "component": "ContextWindowHUD",
+        "storage": "localStorage only",
+        "governanceIntegration": false
       },
-      "actionRequired": false
+      "actionRequired": true
     },
     {
-      "id": "log-006",
-      "timestamp": 1738280000000,
-      "type": "SUCCESS",
+      "id": "log-106",
+      "timestamp": 1738627560000,
+      "type": "INFO",
       "severity": "low",
-      "category": "governance",
-      "source": "forge-oracle",
-      "message": "All workstreams complete: gov-001 (11/11), gov-002 (4/4) - 100% ready to ship",
+      "category": "milestone",
+      "source": "strategic-audit",
+      "message": "Tech stack audit complete: 58 packages, 100% permissive licenses (MIT/Apache-2.0/ISC). Zero commercial restrictions. Zero copyleft.",
       "context": {
-        "workstreams": {
-          "gov-001": "11/11 tasks complete - Stability improvements shipped",
-          "gov-002": "4/4 tasks complete - Agent protocol documented"
-        },
-        "shipped": [
-          "Configuration system (Stability #1)",
-          "State rotation and backups (Stability #2)",
-          "Error boundary (Stability #3)",
-          "Agent protocol guidelines (Stability #4)",
-          "Strategic Advisor with AI recommendations"
-        ],
-        "recommendation": "Create PR and merge to main"
+        "totalPackages": 58,
+        "mitCount": 52,
+        "apache2Count": 3,
+        "iscCount": 3,
+        "gplCount": 0
       },
       "actionRequired": false
     }
   ],
   "metadata": {
-    "sessionId": "2026-01-29-governance-impl",
+    "sessionId": "2026-02-04-strategic-audit",
     "projectPath": "/home/axw/projects/NXTG-Forge/v3",
     "forgeVersion": "3.0.0",
-    "lastSync": "2026-01-29T08:00:00Z"
+    "lastSync": "2026-02-04T06:00:00Z"
   }
 }

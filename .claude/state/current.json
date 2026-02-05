@@ -1,7 +1,7 @@
 {
   "state": {
     "version": "3.0.0",
-    "timestamp": "2026-02-04T01:40:04.395Z",
+    "timestamp": "2026-02-05T03:23:01.253Z",
     "vision": {
       "version": "1.0",
       "created": "2026-01-25T22:57:35.077Z",
@@ -28,10 +28,10 @@
       "environment": "development",
       "projectPath": "/home/axw/projects/NXTG-Forge/v3"
     },
-    "engagementMode": "vp",
+    "engagementMode": "founder",
     "automationLevel": "conservative"
   },
-  "timestamp": "2026-02-04T01:40:04.396Z",
-  "checksum": "6cad6ec8daa0e261eaae7c6648ce2b80769a5e96eda2cd9b1fcc4edd188ca3fd",
+  "timestamp": "2026-02-05T03:23:01.254Z",
+  "checksum": "2471a33a6575ccfa9c6c3371c991b274e476f63aaf5b497646ed16a1b6a40865",
   "compressed": false
 }
