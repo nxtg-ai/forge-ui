@@ -20,6 +20,8 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import { GovernanceState } from "../types/governance.types";
 import { GovernanceStateManager } from "../services/governance-state-manager";
+import { MemoryService } from "../services/memory-service";
+import type { MemoryItem } from "../services/memory-service";
 import { AgentWorkerPool, PoolStatus, AgentTask } from "./workers";
 import {
   initSentryServer,
@@ -804,6 +806,197 @@ app.get("/api/memory/seed", async (_req, res) => {
       success: true,
       data: seedItems,
       count: seedItems.length,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// ============= Memory Persistence Endpoints =============
+
+import { MemoryService } from "../services/memory-service";
+
+// Initialize Memory Service
+const memoryService = new MemoryService({ projectRoot: process.cwd() });
+memoryService.initialize().catch((error) => {
+  console.error("Failed to initialize memory service:", error);
+});
+
+app.get("/api/memory", async (_req, res) => {
+  try {
+    const result = await memoryService.readMemory();
+
+    if (!result.isOk()) {
+      throw result.unwrapErr();
+    }
+
+    res.json({
+      success: true,
+      data: result.unwrap(),
+      count: result.unwrap().length,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+app.post("/api/memory", async (req, res) => {
+  try {
+    const item = req.body;
+
+    // Write to file system
+    const result = await memoryService.writeMemory(item);
+
+    if (!result.isOk()) {
+      throw result.unwrapErr();
+    }
+
+    // Sync to governance
+    await memoryService.syncToGovernance("memory.created", {
+      id: item.id,
+      category: item.category,
+      content: item.content.substring(0, 100),
+      tags: item.tags,
+    });
+
+    res.json({
+      success: true,
+      data: item,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+app.put("/api/memory/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const item = { ...req.body, id };
+
+    const result = await memoryService.updateMemory(item);
+
+    if (!result.isOk()) {
+      throw result.unwrapErr();
+    }
+
+    // Sync to governance
+    await memoryService.syncToGovernance("memory.updated", {
+      id: item.id,
+      category: item.category,
+    });
+
+    res.json({
+      success: true,
+      data: item,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+app.delete("/api/memory/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { category } = req.query;
+
+    if (!category || typeof category !== "string") {
+      res.status(400).json({
+        success: false,
+        error: "Category parameter is required",
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    const result = await memoryService.deleteMemory(id, category as MemoryItem["category"]);
+
+    if (!result.isOk()) {
+      throw result.unwrapErr();
+    }
+
+    // Sync to governance
+    await memoryService.syncToGovernance("memory.deleted", {
+      id,
+      category,
+    });
+
+    res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+app.get("/api/memory/export", async (_req, res) => {
+  try {
+    const result = await memoryService.exportForContext();
+
+    if (!result.isOk()) {
+      throw result.unwrapErr();
+    }
+
+    res.json({
+      success: true,
+      data: result.unwrap(),
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+app.post("/api/memory/snapshot", async (req, res) => {
+  try {
+    const { name } = req.body;
+
+    const result = await memoryService.createSnapshot(name);
+
+    if (!result.isOk()) {
+      throw result.unwrapErr();
+    }
+
+    // Sync to governance
+    await memoryService.syncToGovernance("memory.snapshot", {
+      name: name || "auto-snapshot",
+      path: result.unwrap(),
+    });
+
+    res.json({
+      success: true,
+      data: {
+        path: result.unwrap(),
+        name: name || "auto-snapshot",
+      },
       timestamp: new Date().toISOString(),
     });
   } catch (error) {

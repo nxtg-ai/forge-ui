@@ -105,7 +105,7 @@
 | Brand alignment ("fair") | +++++ | ++++ | ++ | +++ |
 | Complexity to implement | +++++ | +++ | ++ | ++ |
 
-**ACTION REQUIRED:** Schedule decision session. This blocks LICENSE file creation.
+**✅ DECISION MADE:** Open-Core model selected. Core functionality MIT, value-add features commercial.
 
 ---
 
@@ -929,13 +929,14 @@ These will be written to governance.json in the next step.
 | CLAUDE.md handling | Merge approach with backup | Never destroy user content |
 | Documentation domains | 3 distinct types | User docs, Forge docs, Project memory (skills-style) |
 
-### Blocking Decisions Still Pending
+### ✅ DECISIONS FINALIZED (2026-02-04)
 
-| Decision | Owner | Action Required |
-|----------|-------|-----------------|
-| License model (MIT vs Open-Core vs BSL vs Dual) | CEO | Final call needed |
-| Skill-pack pricing | CEO | Business decision |
-| Claude Code Plugin timeline | Team | Depends on Claude Code plugin API maturity |
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| **License model** | **Open-Core** | Core MIT (CLI, agents, terminal, HUD) + Pro commercial (cloud, team, SSO) |
+| **Skill-pack pricing** | **Tiered** | FREE: Vast coverage of common stacks. PRO: Best-practices infused, pitfall-avoiding intelligence |
+| **Deployment primary** | **Claude Code Plugin** | Dog-food alignment, native integration, first comprehensive plugin with UI |
+| **Deployment secondary** | **npm global** | Broader reach for non-Claude Code users |
 
 ### Immediate Next Steps
 
