@@ -237,7 +237,7 @@ export class MemoryService extends BaseService {
         new IntegrationError(
           "Invalid memory item",
           "VALIDATION_ERROR",
-          { errors: validation.unwrapErr() },
+          { errors: validation.error },
         ),
       );
     }
@@ -402,7 +402,7 @@ export class MemoryService extends BaseService {
     const result = await this.readMemory();
 
     if (!result.isOk()) {
-      return Result.err(result.unwrapErr());
+      return Result.err(result.error);
     }
 
     const items = result.unwrap();
@@ -479,7 +479,7 @@ export class MemoryService extends BaseService {
       const contextResult = await this.exportForContext();
 
       if (!contextResult.isOk()) {
-        return Result.err(contextResult.unwrapErr());
+        return Result.err(contextResult.error);
       }
 
       const content = [
