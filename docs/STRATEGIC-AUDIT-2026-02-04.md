@@ -233,6 +233,33 @@ Layer 5: localStorage (Browser-side, ContextWindowHUD)
 └── forge-memory - Display-only (THIS IS THE BUG - should sync to Layer 3)
 ```
 
+**[CEO-LOOP 2026-02-05 EMERGENCY UPDATE]:**
+```
+!!! CRITICAL DISCOVERY !!!
+
+Claude Code has NATIVE AUTO-MEMORY at:
+~/.claude/projects/{project-hash}/memory/MEMORY.md
+
+This file EXISTS and HAS CONTENT:
+- 3 rules with concrete examples
+- Command status table
+- Architecture decisions
+
+OUR Layer 3 (.claude/forge/memory/) IS EMPTY:
+- decisions.md = just header
+- learnings.md = just header
+- patterns.md = just header
+
+WE ARE COMPETING WITH NATIVE INSTEAD OF ENHANCING IT.
+
+DECISION REQUIRED:
+A) Delete our memory layer, use Claude native
+B) Integrate - read/write to Claude native location
+C) Continue parallel (current broken state)
+
+See: docs/reports/EMERGENCY-TACTICAL-AUDIT-2026-02-05.md
+```
+
 **[forge-builder]** The fix: ContextWindowHUD memory cards should:
 1. READ from .claude/forge/memory/
 2. WRITE back on save
@@ -296,6 +323,26 @@ Layer 5: localStorage (Browser-side, ContextWindowHUD)
 | `.claude/forge/agents/` | No - duplicates concept | **DELETE** |
 | `.claude/forge/memory/` | No - duplicates `.claude/memory/` | **DELETE** |
 
+**[CEO-LOOP 2026-02-05 CORRECTION]:**
+```
+Actually .claude/forge/agents/ NOW HAS 5 starter agents:
+- starter-general.md
+- starter-react.md
+- starter-node.md
+- starter-python.md
+- starter-fullstack.md
+
+InitService was implemented. This row is OUTDATED.
+
+HOWEVER: .claude/forge/memory/ IS still effectively empty
+(just headers, no actual content).
+
+AND: Claude Code has its OWN memory at:
+~/.claude/projects/{hash}/memory/MEMORY.md
+
+We need to decide: enhance native or delete ours.
+```
+
 **[TOPIC-6: THERE ARE TWO DISTICT TYPES OF DOCS THAT WE NEED TO ACCOUNT FOR AND ORGANIZE AND REINFORCE WITH OUR AGENTS, SKILLS AND HOOKS --> 1. The User's Project Documentation 2. nxtg-forge documentation (for power users) 3. claude code forge - enhanced context engineer, memory, project memory --> which should be determined to be enhanced, enriched and stored as SKILLS.md, right?]**
 
 **[master-architect]** EXCELLENT observation. THREE distinct documentation domains:
@@ -350,6 +397,27 @@ Each file follows the skill format: YAML frontmatter + structured markdown. This
 ## 5. Governance HUD Gap Analysis
 
 ### What Works (Score: 4/10 overall usefulness)
+
+**[CEO-LOOP 2026-02-05 REALITY CHECK]:**
+```
+This section claims 4/10 usefulness.
+After today's audit, I'd say it's more like 2.5/10.
+
+WHAT ACTUALLY WORKS:
+- UI renders (true)
+- API responds (true)
+- JSON persists (true)
+
+WHAT DOESN'T:
+- Sentinel log is STALE (last update Feb 4)
+- Constitution is not enforced (advisory only)
+- Worker pool is COSMETIC (no real agent execution)
+- Memory cards are DISCONNECTED (localStorage only)
+- Context visualization shows FAKE DATA
+
+The dashboard is beautiful but INERT.
+It's a cockpit with no plane.
+```
 
 | Feature | Status | Notes |
 |---------|--------|-------|
@@ -923,6 +991,26 @@ The following items have been identified as requiring Governance HUD visibility:
 
 ## 10. Team Session Consensus (2026-02-04)
 
+**[CEO-LOOP 2026-02-05 CRITICAL UPDATE]:**
+```
+!!! THIS SECTION REQUIRES REVISION !!!
+
+Key discovery: Claude Code has NATIVE memory at:
+~/.claude/projects/{hash}/memory/MEMORY.md
+
+The "5-layer hierarchy" decision needs re-evaluation.
+We designed a memory architecture without knowing Claude
+already had one. Our Layer 3 (.claude/forge/memory/) is
+EMPTY while Claude's native memory HAS CONTENT.
+
+NEW DECISION REQUIRED:
+- Do we integrate with Claude's native memory?
+- Do we delete our empty memory layer?
+- Do we somehow merge/enhance?
+
+See: docs/reports/EMERGENCY-TACTICAL-AUDIT-2026-02-05.md
+```
+
 ### Participants
 - **CEO** (User) - Vision, priorities, inline comments
 - **[master-architect]** - System design, architecture decisions
@@ -935,7 +1023,7 @@ The following items have been identified as requiring Governance HUD visibility:
 | Topic | Decision | Rationale |
 |-------|----------|-----------|
 | `.claude/forge/` vs `.forge/` | NOT duplicates - serve different purposes | `.claude/forge/` = product harness (committed), `.forge/` = user personal (gitignored) |
-| Memory architecture | 5-layer hierarchy | CLAUDE.md → state/ → forge/memory/ → governance.json → localStorage (synced) |
+| Memory architecture | 5-layer hierarchy | CLAUDE.md → state/ → forge/memory/ → governance.json → localStorage (synced) **[2026-02-05: NEEDS REVISION - Claude has native memory]** |
 | Deployment medium | Dual-track: Claude Code Plugin (primary) + npm global (secondary) | Dog-food alignment + broad reach |
 | Runtime vs Config | Separate runtime (~/.nxtg-forge/) from config (.claude/forge/) | Prevents src/ collision with user projects |
 | First-run target | < 60 seconds to value | Guided wizard, no docs required |
@@ -954,15 +1042,37 @@ The following items have been identified as requiring Governance HUD visibility:
 
 ### Immediate Next Steps
 
-| # | Action | Owner | Priority |
-|---|--------|-------|----------|
-| 1 | Wire ContextWindowHUD to file system (fix localStorage-only) | forge-builder | CRITICAL |
-| 2 | Implement memory persistence layer (.claude/forge/memory/) | forge-builder | CRITICAL |
-| 3 | Create /frg-init wizard flow | forge-planner | HIGH |
-| 4 | Populate .claude/forge/agents/ with starter agents | forge-builder | HIGH |
-| 5 | Design skill-pack format and marketplace spec | forge-planner | MEDIUM |
-| 6 | Research Claude Code plugin API capabilities | forge-builder | MEDIUM |
-| 7 | Build first-run experience prototype | nxtg-design-vanguard | MEDIUM |
+**[CEO-LOOP 2026-02-05 STATUS UPDATE]:**
+```
+Progress since Feb 4:
+- #4 DONE: starter agents exist in .claude/forge/agents/
+- #3 PARTIAL: InitService exists but not wizard UI
+
+BLOCKED BY NEW DISCOVERY:
+- #1 and #2 need re-evaluation
+- Claude Code already has memory at ~/.claude/projects/*/memory/
+- Should we wire to NATIVE memory instead of our empty files?
+
+NEW PRIORITY ORDER:
+0. DECIDE: Memory strategy (integrate native vs our system)
+1. Then: Wire ContextWindowHUD to chosen memory source
+2. Then: Fix governance real-time pipeline
+3. Then: Plugin research
+
+The Infinity Terminal WORKS. That's our differentiator.
+Focus there, not on duplicating Claude's memory.
+```
+
+| # | Action | Owner | Priority | Status (2026-02-05) |
+|---|--------|-------|----------|---------------------|
+| 0 | **DECIDE memory strategy** | CEO-LOOP | **BLOCKING** | NEW - required first |
+| 1 | Wire ContextWindowHUD to file system (fix localStorage-only) | forge-builder | CRITICAL | BLOCKED by #0 |
+| 2 | Implement memory persistence layer (.claude/forge/memory/) | forge-builder | CRITICAL | BLOCKED by #0 (may delete instead) |
+| 3 | Create /frg-init wizard flow | forge-planner | HIGH | PARTIAL (InitService exists) |
+| 4 | Populate .claude/forge/agents/ with starter agents | forge-builder | HIGH | DONE |
+| 5 | Design skill-pack format and marketplace spec | forge-planner | MEDIUM | Not started |
+| 6 | Research Claude Code plugin API capabilities | forge-builder | MEDIUM | Not started |
+| 7 | Build first-run experience prototype | nxtg-design-vanguard | MEDIUM | Not started |
 
 ### Architecture Diagram (Agreed)
 
