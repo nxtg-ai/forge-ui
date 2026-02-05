@@ -452,6 +452,17 @@
         "gplCount": 0
       },
       "actionRequired": false
+    },
+    {
+      "id": "oracle-1770330823000-8091",
+      "timestamp": 1770330823000,
+      "type": "WARN",
+      "severity": "medium",
+      "category": "file-placement",
+      "source": "forge-oracle",
+      "message": "File placement violation: SOME-AUDIT-REPORT.md written to root instead of docs/reports/",
+      "context": {},
+      "actionRequired": false
     }
   ],
   "metadata": {
