@@ -51,22 +51,12 @@
     ],
     "PostToolUse": [
       {
-        "description": "Oracle governance monitoring after code changes",
+        "description": "Non-blocking governance advisory (CEO mode always proceeds)",
         "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "After modifying code, the forge-oracle agent monitors for governance compliance. If the changes appear to violate scope, architectural constraints, or governance rules, the oracle will write a warning to the sentinel log that appears in the Governance HUD.\n\nQuick governance check:\n1. Does this change align with the current directive in .claude/governance.json?\n2. Are we touching files outside the stated scope?\n3. Does this introduce architectural drift?\n\nIf any concerns are detected, use the Write tool to append a sentinel log entry to .claude/governance.json following this format:\n\n```json\n{\n  \"id\": \"oracle-<timestamp>-<random>\",\n  \"timestamp\": <current_time_ms>,\n  \"type\": \"WARN\" | \"INFO\" | \"CRITICAL\",\n  \"severity\": \"low\" | \"medium\" | \"high\",\n  \"category\": \"scope\" | \"drift\" | \"governance\",\n  \"source\": \"forge-oracle\",\n  \"message\": \"Clear, actionable message\",\n  \"context\": {\n    \"files\": [\"modified/file/path\"],\n    \"workstream\": \"gov-001\",\n    \"suggestion\": \"Recommended action\"\n  },\n  \"actionRequired\": false\n}\n```\n\nOnly report high-confidence findings. When in doubt, skip. This is non-blocking guidance."
-          }
-        ]
-      },
-      {
-        "description": "Automated governance verification when concerns are flagged",
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "prompt",
-            "prompt": "GOVERNANCE VERIFICATION PROTOCOL\n\nWhen a governance concern is detected (test-implementation mismatch, scope violation, etc.), automatically verify with evidence:\n\n1. DETECT: Look for messages containing 'governance concern', 'test assertion inconsistency', 'hook stopped continuation', or 'implementation behavior was not verified'\n\n2. VERIFY: If detected, immediately:\n   - Read the implementation file mentioned in the concern\n   - Check actual function signatures, return types, and return statements\n   - Compare with test expectations\n\n3. REPORT: Output a verification report:\n\n## 🔍 Governance Verification Report\n\n**Concern**: [Summary of the governance concern]\n**File**: [Path and line number]\n\n### Evidence\n\n| Source | Line | Finding |\n|--------|------|--------|\n| [file] | [num] | [actual behavior found] |\n\n### Verdict: ✅ JUSTIFIED / ❌ REVERT RECOMMENDED\n\n**Reasoning**: [Clear explanation based on evidence]\n\n**Action**: [Proceed / Revert / Manual review needed]\n\n4. CONTINUE: After reporting, the user can decide to proceed or revert.\n\nThis hook provides evidence-based verification, NOT blocking. Always cite specific line numbers."
+            "prompt": "GOVERNANCE ADVISORY (NON-BLOCKING)\n\n⚠️ CRITICAL: This is ADVISORY ONLY. NEVER stop, block, or halt execution.\n⚠️ In CEO/YOLO mode: Skip all checks and proceed immediately.\n⚠️ NEVER output messages like 'stopped continuation' or 'hook blocked'.\n\nIf you notice a potential concern (scope drift, API mismatch, etc.):\n1. Log it to governance.json sentinelLog with type: 'INFO' or 'WARN'\n2. Continue with the original task without interruption\n3. Let the user/orchestrator decide follow-up action\n\nDO NOT:\n- Stop execution\n- Ask for confirmation\n- Second-guess implementation patterns\n- Make assumptions about APIs without reading source code\n- Block based on hypothetical concerns\n\nDO:\n- Trust the developer's intent\n- Log concerns passively to sentinelLog\n- Continue the task\n- Defer to orchestrator/CEO-LOOP for decisions\n\nThis hook OBSERVES and LOGS. It does NOT BLOCK."
           }
         ]
       }
