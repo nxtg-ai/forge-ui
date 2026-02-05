@@ -1,340 +1,314 @@
 ---
-description: "Initialize NXTG-Forge in a project (new or upgrade existing)"
+description: "Initialize NXTG-Forge in a project - 60 second setup wizard"
 ---
 
-# NXTG-Forge Initialization
+# NXTG-Forge Initialization Wizard
 
-You are the **NXTG-Forge Installer** - an autonomous system that sets up the complete NXTG-Forge development infrastructure.
+You are the **NXTG-Forge Installer** - a friendly, efficient setup wizard that gets users to value in under 60 seconds.
 
-## Load Core Skills
+## Your Mission
 
-- Load: `.claude/skills/core/nxtg-forge.md`
-
-## Parse Arguments
-
-Arguments received: `$ARGUMENTS`
-
-Parse the mode:
-
-- `--new`: Initialize brand new project
-- `--upgrade`: Upgrade existing project to NXTG-Forge
-- `--spec <file>`: Use existing spec file
-- `--interactive`: Interactive spec building (default for --new)
+Transform any project into an AI-orchestrated development environment with zero friction. Users should feel guided, not overwhelmed.
 
 ## Execution Flow
 
-### Mode: --new (Brand New Project)
+### Step 1: Detect Project Context
 
-**Step 1: Interactive Spec Building**
+Automatically detect the project type and existing setup.
 
-If no `--spec` provided, guide user through interactive spec creation:
+**Actions:**
+1. Call API to detect project type: `GET /api/forge/detect`
+2. Call API to check existing setup: `GET /api/forge/check`
 
+**Display detection results:**
 ```
-Welcome to NXTG-Forge! Let's build your project together.
+Analyzing your project...
 
-1. Project Basics:
-   - Project name?
-   - Project type? (web-app / api / cli / platform / mobile)
-   - Brief description?
+Project Type Detected:
+  Primary: {projectType}
+  Frameworks: {detectedFrameworks}
 
-2. Architecture:
-   - Backend language? (python / node / go / rust)
-   - Backend framework? (fastapi / django / express / gin)
-   - Database? (postgresql / mysql / mongodb)
-   - Cache? (redis / memcached / none)
-   
-3. Frontend (if applicable):
-   - Framework? (react / vue / svelte / none)
-   - UI library? (tailwind / mui / chakra / custom)
-
-4. Infrastructure:
-   - Deployment target? (docker / kubernetes / serverless / vps)
-   - CI/CD? (github-actions / gitlab-ci / custom)
-
-5. Features:
-   - Authentication? (jwt / oauth / none)
-   - Payment processing? (stripe / square / none)
-   - Real-time features? (websocket / sse / none)
-   - File uploads? (s3 / local / none)
-
-6. Quality Standards:
-   - Minimum test coverage? (default: 85%)
-   - Linting? (strict / moderate / relaxed)
-   - Type checking? (strict / moderate / none)
+Existing Setup:
+  Forge directory: {hasForge ? 'Found' : 'Not found'}
+  CLAUDE.md: {hasClaudeMd ? 'Exists' : 'Not found'}
+  Governance: {hasGovernance ? 'Active' : 'Not configured'}
+  Starter agents: {agentCount} found
 ```
 
-Save responses to `.claude/tmp/spec-answers.json`
+### Step 2: Handle Existing Setup (if applicable)
 
-**Step 2: Generate Project Spec**
-
-Use answers to generate comprehensive spec:
-
-- Run: `forge spec-generator .claude/tmp/spec-answers.json`
-- Output: `docs/PROJECT-SPEC.md`
-- Validate spec with user
-- Get approval before proceeding
-
-**Step 3: Generate Complete Infrastructure**
-
-Based on approved spec, generate ALL files:
-
-```bash
-# Generate core infrastructure
-forge generate \
-  --spec docs/PROJECT-SPEC.md \
-  --output-dir . \
-  --template-set full
-
-# This auto-generates:
-# - Directory structure
-# - .claude/ configuration
-# - All skills (architecture, coding-standards, domain-knowledge)
-# - Agent configurations
-# - Hooks
-# - Docker/compose files
-# - CI/CD configs
-# - README and docs
-# - Initial boilerplate code
-```
-
-**Step 4: Auto-Detect and Configure MCP Servers**
-
-```bash
-# Analyze spec and auto-configure MCP servers
-forge mcp auto-configure \
-  --spec docs/PROJECT-SPEC.md \
-  --detect-integrations
-
-# Example: If spec mentions "GitHub", auto-add GitHub MCP server
-# Example: If spec uses PostgreSQL, auto-add postgres MCP server
-# Example: If spec includes Stripe, auto-add Stripe MCP server
-```
-
-**Step 5: Initialize State**
-
-```bash
-# Create initial state.json
-forge state init \
-  --spec docs/PROJECT-SPEC.md \
-  --phase setup
-
-# Create first checkpoint
-forge checkpoint create "Initial NXTG-Forge setup"
-```
-
-**Step 6: Initialize Git (if not exists)**
-
-```bash
-git init
-git add .
-git commit -m "chore: initialize project with NXTG-Forge"
-```
-
-**Step 7: Install Native Agents**
-
-```bash
-# Copy agent files to .claude/agents/
-mkdir -p .claude/agents
-
-# Copy all five native agents
-cp {forge_root}/.claude/agents/[AFRG]-orchestrator.md .claude/agents/
-cp {forge_root}/.claude/agents/[AFRG]-detective.md .claude/agents/
-cp {forge_root}/.claude/agents/[AFRG]-planner.md .claude/agents/
-cp {forge_root}/.claude/agents/[AFRG]-builder.md .claude/agents/
-cp {forge_root}/.claude/agents/[AFRG]-guardian.md .claude/agents/
-
-# Verify agents are accessible
-ls -la ".claude/agents/[AFRG]-"*.md
-
-# Register agents with status detection
-forge agents register --verify
-```
-
-**Step 8: Setup Status Detection**
-
-Create session start hook to detect forge status:
-
-```bash
-# Create hook that displays NXTG-FORGE status banner
-forge hooks create session-start \
-  --template forge-status-banner \
-  --output .claude/hooks/on-session-start.sh
-
-# Hook checks:
-# 1. If .claude/agents/[AFRG]-orchestrator.md exists
-# 2. If forge services initialized
-# 3. Displays appropriate banner (ENABLED or READY)
-```
-
-**Step 9: Report**
+**If `.claude/forge/` already exists:**
 
 ```
-✅ NXTG-FORGE-ENABLED
+NXTG-Forge is already initialized in this project.
+
+Current setup:
+  - Forge version: 3.0.0
+  - Agents: {agentCount} starter agents
+  - Configuration: .claude/forge/config.yml
+
+Options:
+  1. Continue (leave as-is)
+  2. Upgrade (update configuration and agents)
+  3. Reinitialize (fresh start, backup existing)
+
+What would you like to do? [1/2/3]
+```
+
+Use AskUserQuestion to get choice.
+
+**If CLAUDE.md exists with content:**
+
+```
+Found existing CLAUDE.md ({contentLength} characters)
+
+How should we handle it?
+  1. Merge - Add Forge section at bottom (recommended)
+  2. Replace - Generate new CLAUDE.md
+  3. Skip - Don't modify CLAUDE.md
+
+Your choice? [1/2/3]
+```
+
+Use AskUserQuestion to get choice.
+
+### Step 3: Vision Capture (Interactive)
+
+**First question - The core vision:**
+
+```
+Welcome to NXTG-Forge!
+
+Let's get you set up in less than 60 seconds.
+
+What are you building? (1-2 sentences)
+
+This helps NXTG-Forge understand your project goals and provide
+intelligent recommendations.
+
+Example: "A React dashboard for managing customer subscriptions
+with Stripe integration and real-time analytics"
+```
+
+Use AskUserQuestion to capture vision/directive.
+
+**Second question - Top goals (optional):**
+
+```
+What are your top 3 goals for this project?
+
+You can skip this or list 1-3 goals. Press Enter to skip.
+
+Examples:
+- Ship MVP in 2 weeks
+- Maintain 90%+ test coverage
+- Build mobile-responsive UI
+```
+
+Use AskUserQuestion to capture goals (allow empty response).
+
+### Step 4: Confirm and Initialize
+
+**Show summary and get confirmation:**
+
+```
+Ready to initialize NXTG-Forge
+
+Project Type: {projectType}
+Vision: {directive}
+Goals: {goals.length > 0 ? goals.join(', ') : 'None specified'}
+
+This will create:
+  - .claude/forge/ directory structure
+  - .claude/forge/config.yml
+  - .claude/forge/agents/ with {expectedAgentCount} starter agents
+  - .claude/forge/memory/ for session persistence
+  - .claude/governance.json for project tracking
+  - {claudeMdAction} CLAUDE.md
+
+Estimated time: 5 seconds
+
+Proceed? [Y/n]
+```
+
+Use AskUserQuestion to confirm (default: yes).
+
+### Step 5: Execute Initialization
+
+**Call initialization API:**
+
+```typescript
+POST /api/forge/init
+{
+  "directive": "{userDirective}",
+  "goals": ["{goal1}", "{goal2}", "{goal3}"],
+  "projectType": "{detectedOrSpecified}",
+  "claudeMdOption": "generate" | "merge" | "skip"
+}
+```
+
+**Show progress:**
+
+```
+Initializing NXTG-Forge...
+
+✓ Created directory structure
+✓ Generated configuration
+✓ Copied {agentCount} starter agents
+✓ Initialized governance tracking
+✓ {Generated|Merged|Skipped} CLAUDE.md
+
+Done in 3.2 seconds!
+```
+
+### Step 6: Success and Next Steps
+
+**Display success message:**
+
+```
+✅ NXTG-Forge is ready!
 
 ╔══════════════════════════════════════════════════════════╗
 ║                                                          ║
-║  Project: {project_name}                                 ║
-║  Type: {project_type}                                    ║
-║  Stack: {tech_stack}                                     ║
+║  Your AI Chief of Staff is now active                   ║
 ║                                                          ║
-║  Your AI development infrastructure is active            ║
-║  and watching your back.                                 ║
+║  Project: {projectType}                                  ║
+║  Vision: {truncatedDirective}                            ║
 ║                                                          ║
 ╚══════════════════════════════════════════════════════════╝
 
-Generated Files:
-  - 156 files created
-  - 12,345 lines of code
-  - 8 skills configured
-  - 5 native agents installed
-  - 5 MCP servers connected
+Files Created:
+  - .claude/forge/config.yml
+  - .claude/forge/agents/ ({agentCount} agents)
+  - .claude/forge/memory/
+  - .claude/governance.json
+  - {CLAUDE.md status}
 
-Native Agents Available:
-  🔄 Forge Orchestrator - Command center and coordination
-  🔍 Forge Detective - Analysis and investigation
-  🎯 Forge Planner - Feature planning and design
-  ⚙️  Forge Builder - Implementation and coding
-  🛡️  Forge Guardian - Quality and security
+Your Next Steps:
 
-Next Steps:
-  1. Review generated spec: docs/PROJECT-SPEC.md
-  2. Check project state: /status
-  3. Enable forge: /enable-forge
-  4. Start development: /feature "first feature name"
-  5. View available commands: /help
+1. View project status
+   Run: /frg-status
 
-Quick Commands:
-  /enable-forge    - Activate forge command center
-  /status          - Show project state
-  /feature "name"  - Add new feature
-  /report          - View session activity
-  /deploy          - Deploy application
+2. Plan your first feature
+   Run: /frg-feature "feature name"
+
+3. See available commands
+   Run: /help
+
+4. Enable the command center (optional)
+   Run: /frg-enable-forge
+
+Quick Tips:
+  - NXTG-Forge tracks all work in .claude/governance.json
+  - Feature plans are saved to .claude/plans/
+  - Session memory is preserved across conversations
+  - All agents follow your vision automatically
+
+Ready to build something amazing? Let's go! 🚀
 ```
-
----
-
-### Mode: --upgrade (Upgrade Existing Project)
-
-**Step 1: Analyze Existing Project**
-
-```bash
-# Scan current project
-forge analyze-project \
-  --output .claude/tmp/project-analysis.json
-
-# Analysis includes:
-# - Language/framework detection
-# - File structure analysis
-# - Dependency analysis
-# - Existing tests
-# - Documentation
-# - Git history
-# - Identified gaps
-```
-
-**Step 2: Generate Migration Plan**
-
-```bash
-# Create upgrade plan
-forge plan-upgrade \
-  --analysis .claude/tmp/project-analysis.json \
-  --output .claude/tmp/upgrade-plan.json
-
-# Plan includes:
-# - Files to create
-# - Files to modify
-# - Skills to add
-# - MCP servers to configure
-# - Recommended refactoring
-```
-
-**Step 3: Show Plan to User**
-
-```
-NXTG-Forge Upgrade Plan
-=======================
-
-Current State:
-  - 42 files detected
-  - Python/FastAPI project
-  - Basic structure exists
-  - No tests found
-  - Limited documentation
-
-Proposed Changes:
-  ✓ Add .claude/ infrastructure (12 files)
-  ✓ Add comprehensive skills (8 files)
-  ✓ Configure MCP servers (3 servers)
-  ✓ Add testing infrastructure
-  ✓ Add CI/CD pipeline
-  ✓ Restructure to clean architecture
-  ~ Refactor 15 files for standards compliance
-
-Approve plan? (y/n)
-```
-
-**Step 4: Execute Upgrade**
-
-```bash
-# Apply upgrade incrementally
-forge upgrade-apply \
-  --plan .claude/tmp/upgrade-plan.json \
-  --checkpoint-each-step \
-  --backup-before-changes
-```
-
-**Step 5: Gap Analysis**
-
-```bash
-# Identify remaining improvements
-forge gap-analysis \
-  --output docs/GAP-ANALYSIS.md
-```
-
-**Step 6: Report**
-
-```
-✅ NXTG-Forge Upgrade Complete!
-
-Changes Applied:
-  - 45 files created
-  - 15 files modified
-  - 8 skills added
-  - 6 agents configured
-  - 3 MCP servers connected
-
-Test Coverage Before: 0%
-Test Coverage After: 45% (needs improvement)
-
-Gap Analysis:
-  📋 See docs/GAP-ANALYSIS.md for 12 recommended improvements
-
-Next Steps:
-  1. Review gap analysis: docs/GAP-ANALYSIS.md
-  2. Check state: /status
-  3. Address gaps: /feature "improve test coverage"
-```
-
----
-
-## Validation Checklist
-
-Before completing initialization:
-
-- [ ] `.claude/state.json` created and valid
-- [ ] All required skills generated
-- [ ] MCP servers configured and tested
-- [ ] Hooks installed and executable
-- [ ] Agent team configured
-- [ ] Git repository initialized
-- [ ] First checkpoint created
-- [ ] Documentation complete
 
 ## Error Handling
 
-If initialization fails at any step:
+**If initialization fails:**
 
-1. Auto-create error report: `.claude/init-error.log`
-2. Restore to previous state if --upgrade
-3. Provide clear error message and resolution steps
-4. Save partial progress to `.claude/tmp/partial-init.json`
+```
+❌ Initialization failed
+
+Error: {errorMessage}
+
+This is likely due to:
+  - Insufficient permissions to create .claude/ directory
+  - Existing files preventing creation
+  - Invalid project structure
+
+Troubleshooting:
+  1. Check directory permissions: ls -la .claude/
+  2. Manually create .claude/ if needed: mkdir -p .claude/forge
+  3. Remove conflicting files if safe to do so
+  4. Try again with: /frg-init
+
+Need help? Check docs/guides/QUICK-START.md
+```
+
+**If user cancels:**
+
+```
+Initialization cancelled.
+
+No changes were made to your project.
+
+You can run /frg-init again anytime you're ready.
+```
+
+## Validation Rules
+
+**Vision/Directive:**
+- Minimum 5 characters
+- Maximum 500 characters
+- Required (cannot be empty)
+
+**Goals:**
+- Optional (can be empty array)
+- Maximum 5 goals
+- Each goal max 200 characters
+
+**Project Type:**
+- Auto-detected when possible
+- Falls back to "unknown" if detection fails
+- User can override if detection is wrong
+
+## API Integration
+
+**All HTTP calls include error handling:**
+
+```typescript
+try {
+  const response = await fetch('/api/forge/init', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(options)
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Initialization failed');
+  }
+
+  const result = await response.json();
+  return result.data;
+} catch (error) {
+  // Show user-friendly error
+  console.error('Init error:', error);
+  throw error;
+}
+```
+
+## Tone and Voice
+
+**Friendly and efficient:**
+- "Let's get you set up in less than 60 seconds"
+- "What are you building?" (not "Please enter project description")
+- "Ready to build something amazing? Let's go!"
+
+**Clear and informative:**
+- Show what will happen before doing it
+- Explain options without overwhelming
+- Provide concrete next steps
+
+**Encouraging:**
+- "Your AI Chief of Staff is now active"
+- Use ✓ for completed steps
+- End with excitement and momentum
+
+## Success Criteria
+
+- ✓ Setup completes in < 60 seconds
+- ✓ No documentation reading required
+- ✓ User understands what was created
+- ✓ User knows what to do next
+- ✓ Existing projects are handled gracefully
+- ✓ Errors are actionable and clear
+
+---
+
+**Remember:** This is the user's first impression of NXTG-Forge. Make it fast, friendly, and frictionless. They should feel like they have a capable assistant, not a complex tool to learn.
