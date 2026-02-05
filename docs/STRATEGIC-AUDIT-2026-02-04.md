@@ -848,35 +848,37 @@ THE IDEAL FIRST-RUN FLOW (60 seconds to value):
 
 ## 9. Master Gap Tracker
 
+**Last Updated:** 2026-02-05 (post-implementation session)
+
 ### BLOCKING (Must resolve before proceeding)
 
 | # | Gap | Owner | Status | Blocks |
 |---|-----|-------|--------|--------|
-| B1 | Deployment medium decision | CEO-LOOP | PENDING | Everything downstream |
-| B2 | LICENSE file creation | CEO-LOOP | PENDING (needs B1) | Open-source release |
-| B3 | Governance HUD data pipeline | forge-builder | GAP | Real-time visibility |
+| B1 | Deployment medium decision | CEO-LOOP | ✅ **DONE** | Claude Code Plugin + npm dual-track |
+| B2 | LICENSE file creation | CEO-LOOP | ✅ **DONE** | Open-Core MIT (LICENSE + LICENSING.md) |
+| B3 | Governance HUD data pipeline | forge-builder | 🔴 GAP | Real-time visibility |
 
 ### CRITICAL (Must fix this session)
 
 | # | Gap | Owner | Status | Action |
 |---|-----|-------|--------|--------|
-| C1 | governance.json stale (Jan 29 data) | forge-builder | GAP | Update with current state |
-| C2 | Root doc clutter (39 files) | forge-builder | GAP | Reorganize per Section 6 |
-| C3 | .claude/forge/ duplication | forge-builder | GAP | Clean nested dirs |
-| C4 | Empty dirs without .gitkeep | forge-builder | GAP | Add .gitkeep or delete |
-| C5 | Context Memory not functional | forge-builder | KNOWN | User observation confirmed |
+| C1 | governance.json stale (Jan 29 data) | forge-builder | 🟡 PARTIAL | Workstreams updated, needs full refresh |
+| C2 | Root doc clutter (39 files) | forge-builder | ✅ **DONE** | Reorganized to docs/ subdirs |
+| C3 | .claude/forge/ duplication | forge-builder | 🔴 GAP | Clean nested dirs |
+| C4 | Empty dirs without .gitkeep | forge-builder | 🔴 GAP | Add .gitkeep or delete |
+| C5 | Context Memory not functional | forge-builder | ✅ **DONE** | MemoryService implemented |
 
 ### HIGH (Address soon)
 
 | # | Gap | Owner | Status | Action |
 |---|-----|-------|--------|--------|
-| H1 | SECURITY.md missing | forge-builder | GAP | Create after LICENSE decided |
-| H2 | CODE_OF_CONDUCT.md missing | forge-builder | GAP | Create (Contributor Covenant) |
-| H3 | SUPPORT.md missing | forge-builder | GAP | Create |
-| H4 | No SBOM generation | forge-planner | GAP | Design as forge feature |
-| H5 | Agent protocol not wired | forge-builder | GAP | Agents don't call sentinel API |
-| H6 | Test metrics not in HUD | forge-builder | GAP | Wire vitest results to governance |
-| H7 | Fresh install doc hygiene | forge-planner | GAP | Validate init creates proper structure |
+| H1 | SECURITY.md missing | forge-builder | 🔴 GAP | Create security policy |
+| H2 | CODE_OF_CONDUCT.md missing | forge-builder | 🔴 GAP | Create (Contributor Covenant) |
+| H3 | SUPPORT.md missing | forge-builder | 🔴 GAP | Create support channels doc |
+| H4 | No SBOM generation | forge-planner | 🔴 GAP | Design as forge feature |
+| H5 | Agent protocol not wired | forge-builder | 🔴 GAP | Agents don't call sentinel API |
+| H6 | Test metrics not in HUD | forge-builder | 🔴 GAP | Wire vitest results to governance |
+| H7 | Fresh install doc hygiene | forge-planner | ✅ **DONE** | InitService with starter agents |
 
 ### MEDIUM (Backlog)
 
@@ -890,18 +892,30 @@ THE IDEAL FIRST-RUN FLOW (60 seconds to value):
 | M6 | Brand assets only in .forge/ | HOLD | By design | Personal, not committed |
 | M7 | No dependency graph visualization | HOLD | Future | Governance HUD enhancement |
 
+### NEW GAPS IDENTIFIED (2026-02-05)
+
+| # | Gap | Owner | Status | Action |
+|---|-----|-------|--------|--------|
+| N1 | Gap tracker not in UI | forge-builder | 🔴 GAP | Add /frg-gaps command + HUD panel |
+| N2 | Governance hooks give false positives | forge-builder | 🟡 KNOWN | Hooks don't read actual source code |
+| N3 | Skill-pack marketplace not implemented | forge-builder | 🔴 GAP | Specs done, needs code (docs/specs/) |
+
 ---
 
 ## Governance HUD Registration
 
 The following items have been identified as requiring Governance HUD visibility:
 
-1. **BLOCKING DECISION: Deployment Medium** - npm vs Claude Plugin vs GitHub Release vs multi-channel
-2. **BLOCKING DECISION: License Model** - MIT vs Open-Core vs BSL vs Dual
-3. **CRITICAL: Governance Data Pipeline** - HUD shows stale data from Jan 29
-4. **CRITICAL: Root Documentation Reorganization** - 39 files → ~10
+1. ~~**BLOCKING DECISION: Deployment Medium**~~ ✅ RESOLVED: Claude Code Plugin + npm dual-track
+2. ~~**BLOCKING DECISION: License Model**~~ ✅ RESOLVED: Open-Core (MIT core, commercial pro)
+3. **CRITICAL: Governance Data Pipeline** - HUD shows stale data from Jan 29 🔴 STILL OPEN
+4. ~~**CRITICAL: Root Documentation Reorganization**~~ ✅ DONE: Moved to docs/ subdirs
 
-These will be written to governance.json in the next step.
+**⚠️ META-GAP IDENTIFIED:** The gap tracker itself is not surfaced in the UI.
+- No `/frg-gaps` command exists
+- No gaps panel in Governance HUD
+- Users cannot see progress without reading this markdown file
+- **Action required:** Create gap tracking feature in HUD
 
 ---
 
