@@ -56,17 +56,54 @@ describe("PTY Bridge", () => {
   let server: http.Server;
   let runspaceManager: MockRunspaceManager;
   let wss: WebSocketServer;
+  let port: number;
+  const pendingTimers: ReturnType<typeof setTimeout>[] = [];
+  const activeClients: WebSocket[] = [];
 
-  beforeEach(() => {
+  /** Create a tracked WebSocket client - auto-cleaned in afterEach */
+  function createClient(url: string): WebSocket {
+    const ws = new WebSocket(url);
+    ws.on("error", () => { /* suppress ECONNREFUSED during teardown */ });
+    activeClients.push(ws);
+    return ws;
+  }
+
+  beforeEach(async () => {
     server = http.createServer();
     runspaceManager = new MockRunspaceManager();
 
     // Create PTY bridge
-    wss = createPTYBridge(server, runspaceManager as any);
+    wss = createPTYBridge(server, runspaceManager as unknown as RunspaceManager);
+
+    // Start server listening on random port
+    await new Promise<void>((resolve) => {
+      server.listen(0, () => resolve());
+    });
+    port = (server.address() as { port: number }).port;
   });
 
   afterEach(async () => {
+    // Clear any pending reconnect timers first
+    for (const timer of pendingTimers) {
+      clearTimeout(timer);
+    }
+    pendingTimers.length = 0;
+
+    // Close all test-created WebSocket clients
+    for (const client of activeClients) {
+      if (client.readyState === WebSocket.OPEN || client.readyState === WebSocket.CONNECTING) {
+        client.terminate();
+      }
+    }
+    activeClients.length = 0;
+
     cleanupPTYBridge();
+    // Close all server-side WebSocket clients
+    if (wss) {
+      for (const client of wss.clients) {
+        client.terminate();
+      }
+    }
     await new Promise<void>((resolve) => {
       if (wss) {
         wss.close(() => resolve());
@@ -103,30 +140,20 @@ describe("PTY Bridge", () => {
       runspaceManager.addMockRunspace(mockRunspace);
       runspaceManager.setActiveRunspace(mockRunspace.id);
 
-      // Start server
-      server.listen(0, () => {
-        const port = (server.address() as any).port;
+      const client = createClient(`ws://localhost:${port}/terminal`);
 
-        // Create client connection
-        const client = new WebSocket(`ws://localhost:${port}/terminal`);
+      client.on("open", () => {
+        expect(client.readyState).toBe(WebSocket.OPEN);
+        client.close();
+      });
 
-        client.on("open", () => {
-          expect(client.readyState).toBe(WebSocket.OPEN);
-          client.close();
-        });
-
-        client.on("message", (data) => {
-          const message = JSON.parse(data.toString());
-          if (message.type === "session") {
-            expect(message.sessionId).toBeDefined();
-            expect(message.restored).toBe(false);
-            done();
-          }
-        });
-
-        client.on("error", (error) => {
-          done(error);
-        });
+      client.on("message", (data) => {
+        const message = JSON.parse(data.toString());
+        if (message.type === "session") {
+          expect(message.sessionId).toBeDefined();
+          expect(message.restored).toBe(false);
+          done();
+        }
       });
     });
 
@@ -143,33 +170,26 @@ describe("PTY Bridge", () => {
 
       runspaceManager.addMockRunspace(mockRunspace);
 
-      server.listen(0, () => {
-        const port = (server.address() as any).port;
+      const client = createClient(
+        `ws://localhost:${port}/terminal?runspace=${mockRunspace.id}`
+      );
 
-        const client = new WebSocket(
-          `ws://localhost:${port}/terminal?runspace=${mockRunspace.id}`
-        );
-
-        client.on("message", (data) => {
-          const message = JSON.parse(data.toString());
-          if (message.type === "session") {
-            expect(message.sessionId).toBeDefined();
-            client.close();
-            done();
-          }
-        });
-
-        client.on("error", (error) => {
-          done(error);
-        });
+      client.on("message", (data) => {
+        const message = JSON.parse(data.toString());
+        if (message.type === "session") {
+          expect(message.sessionId).toBeDefined();
+          client.close();
+          done();
+        }
       });
     });
 
-    it("should reject connection to non-existent runspace", (done) => {
-      server.listen(0, () => {
-        const port = (server.address() as any).port;
+    it("should reject connection to non-existent runspace", () => {
+      return new Promise<void>((resolve) => {
+        let resolved = false;
+        const finish = () => { if (!resolved) { resolved = true; resolve(); } };
 
-        const client = new WebSocket(
+        const client = createClient(
           `ws://localhost:${port}/terminal?runspace=non-existent`
         );
 
@@ -177,18 +197,12 @@ describe("PTY Bridge", () => {
           const message = JSON.parse(data.toString());
           if (message.type === "error") {
             expect(message.data).toContain("Runspace not found");
-            done();
+            finish();
           }
         });
 
         client.on("close", () => {
-          // Client should close after error
-          done();
-        });
-
-        client.on("error", () => {
-          // Expected behavior - connection closed
-          done();
+          finish();
         });
       });
     });
@@ -209,20 +223,17 @@ describe("PTY Bridge", () => {
       runspaceManager.addMockRunspace(mockRunspace);
       runspaceManager.setActiveRunspace(mockRunspace.id);
 
-      server.listen(0, () => {
-        const port = (server.address() as any).port;
-        const client = new WebSocket(`ws://localhost:${port}/terminal`);
+      const client = createClient(`ws://localhost:${port}/terminal`);
 
-        client.on("message", (data) => {
-          const message = JSON.parse(data.toString());
-          if (message.type === "session") {
-            expect(message.sessionId).toBeDefined();
-            expect(typeof message.sessionId).toBe("string");
-            expect(message.sessionId.length).toBeGreaterThan(0);
-            client.close();
-            done();
-          }
-        });
+      client.on("message", (data) => {
+        const message = JSON.parse(data.toString());
+        if (message.type === "session") {
+          expect(message.sessionId).toBeDefined();
+          expect(typeof message.sessionId).toBe("string");
+          expect(message.sessionId.length).toBeGreaterThan(0);
+          client.close();
+          done();
+        }
       });
     });
 
@@ -240,40 +251,32 @@ describe("PTY Bridge", () => {
       runspaceManager.addMockRunspace(mockRunspace);
       runspaceManager.setActiveRunspace(mockRunspace.id);
 
-      server.listen(0, () => {
-        const port = (server.address() as any).port;
-        let sessionId: string;
+      let sessionId: string;
+      const client1 = createClient(`ws://localhost:${port}/terminal`);
 
-        // First connection - create session
-        const client1 = new WebSocket(`ws://localhost:${port}/terminal`);
+      client1.on("message", (data) => {
+        const message = JSON.parse(data.toString());
+        if (message.type === "session") {
+          sessionId = message.sessionId;
+          expect(message.restored).toBe(false);
+          client1.close();
 
-        client1.on("message", (data) => {
-          const message = JSON.parse(data.toString());
-          if (message.type === "session") {
-            sessionId = message.sessionId;
-            expect(message.restored).toBe(false);
+          pendingTimers.push(setTimeout(() => {
+            const client2 = createClient(
+              `ws://localhost:${port}/terminal?sessionId=${sessionId}`
+            );
 
-            // Close first connection
-            client1.close();
-
-            // Second connection - reattach to session
-            setTimeout(() => {
-              const client2 = new WebSocket(
-                `ws://localhost:${port}/terminal?sessionId=${sessionId}`
-              );
-
-              client2.on("message", (data) => {
-                const message = JSON.parse(data.toString());
-                if (message.type === "session") {
-                  expect(message.sessionId).toBe(sessionId);
-                  expect(message.restored).toBe(true);
-                  client2.close();
-                  done();
-                }
-              });
-            }, 100);
-          }
-        });
+            client2.on("message", (data) => {
+              const message = JSON.parse(data.toString());
+              if (message.type === "session") {
+                expect(message.sessionId).toBe(sessionId);
+                expect(message.restored).toBe(true);
+                client2.close();
+                done();
+              }
+            });
+          }, 100));
+        }
       });
     });
 
@@ -291,36 +294,30 @@ describe("PTY Bridge", () => {
       runspaceManager.addMockRunspace(mockRunspace);
       runspaceManager.setActiveRunspace(mockRunspace.id);
 
-      server.listen(0, () => {
-        const port = (server.address() as any).port;
-        const client = new WebSocket(`ws://localhost:${port}/terminal`);
-        let sessionId: string;
+      const client = createClient(`ws://localhost:${port}/terminal`);
+      let sessionId: string;
 
-        client.on("message", (data) => {
-          const message = JSON.parse(data.toString());
-          if (message.type === "session") {
-            sessionId = message.sessionId;
+      client.on("message", (data) => {
+        const message = JSON.parse(data.toString());
+        if (message.type === "session") {
+          sessionId = message.sessionId;
+          client.close();
 
-            // Disconnect client
-            client.close();
+          pendingTimers.push(setTimeout(() => {
+            const client2 = createClient(
+              `ws://localhost:${port}/terminal?sessionId=${sessionId}`
+            );
 
-            // Wait a bit, then reconnect
-            setTimeout(() => {
-              const client2 = new WebSocket(
-                `ws://localhost:${port}/terminal?sessionId=${sessionId}`
-              );
-
-              client2.on("message", (data) => {
-                const message = JSON.parse(data.toString());
-                if (message.type === "session") {
-                  expect(message.restored).toBe(true);
-                  client2.close();
-                  done();
-                }
-              });
-            }, 100);
-          }
-        });
+            client2.on("message", (data) => {
+              const message = JSON.parse(data.toString());
+              if (message.type === "session") {
+                expect(message.restored).toBe(true);
+                client2.close();
+                done();
+              }
+            });
+          }, 100));
+        }
       });
     });
   });
@@ -340,25 +337,20 @@ describe("PTY Bridge", () => {
       runspaceManager.addMockRunspace(mockRunspace);
       runspaceManager.setActiveRunspace(mockRunspace.id);
 
-      server.listen(0, () => {
-        const port = (server.address() as any).port;
-        const client = new WebSocket(`ws://localhost:${port}/terminal`);
+      const client = createClient(`ws://localhost:${port}/terminal`);
 
-        client.on("open", () => {
-          // Send input command
-          client.send(
-            JSON.stringify({
-              type: "input",
-              data: "echo 'hello world'\n",
-            })
-          );
+      client.on("open", () => {
+        client.send(
+          JSON.stringify({
+            type: "input",
+            data: "echo 'hello world'\n",
+          })
+        );
 
-          // Give time for processing
-          setTimeout(() => {
-            client.close();
-            done();
-          }, 50);
-        });
+        setTimeout(() => {
+          client.close();
+          done();
+        }, 50);
       });
     });
 
@@ -376,25 +368,21 @@ describe("PTY Bridge", () => {
       runspaceManager.addMockRunspace(mockRunspace);
       runspaceManager.setActiveRunspace(mockRunspace.id);
 
-      server.listen(0, () => {
-        const port = (server.address() as any).port;
-        const client = new WebSocket(`ws://localhost:${port}/terminal`);
+      const client = createClient(`ws://localhost:${port}/terminal`);
 
-        client.on("open", () => {
-          // Send resize command
-          client.send(
-            JSON.stringify({
-              type: "resize",
-              cols: 120,
-              rows: 40,
-            })
-          );
+      client.on("open", () => {
+        client.send(
+          JSON.stringify({
+            type: "resize",
+            cols: 120,
+            rows: 40,
+          })
+        );
 
-          setTimeout(() => {
-            client.close();
-            done();
-          }, 50);
-        });
+        setTimeout(() => {
+          client.close();
+          done();
+        }, 50);
       });
     });
 
@@ -412,24 +400,20 @@ describe("PTY Bridge", () => {
       runspaceManager.addMockRunspace(mockRunspace);
       runspaceManager.setActiveRunspace(mockRunspace.id);
 
-      server.listen(0, () => {
-        const port = (server.address() as any).port;
-        const client = new WebSocket(`ws://localhost:${port}/terminal`);
+      const client = createClient(`ws://localhost:${port}/terminal`);
 
-        client.on("open", () => {
-          // Send execute command
-          client.send(
-            JSON.stringify({
-              type: "execute",
-              command: "ls -la",
-            })
-          );
+      client.on("open", () => {
+        client.send(
+          JSON.stringify({
+            type: "execute",
+            command: "ls -la",
+          })
+        );
 
-          setTimeout(() => {
-            client.close();
-            done();
-          }, 50);
-        });
+        setTimeout(() => {
+          client.close();
+          done();
+        }, 50);
       });
     });
 
@@ -447,21 +431,16 @@ describe("PTY Bridge", () => {
       runspaceManager.addMockRunspace(mockRunspace);
       runspaceManager.setActiveRunspace(mockRunspace.id);
 
-      server.listen(0, () => {
-        const port = (server.address() as any).port;
-        const client = new WebSocket(`ws://localhost:${port}/terminal`);
+      const client = createClient(`ws://localhost:${port}/terminal`);
 
-        client.on("open", () => {
-          // Send invalid message (not JSON)
-          client.send("invalid json {{{");
+      client.on("open", () => {
+        client.send("invalid json {{{");
 
-          // Should not crash - wait and close
-          setTimeout(() => {
-            expect(client.readyState).not.toBe(WebSocket.CLOSED);
-            client.close();
-            done();
-          }, 50);
-        });
+        setTimeout(() => {
+          expect(client.readyState).not.toBe(WebSocket.CLOSED);
+          client.close();
+          done();
+        }, 50);
       });
     });
   });
@@ -481,41 +460,34 @@ describe("PTY Bridge", () => {
       runspaceManager.addMockRunspace(mockRunspace);
       runspaceManager.setActiveRunspace(mockRunspace.id);
 
-      server.listen(0, () => {
-        const port = (server.address() as any).port;
-        const client = new WebSocket(`ws://localhost:${port}/terminal`);
-        let sessionId: string;
+      const client = createClient(`ws://localhost:${port}/terminal`);
+      let sessionId: string;
 
-        client.on("message", (data) => {
-          const message = JSON.parse(data.toString());
-          if (message.type === "session") {
-            sessionId = message.sessionId;
+      client.on("message", (data) => {
+        const message = JSON.parse(data.toString());
+        if (message.type === "session") {
+          sessionId = message.sessionId;
+          client.close();
 
-            // Close and reconnect
-            client.close();
+          pendingTimers.push(setTimeout(() => {
+            const client2 = createClient(
+              `ws://localhost:${port}/terminal?sessionId=${sessionId}`
+            );
 
-            setTimeout(() => {
-              const client2 = new WebSocket(
-                `ws://localhost:${port}/terminal?sessionId=${sessionId}`
-              );
+            client2.on("open", () => {
+              client2.send(JSON.stringify({ type: "ready" }));
+            });
 
-              // Send ready signal to receive scrollback
-              client2.on("open", () => {
-                client2.send(JSON.stringify({ type: "ready" }));
-              });
-
-              client2.on("message", (data) => {
-                const message = JSON.parse(data.toString());
-                // Should receive scrollback on reconnect
-                if (message.type === "output") {
-                  expect(message.data).toBeDefined();
-                  client2.close();
-                  done();
-                }
-              });
-            }, 100);
-          }
-        });
+            client2.on("message", (data) => {
+              const message = JSON.parse(data.toString());
+              if (message.type === "output") {
+                expect(message.data).toBeDefined();
+                client2.close();
+                done();
+              }
+            });
+          }, 100));
+        }
       });
     });
   });
@@ -523,38 +495,36 @@ describe("PTY Bridge", () => {
   describe("Cleanup", () => {
     it("should cleanup all sessions on shutdown", () => {
       cleanupPTYBridge();
-      // Should not throw
       expect(true).toBe(true);
     });
 
-    it("should close WebSocket on PTY exit", (done) => {
-      const mockRunspace: Runspace = {
-        id: "exit-test",
-        name: "exit-project",
-        displayName: "Exit Project",
-        path: "/home/test/exit",
-        type: "wsl",
-        status: "active",
-        createdAt: new Date(),
-      };
+    it("should close WebSocket on PTY exit", () => {
+      return new Promise<void>((resolve) => {
+        const mockRunspace: Runspace = {
+          id: "exit-test",
+          name: "exit-project",
+          displayName: "Exit Project",
+          path: "/home/test/exit",
+          type: "wsl",
+          status: "active",
+          createdAt: new Date(),
+        };
 
-      runspaceManager.addMockRunspace(mockRunspace);
-      runspaceManager.setActiveRunspace(mockRunspace.id);
+        runspaceManager.addMockRunspace(mockRunspace);
+        runspaceManager.setActiveRunspace(mockRunspace.id);
 
-      server.listen(0, () => {
-        const port = (server.address() as any).port;
-        const client = new WebSocket(`ws://localhost:${port}/terminal`);
+        let resolved = false;
+        const finish = () => { if (!resolved) { resolved = true; resolve(); } };
+
+        const client = createClient(`ws://localhost:${port}/terminal`);
 
         client.on("close", () => {
-          // WebSocket should close when PTY exits
-          done();
+          finish();
         });
 
-        // Simulate PTY setup and immediate exit
         client.on("message", (data) => {
           const message = JSON.parse(data.toString());
           if (message.type === "session") {
-            // Connection established, close it
             client.close();
           }
         });
@@ -575,86 +545,72 @@ describe("PTY Bridge", () => {
       runspaceManager.addMockRunspace(mockRunspace);
       runspaceManager.setActiveRunspace(mockRunspace.id);
 
-      server.listen(0, () => {
-        const port = (server.address() as any).port;
-        const client = new WebSocket(`ws://localhost:${port}/terminal`);
-        let sessionId: string;
+      const client = createClient(`ws://localhost:${port}/terminal`);
+      let sessionId: string;
 
-        client.on("message", (data) => {
-          const message = JSON.parse(data.toString());
-          if (message.type === "session") {
-            sessionId = message.sessionId;
+      client.on("message", (data) => {
+        const message = JSON.parse(data.toString());
+        if (message.type === "session") {
+          sessionId = message.sessionId;
+          client.close();
 
-            // Close connection
-            client.close();
+          pendingTimers.push(setTimeout(() => {
+            const client2 = createClient(
+              `ws://localhost:${port}/terminal?sessionId=${sessionId}`
+            );
 
-            // Quickly reconnect before cleanup timer fires
-            setTimeout(() => {
-              const client2 = new WebSocket(
-                `ws://localhost:${port}/terminal?sessionId=${sessionId}`
-              );
-
-              client2.on("message", (data) => {
-                const message = JSON.parse(data.toString());
-                if (message.type === "session") {
-                  expect(message.restored).toBe(true);
-                  client2.close();
-                  done();
-                }
-              });
-            }, 10); // Very quick reconnect
-          }
-        });
+            client2.on("message", (data) => {
+              const message = JSON.parse(data.toString());
+              if (message.type === "session") {
+                expect(message.restored).toBe(true);
+                client2.close();
+                done();
+              }
+            });
+          }, 10));
+        }
       });
     });
   });
 
   describe("Error handling", () => {
-    it("should handle WebSocket errors gracefully", (done) => {
-      const mockRunspace: Runspace = {
-        id: "error-test",
-        name: "error-project",
-        displayName: "Error Project",
-        path: "/home/test/error",
-        type: "wsl",
-        status: "active",
-        createdAt: new Date(),
-      };
+    it("should handle WebSocket errors gracefully", () => {
+      return new Promise<void>((resolve) => {
+        const mockRunspace: Runspace = {
+          id: "error-test",
+          name: "error-project",
+          displayName: "Error Project",
+          path: "/home/test/error",
+          type: "wsl",
+          status: "active",
+          createdAt: new Date(),
+        };
 
-      runspaceManager.addMockRunspace(mockRunspace);
-      runspaceManager.setActiveRunspace(mockRunspace.id);
+        runspaceManager.addMockRunspace(mockRunspace);
+        runspaceManager.setActiveRunspace(mockRunspace.id);
 
-      server.listen(0, () => {
-        const port = (server.address() as any).port;
-        const client = new WebSocket(`ws://localhost:${port}/terminal`);
+        const client = createClient(`ws://localhost:${port}/terminal`);
 
-        // Emit error event
         client.on("open", () => {
           client.emit("error", new Error("Test error"));
         });
 
-        // Should handle error without crashing
         setTimeout(() => {
-          done();
+          resolve();
         }, 50);
       });
     });
 
     it("should handle connection to server with no default runspace", (done) => {
-      // No runspaces configured
-      server.listen(0, () => {
-        const port = (server.address() as any).port;
-        const client = new WebSocket(`ws://localhost:${port}/terminal`);
+      const client = createClient(`ws://localhost:${port}/terminal`);
 
-        client.on("message", (data) => {
-          const message = JSON.parse(data.toString());
-          if (message.type === "session") {
-            // Should create default PTY session
-            expect(message.sessionId).toBeDefined();
-            client.close();
-            done();
-          }
-        });
+      client.on("message", (data) => {
+        const message = JSON.parse(data.toString());
+        if (message.type === "session") {
+          expect(message.sessionId).toBeDefined();
+          client.close();
+          done();
+        }
       });
     });
   });

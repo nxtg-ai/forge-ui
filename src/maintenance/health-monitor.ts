@@ -222,7 +222,7 @@ export class HealthMonitor {
     };
 
     try {
-      const sessionsDir = path.resolve('.forge/sessions');
+      const sessionsDir = path.resolve(this.config.forgeDir, 'sessions');
       const exists = await fs.access(sessionsDir).then(() => true).catch(() => false);
 
       if (!exists) {
@@ -284,7 +284,7 @@ export class HealthMonitor {
     };
 
     try {
-      const dbPath = path.resolve('.forge/maintenance.db');
+      const dbPath = path.resolve(this.config.forgeDir, 'maintenance.db');
       const exists = await fs.access(dbPath).then(() => true).catch(() => false);
 
       if (!exists) {

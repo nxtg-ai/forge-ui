@@ -11,7 +11,7 @@ import * as path from 'path';
 
 describe('HealthMonitor', () => {
   let monitor: HealthMonitor;
-  const testForgeDir = '.forge-test';
+  const testForgeDir = '.forge-test-health';
 
   beforeEach(async () => {
     monitor = new HealthMonitor({
@@ -99,9 +99,9 @@ describe('HealthMonitor', () => {
     });
 
     it('should mark as degraded when directory too large', async () => {
-      // Create a large file
-      const largeContent = 'x'.repeat(101 * 1024 * 1024); // 101MB
-      await fs.writeFile(path.join(testForgeDir, 'large.txt'), largeContent);
+      // Configure a very small limit so we can trigger degraded with a tiny file
+      monitor.configure({ maxForgeDirSize: 100 }); // 100 bytes
+      await fs.writeFile(path.join(testForgeDir, 'test.txt'), 'x'.repeat(200));
 
       const results = await monitor.check();
       const forgeDirCheck = results.find(r => r.category === 'forge_dir_size');
@@ -114,8 +114,7 @@ describe('HealthMonitor', () => {
 
   describe('checkStaleSessions', () => {
     it('should detect stale sessions', async () => {
-      // The health monitor checks .forge/sessions by default, not testForgeDir/sessions
-      const sessionsDir = path.join('.forge', 'sessions');
+      const sessionsDir = path.join(testForgeDir, 'sessions');
       await fs.mkdir(sessionsDir, { recursive: true });
 
       // Create a fresh session
@@ -139,12 +138,10 @@ describe('HealthMonitor', () => {
         expect(sessionCheck!.status).toBe('degraded');
       }
 
-      // Clean up
-      await fs.rm(sessionsDir, { recursive: true, force: true });
     });
 
     it('should provide auto-fix action for stale sessions', async () => {
-      const sessionsDir = path.join('.forge', 'sessions');
+      const sessionsDir = path.join(testForgeDir, 'sessions');
       await fs.mkdir(sessionsDir, { recursive: true });
 
       const stalePath = path.join(sessionsDir, 'stale.json');
@@ -172,8 +169,6 @@ describe('HealthMonitor', () => {
         }
       }
 
-      // Clean up
-      await fs.rm(sessionsDir, { recursive: true, force: true });
     });
   });
 
@@ -206,8 +201,7 @@ describe('HealthMonitor', () => {
 
   describe('checkDatabaseHealth', () => {
     it('should check database file if it exists', async () => {
-      // The health monitor checks .forge/maintenance.db by default
-      // We need to configure it to check our test location
+      // Monitor already configured with testForgeDir
       const customMonitor = new HealthMonitor({
         forgeDir: testForgeDir,
       });

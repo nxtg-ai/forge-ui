@@ -463,6 +463,39 @@
       "message": "File placement violation: SOME-AUDIT-REPORT.md written to root instead of docs/reports/",
       "context": {},
       "actionRequired": false
+    },
+    {
+      "id": "oracle-1770332884000-23804",
+      "timestamp": 1770332884000,
+      "type": "WARN",
+      "severity": "medium",
+      "category": "code-quality",
+      "source": "forge-oracle",
+      "message": "Code governance: 21 violation(s) in api-server.ts",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770332914000-24120",
+      "timestamp": 1770332914000,
+      "type": "WARN",
+      "severity": "medium",
+      "category": "code-quality",
+      "source": "forge-oracle",
+      "message": "Code governance: 21 violation(s) in api-server.ts",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770332919000-24197",
+      "timestamp": 1770332919000,
+      "type": "WARN",
+      "severity": "medium",
+      "category": "code-quality",
+      "source": "forge-oracle",
+      "message": "Code governance: 13 violation(s) in pty-bridge.ts",
+      "context": {},
+      "actionRequired": false
     }
   ],
   "metadata": {

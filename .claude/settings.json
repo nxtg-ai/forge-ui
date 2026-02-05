@@ -68,6 +68,26 @@
             "command": "bash .claude/hooks/enforce-file-placement.sh"
           }
         ]
+      },
+      {
+        "description": "Governance code quality check - advisory",
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/governance-check.sh"
+          }
+        ]
+      },
+      {
+        "description": "Governance code quality check - advisory",
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/governance-check.sh"
+          }
+        ]
       }
     ]
   }
