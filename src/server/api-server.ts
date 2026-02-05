@@ -23,6 +23,13 @@ import { GovernanceStateManager } from "../services/governance-state-manager";
 import { MemoryService } from "../services/memory-service";
 import type { MemoryItem } from "../services/memory-service";
 import { AgentWorkerPool, PoolStatus, AgentTask } from "./workers";
+import { InitService } from "../services/init-service";
+import type {
+  InitOptions,
+  InitResult,
+  ProjectDetection,
+  ExistingSetup,
+} from "../services/init-service";
 import {
   initSentryServer,
   captureException,
@@ -103,6 +110,8 @@ const bootstrapService = new BootstrapService(stateManager);
 const mcpSuggestionEngine = new MCPSuggestionEngine();
 // Multi-project runspace manager
 const runspaceManager = new RunspaceManager();
+// Initialize init service for project setup
+const initService = new InitService(projectRoot);
 
 // WebSocket connection management
 const clients = new Set<WebSocket>();
@@ -832,7 +841,7 @@ app.get("/api/memory", async (_req, res) => {
     const result = await memoryService.readMemory();
 
     if (!result.isOk()) {
-      throw result.unwrapErr();
+      throw result.error;
     }
 
     res.json({
@@ -858,7 +867,7 @@ app.post("/api/memory", async (req, res) => {
     const result = await memoryService.writeMemory(item);
 
     if (!result.isOk()) {
-      throw result.unwrapErr();
+      throw result.error;
     }
 
     // Sync to governance
@@ -891,7 +900,7 @@ app.put("/api/memory/:id", async (req, res) => {
     const result = await memoryService.updateMemory(item);
 
     if (!result.isOk()) {
-      throw result.unwrapErr();
+      throw result.error;
     }
 
     // Sync to governance
@@ -931,7 +940,7 @@ app.delete("/api/memory/:id", async (req, res) => {
     const result = await memoryService.deleteMemory(id, category as MemoryItem["category"]);
 
     if (!result.isOk()) {
-      throw result.unwrapErr();
+      throw result.error;
     }
 
     // Sync to governance
@@ -958,7 +967,7 @@ app.get("/api/memory/export", async (_req, res) => {
     const result = await memoryService.exportForContext();
 
     if (!result.isOk()) {
-      throw result.unwrapErr();
+      throw result.error;
     }
 
     res.json({
@@ -982,7 +991,7 @@ app.post("/api/memory/snapshot", async (req, res) => {
     const result = await memoryService.createSnapshot(name);
 
     if (!result.isOk()) {
-      throw result.unwrapErr();
+      throw result.error;
     }
 
     // Sync to governance
@@ -1857,6 +1866,113 @@ app.post("/api/workers/shutdown", async (req, res) => {
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : "Failed to shutdown",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// ============= Forge Initialization Endpoints =============
+
+// Detect project type
+app.get("/api/forge/detect", async (req, res) => {
+  try {
+    const detectionResult = await initService.detectProjectType();
+
+    if (detectionResult.isErr()) {
+      return res.status(500).json({
+        success: false,
+        error: detectionResult.error.message,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    res.json({
+      success: true,
+      data: detectionResult.unwrap(),
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Detection failed",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// Check existing setup
+app.get("/api/forge/check", async (req, res) => {
+  try {
+    const setupResult = await initService.checkExistingSetup();
+
+    if (setupResult.isErr()) {
+      return res.status(500).json({
+        success: false,
+        error: setupResult.error.message,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    res.json({
+      success: true,
+      data: setupResult.unwrap(),
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Setup check failed",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// Initialize NXTG-Forge
+app.post("/api/forge/init", async (req, res) => {
+  try {
+    const options: InitOptions = req.body;
+
+    // Initialize the service first if needed
+    const serviceInit = await initService.initialize();
+    if (serviceInit.isErr()) {
+      return res.status(500).json({
+        success: false,
+        error: serviceInit.error.message,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // Perform initialization
+    const result = await initService.initialize(options);
+
+    if (result.isErr()) {
+      const error = result.error;
+      return res.status(400).json({
+        success: false,
+        error: error.message,
+        code: "code" in error ? error.code : "INIT_ERROR",
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const initResult = result.unwrap();
+
+    // Broadcast initialization event
+    broadcast("forge.initialized", {
+      projectType: initResult.projectType,
+      agentsCopied: initResult.agentsCopied,
+      filesCreated: initResult.created.length,
+    });
+
+    res.json({
+      success: true,
+      data: initResult,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Initialization failed",
       timestamp: new Date().toISOString(),
     });
   }
