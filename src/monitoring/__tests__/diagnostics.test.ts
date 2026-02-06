@@ -7,14 +7,14 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { DiagnosticTools, DiagnosticReport, DiagnosticResult } from "../diagnostics";
 import * as fs from "fs";
 import * as path from "path";
-import { execSync } from "child_process";
+import * as childProcess from "child_process";
+import * as os from "os";
+import * as dns from "dns";
 import { HealthMonitor } from "../health";
 import { PerformanceMonitor } from "../performance";
 import { ErrorTracker } from "../errors";
 
-// Mock dependencies
-vi.mock("fs");
-vi.mock("child_process");
+// Mock local module dependencies
 vi.mock("../health", () => {
   class MockHealthMonitor {
     constructor(public projectPath: string) {}
@@ -24,6 +24,7 @@ vi.mock("../health", () => {
   }
   return { HealthMonitor: MockHealthMonitor };
 });
+
 vi.mock("../performance", () => {
   class MockPerformanceMonitor {
     start() {}
@@ -34,6 +35,7 @@ vi.mock("../performance", () => {
   }
   return { PerformanceMonitor: MockPerformanceMonitor };
 });
+
 vi.mock("../errors", () => {
   class MockErrorTracker {
     constructor(public projectPath: string) {}
@@ -44,14 +46,96 @@ vi.mock("../errors", () => {
   return { ErrorTracker: MockErrorTracker };
 });
 
+// Mock Node built-in modules with factories
+vi.mock("fs", async () => {
+  const actual = await vi.importActual<typeof import("fs")>("fs");
+  return {
+    default: actual,
+    ...actual,
+    existsSync: vi.fn(),
+    mkdirSync: vi.fn(),
+    writeFileSync: vi.fn(),
+    readFileSync: vi.fn(),
+    unlinkSync: vi.fn(),
+    readdirSync: vi.fn(),
+  };
+});
+
+vi.mock("child_process", async () => {
+  const actual = await vi.importActual<typeof import("child_process")>("child_process");
+  const mocked = {
+    ...actual,
+    execSync: vi.fn(),
+  };
+  return {
+    ...mocked,
+    default: mocked,
+  };
+});
+
+vi.mock("os", async () => {
+  const actual = await vi.importActual<typeof import("os")>("os");
+  const mocked = {
+    ...actual,
+    totalmem: vi.fn().mockReturnValue(16 * 1024 * 1024 * 1024),
+    freemem: vi.fn().mockReturnValue(8 * 1024 * 1024 * 1024),
+    platform: vi.fn().mockReturnValue('linux'),
+    cpus: vi.fn().mockReturnValue([{ model: 'Test CPU', speed: 2400, times: { user: 0, nice: 0, sys: 0, idle: 0, irq: 0 } }]),
+  };
+  return {
+    ...mocked,
+    default: mocked,
+  };
+});
+
+const { mockDnsResolve4 } = vi.hoisted(() => ({
+  mockDnsResolve4: vi.fn().mockResolvedValue(["127.0.0.1"]),
+}));
+vi.mock("dns", async () => {
+  const actual = await vi.importActual<typeof import("dns")>("dns");
+  const mocked = {
+    ...actual,
+    promises: {
+      ...actual.promises,
+      resolve4: mockDnsResolve4,
+    },
+  };
+  return {
+    ...mocked,
+    default: mocked,
+  };
+});
+
 describe("DiagnosticTools", () => {
   let diagnosticTools: DiagnosticTools;
   let mockProjectPath: string;
 
   beforeEach(() => {
     mockProjectPath = "/test/project";
-    diagnosticTools = new DiagnosticTools(mockProjectPath);
     vi.clearAllMocks();
+
+    // Set up fs mocks
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.mkdirSync).mockReturnValue(undefined);
+    vi.mocked(fs.writeFileSync).mockReturnValue(undefined);
+    vi.mocked(fs.readFileSync).mockReturnValue("test content");
+    vi.mocked(fs.unlinkSync).mockReturnValue(undefined);
+    vi.mocked(fs.readdirSync).mockReturnValue([] as any);
+
+    // Set up child_process mock
+    vi.mocked(childProcess.execSync).mockReturnValue("");
+
+    // Set up os mocks
+    vi.mocked(os.totalmem).mockReturnValue(16 * 1024 * 1024 * 1024);
+    vi.mocked(os.freemem).mockReturnValue(8 * 1024 * 1024 * 1024);
+    vi.mocked(os.platform).mockReturnValue('linux' as NodeJS.Platform);
+    vi.mocked(os.cpus).mockReturnValue([{ model: 'Test CPU', speed: 2400, times: { user: 0, nice: 0, sys: 0, idle: 0, irq: 0 } }]);
+
+    // Set up dns mock
+    mockDnsResolve4.mockResolvedValue(["127.0.0.1"]);
+
+    // Create diagnosticTools after mocks are set up
+    diagnosticTools = new DiagnosticTools(mockProjectPath);
   });
 
   afterEach(() => {
@@ -72,7 +156,7 @@ describe("DiagnosticTools", () => {
 
   describe("runDiagnostics", () => {
     beforeEach(() => {
-      // Mock fs operations
+      // Ensure all mocks are set for successful test run
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.mkdirSync).mockReturnValue(undefined);
       vi.mocked(fs.writeFileSync).mockReturnValue(undefined);
@@ -80,14 +164,9 @@ describe("DiagnosticTools", () => {
       vi.mocked(fs.unlinkSync).mockReturnValue(undefined);
       vi.mocked(fs.readdirSync).mockReturnValue([] as any);
 
-      // Mock execSync
-      vi.mocked(execSync).mockReturnValue("");
+      vi.mocked(childProcess.execSync).mockReturnValue("");
 
-      // Mock DNS
-      const dns = require("dns");
-      dns.promises = {
-        resolve4: vi.fn().mockResolvedValue(["127.0.0.1"]),
-      };
+      mockDnsResolve4.mockResolvedValue(["127.0.0.1"]);
     });
 
     it("should run all diagnostic tests", async () => {
@@ -324,15 +403,19 @@ describe("DiagnosticTools", () => {
   describe("testStateManagement", () => {
     it("should pass when state file is valid", async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.readFileSync).mockReturnValue(
-        JSON.stringify({
-          version: "1.0.0",
-          projectName: "test-project",
-          timestamp: new Date().toISOString(),
-        })
-      );
+      vi.mocked(fs.readFileSync).mockImplementation((filePath: any) => {
+        if (filePath.includes('current.json')) {
+          return JSON.stringify({
+            version: "1.0.0",
+            projectName: "test-project",
+            timestamp: new Date().toISOString(),
+          });
+        }
+        return "test content";
+      });
+      const tools = new DiagnosticTools(mockProjectPath);
 
-      const report = await diagnosticTools.runDiagnostics();
+      const report = await tools.runDiagnostics();
       const stateTest = report.results.find((r) => r.name === "State Management");
 
       expect(stateTest?.passed).toBe(true);
@@ -353,9 +436,15 @@ describe("DiagnosticTools", () => {
 
     it("should fail when state file is missing required fields", async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({ version: "1.0.0" }));
+      vi.mocked(fs.readFileSync).mockImplementation((filePath: any) => {
+        if (filePath.includes('current.json')) {
+          return JSON.stringify({ version: "1.0.0" });
+        }
+        return "test content";
+      });
+      const tools = new DiagnosticTools(mockProjectPath);
 
-      const report = await diagnosticTools.runDiagnostics();
+      const report = await tools.runDiagnostics();
       const stateTest = report.results.find((r) => r.name === "State Management");
 
       expect(stateTest?.passed).toBe(false);
@@ -400,9 +489,15 @@ describe("DiagnosticTools", () => {
   describe("testGitRepository", () => {
     it("should pass when git repository is clean", async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(execSync).mockReturnValue("");
+      vi.mocked(childProcess.execSync).mockImplementation((cmd) => {
+        if (cmd.toString().includes('git status')) {
+          return "";
+        }
+        return "";
+      });
+      const tools = new DiagnosticTools(mockProjectPath);
 
-      const report = await diagnosticTools.runDiagnostics();
+      const report = await tools.runDiagnostics();
       const gitTest = report.results.find((r) => r.name === "Git Repository");
 
       expect(gitTest?.passed).toBe(true);
@@ -411,9 +506,15 @@ describe("DiagnosticTools", () => {
 
     it("should pass when git repository has changes", async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(execSync).mockReturnValue(" M file.txt\n?? newfile.txt");
+      vi.mocked(childProcess.execSync).mockImplementation((cmd) => {
+        if (cmd.toString().includes('git status')) {
+          return " M file.txt\n?? newfile.txt";
+        }
+        return "";
+      });
+      const tools = new DiagnosticTools(mockProjectPath);
 
-      const report = await diagnosticTools.runDiagnostics();
+      const report = await tools.runDiagnostics();
       const gitTest = report.results.find((r) => r.name === "Git Repository");
 
       expect(gitTest?.passed).toBe(true);
@@ -435,12 +536,10 @@ describe("DiagnosticTools", () => {
 
   describe("testNetworkConnectivity", () => {
     it("should pass when network is available", async () => {
-      const dns = require("dns");
-      dns.promises = {
-        resolve4: vi.fn().mockResolvedValue(["192.168.1.1"]),
-      };
+      mockDnsResolve4.mockResolvedValue(["192.168.1.1"]);
+      const tools = new DiagnosticTools(mockProjectPath);
 
-      const report = await diagnosticTools.runDiagnostics();
+      const report = await tools.runDiagnostics();
       const netTest = report.results.find((r) => r.name === "Network Connectivity");
 
       expect(netTest?.passed).toBe(true);
@@ -448,12 +547,10 @@ describe("DiagnosticTools", () => {
     });
 
     it("should fail when network is unavailable", async () => {
-      const dns = require("dns");
-      dns.promises = {
-        resolve4: vi.fn().mockRejectedValue(new Error("ENOTFOUND")),
-      };
+      mockDnsResolve4.mockRejectedValue(new Error("ENOTFOUND"));
+      const tools = new DiagnosticTools(mockProjectPath);
 
-      const report = await diagnosticTools.runDiagnostics();
+      const report = await tools.runDiagnostics();
       const netTest = report.results.find((r) => r.name === "Network Connectivity");
 
       expect(netTest?.passed).toBe(false);
@@ -463,9 +560,8 @@ describe("DiagnosticTools", () => {
 
   describe("testMemoryUsage", () => {
     it("should pass when memory usage is normal", async () => {
-      const os = require("os");
-      os.totalmem = vi.fn().mockReturnValue(16 * 1024 * 1024 * 1024); // 16GB
-      os.freemem = vi.fn().mockReturnValue(8 * 1024 * 1024 * 1024); // 8GB free
+      vi.mocked(os.totalmem).mockReturnValue(16 * 1024 * 1024 * 1024); // 16GB
+      vi.mocked(os.freemem).mockReturnValue(8 * 1024 * 1024 * 1024); // 8GB free
 
       const report = await diagnosticTools.runDiagnostics();
       const memTest = report.results.find((r) => r.name === "Memory Usage");
@@ -475,11 +571,13 @@ describe("DiagnosticTools", () => {
     });
 
     it("should fail when memory usage is high", async () => {
-      const os = require("os");
-      os.totalmem = vi.fn().mockReturnValue(16 * 1024 * 1024 * 1024); // 16GB
-      os.freemem = vi.fn().mockReturnValue(0.5 * 1024 * 1024 * 1024); // 0.5GB free (>90% used)
+      const totalMem = 16 * 1024 * 1024 * 1024; // 16GB
+      const freeMem = 1 * 1024 * 1024 * 1024; // 1GB free (93.75% used)
+      vi.mocked(os.totalmem).mockReturnValue(totalMem);
+      vi.mocked(os.freemem).mockReturnValue(freeMem);
+      const tools = new DiagnosticTools(mockProjectPath);
 
-      const report = await diagnosticTools.runDiagnostics();
+      const report = await tools.runDiagnostics();
       const memTest = report.results.find((r) => r.name === "Memory Usage");
 
       expect(memTest?.passed).toBe(false);
@@ -489,22 +587,32 @@ describe("DiagnosticTools", () => {
 
   describe("testDiskSpace", () => {
     it("should pass when disk space is sufficient", async () => {
-      vi.mocked(execSync).mockReturnValue(
-        "Filesystem     1K-blocks      Used Available Use%\n/dev/sda1     1000000000 500000000 500000000  50%"
-      );
+      // Mock df command - returns last line only due to 'tail -1' in command
+      vi.mocked(childProcess.execSync).mockImplementation((cmd) => {
+        if (cmd.toString().includes('df')) {
+          return "/dev/sda1     1000000000 500000000 500000000  50%";
+        }
+        return "";
+      });
+      const tools = new DiagnosticTools(mockProjectPath);
 
-      const report = await diagnosticTools.runDiagnostics();
+      const report = await tools.runDiagnostics();
       const diskTest = report.results.find((r) => r.name === "Disk Space");
 
       expect(diskTest?.passed).toBe(true);
     });
 
     it("should fail when disk space is low", async () => {
-      vi.mocked(execSync).mockReturnValue(
-        "Filesystem     1K-blocks      Used Available Use%\n/dev/sda1     1000000000 920000000  80000000  92%"
-      );
+      // Mock df command - returns last line only due to 'tail -1' in command
+      vi.mocked(childProcess.execSync).mockImplementation((cmd) => {
+        if (cmd.toString().includes('df')) {
+          return "/dev/sda1     1000000000 920000000  80000000  92%";
+        }
+        return "";
+      });
+      const tools = new DiagnosticTools(mockProjectPath);
 
-      const report = await diagnosticTools.runDiagnostics();
+      const report = await tools.runDiagnostics();
       const diskTest = report.results.find((r) => r.name === "Disk Space");
 
       expect(diskTest?.passed).toBe(false);
@@ -708,21 +816,51 @@ describe("DiagnosticTools", () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.mkdirSync).mockReturnValue(undefined);
       vi.mocked(fs.writeFileSync).mockReturnValue(undefined);
-      vi.mocked(fs.readFileSync).mockReturnValue("test");
+      vi.mocked(fs.readFileSync).mockImplementation((filePath: any) => {
+        if (filePath.includes('package.json')) {
+          return JSON.stringify({
+            dependencies: { react: "^18.0.0" },
+            devDependencies: { vitest: "^1.0.0" }
+          });
+        }
+        if (filePath.includes('current.json')) {
+          return JSON.stringify({
+            version: "1.0.0",
+            projectName: "test-project",
+            timestamp: new Date().toISOString(),
+          });
+        }
+        return "test content";
+      });
       vi.mocked(fs.unlinkSync).mockReturnValue(undefined);
-      vi.mocked(fs.readdirSync).mockReturnValue([
-        "orchestrator.md",
-        "architect.md",
-        "developer.md",
-        "qa.md",
-        "devops.md",
-      ] as any);
-      vi.mocked(execSync).mockReturnValue("");
+      vi.mocked(fs.readdirSync).mockImplementation((dirPath: any) => {
+        if (dirPath.includes('agents')) {
+          return [
+            "orchestrator.md",
+            "architect.md",
+            "developer.md",
+            "qa.md",
+            "devops.md",
+          ] as any;
+        }
+        if (dirPath.includes('commands')) {
+          return ["status.md"] as any;
+        }
+        return [] as any;
+      });
+      vi.mocked(childProcess.execSync).mockImplementation((cmd) => {
+        if (cmd.toString().includes('df')) {
+          return "/dev/sda1     1000000000 500000000 500000000  50%";
+        }
+        if (cmd.toString().includes('npm --version')) {
+          return "10.0.0";
+        }
+        return "";
+      });
+      mockDnsResolve4.mockResolvedValue(["127.0.0.1"]);
 
-      const dns = require("dns");
-      dns.promises = { resolve4: vi.fn().mockResolvedValue(["127.0.0.1"]) };
-
-      const report = await diagnosticTools.runDiagnostics();
+      const tools = new DiagnosticTools(mockProjectPath);
+      const report = await tools.runDiagnostics();
 
       expect(report.recommendations).toContain(
         "System is healthy. All diagnostic tests passed."

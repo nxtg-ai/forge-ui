@@ -6,6 +6,8 @@
 import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
+import * as os from "os";
+import * as dns from "dns";
 import { performance } from "perf_hooks";
 import { Logger, LogLevel } from "../utils/logger";
 import { HealthMonitor } from "./health";
@@ -387,8 +389,9 @@ export class DiagnosticTools {
       const stateContent = fs.readFileSync(stateFile, "utf-8");
       const state = JSON.parse(stateContent);
 
-      const hasRequiredFields =
-        state.version && state.projectName && state.timestamp;
+      const hasRequiredFields = Boolean(
+        state.version && state.projectName && state.timestamp,
+      );
 
       return {
         name: "State Management",
@@ -517,8 +520,7 @@ export class DiagnosticTools {
 
     try {
       // Simple DNS resolution test
-      const dns = require("dns").promises;
-      await dns.resolve4("github.com");
+      await dns.promises.resolve4("github.com");
 
       return {
         name: "Network Connectivity",
@@ -544,7 +546,6 @@ export class DiagnosticTools {
    */
   private async testMemoryUsage(): Promise<DiagnosticResult> {
     const start = performance.now();
-    const os = require("os");
 
     const totalMem = os.totalmem();
     const freeMem = os.freemem();
@@ -623,8 +624,6 @@ export class DiagnosticTools {
    * Get system information
    */
   private getSystemInfo(): SystemInfo {
-    const os = require("os");
-
     return {
       platform: os.platform(),
       nodeVersion: process.version,

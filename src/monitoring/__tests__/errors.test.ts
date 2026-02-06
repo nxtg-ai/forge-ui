@@ -12,23 +12,18 @@ import {
   ErrorReport,
   RecoveryStrategy,
 } from "../errors";
-import * as fs from "fs";
 import * as path from "path";
 
-// Mock dependencies
-vi.mock("fs");
-vi.mock("crypto", () => ({
-  default: {
-    createHash: () => ({
-      update: vi.fn().mockReturnThis(),
-      digest: vi.fn().mockReturnValue("0123456789abcdef0123456789abcdef"),
-    }),
-  },
-  createHash: () => ({
-    update: vi.fn().mockReturnThis(),
-    digest: vi.fn().mockReturnValue("0123456789abcdef0123456789abcdef"),
-  }),
+// Mock fs module with factory function
+vi.mock("fs", () => ({
+  existsSync: vi.fn(),
+  readFileSync: vi.fn(),
+  writeFileSync: vi.fn(),
+  mkdirSync: vi.fn(),
 }));
+
+// Import the mocked fs to access the mocks
+import * as fs from "fs";
 
 describe("ErrorTracker", () => {
   let errorTracker: ErrorTracker;
@@ -36,18 +31,26 @@ describe("ErrorTracker", () => {
 
   beforeEach(() => {
     mockProjectPath = "/test/project";
-    vi.mocked(fs.existsSync).mockReturnValue(false);
-    vi.mocked(fs.mkdirSync).mockReturnValue(undefined);
-    vi.mocked(fs.writeFileSync).mockReturnValue(undefined);
-    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({ errors: [] }));
+
+    // Reset and configure mocks
+    fs.existsSync.mockReturnValue(false);
+    fs.readFileSync.mockReturnValue(JSON.stringify({ errors: [] }));
+    fs.writeFileSync.mockImplementation(() => {});
+    fs.mkdirSync.mockImplementation(() => '' as any);
 
     errorTracker = new ErrorTracker(mockProjectPath);
-    vi.clearAllMocks();
+
+    // Clear mock call history but keep implementations
+    fs.existsSync.mockClear();
+    fs.readFileSync.mockClear();
+    fs.writeFileSync.mockClear();
+    fs.mkdirSync.mockClear();
   });
 
   afterEach(() => {
-    errorTracker.stop();
-    vi.restoreAllMocks();
+    if (errorTracker) {
+      errorTracker.stop();
+    }
   });
 
   describe("constructor", () => {
@@ -84,8 +87,8 @@ describe("ErrorTracker", () => {
         ],
       };
 
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(persistedErrors));
+      fs.existsSync.mockReturnValue(true);
+      fs.readFileSync.mockReturnValue(JSON.stringify(persistedErrors));
 
       const tracker = new ErrorTracker(mockProjectPath);
       const errors = tracker.getErrors();
@@ -184,13 +187,15 @@ describe("ErrorTracker", () => {
       expect(trackedError.severity).toBe(ErrorSeverity.CRITICAL);
     });
 
-    it("should emit errorTracked event", (done) => {
-      errorTracker.on("errorTracked", (trackedError: TrackedError) => {
-        expect(trackedError.message).toBe("Event test error");
-        done();
+    it("should emit errorTracked event", async () => {
+      const promise = new Promise<TrackedError>((resolve) => {
+        errorTracker.on("errorTracked", resolve);
       });
 
       errorTracker.trackError(new Error("Event test error"));
+
+      const trackedError = await promise;
+      expect(trackedError.message).toBe("Event test error");
     });
 
     it("should include context in tracked error", () => {
@@ -215,8 +220,8 @@ describe("ErrorTracker", () => {
         ErrorSeverity.HIGH
       );
 
-      // Wait for async recovery
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Wait for async recovery (BACKEND has 2000ms backoff)
+      await new Promise((resolve) => setTimeout(resolve, 2500));
 
       expect(recoveryHandler).toHaveBeenCalled();
     });
@@ -238,18 +243,20 @@ describe("ErrorTracker", () => {
       expect(recoveredError?.recovered).toBe(true);
     });
 
-    it("should emit errorRecovered event", (done) => {
+    it("should emit errorRecovered event", async () => {
       const trackedError = errorTracker.trackError(
         new Error("Test error"),
         ErrorCategory.UI
       );
 
-      errorTracker.on("errorRecovered", (error: TrackedError) => {
-        expect(error.id).toBe(trackedError.id);
-        done();
+      const promise = new Promise<TrackedError>((resolve) => {
+        errorTracker.on("errorRecovered", resolve);
       });
 
       errorTracker.markRecovered(trackedError.id);
+
+      const error = await promise;
+      expect(error.id).toBe(trackedError.id);
     });
 
     it("should handle non-existent error ID gracefully", () => {
@@ -317,7 +324,7 @@ describe("ErrorTracker", () => {
   });
 
   describe("generateReport", () => {
-    it("should generate error report", () => {
+    it("should generate error report", async () => {
       errorTracker.trackError(new Error("Error 1"), ErrorCategory.UI, ErrorSeverity.LOW);
       errorTracker.trackError(new Error("Error 2"), ErrorCategory.BACKEND, ErrorSeverity.HIGH);
       errorTracker.trackError(
@@ -325,6 +332,9 @@ describe("ErrorTracker", () => {
         ErrorCategory.BACKEND,
         ErrorSeverity.CRITICAL
       );
+
+      // Wait a bit so period > 0
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       const report = errorTracker.generateReport();
 
@@ -430,7 +440,7 @@ describe("ErrorTracker", () => {
       errorTracker.start(1000);
 
       vi.advanceTimersByTime(1000);
-      await vi.runAllTimersAsync();
+      errorTracker.stop();
 
       expect(reportHandler).toHaveBeenCalled();
 
@@ -527,16 +537,16 @@ describe("ErrorTracker", () => {
   describe("setRecoveryStrategy", () => {
     it("should set custom recovery strategy", () => {
       const strategy: RecoveryStrategy = {
-        category: ErrorCategory.CUSTOM,
+        category: ErrorCategory.UI as any,
         action: "retry",
         maxAttempts: 5,
         backoffMs: 1000,
       };
 
-      errorTracker.setRecoveryStrategy(ErrorCategory.CUSTOM, strategy);
+      errorTracker.setRecoveryStrategy(ErrorCategory.UI, strategy);
 
       expect(() =>
-        errorTracker.setRecoveryStrategy(ErrorCategory.CUSTOM, strategy)
+        errorTracker.setRecoveryStrategy(ErrorCategory.UI, strategy)
       ).not.toThrow();
     });
 
@@ -561,7 +571,8 @@ describe("ErrorTracker", () => {
 
       errorTracker.trackError(new Error("Test error"), ErrorCategory.UI);
 
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // UI has 1000ms backoff
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
       expect(recoveryHandler).toHaveBeenCalledWith(
         expect.objectContaining({ type: "retry" })
@@ -574,7 +585,8 @@ describe("ErrorTracker", () => {
 
       errorTracker.trackError(new Error("Test error"), ErrorCategory.INTEGRATION);
 
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // INTEGRATION has 3000ms backoff
+      await new Promise((resolve) => setTimeout(resolve, 3500));
 
       expect(recoveryHandler).toHaveBeenCalledWith(
         expect.objectContaining({ type: "reset" })
@@ -587,6 +599,7 @@ describe("ErrorTracker", () => {
 
       errorTracker.trackError(new Error("Test error"), ErrorCategory.STATE);
 
+      // STATE has 0ms backoff
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(recoveryHandler).toHaveBeenCalledWith(
@@ -600,6 +613,7 @@ describe("ErrorTracker", () => {
 
       errorTracker.trackError(new Error("Test error"), ErrorCategory.FILE_SYSTEM);
 
+      // FILE_SYSTEM has 0ms backoff
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(recoveryHandler).toHaveBeenCalledWith(
@@ -612,18 +626,18 @@ describe("ErrorTracker", () => {
       errorTracker.on("recoveryAction", recoveryHandler);
 
       const strategy: RecoveryStrategy = {
-        category: ErrorCategory.CUSTOM,
+        category: ErrorCategory.UI as any,
         action: "retry",
         maxAttempts: 2,
         backoffMs: 0,
       };
 
-      errorTracker.setRecoveryStrategy(ErrorCategory.CUSTOM, strategy);
+      errorTracker.setRecoveryStrategy(ErrorCategory.UI, strategy);
 
       const error = new Error("Test error");
-      errorTracker.trackError(error, ErrorCategory.CUSTOM);
-      errorTracker.trackError(error, ErrorCategory.CUSTOM);
-      errorTracker.trackError(error, ErrorCategory.CUSTOM);
+      errorTracker.trackError(error, ErrorCategory.UI);
+      errorTracker.trackError(error, ErrorCategory.UI);
+      errorTracker.trackError(error, ErrorCategory.UI);
 
       await new Promise((resolve) => setTimeout(resolve, 100));
 
@@ -638,21 +652,21 @@ describe("ErrorTracker", () => {
       errorTracker.on("recoveryAction", recoveryHandler);
 
       const strategy: RecoveryStrategy = {
-        category: ErrorCategory.CUSTOM,
+        category: ErrorCategory.UI as any,
         action: "retry",
         maxAttempts: 3,
         backoffMs: 100,
       };
 
-      errorTracker.setRecoveryStrategy(ErrorCategory.CUSTOM, strategy);
+      errorTracker.setRecoveryStrategy(ErrorCategory.UI, strategy);
 
       const error = new Error("Test error");
-      errorTracker.trackError(error, ErrorCategory.CUSTOM);
+      errorTracker.trackError(error, ErrorCategory.UI);
 
       await vi.advanceTimersByTimeAsync(100);
       expect(recoveryHandler).toHaveBeenCalledTimes(1);
 
-      errorTracker.trackError(error, ErrorCategory.CUSTOM);
+      errorTracker.trackError(error, ErrorCategory.UI);
       await vi.advanceTimersByTimeAsync(200);
       expect(recoveryHandler).toHaveBeenCalledTimes(2);
 
@@ -675,7 +689,7 @@ describe("ErrorTracker", () => {
       }
 
       vi.advanceTimersByTime(1000);
-      await vi.runAllTimersAsync();
+      errorTracker.stop();
 
       expect(alertHandler).toHaveBeenCalledWith(
         expect.objectContaining({ type: "high_error_rate" })
@@ -698,7 +712,7 @@ describe("ErrorTracker", () => {
       }
 
       vi.advanceTimersByTime(1000);
-      await vi.runAllTimersAsync();
+      errorTracker.stop();
 
       expect(alertHandler).toHaveBeenCalledWith(
         expect.objectContaining({ type: "critical_errors" })
@@ -721,7 +735,7 @@ describe("ErrorTracker", () => {
       }
 
       vi.advanceTimersByTime(60000); // Wait for recovery rate calculation
-      await vi.runAllTimersAsync();
+      errorTracker.stop();
 
       vi.useRealTimers();
     });
@@ -740,7 +754,7 @@ describe("ErrorTracker", () => {
       }
 
       vi.advanceTimersByTime(1000);
-      await vi.runAllTimersAsync();
+      errorTracker.stop();
 
       expect(alertHandler).toHaveBeenCalledWith(
         expect.objectContaining({ type: "category_threshold" })
@@ -762,8 +776,8 @@ describe("ErrorTracker", () => {
     });
 
     it("should create directory if it doesn't exist", () => {
-      vi.mocked(fs.existsSync).mockReturnValue(false);
-      vi.mocked(fs.mkdirSync).mockReturnValue(undefined);
+      fs.existsSync.mockReturnValue(false);
+      fs.mkdirSync.mockImplementation(() => '' as any);
 
       errorTracker.trackError(new Error("Test error"));
       errorTracker.stop();
@@ -775,7 +789,7 @@ describe("ErrorTracker", () => {
     });
 
     it("should handle persistence errors gracefully", () => {
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {
+      fs.writeFileSync.mockImplementation(() => {
         throw new Error("Write failed");
       });
 
@@ -788,7 +802,7 @@ describe("ErrorTracker", () => {
       errorTracker.trackError(new Error("Test error"));
       errorTracker.stop();
 
-      const writeCall = vi.mocked(fs.writeFileSync).mock.calls[0];
+      const writeCall = fs.writeFileSync.mock.calls[0];
       const data = JSON.parse(writeCall[1] as string);
 
       expect(data.timestamp).toBeDefined();
