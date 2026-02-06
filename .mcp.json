@@ -7,7 +7,7 @@
         "@playwright/mcp@latest",
         "--headless",
         "--console-level",
-        "error"
+        "debug"
       ]
     }
   }
