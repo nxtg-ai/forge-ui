@@ -306,7 +306,8 @@ export function useCommandExecution() {
     const unsubscribe = apiClient.subscribe("command.executed", (data: { result?: unknown; command?: Command }) => {
       setLastResult(data.result);
       if (data.command) {
-        setHistory((prev) => [data.command, ...prev]);
+        const cmd = data.command;
+        setHistory((prev) => [cmd, ...prev]);
       }
     });
 
@@ -450,7 +451,8 @@ export function useYoloMode() {
     // Subscribe to YOLO action events
     const unsubscribe = apiClient.subscribe("yolo.action", (data: { action?: AutomatedAction; statistics?: YoloStatistics }) => {
       if (data.action) {
-        setHistory((prev) => [data.action, ...prev]);
+        const action = data.action;
+        setHistory((prev) => [action, ...prev]);
       }
       if (data.statistics) {
         setStatistics(data.statistics);

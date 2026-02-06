@@ -518,8 +518,8 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
                               timestamp: new Date(),
                             },
                           ]);
-                          setPhase("discussing");
-                          setConsensus((prev) => Math.max(0, prev - 20));
+                          setCurrentPhase("discussion");
+                          setDecision(null);
                         }}
                         className="px-6 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg font-medium transition-all"
                       >

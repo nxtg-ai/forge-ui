@@ -111,19 +111,19 @@ export class ClaudeCodeAdapter extends BaseAdapter {
       {
         name: CAPABILITIES.MEMORY_READ,
         available: true,
-        nativeToolName: null,
+        nativeToolName: undefined,
         metadata: { description: 'Read from native memory' }
       },
       {
         name: CAPABILITIES.MEMORY_WRITE,
         available: true,
-        nativeToolName: null,
+        nativeToolName: undefined,
         metadata: { description: 'Write to native memory' }
       },
       {
         name: CAPABILITIES.SESSION_MANAGE,
         available: true,
-        nativeToolName: null,
+        nativeToolName: undefined,
         metadata: { description: 'Manage sessions' }
       },
     ];

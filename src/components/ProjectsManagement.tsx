@@ -140,7 +140,7 @@ export const ProjectsManagement: React.FC<ProjectsManagementProps> = ({
                 </p>
                 <button
                   onClick={() => {
-                    toast("Open the Infinity Terminal and run /frg-init to create a new project", "info");
+                    toast.info("Open the Infinity Terminal and run /frg-init to create a new project");
                   }}
                   className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg flex items-center gap-2"
                 >

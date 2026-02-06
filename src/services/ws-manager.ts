@@ -166,11 +166,12 @@ class WSManager {
    * Returns an unsubscribe function.
    * Auto-connects on first subscription.
    */
-  subscribe(eventType: string, handler: MessageHandler): () => void {
+  subscribe<T = unknown>(eventType: string, handler: (data: T) => void): () => void {
+    const wrappedHandler: MessageHandler = handler as MessageHandler;
     if (!this.subscribers.has(eventType)) {
       this.subscribers.set(eventType, new Set());
     }
-    this.subscribers.get(eventType)!.add(handler);
+    this.subscribers.get(eventType)!.add(wrappedHandler);
 
     // Auto-connect when first subscriber appears
     if (this.state.status === "disconnected" && !this.isConnecting) {
@@ -180,7 +181,7 @@ class WSManager {
     return () => {
       const handlers = this.subscribers.get(eventType);
       if (handlers) {
-        handlers.delete(handler);
+        handlers.delete(wrappedHandler);
         if (handlers.size === 0) {
           this.subscribers.delete(eventType);
         }

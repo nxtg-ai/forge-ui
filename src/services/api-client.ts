@@ -274,11 +274,11 @@ export class ApiClient {
 
   // ============= WebSocket (delegated to wsManager) =============
 
-  public subscribe(
+  public subscribe<T = unknown>(
     eventType: WSMessageType,
-    handler: (data: unknown) => void,
+    handler: (data: T) => void,
   ): () => void {
-    return wsManager.subscribe(eventType, handler);
+    return wsManager.subscribe<T>(eventType, handler);
   }
 
   public sendWSMessage<T>(type: WSMessageType, payload: T) {

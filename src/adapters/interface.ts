@@ -418,30 +418,30 @@ export const AdapterValidation = {
    */
   validateTaskRequest(task: TaskRequest): Result<true, AdapterValidationError> {
     if (!task.agentId || task.agentId.trim().length === 0) {
-      return new Result.err(
+      return Result.err(
         new AdapterValidationError('agentId is required and cannot be empty')
       );
     }
 
     if (!task.objective || task.objective.trim().length === 0) {
-      return new Result.err(
+      return Result.err(
         new AdapterValidationError('objective is required and cannot be empty')
       );
     }
 
     if (task.timeout !== undefined && task.timeout <= 0) {
-      return new Result.err(
+      return Result.err(
         new AdapterValidationError('timeout must be positive')
       );
     }
 
     if (task.priority !== undefined && (task.priority < 1 || task.priority > 10)) {
-      return new Result.err(
+      return Result.err(
         new AdapterValidationError('priority must be between 1 and 10')
       );
     }
 
-    return new Result.ok(true as const);
+    return Result.ok(true as const);
   },
 
   /**
@@ -449,7 +449,7 @@ export const AdapterValidation = {
    */
   validateFilePath(filePath: string): Result<true, AdapterValidationError> {
     if (!filePath || filePath.trim().length === 0) {
-      return new Result.err(
+      return Result.err(
         new AdapterValidationError('filePath is required and cannot be empty')
       );
     }
@@ -457,12 +457,12 @@ export const AdapterValidation = {
     // Basic security check: prevent path traversal attempts
     const normalized = filePath.replace(/\\/g, '/');
     if (normalized.includes('../') || normalized.includes('..\\')) {
-      return new Result.err(
+      return Result.err(
         new AdapterValidationError('Path traversal not allowed', undefined, { filePath })
       );
     }
 
-    return new Result.ok(true as const);
+    return Result.ok(true as const);
   },
 
   /**
@@ -470,7 +470,7 @@ export const AdapterValidation = {
    */
   validateShellCommand(command: string): Result<true, AdapterValidationError> {
     if (!command || command.trim().length === 0) {
-      return new Result.err(
+      return Result.err(
         new AdapterValidationError('command is required and cannot be empty')
       );
     }
@@ -485,7 +485,7 @@ export const AdapterValidation = {
 
     for (const pattern of dangerousPatterns) {
       if (pattern.test(command)) {
-        return new Result.err(
+        return Result.err(
           new AdapterValidationError(
             'Command contains potentially dangerous pattern',
             undefined,
@@ -495,6 +495,6 @@ export const AdapterValidation = {
       }
     }
 
-    return new Result.ok(true as const);
+    return Result.ok(true as const);
   },
 };
