@@ -5,49 +5,75 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { useRealtimeConnection, useOptimisticUpdate, useAdaptivePolling } from "../useRealtimeConnection";
+import type { WSConnectionState, ConnectionStatus } from "../../services/ws-manager";
 
-// Mock WebSocket
-class MockWebSocket {
-  static CONNECTING = 0;
-  static OPEN = 1;
-  static CLOSING = 2;
-  static CLOSED = 3;
+// Mock ws-manager module
+vi.mock("../../services/ws-manager", () => {
+  const mockSubscribe = vi.fn();
+  const mockOnStateChange = vi.fn();
+  const mockConnect = vi.fn();
+  const mockDisconnect = vi.fn();
+  const mockSend = vi.fn();
+  const mockGetState = vi.fn();
 
-  onopen: (() => void) | null = null;
-  onmessage: ((event: MessageEvent) => void) | null = null;
-  onerror: ((event: Event) => void) | null = null;
-  onclose: (() => void) | null = null;
-  readyState = MockWebSocket.CONNECTING;
+  return {
+    wsManager: {
+      subscribe: mockSubscribe,
+      onStateChange: mockOnStateChange,
+      connect: mockConnect,
+      disconnect: mockDisconnect,
+      send: mockSend,
+      getState: mockGetState,
+    },
+  };
+});
 
-  constructor(public url: string) {
-    (global as any).lastWebSocketInstance = this;
-
-    // Auto-trigger onopen in the next microtask (synchronous-ish)
-    queueMicrotask(() => {
-      if (this.readyState === MockWebSocket.CONNECTING) {
-        this.readyState = MockWebSocket.OPEN;
-        if (this.onopen) this.onopen();
-      }
-    });
-  }
-
-  send(data: string) {
-    // Mock send
-  }
-
-  close() {
-    this.readyState = MockWebSocket.CLOSED;
-    queueMicrotask(() => {
-      if (this.onclose) this.onclose();
-    });
-  }
-}
-
-global.WebSocket = MockWebSocket as any;
+// Get the mocked functions
+const { wsManager } = await import("../../services/ws-manager");
+const mockSubscribe = wsManager.subscribe as ReturnType<typeof vi.fn>;
+const mockOnStateChange = wsManager.onStateChange as ReturnType<typeof vi.fn>;
+const mockConnect = wsManager.connect as ReturnType<typeof vi.fn>;
+const mockDisconnect = wsManager.disconnect as ReturnType<typeof vi.fn>;
+const mockSend = wsManager.send as ReturnType<typeof vi.fn>;
+const mockGetState = wsManager.getState as ReturnType<typeof vi.fn>;
 
 describe("useRealtimeConnection", () => {
+  let stateChangeHandler: ((state: WSConnectionState) => void) | null = null;
+  let messageHandler: ((msg: unknown) => void) | null = null;
+
   beforeEach(() => {
     vi.clearAllMocks();
+
+    stateChangeHandler = null;
+    messageHandler = null;
+
+    // Mock initial state as disconnected
+    mockGetState.mockReturnValue({
+      status: "disconnected" as ConnectionStatus,
+      reconnectAttempt: 0,
+      latency: 0,
+    });
+
+    // Capture handlers when subscribed
+    mockOnStateChange.mockImplementation((handler: (state: WSConnectionState) => void) => {
+      stateChangeHandler = handler;
+      // Immediately call with current state (as real wsManager does)
+      handler({
+        status: "disconnected" as ConnectionStatus,
+        reconnectAttempt: 0,
+        latency: 0,
+      });
+      return vi.fn(); // Return unsubscribe function
+    });
+
+    mockSubscribe.mockImplementation((eventType: string, handler: (msg: unknown) => void) => {
+      if (eventType === "*") {
+        messageHandler = handler;
+      }
+      return vi.fn(); // Return unsubscribe function
+    });
+
+    mockSend.mockReturnValue(true);
   });
 
   afterEach(() => {
@@ -66,7 +92,7 @@ describe("useRealtimeConnection", () => {
     expect(result.current.messages).toEqual([]);
   });
 
-  it("should connect to WebSocket on mount", async () => {
+  it("should subscribe to wsManager on mount and call onOpen on connected transition", async () => {
     const onOpen = vi.fn();
 
     renderHook(() =>
@@ -76,16 +102,23 @@ describe("useRealtimeConnection", () => {
       })
     );
 
-    // Wait for connection (500ms delay + auto-open)
-    await waitFor(
-      () => {
-        const wsInstance = (global as any).lastWebSocketInstance;
-        expect(wsInstance).toBeDefined();
-        expect(wsInstance.url).toBe("ws://localhost:5051/ws");
-        expect(onOpen).toHaveBeenCalledTimes(1);
-      },
-      { timeout: 2000 }
-    );
+    // Verify subscriptions were set up
+    expect(mockOnStateChange).toHaveBeenCalledTimes(1);
+    expect(mockSubscribe).toHaveBeenCalledWith("*", expect.any(Function));
+
+    // Simulate state transition to connected
+    act(() => {
+      stateChangeHandler?.({
+        status: "connected" as ConnectionStatus,
+        reconnectAttempt: 0,
+        latency: 0,
+        lastConnected: new Date(),
+      });
+    });
+
+    await waitFor(() => {
+      expect(onOpen).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("should update connection state on open", async () => {
@@ -95,13 +128,20 @@ describe("useRealtimeConnection", () => {
       })
     );
 
-    await waitFor(
-      () => {
-        expect(result.current.connectionState.status).toBe("connected");
-        expect(result.current.isConnected).toBe(true);
-      },
-      { timeout: 2000 }
-    );
+    // Simulate state change to connected
+    act(() => {
+      stateChangeHandler?.({
+        status: "connected" as ConnectionStatus,
+        reconnectAttempt: 0,
+        latency: 0,
+        lastConnected: new Date(),
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.connectionState.status).toBe("connected");
+      expect(result.current.isConnected).toBe(true);
+    });
   });
 
   it("should receive and parse messages", async () => {
@@ -111,21 +151,22 @@ describe("useRealtimeConnection", () => {
       })
     );
 
-    await waitFor(
-      () => {
-        expect(result.current.isConnected).toBe(true);
-      },
-      { timeout: 2000 }
-    );
-
-    const wsInstance = (global as any).lastWebSocketInstance;
-
-    // Simulate receiving a message
+    // Simulate state change to connected
     act(() => {
-      const event = new MessageEvent("message", {
-        data: JSON.stringify({ type: "test", payload: "data" }),
+      stateChangeHandler?.({
+        status: "connected" as ConnectionStatus,
+        reconnectAttempt: 0,
+        latency: 0,
       });
-      if (wsInstance.onmessage) wsInstance.onmessage(event);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isConnected).toBe(true);
+    });
+
+    // Simulate receiving a message through wsManager
+    act(() => {
+      messageHandler?.({ type: "test", payload: "data" });
     });
 
     await waitFor(() => {
@@ -134,73 +175,80 @@ describe("useRealtimeConnection", () => {
     });
   });
 
-  it("should handle pong messages and calculate latency", async () => {
+  it("should update latency from wsManager state", async () => {
     const { result } = renderHook(() =>
       useRealtimeConnection({
         url: "ws://localhost:5051/ws",
-        heartbeatInterval: 100, // Short interval for testing
+        heartbeatInterval: 100, // Ignored by hook, but kept for compatibility
       })
     );
 
-    await waitFor(
-      () => {
-        expect(result.current.isConnected).toBe(true);
-      },
-      { timeout: 2000 }
-    );
-
-    const wsInstance = (global as any).lastWebSocketInstance;
-
-    // Wait for first heartbeat to be sent (100ms + buffer)
-    await new Promise((resolve) => setTimeout(resolve, 150));
-
-    // Simulate pong response
+    // Simulate state change to connected
     act(() => {
-      const event = new MessageEvent("message", {
-        data: JSON.stringify({ type: "pong" }),
+      stateChangeHandler?.({
+        status: "connected" as ConnectionStatus,
+        reconnectAttempt: 0,
+        latency: 0,
       });
-      if (wsInstance.onmessage) wsInstance.onmessage(event);
     });
 
     await waitFor(() => {
-      expect(result.current.connectionState.latency).toBeGreaterThanOrEqual(0);
+      expect(result.current.isConnected).toBe(true);
+    });
+
+    // Simulate latency update from wsManager
+    act(() => {
+      stateChangeHandler?.({
+        status: "connected" as ConnectionStatus,
+        reconnectAttempt: 0,
+        latency: 42,
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.connectionState.latency).toBe(42);
     });
   });
 
-  it("should send messages through WebSocket", async () => {
+  it("should send messages through wsManager", async () => {
     const { result } = renderHook(() =>
       useRealtimeConnection({
         url: "ws://localhost:5051/ws",
       })
     );
 
-    await waitFor(
-      () => {
-        expect(result.current.isConnected).toBe(true);
-      },
-      { timeout: 2000 }
-    );
+    // Simulate state change to connected
+    act(() => {
+      stateChangeHandler?.({
+        status: "connected" as ConnectionStatus,
+        reconnectAttempt: 0,
+        latency: 0,
+      });
+    });
 
-    const wsInstance = (global as any).lastWebSocketInstance;
-    const sendSpy = vi.spyOn(wsInstance, "send");
+    await waitFor(() => {
+      expect(result.current.isConnected).toBe(true);
+    });
 
     act(() => {
       result.current.sendMessage({ type: "test", data: "hello" });
     });
 
-    expect(sendSpy).toHaveBeenCalledWith(
-      JSON.stringify({ type: "test", data: "hello" })
-    );
+    expect(mockSend).toHaveBeenCalledWith({ type: "test", data: "hello" });
   });
 
-  it("should not send messages when disconnected", async () => {
+  it("should delegate sendMessage to wsManager regardless of connection state", async () => {
     const { result } = renderHook(() =>
       useRealtimeConnection({
         url: "ws://localhost:5051/ws",
       })
     );
 
+    // wsManager handles queueing when disconnected
+    mockSend.mockReturnValue(false); // Simulate queued (not sent immediately)
+
     const success = result.current.sendMessage({ type: "test" });
+    expect(mockSend).toHaveBeenCalledWith({ type: "test" });
     expect(success).toBe(false);
   });
 
@@ -211,21 +259,22 @@ describe("useRealtimeConnection", () => {
       })
     );
 
-    await waitFor(
-      () => {
-        expect(result.current.isConnected).toBe(true);
-      },
-      { timeout: 2000 }
-    );
+    // Simulate state change to connected
+    act(() => {
+      stateChangeHandler?.({
+        status: "connected" as ConnectionStatus,
+        reconnectAttempt: 0,
+        latency: 0,
+      });
+    });
 
-    const wsInstance = (global as any).lastWebSocketInstance;
+    await waitFor(() => {
+      expect(result.current.isConnected).toBe(true);
+    });
 
     // Add a message
     act(() => {
-      const event = new MessageEvent("message", {
-        data: JSON.stringify({ type: "test" }),
-      });
-      if (wsInstance.onmessage) wsInstance.onmessage(event);
+      messageHandler?.({ type: "test" });
     });
 
     await waitFor(() => {
@@ -239,105 +288,155 @@ describe("useRealtimeConnection", () => {
     expect(result.current.messages).toEqual([]);
   });
 
-  it("should reconnect after connection loss", async () => {
+  it("should call onReconnect callback on reconnecting state", async () => {
     const onReconnect = vi.fn();
 
     const { result } = renderHook(() =>
       useRealtimeConnection({
         url: "ws://localhost:5051/ws",
-        reconnectDelay: 100, // Short delay for testing
+        reconnectDelay: 100, // Ignored, but kept for compatibility
         onReconnect,
       })
     );
 
-    await waitFor(
-      () => {
-        expect(result.current.isConnected).toBe(true);
-      },
-      { timeout: 2000 }
-    );
+    // Simulate state change to connected
+    act(() => {
+      stateChangeHandler?.({
+        status: "connected" as ConnectionStatus,
+        reconnectAttempt: 0,
+        latency: 0,
+      });
+    });
 
-    const firstWsInstance = (global as any).lastWebSocketInstance;
+    await waitFor(() => {
+      expect(result.current.isConnected).toBe(true);
+    });
 
     // Simulate connection close
     act(() => {
-      firstWsInstance.close();
+      stateChangeHandler?.({
+        status: "disconnected" as ConnectionStatus,
+        reconnectAttempt: 0,
+        latency: 0,
+      });
     });
 
-    await waitFor(
-      () => {
-        expect(result.current.connectionState.status).toBe("disconnected");
-      },
-      { timeout: 1000 }
-    );
+    await waitFor(() => {
+      expect(result.current.connectionState.status).toBe("disconnected");
+    });
 
-    // Wait for reconnection (100ms delay + 500ms connect delay + auto-open)
-    await waitFor(
-      () => {
-        expect(onReconnect).toHaveBeenCalledWith(1);
-      },
-      { timeout: 2000 }
-    );
+    // Simulate reconnection attempt
+    act(() => {
+      stateChangeHandler?.({
+        status: "reconnecting" as ConnectionStatus,
+        reconnectAttempt: 1,
+        latency: 0,
+      });
+    });
+
+    await waitFor(() => {
+      expect(onReconnect).toHaveBeenCalledWith(1);
+    });
   });
 
-  it("should use exponential backoff for reconnection", async () => {
+  it("should track reconnect attempts from wsManager", async () => {
     const { result, unmount } = renderHook(() =>
       useRealtimeConnection({
         url: "ws://localhost:5051/ws",
-        reconnectDelay: 100, // Short delay for testing
+        reconnectDelay: 100, // Ignored, but kept for compatibility
         maxReconnectAttempts: 3,
       })
     );
 
-    await waitFor(
-      () => {
-        expect(result.current.isConnected).toBe(true);
-      },
-      { timeout: 2000 }
-    );
-
-    // Trigger first close
+    // Simulate state change to connected
     act(() => {
-      const wsInstance = (global as any).lastWebSocketInstance;
-      wsInstance.close();
+      stateChangeHandler?.({
+        status: "connected" as ConnectionStatus,
+        reconnectAttempt: 0,
+        latency: 0,
+      });
     });
 
-    await waitFor(
-      () => {
-        expect(result.current.connectionState.reconnectAttempt).toBe(1);
-      },
-      { timeout: 2000 }
-    );
+    await waitFor(() => {
+      expect(result.current.isConnected).toBe(true);
+    });
+
+    // Simulate reconnection attempt
+    act(() => {
+      stateChangeHandler?.({
+        status: "reconnecting" as ConnectionStatus,
+        reconnectAttempt: 1,
+        latency: 0,
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.connectionState.reconnectAttempt).toBe(1);
+    });
 
     // Clean up to prevent further reconnections
     unmount();
   });
 
-  it("should cleanup on unmount", async () => {
-    let wsInstance: any;
+  it("should cleanup subscriptions on unmount", async () => {
+    const unsubState = vi.fn();
+    const unsubMessages = vi.fn();
 
-    const { result, unmount } = renderHook(() =>
+    mockOnStateChange.mockReturnValue(unsubState);
+    mockSubscribe.mockReturnValue(unsubMessages);
+
+    const { unmount } = renderHook(() =>
       useRealtimeConnection({
         url: "ws://localhost:5051/ws",
       })
     );
 
-    // Wait for connection to be established
-    await waitFor(
-      () => {
-        expect(result.current.isConnected).toBe(true);
-      },
-      { timeout: 2000 }
-    );
-
-    // Get the WebSocket instance and spy on close
-    wsInstance = (global as any).lastWebSocketInstance;
-    const closeSpy = vi.spyOn(wsInstance, "close");
+    // Verify subscriptions were set up
+    expect(mockOnStateChange).toHaveBeenCalledTimes(1);
+    expect(mockSubscribe).toHaveBeenCalledWith("*", expect.any(Function));
 
     unmount();
 
-    // Verify close was called
-    expect(closeSpy).toHaveBeenCalled();
+    // Verify unsubscribe functions were called
+    expect(unsubState).toHaveBeenCalled();
+    expect(unsubMessages).toHaveBeenCalled();
+  });
+
+  it("should call onClose callback on disconnected transition", async () => {
+    const onClose = vi.fn();
+
+    renderHook(() =>
+      useRealtimeConnection({
+        url: "ws://localhost:5051/ws",
+        onClose,
+      })
+    );
+
+    // Simulate state change to connected first
+    act(() => {
+      stateChangeHandler?.({
+        status: "connected" as ConnectionStatus,
+        reconnectAttempt: 0,
+        latency: 0,
+      });
+    });
+
+    await waitFor(() => {
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    // Simulate connection close
+    act(() => {
+      stateChangeHandler?.({
+        status: "disconnected" as ConnectionStatus,
+        reconnectAttempt: 0,
+        latency: 0,
+      });
+    });
+
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
   });
 });
 

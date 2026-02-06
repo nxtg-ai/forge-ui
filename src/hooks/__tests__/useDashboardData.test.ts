@@ -5,41 +5,25 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { useDashboardData } from "../useDashboardData";
+import { wsManager } from "../../services/ws-manager";
 
-// Track WebSocket instances
-let wsInstances: any[] = [];
-
-// Mock WebSocket
-class MockWebSocket {
-  static CONNECTING = 0;
-  static OPEN = 1;
-  static CLOSING = 2;
-  static CLOSED = 3;
-
-  onopen: (() => void) | null = null;
-  onmessage: ((event: { data: string }) => void) | null = null;
-  onerror: ((event: Event) => void) | null = null;
-  onclose: (() => void) | null = null;
-  readyState = MockWebSocket.OPEN;
-  url: string;
-
-  constructor(url: string) {
-    this.url = url;
-    wsInstances.push(this);
-    // Auto-open
-    queueMicrotask(() => {
-      this.readyState = MockWebSocket.OPEN;
-      if (this.onopen) this.onopen();
-    });
-  }
-
-  send(_data: string) {}
-
-  close() {
-    this.readyState = MockWebSocket.CLOSED;
-    if (this.onclose) this.onclose();
-  }
-}
+// Mock wsManager module
+vi.mock("../../services/ws-manager", () => ({
+  wsManager: {
+    subscribe: vi.fn((eventType: string, handler: (data: unknown) => void) => {
+      // Return unsubscribe function
+      return () => {};
+    }),
+    onStateChange: vi.fn((handler: (state: any) => void) => {
+      // Return unsubscribe function
+      return () => {};
+    }),
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    send: vi.fn(() => true),
+    getState: vi.fn(() => ({ status: "connected" })),
+  },
+}));
 
 // Default mock responses
 const defaultResponses: Record<string, any> = {
@@ -64,20 +48,14 @@ function createFetchMock(overrides: Record<string, any> = {}) {
   });
 }
 
-const OriginalWebSocket = global.WebSocket;
-
 describe("useDashboardData", () => {
   beforeEach(() => {
-    wsInstances = [];
-    global.WebSocket = MockWebSocket as any;
+    vi.clearAllMocks();
     global.fetch = createFetchMock();
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    global.WebSocket = OriginalWebSocket;
-    // Close any open WS connections
-    wsInstances.forEach(ws => { try { ws.close(); } catch {} });
   });
 
   it("should initialize with loading state", () => {
@@ -214,13 +192,19 @@ describe("useDashboardData", () => {
     expect(result.current.visionData.mission).toBe("Building innovative solutions");
   });
 
-  it("should create WebSocket connection", async () => {
+  it("should subscribe to wsManager events", async () => {
     const { result } = renderHook(() => useDashboardData());
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(wsInstances.length).toBeGreaterThan(0);
+    // Verify wsManager.subscribe was called for each event type
+    expect(wsManager.subscribe).toHaveBeenCalledWith("state.update", expect.any(Function));
+    expect(wsManager.subscribe).toHaveBeenCalledWith("agent.activity", expect.any(Function));
+    expect(wsManager.subscribe).toHaveBeenCalledWith("vision.change", expect.any(Function));
+
+    // Verify it was called exactly 3 times (once per event type)
+    expect(wsManager.subscribe).toHaveBeenCalledTimes(3);
   });
 });

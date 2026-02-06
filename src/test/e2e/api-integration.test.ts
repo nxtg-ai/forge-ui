@@ -637,7 +637,7 @@ describe("E2E: API Integration", () => {
       expect(response).toHaveProperty("success");
     });
 
-    it("should include credentials in requests", async () => {
+    it("should NOT include credentials in requests (session management removed)", async () => {
       let capturedOptions: RequestInit | undefined;
 
       global.fetch = vi.fn((url, options) => {
@@ -655,7 +655,8 @@ describe("E2E: API Integration", () => {
 
       await apiClient.get("/test");
 
-      expect(capturedOptions?.credentials).toBe("include");
+      // Credentials are no longer included since session management was removed
+      expect(capturedOptions?.credentials).toBeUndefined();
     });
   });
 

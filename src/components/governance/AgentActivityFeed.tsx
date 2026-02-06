@@ -1,6 +1,6 @@
 /**
  * Agent Activity Feed Component
- * Real-time activity stream from worker pool
+ * Real-time activity stream from worker pool via shared wsManager
  */
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -17,6 +17,7 @@ import {
   Bot,
   Zap,
 } from "lucide-react";
+import { wsManager } from "../../services/ws-manager";
 
 interface WorkerActivity {
   id: string;
@@ -43,7 +44,12 @@ interface AgentActivityFeedProps {
  * Worker event received from WebSocket
  */
 interface WorkerEvent {
-  type: "task.started" | "task.completed" | "task.failed" | "worker.status" | "pool.scaled";
+  type:
+    | "task.started"
+    | "task.completed"
+    | "task.failed"
+    | "worker.status"
+    | "pool.scaled";
   workerId?: string;
   taskId?: string;
   status?: string;
@@ -65,92 +71,28 @@ export const AgentActivityFeed: React.FC<AgentActivityFeedProps> = ({
   const [isConnected, setIsConnected] = useState(false);
   const [connectionFailed, setConnectionFailed] = useState(false);
 
-  // Fetch initial activities and set up WebSocket
+  // Subscribe to worker events via shared wsManager
   useEffect(() => {
-    let ws: WebSocket | null = null;
-    let reconnectAttempts = 0;
-    const maxReconnectAttempts = 3;
-    let reconnectTimeout: NodeJS.Timeout | null = null;
-    let isCancelled = false;
+    const unsubMessage = wsManager.subscribe(
+      "worker.event",
+      (payload: unknown) => {
+        const activity = parseWorkerEvent(payload as WorkerEvent);
+        if (activity) {
+          setActivities((prev) => [activity, ...prev].slice(0, maxEntries));
+        }
+      },
+    );
 
-    const connectWebSocket = () => {
-      if (isCancelled) return;
-
-      // Stop trying after max attempts
-      if (reconnectAttempts >= maxReconnectAttempts) {
-        setConnectionFailed(true);
-        return;
-      }
-
-      try {
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        // Use relative URL - Vite proxy handles forwarding to API server
-        ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws`);
-
-        ws.onopen = () => {
-          if (isCancelled) {
-            ws?.close();
-            return;
-          }
-          reconnectAttempts = 0;
-          setIsConnected(true);
-          setConnectionFailed(false);
-        };
-
-        ws.onmessage = (event) => {
-          if (isCancelled) return;
-          try {
-            const message = JSON.parse(event.data);
-            if (message.type === "worker.event") {
-              const activity = parseWorkerEvent(message.payload);
-              if (activity) {
-                setActivities((prev) =>
-                  [activity, ...prev].slice(0, maxEntries),
-                );
-              }
-            }
-          } catch (err) {
-            console.error("Failed to parse WebSocket message:", err);
-          }
-        };
-
-        ws.onclose = () => {
-          if (isCancelled) return;
-          setIsConnected(false);
-
-          // Reconnect with backoff, but only up to max attempts
-          if (reconnectAttempts < maxReconnectAttempts) {
-            reconnectAttempts++;
-            const delay = 2000 * Math.pow(2, reconnectAttempts - 1);
-            reconnectTimeout = setTimeout(connectWebSocket, delay);
-          } else {
-            setConnectionFailed(true);
-          }
-        };
-
-        ws.onerror = () => {
-          // Let onclose handle the state change
-        };
-      } catch (err) {
-        // WebSocket constructor failed
-        setConnectionFailed(true);
-      }
-    };
-
-    // Delay initial connection to allow API server to start
-    const initialConnectTimeout = setTimeout(() => {
-      connectWebSocket();
-    }, 600);
+    const unsubState = wsManager.onStateChange((state) => {
+      setIsConnected(state.status === "connected");
+      setConnectionFailed(
+        state.status === "disconnected" && state.reconnectAttempt >= 5,
+      );
+    });
 
     return () => {
-      isCancelled = true;
-      clearTimeout(initialConnectTimeout);
-      if (reconnectTimeout) {
-        clearTimeout(reconnectTimeout);
-      }
-      if (ws) {
-        ws.close();
-      }
+      unsubMessage();
+      unsubState();
     };
   }, [maxEntries]);
 
@@ -320,7 +262,9 @@ export const AgentActivityFeed: React.FC<AgentActivityFeedProps> = ({
 };
 
 // Activity item component
-const ActivityItem: React.FC<{ activity: WorkerActivity }> = ({ activity }) => {
+const ActivityItem: React.FC<{ activity: WorkerActivity }> = ({
+  activity,
+}) => {
   const getIcon = () => {
     switch (activity.type) {
       case "task.started":

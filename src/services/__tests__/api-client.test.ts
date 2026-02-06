@@ -10,37 +10,22 @@ import type { VisionData, ProjectState, Command } from "../../components/types";
 // Mock fetch globally
 global.fetch = vi.fn();
 
-// Mock WebSocket
-class MockWebSocket {
-  public readyState = WebSocket.CONNECTING;
-  public onopen: ((event: Event) => void) | null = null;
-  public onmessage: ((event: MessageEvent) => void) | null = null;
-  public onerror: ((event: Event) => void) | null = null;
-  public onclose: ((event: CloseEvent) => void) | null = null;
-
-  constructor(public url: string) {
-    // Simulate async connection using queueMicrotask for synchronous-like behavior
-    queueMicrotask(() => {
-      this.readyState = WebSocket.OPEN;
-      if (this.onopen) {
-        this.onopen(new Event("open"));
-      }
-    });
-  }
-
-  send(data: string): void {
-    // Mock send
-  }
-
-  close(): void {
-    this.readyState = WebSocket.CLOSED;
-    if (this.onclose) {
-      this.onclose(new CloseEvent("close"));
-    }
-  }
-}
-
-global.WebSocket = MockWebSocket as any;
+// Mock ws-manager module
+vi.mock("../ws-manager", () => ({
+  wsManager: {
+    subscribe: vi.fn((eventType: string, handler: (data: unknown) => void) => {
+      return () => {}; // Return unsubscribe function
+    }),
+    send: vi.fn(),
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    getState: vi.fn(() => ({
+      status: "connected",
+      reconnectAttempt: 0,
+      latency: 0,
+    })),
+  },
+}));
 
 describe("ApiClient", () => {
   let client: ApiClient;
@@ -520,128 +505,35 @@ describe("ApiClient", () => {
     });
   });
 
-  describe("WebSocket Management", () => {
-    it("should initialize WebSocket connection", async () => {
-      // Manually trigger WebSocket initialization by calling the private method
-      client["initializeWebSocket"]();
-
-      // Wait for microtask to complete - setTimeout(0) allows microtask queue to flush
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      // WebSocket should be created
-      expect(client["wsConnection"]).toBeDefined();
-      expect(client["wsConnection"]?.readyState).toBe(WebSocket.OPEN);
-    });
-
-    it("should subscribe to WebSocket events", async () => {
+  describe("WebSocket Management (delegated to wsManager)", () => {
+    it("should delegate subscribe to wsManager", async () => {
+      const { wsManager } = await import("../ws-manager");
       const handler = vi.fn();
 
       const unsubscribe = client.subscribe("agent.activity", handler);
 
+      expect(wsManager.subscribe).toHaveBeenCalledWith("agent.activity", handler);
       expect(typeof unsubscribe).toBe("function");
     });
 
-    it("should unsubscribe from WebSocket events", async () => {
-      const handler = vi.fn();
+    it("should delegate sendWSMessage to wsManager", async () => {
+      const { wsManager } = await import("../ws-manager");
 
-      const unsubscribe = client.subscribe("agent.activity", handler);
-      unsubscribe();
+      client.sendWSMessage("command.executed", { commandId: "test" });
 
-      // Handler should be removed
-      expect(client["eventHandlers"].get("agent.activity")?.has(handler)).toBe(false);
+      expect(wsManager.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "command.executed",
+          payload: { commandId: "test" },
+          timestamp: expect.any(String),
+          correlationId: expect.any(String),
+        }),
+      );
     });
 
-    it.skip("should send WebSocket message when connected", async () => {
-      // Create a fresh client to avoid state issues
-      const testClient = new ApiClient();
-      testClient.disconnect(); // Clear any pending initialization
-
-      // Manually initialize WebSocket
-      testClient["initializeWebSocket"]();
-      // Wait for microtask - need short timeout to ensure queueMicrotask has executed
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      const ws = testClient["wsConnection"];
-      expect(ws).toBeDefined();
-      expect(ws).not.toBeNull();
-
-      const sendSpy = vi.spyOn(ws!, "send");
-
-      testClient.sendWSMessage("command.executed", { commandId: "test" });
-
-      expect(sendSpy).toHaveBeenCalled();
-
-      testClient.disconnect();
-    });
-
-    it.skip("should queue messages when disconnected", () => {
-      // Create new client but don't initialize WebSocket
-      const newClient = new ApiClient();
-
-      // Send message immediately (before WebSocket is ready)
-      newClient.sendWSMessage("command.executed", { commandId: "test" });
-
-      // Should be queued
-      expect(newClient["requestQueue"].length).toBeGreaterThan(0);
-
-      newClient.disconnect();
-    });
-
-    it("should disconnect WebSocket", async () => {
-      // Initialize WebSocket
-      client["initializeWebSocket"]();
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      const ws = client["wsConnection"];
-      expect(ws).toBeDefined();
-
-      client.disconnect();
-
-      expect(client["wsConnection"]).toBeNull();
-      expect(client["eventHandlers"].size).toBe(0);
-    });
-
-    it.skip("should attempt reconnection on close", async () => {
-      // Create a fresh client to avoid state issues
-      const testClient = new ApiClient();
-      testClient.disconnect(); // Clear any pending initialization
-
-      // Initialize WebSocket
-      testClient["initializeWebSocket"]();
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      const ws = testClient["wsConnection"];
-      expect(ws).toBeDefined();
-      expect(ws).not.toBeNull();
-
-      // Get the onclose handler before triggering it
-      const oncloseHandler = ws!.onclose;
-      expect(oncloseHandler).toBeDefined();
-
-      // Manually trigger close event
-      oncloseHandler!(new CloseEvent("close"));
-
-      // Give it a moment to update state
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      // Should schedule reconnection
-      expect(testClient["wsReconnectAttempts"]).toBe(1);
-
-      testClient.disconnect();
-    });
-
-    it("should stop reconnecting after max attempts", async () => {
-      // Initialize WebSocket
-      client["initializeWebSocket"]();
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      // Simulate max reconnection attempts
-      for (let i = 0; i < 5; i++) {
-        client["attemptReconnect"]();
-      }
-
-      // Should stop after max attempts
-      expect(client["wsReconnectAttempts"]).toBe(5);
+    it("should handle disconnect as no-op", () => {
+      // disconnect() is now a no-op since wsManager manages lifecycle
+      expect(() => client.disconnect()).not.toThrow();
     });
   });
 
@@ -683,7 +575,7 @@ describe("ApiClient", () => {
       expect(result.error).toBeDefined();
     });
 
-    it("should include credentials in requests", async () => {
+    it("should NOT include credentials in requests (session management removed)", async () => {
       vi.mocked(fetch).mockResolvedValue({
         ok: true,
         json: async () => ({ success: true, timestamp: new Date().toISOString() }),
@@ -694,9 +586,16 @@ describe("ApiClient", () => {
       expect(fetch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          credentials: "include",
+          headers: expect.objectContaining({
+            "Content-Type": "application/json",
+          }),
         }),
       );
+
+      // Verify credentials are NOT included
+      const callArgs = vi.mocked(fetch).mock.calls[0];
+      const options = callArgs[1] as RequestInit;
+      expect(options.credentials).toBeUndefined();
     });
   });
 });

@@ -39,7 +39,16 @@ const TOKEN_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
 // Security: Allowed origins (configurable via environment)
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
-  : ["http://localhost:5050", "http://127.0.0.1:5050"];
+  : [
+      "http://localhost:5050",
+      "http://localhost:5051",
+      "http://127.0.0.1:5050",
+      "http://127.0.0.1:5051",
+      "ws://localhost:5050",
+      "ws://localhost:5051",
+      "ws://127.0.0.1:5050",
+      "ws://127.0.0.1:5051",
+    ];
 
 // Security: Dangerous command patterns to block
 const DANGEROUS_COMMANDS = [

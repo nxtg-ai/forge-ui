@@ -1,10 +1,21 @@
+/**
+ * useRealtimeConnection Hook
+ * Thin wrapper around the shared wsManager singleton.
+ * Provides React-friendly API with connection state and message handling.
+ */
+
 import { useState, useEffect, useCallback, useRef } from "react";
+import {
+  wsManager,
+  type WSConnectionState,
+  type ConnectionStatus,
+} from "../services/ws-manager";
 
 interface WebSocketConfig {
-  url: string;
-  reconnectDelay?: number;
-  maxReconnectAttempts?: number;
-  heartbeatInterval?: number;
+  url?: string; // Ignored - wsManager handles URL
+  reconnectDelay?: number; // Ignored - wsManager handles reconnection
+  maxReconnectAttempts?: number; // Ignored - wsManager handles reconnection
+  heartbeatInterval?: number; // Ignored - wsManager handles heartbeat
   onOpen?: () => void;
   onClose?: () => void;
   onError?: (error: Event) => void;
@@ -12,28 +23,14 @@ interface WebSocketConfig {
 }
 
 interface ConnectionState {
-  status:
-    | "connecting"
-    | "connected"
-    | "disconnected"
-    | "reconnecting"
-    | "error";
+  status: ConnectionStatus;
   lastConnected?: Date;
   reconnectAttempt: number;
   latency: number;
 }
 
 export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
-  const {
-    url,
-    reconnectDelay = 5000,
-    maxReconnectAttempts = 5,
-    heartbeatInterval = 30000,
-    onOpen,
-    onClose,
-    onError,
-    onReconnect,
-  } = config;
+  const { onOpen, onClose, onReconnect } = config;
 
   const [connectionState, setConnectionState] = useState<ConnectionState>({
     status: "disconnected",
@@ -42,16 +39,12 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
   });
 
   const [messages, setMessages] = useState<T[]>([]);
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
-  const heartbeatIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
-  const pingTimestampRef = useRef<number>(0);
 
   // Store callbacks in refs to avoid dependency issues
   const onOpenRef = useRef(onOpen);
   const onCloseRef = useRef(onClose);
-  const onErrorRef = useRef(onError);
   const onReconnectRef = useRef(onReconnect);
+  const prevStatusRef = useRef<ConnectionStatus>("disconnected");
 
   useEffect(() => {
     onOpenRef.current = onOpen;
@@ -60,171 +53,63 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
     onCloseRef.current = onClose;
   }, [onClose]);
   useEffect(() => {
-    onErrorRef.current = onError;
-  }, [onError]);
-  useEffect(() => {
     onReconnectRef.current = onReconnect;
   }, [onReconnect]);
 
-  // Exponential backoff for reconnection
-  const getReconnectDelay = (attempt: number) => {
-    return Math.min(reconnectDelay * Math.pow(2, attempt), 30000);
-  };
+  // Subscribe to wsManager state changes and messages
+  useEffect(() => {
+    // State change listener
+    const unsubState = wsManager.onStateChange((state: WSConnectionState) => {
+      const newStatus = state.status;
+      const oldStatus = prevStatusRef.current;
 
-  // Heartbeat/ping mechanism
-  const startHeartbeat = useCallback(() => {
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current);
-    }
+      setConnectionState({
+        status: state.status,
+        lastConnected: state.lastConnected,
+        reconnectAttempt: state.reconnectAttempt,
+        latency: state.latency,
+      });
 
-    heartbeatIntervalRef.current = setInterval(() => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        pingTimestampRef.current = Date.now();
-        wsRef.current.send(JSON.stringify({ type: "ping" }));
-      }
-    }, heartbeatInterval);
-  }, [heartbeatInterval]);
-
-  const stopHeartbeat = useCallback(() => {
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current);
-    }
-  }, []);
-
-  // Track reconnect attempts in a ref to avoid dependency cycles
-  const reconnectAttemptsRef = useRef(0);
-
-  // Connect to WebSocket
-  const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      return;
-    }
-
-    setConnectionState((prev) => ({
-      ...prev,
-      status: reconnectAttemptsRef.current > 0 ? "reconnecting" : "connecting",
-    }));
-
-    try {
-      wsRef.current = new WebSocket(url);
-
-      wsRef.current.onopen = () => {
-        reconnectAttemptsRef.current = 0;
-        setConnectionState({
-          status: "connected",
-          lastConnected: new Date(),
-          reconnectAttempt: 0,
-          latency: 0,
-        });
-        startHeartbeat();
+      // Fire callbacks on transitions
+      if (newStatus === "connected" && oldStatus !== "connected") {
         onOpenRef.current?.();
-      };
-
-      wsRef.current.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-
-          // Handle pong response
-          if (data.type === "pong" && pingTimestampRef.current) {
-            const latency = Date.now() - pingTimestampRef.current;
-            setConnectionState((prev) => ({ ...prev, latency }));
-            return;
-          }
-
-          // Add message to queue
-          setMessages((prev) => [...prev, data as T]);
-        } catch (error) {
-          console.error("Failed to parse WebSocket message:", error);
-        }
-      };
-
-      wsRef.current.onerror = (event) => {
-        setConnectionState((prev) => ({
-          ...prev,
-          status: "error",
-        }));
-        onErrorRef.current?.(event);
-      };
-
-      wsRef.current.onclose = () => {
-        setConnectionState((prev) => ({
-          ...prev,
-          status: "disconnected",
-        }));
-        stopHeartbeat();
+      } else if (
+        newStatus === "disconnected" &&
+        oldStatus === "connected"
+      ) {
         onCloseRef.current?.();
+      } else if (newStatus === "reconnecting" && oldStatus !== "reconnecting") {
+        onReconnectRef.current?.(state.reconnectAttempt);
+      }
 
-        // Attempt to reconnect using ref (avoids dependency cycle)
-        if (reconnectAttemptsRef.current < maxReconnectAttempts) {
-          reconnectAttemptsRef.current++;
-          const attempt = reconnectAttemptsRef.current;
-          const delay = getReconnectDelay(attempt);
-
-          setConnectionState((prev) => ({
-            ...prev,
-            reconnectAttempt: attempt,
-          }));
-
-          onReconnectRef.current?.(attempt);
-
-          reconnectTimeoutRef.current = setTimeout(() => {
-            connect();
-          }, delay);
-        }
-      };
-    } catch (error) {
-      console.error("WebSocket connection failed:", error);
-      setConnectionState((prev) => ({
-        ...prev,
-        status: "error",
-      }));
-    }
-  }, [url, maxReconnectAttempts, startHeartbeat, stopHeartbeat]);
-
-  // Disconnect from WebSocket
-  const disconnect = useCallback(() => {
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-    }
-    stopHeartbeat();
-
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-
-    setConnectionState({
-      status: "disconnected",
-      reconnectAttempt: 0,
-      latency: 0,
+      prevStatusRef.current = newStatus;
     });
-  }, [stopHeartbeat]);
 
-  // Send message through WebSocket
-  const sendMessage = useCallback((message: Record<string, unknown>) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(message));
-      return true;
-    }
-    return false;
+    // Subscribe to all messages for the messages array
+    const unsubMessages = wsManager.subscribe("*", (msg: unknown) => {
+      setMessages((prev) => [...prev, msg as T]);
+    });
+
+    return () => {
+      unsubState();
+      unsubMessages();
+    };
   }, []);
 
-  // Clear message queue
+  const sendMessage = useCallback((message: Record<string, unknown>) => {
+    return wsManager.send(message);
+  }, []);
+
   const clearMessages = useCallback(() => {
     setMessages([]);
   }, []);
 
-  // Auto-connect on mount with delay to allow API server to start
-  useEffect(() => {
-    // Small delay to allow API server to be ready (race condition fix)
-    const connectTimeout = setTimeout(() => {
-      connect();
-    }, 500);
+  const connect = useCallback(() => {
+    wsManager.connect();
+  }, []);
 
-    return () => {
-      clearTimeout(connectTimeout);
-      disconnect();
-    };
+  const disconnect = useCallback(() => {
+    wsManager.disconnect();
   }, []);
 
   return {
@@ -256,21 +141,16 @@ export const useOptimisticUpdate = <T>(
           ? (newValue as (prev: T) => T)(value)
           : newValue;
 
-      // Store previous value for rollback
       previousValueRef.current = value;
-
-      // Optimistically update UI
       setValue(nextValue);
       setIsUpdating(true);
       setError(null);
 
       try {
-        // Perform actual update
         const result = await updateFn(nextValue);
-        setValue(result); // Sync with server response
+        setValue(result);
         return result;
       } catch (err) {
-        // Rollback on failure
         setValue(previousValueRef.current);
         setError(err as Error);
         throw err;
@@ -320,11 +200,9 @@ export const useAdaptivePolling = (
   const intervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const currentIntervalRef = useRef(baseInterval);
 
-  // Store fetchFn and onError in refs to avoid dependency issues
   const fetchFnRef = useRef(fetchFn);
   const onErrorRef = useRef(onError);
 
-  // Update refs when props change
   useEffect(() => {
     fetchFnRef.current = fetchFn;
   }, [fetchFn]);
@@ -336,11 +214,9 @@ export const useAdaptivePolling = (
   const adjustInterval = useCallback(
     (success: boolean) => {
       if (success) {
-        // Reset to base interval on success
         currentIntervalRef.current = baseInterval;
         setErrorCount(0);
       } else {
-        // Exponential backoff on failure
         currentIntervalRef.current = Math.min(
           currentIntervalRef.current * 2,
           maxInterval,
@@ -358,18 +234,15 @@ export const useAdaptivePolling = (
       setLastFetch(new Date());
       adjustInterval(true);
     } catch (error) {
-      console.error("Polling error:", error);
       adjustInterval(false);
       onErrorRef.current?.(error as Error);
     } finally {
       setIsPolling(false);
     }
 
-    // Schedule next poll
     intervalRef.current = setTimeout(poll, currentIntervalRef.current);
   }, [adjustInterval]);
 
-  // Start/stop polling based on enabled state
   useEffect(() => {
     if (enabled) {
       poll();

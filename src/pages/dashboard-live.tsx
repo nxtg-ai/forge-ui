@@ -34,6 +34,7 @@ import {
 } from "../hooks/useRealtimeConnection";
 import { useForgeCommands } from "../hooks/useForgeCommands";
 import { useDashboardData } from "../hooks/useDashboardData";
+import { wsManager } from "../services/ws-manager";
 import { EngagementProvider, useEngagement } from "../contexts/EngagementContext";
 import { useLayout } from "../contexts/LayoutContext";
 import type {
@@ -93,10 +94,9 @@ const LiveDashboard: React.FC = () => {
     refresh: refreshDashboard,
   } = useDashboardData();
 
-  // WebSocket connection for real-time updates
-  const { connectionState, messages, sendMessage, isConnected } =
+  // WebSocket connection for real-time updates (shared via wsManager singleton)
+  const { connectionState, sendMessage, isConnected } =
     useRealtimeConnection({
-      url: import.meta.env.VITE_WS_URL || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`,
       onOpen: () => {
         toast.success("Connected to Forge", {
           message: "Real-time updates enabled",
@@ -117,24 +117,22 @@ const LiveDashboard: React.FC = () => {
       },
     });
 
-  // Process incoming WebSocket messages - refresh dashboard data on updates
+  // Subscribe to specific event types for toasts (no blanket refresh)
   useEffect(() => {
-    if (messages.length > 0) {
-      messages.forEach((msg: any) => {
-        if (msg.type === "task_completed") {
-          toast.success(`Task completed: ${msg.payload?.name || "unknown"}`, {
-            duration: 3000,
-          });
-        } else if (msg.type === "blocker_detected") {
-          toast.warning("New blocker detected", {
-            message: msg.payload?.title || "Unknown blocker",
-          });
-        }
-      });
-      // Refresh real data when we get WebSocket events
-      refreshDashboard();
-    }
-  }, [messages, toast, refreshDashboard]);
+    const unsubs = [
+      wsManager.subscribe("task_completed", (data: any) => {
+        toast.success(`Task completed: ${data?.name || "unknown"}`, {
+          duration: 3000,
+        });
+      }),
+      wsManager.subscribe("blocker_detected", (data: any) => {
+        toast.warning("New blocker detected", {
+          message: data?.title || "Unknown blocker",
+        });
+      }),
+    ];
+    return () => unsubs.forEach((unsub) => unsub());
+  }, [toast]);
 
   // Optimistic updates for commands
   interface CommandExecution {

@@ -42,12 +42,42 @@ vi.mock("@tanstack/react-virtual", () => ({
   }),
 }));
 
+// Mock wsManager using vi.hoisted for proper access to mock functions
+const { mockUnsubscribe, mockSubscribe, mockOnStateChange, mockConnect, mockDisconnect, mockSend, mockGetState } = vi.hoisted(() => {
+  const mockUnsubscribe = vi.fn();
+  return {
+    mockUnsubscribe,
+    mockSubscribe: vi.fn(() => mockUnsubscribe),
+    mockOnStateChange: vi.fn(() => mockUnsubscribe),
+    mockConnect: vi.fn(),
+    mockDisconnect: vi.fn(),
+    mockSend: vi.fn(),
+    mockGetState: vi.fn(() => ({
+      status: "disconnected" as const,
+      reconnectAttempt: 0,
+      latency: 0,
+    })),
+  };
+});
+
+vi.mock("../../../services/ws-manager", () => ({
+  wsManager: {
+    subscribe: mockSubscribe,
+    onStateChange: mockOnStateChange,
+    connect: mockConnect,
+    disconnect: mockDisconnect,
+    send: mockSend,
+    getState: mockGetState,
+  },
+}));
+
 describe("LiveActivityFeed", () => {
   let mockFetch: ReturnType<typeof vi.fn>;
   let mockWebSocket: any;
   let MockWebSocketConstructor: any;
 
   beforeEach(() => {
+
     // Mock fetch
     mockFetch = vi.fn();
     global.fetch = mockFetch;
@@ -78,6 +108,11 @@ describe("LiveActivityFeed", () => {
     });
 
     vi.stubGlobal("WebSocket", MockWebSocketConstructor);
+
+    // Reset wsManager mocks
+    mockUnsubscribe.mockClear();
+    mockSubscribe.mockClear();
+    mockOnStateChange.mockClear();
   });
 
   afterEach(() => {
@@ -710,7 +745,13 @@ describe("LiveActivityFeed", () => {
       render(<LiveActivityFeed />);
 
       await waitFor(() => {
-        expect(MockWebSocketConstructor).toHaveBeenCalled();
+        expect(mockSubscribe).toHaveBeenCalledWith(
+          "agent.activity",
+          expect.any(Function)
+        );
+        expect(mockOnStateChange).toHaveBeenCalledWith(
+          expect.any(Function)
+        );
       });
     });
 
@@ -726,13 +767,14 @@ describe("LiveActivityFeed", () => {
       const { unmount } = render(<LiveActivityFeed />);
 
       await waitFor(() => {
-        expect(MockWebSocketConstructor).toHaveBeenCalled();
+        expect(mockSubscribe).toHaveBeenCalled();
+        expect(mockOnStateChange).toHaveBeenCalled();
       });
 
       unmount();
 
       await waitFor(() => {
-        expect(mockWebSocket.close).toHaveBeenCalled();
+        expect(mockUnsubscribe).toHaveBeenCalledTimes(2);
       });
     });
   });

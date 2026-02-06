@@ -6,6 +6,8 @@ import { OracleFeed } from "./OracleFeed";
 import { StrategicAdvisor } from "./StrategicAdvisor";
 import { WorkerPoolMetrics } from "./WorkerPoolMetrics";
 import { AgentActivityFeed } from "./AgentActivityFeed";
+import { wsManager, type ConnectionStatus } from "../../services/ws-manager";
+import { logger } from "../../utils/browser-logger";
 
 interface GovernanceHUDProps {
   className?: string;
@@ -15,13 +17,10 @@ export const GovernanceHUD: React.FC<GovernanceHUDProps> = ({ className }) => {
   const [state, setState] = useState<GovernanceState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isConnected, setIsConnected] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<"connecting" | "connected" | "disconnected" | "fallback">("connecting");
+  const [connectionStatus, setConnectionStatus] = useState<
+    "connecting" | "connected" | "disconnected" | "fallback"
+  >("connecting");
 
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const fallbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const reconnectAttemptsRef = useRef(0);
   const isMountedRef = useRef(true);
 
   // Fetch state from API
@@ -30,13 +29,12 @@ export const GovernanceHUD: React.FC<GovernanceHUDProps> = ({ className }) => {
       const res = await fetch("/api/governance/state");
       if (!res.ok) {
         const errorText = await res.text();
-        console.error("API Error:", res.status, errorText);
+        logger.warn("Governance API Error:", res.status, errorText);
         throw new Error(`API returned ${res.status}: ${errorText}`);
       }
 
       const response = await res.json();
 
-      // API wraps response in { success, data, timestamp }
       if (response.data) {
         setState(response.data);
         setError(null);
@@ -44,136 +42,54 @@ export const GovernanceHUD: React.FC<GovernanceHUDProps> = ({ className }) => {
         throw new Error("Invalid response structure - missing data property");
       }
     } catch (err) {
-      console.error("Governance fetch error:", err);
+      logger.warn("Governance fetch error:", err);
       setError(err instanceof Error ? err.message : "Unknown error occurred");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Setup WebSocket connection
-  const connectWebSocket = () => {
-    if (!isMountedRef.current) return;
-
-    // Maximum 5 reconnection attempts before falling back to polling
-    if (reconnectAttemptsRef.current >= 5) {
-      console.log("[Governance] Max reconnect attempts reached, falling back to polling");
-      setConnectionStatus("fallback");
-      enableFallbackPolling();
-      return;
-    }
-
-    try {
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws`);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        if (!isMountedRef.current) {
-          ws.close();
-          return;
-        }
-
-        console.log("[Governance] WebSocket connected");
-        reconnectAttemptsRef.current = 0;
-        setIsConnected(true);
-        setConnectionStatus("connected");
-        setError(null);
-
-        // Clear fallback polling if it was active
-        if (fallbackIntervalRef.current) {
-          clearInterval(fallbackIntervalRef.current);
-          fallbackIntervalRef.current = null;
-        }
-      };
-
-      ws.onmessage = (event) => {
-        if (!isMountedRef.current) return;
-
-        try {
-          const message = JSON.parse(event.data);
-
-          // Listen for governance.update events
-          if (message.type === "governance.update") {
-            console.log("[Governance] Real-time update received");
-            setState(message.payload);
-            setError(null);
-          }
-        } catch (err) {
-          console.error("[Governance] Failed to parse WebSocket message:", err);
-        }
-      };
-
-      ws.onclose = () => {
-        if (!isMountedRef.current) return;
-
-        console.log("[Governance] WebSocket disconnected");
-        setIsConnected(false);
-        setConnectionStatus("disconnected");
-        wsRef.current = null;
-
-        // Attempt to reconnect with exponential backoff
-        reconnectAttemptsRef.current++;
-        const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current - 1), 10000);
-
-        reconnectTimeoutRef.current = setTimeout(() => {
-          if (isMountedRef.current) {
-            setConnectionStatus("connecting");
-            connectWebSocket();
-          }
-        }, delay);
-      };
-
-      ws.onerror = (err) => {
-        console.error("[Governance] WebSocket error:", err);
-        // onclose will handle reconnection
-      };
-    } catch (err) {
-      console.error("[Governance] Failed to create WebSocket:", err);
-      setConnectionStatus("fallback");
-      enableFallbackPolling();
-    }
-  };
-
-  // Enable fallback polling when WebSocket fails
-  const enableFallbackPolling = () => {
-    if (fallbackIntervalRef.current) return; // Already polling
-
-    console.log("[Governance] Enabling fallback polling");
-    fallbackIntervalRef.current = setInterval(fetchState, 5000); // Poll every 5 seconds
-  };
-
-  // Initial setup
+  // Initial setup: HTTP fetch + wsManager subscription
   useEffect(() => {
     isMountedRef.current = true;
 
     // Fetch initial state
     fetchState();
 
-    // Wait a bit before connecting WebSocket to allow API server to start
-    const initialConnectTimeout = setTimeout(() => {
-      if (isMountedRef.current) {
-        connectWebSocket();
-      }
-    }, 500);
+    // Subscribe to governance updates via shared wsManager
+    const unsubMessage = wsManager.subscribe(
+      "governance.update",
+      (data: any) => {
+        if (!isMountedRef.current) return;
+        if (data) {
+          setState(data);
+          setError(null);
+        }
+      },
+    );
 
-    // Cleanup
+    // Track connection status from wsManager
+    const unsubState = wsManager.onStateChange((wsState) => {
+      if (!isMountedRef.current) return;
+
+      if (wsState.status === "connected") {
+        setConnectionStatus("connected");
+      } else if (
+        wsState.status === "disconnected" &&
+        wsState.reconnectAttempt >= 5
+      ) {
+        setConnectionStatus("fallback");
+      } else if (wsState.status === "reconnecting") {
+        setConnectionStatus("connecting");
+      } else {
+        setConnectionStatus("disconnected");
+      }
+    });
+
     return () => {
       isMountedRef.current = false;
-
-      // Clear timeouts
-      clearTimeout(initialConnectTimeout);
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      if (fallbackIntervalRef.current) {
-        clearInterval(fallbackIntervalRef.current);
-      }
-
-      // Close WebSocket
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
+      unsubMessage();
+      unsubState();
     };
   }, []);
 
@@ -204,29 +120,29 @@ export const GovernanceHUD: React.FC<GovernanceHUDProps> = ({ className }) => {
                 connectionStatus === "connected"
                   ? "bg-green-500 animate-pulse"
                   : connectionStatus === "connecting"
-                  ? "bg-yellow-500 animate-pulse"
-                  : connectionStatus === "fallback"
-                  ? "bg-blue-500"
-                  : "bg-gray-500"
+                    ? "bg-yellow-500 animate-pulse"
+                    : connectionStatus === "fallback"
+                      ? "bg-blue-500"
+                      : "bg-gray-500"
               }`}
               title={
                 connectionStatus === "connected"
                   ? "Real-time updates active"
                   : connectionStatus === "connecting"
-                  ? "Connecting..."
-                  : connectionStatus === "fallback"
-                  ? "Polling mode (5s)"
-                  : "Disconnected"
+                    ? "Connecting..."
+                    : connectionStatus === "fallback"
+                      ? "Polling mode (5s)"
+                      : "Disconnected"
               }
             />
             <span className="text-xs text-gray-500">
               {connectionStatus === "connected"
                 ? "Live"
                 : connectionStatus === "fallback"
-                ? "Polling"
-                : connectionStatus === "connecting"
-                ? "Connecting"
-                : "Offline"}
+                  ? "Polling"
+                  : connectionStatus === "connecting"
+                    ? "Connecting"
+                    : "Offline"}
             </span>
           </div>
         </div>
