@@ -904,17 +904,19 @@ const CommandView: React.FC = () => {
   }
 
   // Process WebSocket messages
+  const toastRef = useRef(toast);
+  useEffect(() => { toastRef.current = toast; }, [toast]);
+
   useEffect(() => {
     if (messages.length > 0) {
       messages.forEach((message: CommandMessage) => {
         if (message.type === "command.executed") {
-          // Handle external command execution updates
-          toast.info("Command executed", { message: message.payload?.command?.name });
+          toastRef.current.info("Command executed", { message: message.payload?.command?.name });
         }
       });
       clearMessages();
     }
-  }, [messages, clearMessages, toast]);
+  }, [messages, clearMessages]);
 
   // Keyboard shortcuts (AppShell handles panel toggles, we just handle command palette)
   useEffect(() => {

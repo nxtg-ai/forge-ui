@@ -199,49 +199,39 @@ export const useAdaptivePolling = (
 
   const intervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const currentIntervalRef = useRef(baseInterval);
+  const baseIntervalRef = useRef(baseInterval);
+  const maxIntervalRef = useRef(maxInterval);
 
   const fetchFnRef = useRef(fetchFn);
   const onErrorRef = useRef(onError);
 
-  useEffect(() => {
-    fetchFnRef.current = fetchFn;
-  }, [fetchFn]);
+  // Store all mutable values in refs to avoid dep chain issues
+  useEffect(() => { fetchFnRef.current = fetchFn; }, [fetchFn]);
+  useEffect(() => { onErrorRef.current = onError; }, [onError]);
+  useEffect(() => { baseIntervalRef.current = baseInterval; }, [baseInterval]);
+  useEffect(() => { maxIntervalRef.current = maxInterval; }, [maxInterval]);
 
-  useEffect(() => {
-    onErrorRef.current = onError;
-  }, [onError]);
-
-  const adjustInterval = useCallback(
-    (success: boolean) => {
-      if (success) {
-        currentIntervalRef.current = baseInterval;
-        setErrorCount(0);
-      } else {
-        currentIntervalRef.current = Math.min(
-          currentIntervalRef.current * 2,
-          maxInterval,
-        );
-        setErrorCount((prev) => prev + 1);
-      }
-    },
-    [baseInterval, maxInterval],
-  );
-
+  // poll uses ONLY refs — no deps that change on every render
   const poll = useCallback(async () => {
     setIsPolling(true);
     try {
       await fetchFnRef.current();
       setLastFetch(new Date());
-      adjustInterval(true);
+      currentIntervalRef.current = baseIntervalRef.current;
+      setErrorCount(0);
     } catch (error) {
-      adjustInterval(false);
+      currentIntervalRef.current = Math.min(
+        currentIntervalRef.current * 2,
+        maxIntervalRef.current,
+      );
+      setErrorCount((prev) => prev + 1);
       onErrorRef.current?.(error as Error);
     } finally {
       setIsPolling(false);
     }
 
     intervalRef.current = setTimeout(poll, currentIntervalRef.current);
-  }, [adjustInterval]);
+  }, []); // stable — all accessed values are refs
 
   useEffect(() => {
     if (enabled) {
