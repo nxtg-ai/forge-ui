@@ -65,7 +65,7 @@ const DASHBOARD_SHORTCUTS: KeyboardShortcut[] = [
 // Dashboard with real-time integration
 const LiveDashboard: React.FC = () => {
   const { toast } = useToast();
-  const { mode: engagementMode } = useEngagement();
+  const { mode: engagementMode, setMode } = useEngagement();
 
   // Layout management from context
   const {
@@ -455,7 +455,7 @@ const LiveDashboard: React.FC = () => {
                 visionData={visionData}
                 projectState={projectState as any}
                 agentActivity={[]}
-                onModeChange={() => {}} // No-op since mode is managed by EngagementContext
+                onModeChange={setMode}
                 currentMode={engagementMode}
               />
             </motion.div>
@@ -471,6 +471,9 @@ const LiveDashboard: React.FC = () => {
             >
               <h1 className="text-2xl font-bold mb-8">
                 Agent Collaboration Network
+                <span className="ml-3 text-xs font-medium px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 align-middle">
+                  Preview
+                </span>
               </h1>
               <AgentCollaborationView
                 agents={workerAgents}
