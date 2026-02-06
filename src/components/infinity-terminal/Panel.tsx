@@ -16,7 +16,7 @@ interface PanelProps {
   side: PanelSide;
   mode: PanelMode;
   visible: boolean;
-  width: number;
+  width: number | string;
   onClose?: () => void;
   children: React.ReactNode;
   className?: string;
@@ -71,7 +71,7 @@ export const Panel: React.FC<PanelProps> = ({
                 });
               }}
               className={`fixed top-0 ${side === "left" ? "left-0" : "right-0"} bottom-0 z-40 bg-gray-900 ${side === "left" ? "border-r" : "border-l"} border-gray-700 ${className}`}
-              style={{ width: `${width}px` }}
+              style={{ width: typeof width === "string" ? width : `${width}px` }}
               data-testid={`panel-drawer-${side}`}
             >
               {(title || onClose) && (
@@ -101,12 +101,15 @@ export const Panel: React.FC<PanelProps> = ({
   // Children are only rendered when visible to prevent hidden components from
   // running timers, WebSockets, and API polling while at width=0 (memory leak).
   const borderClass = side === "left" ? "border-r" : "border-l";
-  const resolvedWidth = visible ? width : 0;
+  const isPercentage = typeof width === "string";
+  const widthValue = isPercentage ? width : `${width}px`;
+  const collapsedWidth = isPercentage ? "0%" : "0px";
+  const resolvedWidth = visible ? widthValue : collapsedWidth;
 
   return (
     <aside
       className={`flex-shrink-0 ${borderClass} border-gray-800 bg-gray-950 overflow-hidden transition-[width] duration-200 ease-in-out ${className}`}
-      style={{ width: `${resolvedWidth}px` }}
+      style={{ width: resolvedWidth }}
       data-testid={`panel-fixed-${side}`}
       onTransitionEnd={handleTransitionEnd}
     >

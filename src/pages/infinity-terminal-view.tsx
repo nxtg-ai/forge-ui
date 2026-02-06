@@ -227,12 +227,10 @@ const InfinityTerminalView: React.FC<InfinityTerminalViewProps> = ({ onNavigate 
         // Left panel configuration - proportional to viewport
         leftPanel={leftPanelContent}
         showLeftPanel={contextPanelVisible}
-        leftPanelWidth={layout.isMobile ? layout.width : Math.round(layout.width * 0.2)}
         leftPanelTitle="Memory & Context"
-        // Right panel configuration - proportional to viewport
+        // Right panel configuration
         rightPanel={rightPanelContent}
         showRightPanel={governancePanelVisible}
-        rightPanelWidth={layout.isMobile ? layout.width : Math.round(layout.width * 0.2)}
         rightPanelTitle="Governance HUD"
         // Footer configuration
         showFooter={footerVisible}

@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { logger } from "../../../utils/browser-logger";
 
 export interface SessionState {
   sessionId: string;
@@ -227,7 +228,7 @@ export function useSessionPersistence(
     const url = getWsUrl(sessionId, authToken);
 
     if (reconnectAttemptsRef.current > 0) {
-      console.log(
+      logger.debug(
         `[InfinityTerminal] Reconnecting (attempt ${reconnectAttemptsRef.current + 1}/${config.maxReconnectAttempts})`,
       );
     }
@@ -364,7 +365,7 @@ export function useSessionPersistence(
       const session = sessions.find((s) => s.sessionName === sessionName);
 
       if (session) {
-        console.log(`[InfinityTerminal] Restoring session: ${sessionName} (id: ${session.sessionId})`);
+        logger.debug(`[InfinityTerminal] Restoring session: ${sessionName} (id: ${session.sessionId})`);
 
         setState((prev) => ({
           ...prev,

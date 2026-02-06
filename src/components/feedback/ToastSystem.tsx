@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useMemo } from "react";
+import { logger } from "../../utils/browser-logger";
 import { motion } from "framer-motion";
 import { SafeAnimatePresence as AnimatePresence } from "../ui/SafeAnimatePresence";
 import {
@@ -338,7 +339,7 @@ export const toastPresets = {
       {
         label: "Retry",
         icon: <RotateCw className="w-3 h-3" />,
-        onClick: () => console.log("Retry"),
+        onClick: () => logger.debug("Retry action clicked"),
       },
     ],
   }),
@@ -365,7 +366,7 @@ export const toastPresets = {
     actions: [
       {
         label: "Update now",
-        onClick: () => console.log("Update"),
+        onClick: () => logger.debug("Update action clicked"),
       },
     ],
   }),

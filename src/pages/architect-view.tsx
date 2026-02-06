@@ -65,6 +65,7 @@ import { apiClient } from "../services/api-client";
 import type { OracleMessage } from "../components/infinity-terminal/OracleFeedMarquee";
 import type { ArchitectureDecision } from "../components/types";
 import { useLayout } from "../contexts/LayoutContext";
+import { logger } from "../utils/browser-logger";
 
 // Architect-specific keyboard shortcuts
 const ARCHITECT_SHORTCUTS: KeyboardShortcut[] = [
@@ -836,7 +837,7 @@ const ArchitectView: React.FC = () => {
         setDecisions(mappedDecisions);
       }
     } catch (error) {
-      console.error("Failed to fetch decisions:", error);
+      logger.error("Failed to fetch decisions:", error);
       toast.error("Failed to load decisions", { message: "Please try again" });
     } finally {
       setLoading(false);
@@ -1066,7 +1067,6 @@ const ArchitectView: React.FC = () => {
           />
         }
         showLeftPanel={historyPanelVisible}
-        leftPanelWidth={320}
         leftPanelTitle="Decision History"
 
         // Right Panel - Impact Analysis
@@ -1080,7 +1080,6 @@ const ArchitectView: React.FC = () => {
           </ErrorBoundary>
         }
         showRightPanel={impactPanelVisible}
-        rightPanelWidth={320}
         rightPanelTitle="Impact Analysis"
 
         // Footer

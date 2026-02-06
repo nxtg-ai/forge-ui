@@ -18,6 +18,7 @@ import {
   Zap,
   DollarSign,
 } from "lucide-react";
+import { logger } from "../../utils/browser-logger";
 
 interface ClaudeTerminalProps {
   onCommandExecute?: (command: string) => void;
@@ -89,7 +90,7 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
 
     // Prevent duplicate initialization in React Strict Mode
     if (initializedRef.current) {
-      console.log("[Terminal] Already initialized, skipping");
+      logger.debug("[Terminal] Already initialized, skipping");
       return;
     }
     initializedRef.current = true;
@@ -234,7 +235,7 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
       wsRef.current?.readyState === WebSocket.CONNECTING ||
       wsRef.current?.readyState === WebSocket.OPEN
     ) {
-      console.log("[Terminal] WebSocket already connected, skipping");
+      logger.debug("[Terminal] WebSocket already connected, skipping");
       return;
     }
 
@@ -275,7 +276,7 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
     };
 
     ws.onerror = (error) => {
-      console.error("WebSocket error:", error);
+      logger.error("WebSocket error:", error);
       term.writeln("\x1b[31m✗ Connection error\x1b[0m");
     };
 

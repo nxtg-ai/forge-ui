@@ -56,6 +56,7 @@ import { useVision } from "../hooks/useForgeIntegration";
 import { apiClient } from "../services/api-client";
 import type { OracleMessage } from "../components/infinity-terminal/OracleFeedMarquee";
 import type { VisionData, Goal, Metric } from "../components/types";
+import { logger } from "../utils/browser-logger";
 
 // Vision-specific keyboard shortcuts
 const VISION_SHORTCUTS: KeyboardShortcut[] = [
@@ -650,7 +651,7 @@ const VisionView: React.FC = () => {
       }
     } catch (error) {
       // History endpoint may not exist yet - that's fine
-      console.log("Vision history not available");
+      logger.debug("Vision history not available");
       setVisionHistory([]);
     } finally {
       setHistoryLoading(false);
@@ -685,7 +686,7 @@ const VisionView: React.FC = () => {
       setRecentAlignmentChecks((prev) => [localCheck, ...prev].slice(0, 5));
       return localCheck;
     } catch (error) {
-      console.error("Alignment check failed:", error);
+      logger.error("Alignment check failed:", error);
       return null;
     }
   }, []);
@@ -859,8 +860,6 @@ const VisionView: React.FC = () => {
         rightPanel={rightPanelContent}
         showLeftPanel={historyPanelVisible}
         showRightPanel={alignmentPanelVisible}
-        leftPanelWidth={320}
-        rightPanelWidth={320}
         leftPanelTitle="Vision History"
         rightPanelTitle="Alignment & Progress"
         showFooter={true}

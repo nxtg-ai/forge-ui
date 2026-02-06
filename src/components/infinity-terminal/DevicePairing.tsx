@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { logger } from "../../utils/browser-logger";
 import { motion } from "framer-motion";
 import { SafeAnimatePresence as AnimatePresence } from "../ui/SafeAnimatePresence";
 import {
@@ -74,7 +75,7 @@ export const DevicePairing: React.FC<DevicePairingProps> = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error("Failed to copy:", err);
+      logger.error("Failed to copy:", err);
     }
   }, [shareUrl]);
 
@@ -88,7 +89,7 @@ export const DevicePairing: React.FC<DevicePairingProps> = ({
           url: shareUrl,
         });
       } catch (err) {
-        console.error("Share failed:", err);
+        logger.error("Share failed:", err);
       }
     }
   }, [shareUrl, sessionInfo.sessionName]);
@@ -169,7 +170,7 @@ export const DevicePairing: React.FC<DevicePairingProps> = ({
               <ScanMode
                 key="scan"
                 onScan={(data) => {
-                  console.log("Scanned:", data);
+                  logger.debug("Scanned:", data);
                   // Handle scanned QR code
                 }}
               />
@@ -310,7 +311,7 @@ const ScanMode: React.FC<ScanModeProps> = ({ onScan }) => {
           setIsScanning(true);
         }
       } catch (err) {
-        console.error("Camera access denied:", err);
+        logger.error("Camera access denied:", err);
         setHasCamera(false);
       }
     };

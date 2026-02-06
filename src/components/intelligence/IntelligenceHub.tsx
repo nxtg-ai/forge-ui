@@ -7,6 +7,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Brain, Layers, AlertCircle, RefreshCw } from "lucide-react";
 import { IntelligenceCard } from "./IntelligenceCard";
+import { logger } from "../../utils/browser-logger";
 
 interface IntelligenceCardData {
   id: string;
@@ -52,7 +53,7 @@ export const IntelligenceHub: React.FC<IntelligenceHubProps> = React.memo(
           throw new Error("Invalid response format");
         }
       } catch (err) {
-        console.error("Failed to load intelligence cards:", err);
+        logger.error("Failed to load intelligence cards:", err);
         setError(
           err instanceof Error ? err.message : "Failed to load intelligence",
         );
