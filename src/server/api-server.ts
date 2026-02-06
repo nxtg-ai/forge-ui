@@ -379,15 +379,17 @@ wss.on("connection", (ws, req) => {
     return;
   }
 
-  // Security: Require authentication token
-  const url = new URL(req.url!, `http://${req.headers.host}`);
-  const token = url.searchParams.get("token");
+  // Security: Require authentication token (production only)
+  if (isProduction) {
+    const url = new URL(req.url!, `http://${req.headers.host}`);
+    const token = url.searchParams.get("token");
 
-  if (!validateWSAuthToken(token ?? undefined)) {
-    console.error("[Security] WebSocket connection rejected: invalid or missing token");
-    ws.send(JSON.stringify({ type: "error", error: "Authentication required" }));
-    ws.close();
-    return;
+    if (!validateWSAuthToken(token ?? undefined)) {
+      console.error("[Security] WebSocket connection rejected: invalid or missing token");
+      ws.send(JSON.stringify({ type: "error", error: "Authentication required" }));
+      ws.close();
+      return;
+    }
   }
 
   clients.add(ws);

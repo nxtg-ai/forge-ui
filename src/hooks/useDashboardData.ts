@@ -238,7 +238,12 @@ export function useDashboardData(): DashboardData {
 
       ws.onopen = () => {
         console.log("[Dashboard] WebSocket connected");
-        reconnectAttempts.current = 0;
+        // Only reset reconnect counter after stable connection (2s)
+        setTimeout(() => {
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            reconnectAttempts.current = 0;
+          }
+        }, 2000);
       };
 
       ws.onmessage = (event) => {
