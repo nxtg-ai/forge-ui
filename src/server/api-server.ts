@@ -956,6 +956,171 @@ app.get("/api/commands", async (req, res) => {
   }
 });
 
+// ============= Command Execution Endpoint =============
+
+// Whitelist of commands that can be executed from the UI
+const EXECUTABLE_COMMANDS: Record<string, () => Promise<{ success: boolean; output: string; data?: unknown }>> = {
+  "frg-status": async () => {
+    const result = await statusService.getStatus();
+    if (result.isErr()) {
+      return { success: false, output: result.error.message };
+    }
+    const status = result.unwrap();
+    const cliOutput = StatusService.formatForCLI(status);
+    return { success: true, output: cliOutput, data: status };
+  },
+
+  "frg-test": async () => {
+    const { execSync } = await import("child_process");
+    try {
+      const output = execSync("npx vitest run --reporter=verbose 2>&1", {
+        cwd: projectRoot,
+        timeout: 120000,
+        encoding: "utf-8",
+        maxBuffer: 1024 * 1024 * 5,
+      });
+      const passMatch = output.match(/(\d+) passed/);
+      const failMatch = output.match(/(\d+) failed/);
+      const passed = passMatch ? parseInt(passMatch[1]) : 0;
+      const failed = failMatch ? parseInt(failMatch[1]) : 0;
+      return {
+        success: failed === 0,
+        output,
+        data: { passed, failed, total: passed + failed },
+      };
+    } catch (error: any) {
+      const output = error.stdout || error.stderr || error.message;
+      const failMatch = output.match(/(\d+) failed/);
+      const passMatch = output.match(/(\d+) passed/);
+      return {
+        success: false,
+        output,
+        data: {
+          passed: passMatch ? parseInt(passMatch[1]) : 0,
+          failed: failMatch ? parseInt(failMatch[1]) : 0,
+        },
+      };
+    }
+  },
+
+  "frg-deploy": async () => {
+    const { execSync } = await import("child_process");
+    // Pre-flight: type check
+    try {
+      execSync("npx tsc --noEmit 2>&1", {
+        cwd: projectRoot,
+        timeout: 60000,
+        encoding: "utf-8",
+      });
+    } catch (error: any) {
+      return {
+        success: false,
+        output: `Pre-flight failed: TypeScript errors\n${error.stdout || error.message}`,
+      };
+    }
+    // Build
+    try {
+      const output = execSync("npx vite build 2>&1", {
+        cwd: projectRoot,
+        timeout: 60000,
+        encoding: "utf-8",
+      });
+      return { success: true, output, data: { stage: "build-complete" } };
+    } catch (error: any) {
+      return {
+        success: false,
+        output: `Build failed:\n${error.stdout || error.message}`,
+      };
+    }
+  },
+
+  "frg-feature": async () => {
+    return {
+      success: true,
+      output: "Feature creation requires the Infinity Terminal.\nNavigate to the Terminal page and use: /frg-feature <name>",
+      data: { redirect: "/terminal" },
+    };
+  },
+
+  "frg-gap-analysis": async () => {
+    const { execSync } = await import("child_process");
+    const lines: string[] = [];
+
+    // Test coverage
+    try {
+      const testOutput = execSync("npx vitest run --reporter=verbose 2>&1 | tail -5", {
+        cwd: projectRoot, timeout: 120000, encoding: "utf-8",
+      });
+      lines.push("## Test Coverage\n" + testOutput.trim());
+    } catch { lines.push("## Test Coverage\nFailed to run tests"); }
+
+    // Doc coverage
+    try {
+      const srcFiles = execSync("find src -name '*.ts' -o -name '*.tsx' | grep -v test | grep -v __tests__ | wc -l", {
+        cwd: projectRoot, timeout: 10000, encoding: "utf-8",
+      }).trim();
+      const docFiles = execSync("find docs -name '*.md' 2>/dev/null | wc -l", {
+        cwd: projectRoot, timeout: 10000, encoding: "utf-8",
+      }).trim();
+      lines.push(`## Documentation\nSource files: ${srcFiles}\nDoc files: ${docFiles}`);
+    } catch { lines.push("## Documentation\nFailed to analyze"); }
+
+    return { success: true, output: lines.join("\n\n") };
+  },
+};
+
+app.post("/api/commands/execute", rateLimit(writeLimiter), async (req, res) => {
+  try {
+    const { command } = req.body;
+
+    if (!command || typeof command !== "string") {
+      return res.status(400).json({
+        success: false,
+        error: "Missing command ID",
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const handler = EXECUTABLE_COMMANDS[command];
+    if (!handler) {
+      return res.status(404).json({
+        success: false,
+        error: `Unknown command: ${command}. Available: ${Object.keys(EXECUTABLE_COMMANDS).join(", ")}`,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // Broadcast that command is starting
+    broadcast("command.started", { command, startedAt: new Date().toISOString() });
+
+    const result = await handler();
+
+    // Broadcast result
+    broadcast(result.success ? "command.completed" : "command.failed", {
+      command,
+      success: result.success,
+      completedAt: new Date().toISOString(),
+    });
+
+    res.json({
+      success: result.success,
+      data: {
+        command,
+        output: result.output,
+        ...result.data,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    captureException(error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Command execution failed",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 // ============= Architecture Endpoints =============
 
 app.get("/api/architecture/decisions", async (req, res) => {

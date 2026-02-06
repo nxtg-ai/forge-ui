@@ -29,7 +29,6 @@ import {
 } from "../components/feedback/ToastSystem";
 import {
   useRealtimeConnection,
-  useOptimisticUpdate,
   useAdaptivePolling,
 } from "../hooks/useRealtimeConnection";
 import { useForgeCommands } from "../hooks/useForgeCommands";
@@ -95,7 +94,7 @@ const LiveDashboard: React.FC = () => {
   } = useDashboardData();
 
   // WebSocket connection for real-time updates (shared via wsManager singleton)
-  const { connectionState, sendMessage, isConnected } =
+  const { connectionState, isConnected } =
     useRealtimeConnection({
       onOpen: () => {
         toast.success("Connected to Forge", {
@@ -134,25 +133,6 @@ const LiveDashboard: React.FC = () => {
     return () => unsubs.forEach((unsub) => unsub());
   }, [toast]);
 
-  // Optimistic updates for commands
-  interface CommandExecution {
-    command: string;
-    args?: Record<string, unknown>;
-    timestamp: Date;
-  }
-  const {
-    value: commandQueue,
-    update: updateCommandQueue,
-    isUpdating: isCommandExecuting,
-  } = useOptimisticUpdate<CommandExecution[]>([], async (commands) => {
-    const response = await fetch("/api/commands/execute", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ commands }),
-    });
-    return response.json();
-  });
-
   // Fetch available commands from API
   const { commands: availableCommands, isLoading: commandsLoading, error: commandsError } = useForgeCommands();
 
@@ -181,49 +161,78 @@ const LiveDashboard: React.FC = () => {
     }
   }, [commandsError, toast]);
 
-  // Command execution handler - memoized
+  // Command execution handler - calls real /api/commands/execute endpoint
   const handleCommandExecute = useCallback(async (command: string, args?: Record<string, unknown>) => {
     setIsExecuting(true);
 
-    // Show executing toast
-    const toastId = Date.now().toString();
-    toast.info("Executing command", {
-      ...toastPresets.commandExecuting(command),
-      id: toastId,
+    toast.info(`Running ${command}...`, {
+      persistent: true,
+      id: `exec-${command}`,
     });
 
     try {
-      // Optimistic update
-      await updateCommandQueue([
-        ...commandQueue,
-        { command, args, timestamp: new Date() },
-      ]);
+      const response = await fetch("/api/commands/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ command, args }),
+      });
 
-      // Send via WebSocket if connected
-      if (isConnected) {
-        sendMessage({
-          type: "execute_command",
-          payload: { command, args },
-        });
-      } else {
-        // Fallback to HTTP
-        const response = await fetch("/api/commands/execute", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ command, args }),
-        });
+      const result = await response.json();
 
-        if (!response.ok) throw new Error("Command execution failed");
+      if (!response.ok || !result.success) {
+        const output = result.data?.output || result.error || "Unknown error";
+        // Truncate long output for toast
+        const summary = output.length > 200 ? output.slice(0, 200) + "..." : output;
+        toast.error(`${command} failed`, {
+          message: summary,
+          duration: 10000,
+          actions: [
+            {
+              label: "Retry",
+              onClick: () => handleCommandExecute(command, args),
+            },
+          ],
+        });
+        return;
       }
 
-      toast.success(`${command} completed successfully`, {
-        duration: 3000,
-      });
+      // Handle redirect commands (e.g., frg-feature → terminal)
+      if (result.data?.redirect) {
+        toast.info(result.data.output || `Navigate to ${result.data.redirect}`, {
+          duration: 5000,
+        });
+        return;
+      }
+
+      // Show real results
+      const output = result.data?.output || "";
+      const summary = output.length > 300 ? output.slice(0, 300) + "..." : output;
+
+      // Command-specific success messages
+      if (command === "frg-test" && result.data) {
+        const { passed, failed } = result.data;
+        toast.success(`Tests: ${passed} passed${failed ? `, ${failed} failed` : ""}`, {
+          message: summary,
+          duration: 8000,
+        });
+      } else if (command === "frg-deploy") {
+        toast.success("Build completed successfully", {
+          message: summary,
+          duration: 5000,
+        });
+      } else {
+        toast.success(`${command} completed`, {
+          message: summary,
+          duration: 5000,
+        });
+      }
+
+      // Refresh dashboard data after command execution
+      refreshDashboard();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       toast.error(`${command} failed`, {
-        message: "An error occurred while executing the command",
-        details: errorMessage,
+        message: errorMessage,
         actions: [
           {
             label: "Retry",
@@ -234,7 +243,7 @@ const LiveDashboard: React.FC = () => {
     } finally {
       setIsExecuting(false);
     }
-  }, [toast, commandQueue, updateCommandQueue, isConnected, sendMessage]);
+  }, [toast, refreshDashboard]);
 
   // Commands are now fetched via useForgeCommands hook
   // Agents data fetched from worker pool API
@@ -334,12 +343,12 @@ const LiveDashboard: React.FC = () => {
             <div
               data-testid="live-dashboard-status-bar"
               role="progressbar"
-              aria-label={isCommandExecuting ? "Command executing" : "No commands executing"}
-              aria-valuenow={isCommandExecuting ? undefined : 0}
+              aria-label={isExecuting ? "Command executing" : "No commands executing"}
+              aria-valuenow={isExecuting ? undefined : 0}
               className="fixed top-0 left-0 right-0 z-50 h-1 bg-gray-900"
             >
               <AnimatePresence>
-                {isCommandExecuting && (
+                {isExecuting && (
                   <motion.div
                     className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"
                     initial={{ x: "-100%" }}
@@ -501,7 +510,7 @@ const LiveDashboard: React.FC = () => {
           healthScore: projectState.healthScore,
           lastActivity: new Date(),
         }}
-        isExecuting={isExecuting || isCommandExecuting}
+        isExecuting={isExecuting}
         isLoadingCommands={commandsLoading}
       />
       </div>
