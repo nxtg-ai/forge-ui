@@ -58,6 +58,13 @@ vi.mock("../AgentActivityFeed", () => ({
 describe("GovernanceHUD", () => {
   let mockFetch: ReturnType<typeof vi.fn>;
   let mockWebSocket: any;
+  let wsOpenCallback: (() => void) | null = null;
+  let wsMessageCallback: ((event: MessageEvent) => void) | null = null;
+  let wsCloseCallback: (() => void) | null = null;
+  let wsErrorCallback: ((event: Event) => void) | null = null;
+  let wsConstructorCalls: number = 0;
+  let wsAutoOpen: boolean = true;
+
   const mockGovernanceState: GovernanceState = {
     constitution: {
       name: "Test Constitution",
@@ -93,29 +100,83 @@ describe("GovernanceHUD", () => {
   };
 
   beforeEach(() => {
+    // Reset callbacks and counters
+    wsOpenCallback = null;
+    wsMessageCallback = null;
+    wsCloseCallback = null;
+    wsErrorCallback = null;
+    wsConstructorCalls = 0;
+    wsAutoOpen = true;
+
     // Mock fetch
     mockFetch = vi.fn();
     global.fetch = mockFetch;
 
-    // Mock WebSocket
-    mockWebSocket = {
-      close: vi.fn(),
-      send: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      onopen: null,
-      onmessage: null,
-      onclose: null,
-      onerror: null,
-    };
+    // Mock WebSocket with conditional auto-open behavior using a class
+    class WebSocketMock {
+      url: string;
+      readyState: number = 0;
+      close = vi.fn();
+      send = vi.fn();
+      addEventListener = vi.fn();
+      removeEventListener = vi.fn();
 
-    vi.stubGlobal("WebSocket", vi.fn(() => mockWebSocket));
-    vi.useFakeTimers();
+      constructor(url: string) {
+        this.url = url;
+        mockWebSocket = this;
+        wsConstructorCalls++;
+      }
+
+      get onopen() {
+        return wsOpenCallback;
+      }
+      set onopen(callback: (() => void) | null) {
+        wsOpenCallback = callback;
+        // Auto-trigger onopen asynchronously only if enabled
+        if (callback && wsAutoOpen) {
+          queueMicrotask(() => {
+            this.readyState = 1; // OPEN
+            callback();
+          });
+        } else if (callback && !wsAutoOpen) {
+          // If auto-open is disabled, auto-close instead
+          queueMicrotask(() => {
+            this.readyState = 3; // CLOSED
+            if (wsCloseCallback) {
+              wsCloseCallback();
+            }
+          });
+        }
+      }
+
+      get onmessage() {
+        return wsMessageCallback;
+      }
+      set onmessage(callback: ((event: MessageEvent) => void) | null) {
+        wsMessageCallback = callback;
+      }
+
+      get onclose() {
+        return wsCloseCallback;
+      }
+      set onclose(callback: (() => void) | null) {
+        wsCloseCallback = callback;
+      }
+
+      get onerror() {
+        return wsErrorCallback;
+      }
+      set onerror(callback: ((event: Event) => void) | null) {
+        wsErrorCallback = callback;
+      }
+    }
+
+    vi.stubGlobal("WebSocket", WebSocketMock);
   });
 
   afterEach(() => {
     vi.clearAllMocks();
-    vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
   describe("Loading State", () => {
@@ -368,9 +429,9 @@ describe("GovernanceHUD", () => {
         expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument();
       });
 
-      vi.advanceTimersByTime(500);
-
-      expect(WebSocket).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(wsConstructorCalls).toBeGreaterThanOrEqual(1);
+      }, { timeout: 1000 });
     });
 
     test("updates to connected status when WebSocket opens", async () => {
@@ -388,16 +449,9 @@ describe("GovernanceHUD", () => {
         expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument();
       });
 
-      vi.advanceTimersByTime(500);
-
-      // Simulate WebSocket open
-      if (mockWebSocket.onopen) {
-        mockWebSocket.onopen();
-      }
-
       await waitFor(() => {
         expect(screen.getByText("Live")).toBeInTheDocument();
-      });
+      }, { timeout: 1000 });
     });
 
     test("handles WebSocket message updates", async () => {
@@ -415,11 +469,9 @@ describe("GovernanceHUD", () => {
         expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument();
       });
 
-      vi.advanceTimersByTime(500);
-
-      if (mockWebSocket.onopen) {
-        mockWebSocket.onopen();
-      }
+      await waitFor(() => {
+        expect(screen.getByText("Live")).toBeInTheDocument();
+      }, { timeout: 1000 });
 
       // Simulate WebSocket message
       const updatedState = {
@@ -436,13 +488,13 @@ describe("GovernanceHUD", () => {
         ],
       };
 
-      if (mockWebSocket.onmessage) {
-        mockWebSocket.onmessage({
+      if (wsMessageCallback) {
+        wsMessageCallback({
           data: JSON.stringify({
             type: "governance.update",
             payload: updatedState,
           }),
-        });
+        } as MessageEvent);
       }
 
       await waitFor(() => {
@@ -465,7 +517,9 @@ describe("GovernanceHUD", () => {
         expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument();
       });
 
-      vi.advanceTimersByTime(500);
+      await waitFor(() => {
+        expect(wsConstructorCalls).toBeGreaterThanOrEqual(1);
+      }, { timeout: 1000 });
 
       unmount();
 
@@ -489,22 +543,25 @@ describe("GovernanceHUD", () => {
         expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument();
       });
 
-      vi.advanceTimersByTime(500);
+      await waitFor(() => {
+        expect(wsConstructorCalls).toBe(1);
+      }, { timeout: 1000 });
 
       // Simulate WebSocket close
-      if (mockWebSocket.onclose) {
-        mockWebSocket.onclose();
+      if (wsCloseCallback) {
+        wsCloseCallback();
       }
 
+      // Wait for reconnection attempt (exponential backoff starts at 1000ms)
       await waitFor(() => {
-        expect(screen.getByText("Connecting")).toBeInTheDocument();
+        expect(wsConstructorCalls).toBe(2);
+      }, { timeout: 2000 });
+
+      // Should be back to Live status
+      await waitFor(() => {
+        expect(screen.getByText("Live")).toBeInTheDocument();
       });
-
-      // Advance time for reconnect delay
-      vi.advanceTimersByTime(1000);
-
-      expect(WebSocket).toHaveBeenCalledTimes(2);
-    });
+    }, 10000);
 
     test("uses exponential backoff for reconnection", async () => {
       mockFetch.mockResolvedValueOnce({
@@ -521,23 +578,27 @@ describe("GovernanceHUD", () => {
         expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument();
       });
 
-      vi.advanceTimersByTime(500);
+      await waitFor(() => {
+        expect(wsConstructorCalls).toBe(1);
+      }, { timeout: 1000 });
 
-      // First close
-      if (mockWebSocket.onclose) {
-        mockWebSocket.onclose();
+      // First close - should reconnect after 1000ms
+      if (wsCloseCallback) {
+        wsCloseCallback();
       }
 
-      vi.advanceTimersByTime(1000);
-      expect(WebSocket).toHaveBeenCalledTimes(2);
+      await waitFor(() => {
+        expect(wsConstructorCalls).toBe(2);
+      }, { timeout: 2000 });
 
-      // Second close
-      if (mockWebSocket.onclose) {
-        mockWebSocket.onclose();
+      // Second close - should reconnect after 2000ms
+      if (wsCloseCallback) {
+        wsCloseCallback();
       }
 
-      vi.advanceTimersByTime(2000);
-      expect(WebSocket).toHaveBeenCalledTimes(3);
+      await waitFor(() => {
+        expect(wsConstructorCalls).toBe(3);
+      }, { timeout: 3000 });
     });
 
     test("falls back to polling after max reconnect attempts", async () => {
@@ -555,20 +616,27 @@ describe("GovernanceHUD", () => {
         expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument();
       });
 
-      vi.advanceTimersByTime(500);
+      await waitFor(() => {
+        expect(wsConstructorCalls).toBe(1);
+      }, { timeout: 1000 });
 
-      // Simulate 5 failed connections
+      // Disable auto-open for reconnection attempts
+      wsAutoOpen = false;
+
+      // Simulate 5 failed connections by closing immediately
       for (let i = 0; i < 5; i++) {
-        if (mockWebSocket.onclose) {
-          mockWebSocket.onclose();
+        if (wsCloseCallback) {
+          wsCloseCallback();
         }
-        vi.advanceTimersByTime(10000);
+        // Wait for reconnect delay
+        await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, i), 10000) + 100));
       }
 
+      // Should now be in fallback/polling mode
       await waitFor(() => {
         expect(screen.getByText("Polling")).toBeInTheDocument();
-      });
-    });
+      }, { timeout: 2000 });
+    }, 60000);
   });
 
   describe("Fallback Polling", () => {
@@ -587,28 +655,34 @@ describe("GovernanceHUD", () => {
         expect(mockFetch).toHaveBeenCalledTimes(1);
       });
 
-      vi.advanceTimersByTime(500);
+      await waitFor(() => {
+        expect(wsConstructorCalls).toBe(1);
+      }, { timeout: 1000 });
 
-      // Simulate max reconnect attempts
+      // Disable auto-open for reconnection attempts
+      wsAutoOpen = false;
+
+      // Simulate 5 failed connections to trigger fallback
       for (let i = 0; i < 5; i++) {
-        if (mockWebSocket.onclose) {
-          mockWebSocket.onclose();
+        if (wsCloseCallback) {
+          wsCloseCallback();
         }
-        vi.advanceTimersByTime(10000);
+        // Wait for reconnect delay
+        await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, i), 10000) + 100));
       }
 
+      // Should now be in fallback/polling mode
       await waitFor(() => {
         expect(screen.getByText("Polling")).toBeInTheDocument();
-      });
+      }, { timeout: 2000 });
 
       const initialFetchCount = mockFetch.mock.calls.length;
 
-      vi.advanceTimersByTime(5000);
-
+      // Wait for polling interval (5 seconds)
       await waitFor(() => {
         expect(mockFetch.mock.calls.length).toBeGreaterThan(initialFetchCount);
-      });
-    });
+      }, { timeout: 6000 });
+    }, 60000);
 
     test("stops polling on unmount", async () => {
       mockFetch.mockResolvedValue({
@@ -625,23 +699,36 @@ describe("GovernanceHUD", () => {
         expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument();
       });
 
-      // Force fallback mode
-      vi.advanceTimersByTime(500);
+      await waitFor(() => {
+        expect(wsConstructorCalls).toBe(1);
+      }, { timeout: 1000 });
+
+      // Disable auto-open for reconnection attempts
+      wsAutoOpen = false;
+
+      // Force fallback mode by triggering close events
       for (let i = 0; i < 5; i++) {
-        if (mockWebSocket.onclose) {
-          mockWebSocket.onclose();
+        if (wsCloseCallback) {
+          wsCloseCallback();
         }
-        vi.advanceTimersByTime(10000);
+        // Wait for reconnect delay
+        await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, i), 10000) + 100));
       }
+
+      // Should now be in fallback/polling mode
+      await waitFor(() => {
+        expect(screen.getByText("Polling")).toBeInTheDocument();
+      }, { timeout: 2000 });
 
       const fetchCountBeforeUnmount = mockFetch.mock.calls.length;
       unmount();
 
-      vi.advanceTimersByTime(10000);
+      // Wait to ensure no additional calls are made
+      await new Promise(resolve => setTimeout(resolve, 6000));
 
       // Should not have made additional fetch calls
       expect(mockFetch.mock.calls.length).toBe(fetchCountBeforeUnmount);
-    });
+    }, 60000);
   });
 
   describe("Custom className", () => {

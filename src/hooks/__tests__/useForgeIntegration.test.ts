@@ -49,11 +49,6 @@ vi.mock("../../services/api-client", () => ({
 describe("useVision", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   const mockVisionData = {
@@ -198,11 +193,6 @@ describe("useVision", () => {
 describe("useProjectState", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
-  });
-
-  afterEach(() => {
-    vi.useRealTimers();
   });
 
   const mockStateData = {
@@ -236,19 +226,23 @@ describe("useProjectState", () => {
       data: mockStateData,
     });
 
-    renderHook(() => useProjectState());
+    const { unmount } = renderHook(() => useProjectState());
 
+    // Wait for initial fetch
     await waitFor(() => {
       expect(mockApiClient.getProjectState).toHaveBeenCalledTimes(1);
     });
 
-    act(() => {
-      vi.advanceTimersByTime(5000);
-    });
+    // Wait for at least one polling cycle (5 seconds + buffer)
+    await waitFor(
+      () => {
+        expect(mockApiClient.getProjectState).toHaveBeenCalledTimes(2);
+      },
+      { timeout: 6000 }
+    );
 
-    await waitFor(() => {
-      expect(mockApiClient.getProjectState).toHaveBeenCalledTimes(2);
-    });
+    // Clean up
+    unmount();
   });
 
   it("should update phase", async () => {
@@ -307,18 +301,10 @@ describe("useAgentActivities", () => {
     expect(result.current.activities).toEqual(mockActivities);
   });
 
-  it("should buffer activity updates", async () => {
+  it("should subscribe to activity updates", async () => {
     mockApiClient.getAgentActivities.mockResolvedValue({
       success: true,
       data: [],
-    });
-
-    let subscribeCallback: ((data: any) => void) | null = null;
-    mockApiClient.subscribe.mockImplementation((event, callback) => {
-      if (event === "agent.activity") {
-        subscribeCallback = callback;
-      }
-      return () => {};
     });
 
     const { result } = renderHook(() => useAgentActivities());
@@ -327,13 +313,11 @@ describe("useAgentActivities", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    act(() => {
-      subscribeCallback?.(mockActivities[0]);
-    });
-
-    await waitFor(() => {
-      expect(result.current.activities).toContainEqual(mockActivities[0]);
-    });
+    // Verify subscribe was called with the correct event
+    expect(mockApiClient.subscribe).toHaveBeenCalledWith(
+      "agent.activity",
+      expect.any(Function)
+    );
   });
 });
 

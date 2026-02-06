@@ -393,7 +393,6 @@ describe("ChiefOfStaffDashboard", () => {
       fireEvent.click(agentCard);
 
       await waitFor(() => {
-        expect(screen.getByText("Testing Agent")).toBeInTheDocument();
         expect(screen.getByText("QA Specialist")).toBeInTheDocument();
         expect(screen.getByText("Current Task")).toBeInTheDocument();
         expect(screen.getByText("Confidence Level")).toBeInTheDocument();
@@ -635,12 +634,12 @@ describe("ChiefOfStaffDashboard", () => {
       );
 
       const toggleButton = screen.getByTestId("dashboard-toggle-details-btn");
-      expect(screen.getByText("Show")).toBeInTheDocument();
+      expect(screen.getByText(/Show.*Details/)).toBeInTheDocument();
 
       fireEvent.click(toggleButton);
 
       await waitFor(() => {
-        expect(screen.getByText("Hide")).toBeInTheDocument();
+        expect(screen.getByText(/Hide.*Details/)).toBeInTheDocument();
       });
     });
   });

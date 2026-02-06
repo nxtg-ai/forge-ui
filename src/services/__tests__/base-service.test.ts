@@ -3,7 +3,7 @@
  * Comprehensive tests for service lifecycle, validation, and utilities
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { BaseService, ServiceState } from "../base-service";
 import { z } from "zod";
 import { Result } from "../../utils/result";
@@ -157,9 +157,13 @@ describe("BaseService", () => {
 
       await service.dispose();
 
-      service.emit("stateChange", ServiceState.READY);
+      // Manually emit after disposal to test that listeners are removed
+      // Note: The service prevents state changes after disposal, so we use a different event
+      service.emit("testEvent" as any, "test");
 
-      expect(handler).not.toHaveBeenCalled();
+      // The stateChange handler should not be called for the manual emit
+      // But we need to check that listeners were removed after disposal
+      expect(service.listenerCount("stateChange")).toBe(0);
     });
 
     it("should prevent disposal multiple times", async () => {
@@ -210,7 +214,9 @@ describe("BaseService", () => {
       expect(result.isErr()).toBe(true);
       if (result.isErr()) {
         expect(result.error.message).toContain("Validation failed");
+        // Check that details exist (Zod issues are stored in the details property)
         expect(result.error.details).toBeDefined();
+        expect(Array.isArray(result.error.details)).toBe(true);
       }
     });
 
@@ -247,7 +253,10 @@ describe("BaseService", () => {
       expect(result.isErr()).toBe(true);
       if (result.isErr()) {
         expect(result.error.details).toBeDefined();
-        expect(result.error.details.length).toBeGreaterThan(0);
+        expect(Array.isArray(result.error.details)).toBe(true);
+        if (Array.isArray(result.error.details)) {
+          expect(result.error.details.length).toBeGreaterThan(0);
+        }
       }
     });
   });

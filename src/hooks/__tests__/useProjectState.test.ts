@@ -21,8 +21,11 @@ const mockStateBridge = {
   dispose: vi.fn(),
 };
 
+// Mock the service as a proper class constructor
 vi.mock("../../services/state-bridge", () => ({
-  StateBridgeService: vi.fn(() => mockStateBridge),
+  StateBridgeService: vi.fn(function() {
+    return mockStateBridge;
+  }),
   StateUpdateType: {
     PROJECT_STATE: "project_state",
     AGENT_STATE: "agent_state",

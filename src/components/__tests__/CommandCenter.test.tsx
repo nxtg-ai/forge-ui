@@ -572,9 +572,15 @@ describe("CommandCenter", () => {
 
       fireEvent.keyDown(window, { key: "Escape" });
 
+      // After pressing Escape with a search query, the query should clear but modal should remain open
       await waitFor(() => {
-        expect(searchInput.value).toBe("");
+        const input = screen.queryByTestId("command-center-search-input") as HTMLInputElement;
+        expect(input).toBeInTheDocument();
+        expect(input.value).toBe("");
       });
+
+      // Modal should still be visible
+      expect(screen.getByTestId("command-center-modal")).toBeInTheDocument();
     });
   });
 

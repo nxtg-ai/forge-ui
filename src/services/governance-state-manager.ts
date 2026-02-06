@@ -3,7 +3,7 @@
  * Handles state rotation, validation, and persistence
  */
 
-import { promises as fs } from "fs";
+import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
 import type {

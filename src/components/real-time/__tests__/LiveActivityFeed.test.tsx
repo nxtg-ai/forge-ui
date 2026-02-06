@@ -45,6 +45,7 @@ vi.mock("@tanstack/react-virtual", () => ({
 describe("LiveActivityFeed", () => {
   let mockFetch: ReturnType<typeof vi.fn>;
   let mockWebSocket: any;
+  let MockWebSocketConstructor: any;
 
   beforeEach(() => {
     // Mock fetch
@@ -57,13 +58,31 @@ describe("LiveActivityFeed", () => {
       send: vi.fn(),
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
+      readyState: WebSocket.OPEN,
+      onopen: null,
+      onmessage: null,
+      onerror: null,
+      onclose: null,
     };
 
-    vi.stubGlobal("WebSocket", vi.fn(() => mockWebSocket));
+    // Create proper WebSocket constructor mock
+    MockWebSocketConstructor = vi.fn(function(this: any, url: string) {
+      Object.assign(this, mockWebSocket);
+      // Simulate async connection - call onopen after a short delay
+      setTimeout(() => {
+        if (this.onopen) {
+          this.onopen(new Event('open'));
+        }
+      }, 0);
+      return this;
+    });
+
+    vi.stubGlobal("WebSocket", MockWebSocketConstructor);
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
   });
 
   describe("Initial Load", () => {
@@ -240,9 +259,10 @@ describe("LiveActivityFeed", () => {
       render(<LiveActivityFeed />);
 
       await waitFor(() => {
-        expect(
-          screen.getByText(/Live|Reconnecting|Offline/)
-        ).toBeInTheDocument();
+        // Check for the status badge container with the specific structure
+        const statusBadges = screen.getAllByText(/Live|Reconnecting|Offline/);
+        // Should have at least one status indicator
+        expect(statusBadges.length).toBeGreaterThan(0);
       });
     });
 
@@ -690,7 +710,7 @@ describe("LiveActivityFeed", () => {
       render(<LiveActivityFeed />);
 
       await waitFor(() => {
-        expect(WebSocket).toHaveBeenCalled();
+        expect(MockWebSocketConstructor).toHaveBeenCalled();
       });
     });
 
@@ -706,12 +726,14 @@ describe("LiveActivityFeed", () => {
       const { unmount } = render(<LiveActivityFeed />);
 
       await waitFor(() => {
-        expect(WebSocket).toHaveBeenCalled();
+        expect(MockWebSocketConstructor).toHaveBeenCalled();
       });
 
       unmount();
 
-      expect(mockWebSocket.close).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(mockWebSocket.close).toHaveBeenCalled();
+      });
     });
   });
 
