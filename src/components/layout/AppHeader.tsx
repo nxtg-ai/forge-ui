@@ -130,36 +130,23 @@ export interface AppHeaderProps {
 /**
  * Connection Status Indicator Component
  */
-const ConnectionStatus: React.FC<{ isConnected: boolean }> = ({ isConnected }) => {
-  const { mode } = useEngagement();
-
-  return (
-    <div className="flex items-center space-x-4">
-      <div
-        data-testid="app-connection-status"
-        className="flex items-center space-x-2"
-      >
-        <div
-          className={`h-2 w-2 rounded-full ${
-            isConnected ? "bg-green-500" : "bg-red-500"
-          } animate-pulse`}
-          aria-hidden="true"
-        />
-        <span className="text-sm text-gray-400">
-          {isConnected ? "Connected" : "Disconnected"}
-        </span>
-      </div>
-
-      {/* Mode Indicator */}
-      <div className="px-3 py-1 bg-gray-800 rounded-full">
-        <span className="text-xs text-gray-400">Mode: </span>
-        <span className="text-xs font-semibold text-blue-400">
-          {mode.toUpperCase()}
-        </span>
-      </div>
-    </div>
-  );
-};
+const ConnectionStatus: React.FC<{ isConnected: boolean }> = ({ isConnected }) => (
+  <div
+    data-testid="app-connection-status"
+    className="flex items-center space-x-2"
+    aria-live="polite"
+  >
+    <div
+      className={`h-2 w-2 rounded-full ${
+        isConnected ? "bg-green-500" : "bg-red-500"
+      } animate-pulse`}
+      aria-hidden="true"
+    />
+    <span className="text-sm text-gray-400">
+      {isConnected ? "Connected" : "Disconnected"}
+    </span>
+  </div>
+);
 
 /**
  * Engagement Mode Selector Component
@@ -237,7 +224,7 @@ const EngagementModeSelector: React.FC = () => {
   }, [showModeSelector, selectedModeIndex, modeKeys, mode, handleModeChange]);
 
   return (
-    <div className="relative">
+    <div className="relative" data-testid="engagement-mode-selector">
       <button
         ref={modeSelectorButtonRef}
         onClick={() => {
