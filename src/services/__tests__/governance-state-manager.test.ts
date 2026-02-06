@@ -499,7 +499,7 @@ describe("GovernanceStateManager", () => {
   });
 
   describe("validateStateIntegrity", () => {
-    it.skip("should validate state with correct checksum", async () => {
+    it("should validate state with correct checksum", async () => {
       const state = createValidState();
 
       const claudeDir = path.join(testDir, ".claude");
