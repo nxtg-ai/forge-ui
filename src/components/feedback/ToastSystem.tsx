@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import { SafeAnimatePresence as AnimatePresence } from "../ui/SafeAnimatePresence";
 import {
@@ -92,7 +92,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
     [addToast],
   );
 
-  const toast = {
+  const toast = useMemo(() => ({
     success: (title: string, options?: Partial<Toast>) =>
       createToast("success", title, options),
     error: (title: string, options?: Partial<Toast>) =>
@@ -101,10 +101,12 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
       createToast("warning", title, options),
     info: (title: string, options?: Partial<Toast>) =>
       createToast("info", title, options),
-  };
+  }), [createToast]);
+
+  const contextValue = useMemo(() => ({ toast, dismiss, dismissAll }), [toast, dismiss, dismissAll]);
 
   return (
-    <ToastContext.Provider value={{ toast, dismiss, dismissAll }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
       <ToastContainer toasts={toasts} onDismiss={dismiss} />
     </ToastContext.Provider>
