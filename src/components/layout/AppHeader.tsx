@@ -24,8 +24,6 @@ import {
   BarChart3,
   Target,
   Building2,
-  Rocket,
-  Shield,
   Menu,
   X,
   ChevronDown,
@@ -37,7 +35,6 @@ import {
   MessageSquare,
   Command,
   Mountain,
-  Sparkles,
 } from "lucide-react";
 import { ProjectSwitcher } from "../ProjectSwitcher";
 import { useEngagement } from "../../contexts/EngagementContext";
@@ -51,9 +48,6 @@ const NAVIGATION_ROUTES = [
   { id: "infinity-terminal", label: "Terminal", icon: <Terminal className="w-4 h-4" />, testId: "infinity-terminal" },
   { id: "command", label: "Command", icon: <Command className="w-4 h-4" />, testId: "command" },
   { id: "architect", label: "Architect", icon: <Building2 className="w-4 h-4" />, testId: "architect" },
-  { id: "architect-demo", label: "Demo", icon: <Rocket className="w-4 h-4" />, testId: "architect-demo" },
-  { id: "yolo", label: "YOLO", icon: <Shield className="w-4 h-4" />, testId: "yolo" },
-  { id: "marketing", label: "Marketing", icon: <Sparkles className="w-4 h-4" />, testId: "marketing" },
 ] as const;
 
 // Engagement mode configuration
@@ -544,7 +538,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         className={`border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm sticky top-0 z-40 ${className}`}
         role="banner"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-4 md:space-x-8">
               {/* Mobile Hamburger Menu */}
