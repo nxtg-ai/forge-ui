@@ -125,10 +125,12 @@ class InMemoryRateLimiter {
   }
 }
 
-// Rate limiters
-const generalLimiter = new InMemoryRateLimiter(60000, 100); // 100 req/min
-const writeLimiter = new InMemoryRateLimiter(60000, 10); // 10 req/min for writes
-const authLimiter = new InMemoryRateLimiter(60000, 5); // 5 req/min for auth
+// Rate limiters - generous for reads (dashboard polls multiple endpoints),
+// strict for writes and auth
+const isProduction = process.env.NODE_ENV === "production";
+const generalLimiter = new InMemoryRateLimiter(60000, isProduction ? 300 : 1000); // reads: generous
+const writeLimiter = new InMemoryRateLimiter(60000, isProduction ? 30 : 100); // writes: moderate
+const authLimiter = new InMemoryRateLimiter(60000, isProduction ? 10 : 50); // auth: strict
 
 // Rate limiting middleware factory
 function rateLimit(limiter: InMemoryRateLimiter) {

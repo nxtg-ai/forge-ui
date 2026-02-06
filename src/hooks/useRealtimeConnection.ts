@@ -91,6 +91,9 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
     }
   }, []);
 
+  // Track reconnect attempts in a ref to avoid dependency cycles
+  const reconnectAttemptsRef = useRef(0);
+
   // Connect to WebSocket
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -99,13 +102,14 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
 
     setConnectionState((prev) => ({
       ...prev,
-      status: prev.reconnectAttempt > 0 ? "reconnecting" : "connecting",
+      status: reconnectAttemptsRef.current > 0 ? "reconnecting" : "connecting",
     }));
 
     try {
       wsRef.current = new WebSocket(url);
 
       wsRef.current.onopen = () => {
+        reconnectAttemptsRef.current = 0;
         setConnectionState({
           status: "connected",
           lastConnected: new Date(),
@@ -150,9 +154,10 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
         stopHeartbeat();
         onCloseRef.current?.();
 
-        // Attempt to reconnect
-        if (connectionState.reconnectAttempt < maxReconnectAttempts) {
-          const attempt = connectionState.reconnectAttempt + 1;
+        // Attempt to reconnect using ref (avoids dependency cycle)
+        if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+          reconnectAttemptsRef.current++;
+          const attempt = reconnectAttemptsRef.current;
           const delay = getReconnectDelay(attempt);
 
           setConnectionState((prev) => ({
@@ -174,7 +179,7 @@ export const useRealtimeConnection = <T = any>(config: WebSocketConfig) => {
         status: "error",
       }));
     }
-  }, [url, connectionState.reconnectAttempt, maxReconnectAttempts, startHeartbeat, stopHeartbeat]);
+  }, [url, maxReconnectAttempts, startHeartbeat, stopHeartbeat]);
 
   // Disconnect from WebSocket
   const disconnect = useCallback(() => {
