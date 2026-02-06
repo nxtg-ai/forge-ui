@@ -285,7 +285,7 @@ describe("InitService", () => {
         claudeMdOption: "generate" as const,
       };
 
-      const result = await initService.initialize(options);
+      const result = await initService.initializeProject(options);
 
       expect(result.isOk()).toBe(true);
       const initResult = result.unwrap();
@@ -333,7 +333,7 @@ describe("InitService", () => {
         claudeMdOption: "generate" as const,
       };
 
-      const result = await initService.initialize(options);
+      const result = await initService.initializeProject(options);
 
       expect(result.isOk()).toBe(true);
       const initResult = result.unwrap();
@@ -346,7 +346,7 @@ describe("InitService", () => {
         claudeMdOption: "generate" as const,
       };
 
-      const result = await initService.initialize(options);
+      const result = await initService.initializeProject(options);
 
       expect(result.isErr()).toBe(true);
     });
