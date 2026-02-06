@@ -10,6 +10,9 @@
 
 import { exec } from "child_process";
 import { promisify } from "util";
+import { Logger } from "../utils/logger";
+
+const log = Logger.getInstance("MCPSuggestionEngine");
 
 const execAsync = promisify(exec);
 
@@ -340,7 +343,7 @@ export class MCPSuggestionEngine {
    * Analyze project vision and suggest relevant MCP servers
    */
   async suggestMCPs(vision: VisionContext): Promise<MCPSuggestion> {
-    console.log("🤖 Analyzing project vision...");
+    log.info("Analyzing project vision...");
 
     // Step 1: AI analyzes vision and scores each MCP
     const scoredServers = await this.scoreServers(vision);
@@ -425,7 +428,7 @@ IMPORTANT: Return ONLY the JSON object, no additional commentary.
         .filter((mcp) => mcp.relevanceScore > 30) // Only show relevant ones
         .sort((a, b) => b.relevanceScore - a.relevanceScore);
     } catch (error) {
-      console.error("Error calling Claude Code CLI:", error);
+      log.error("Error calling Claude Code CLI", error);
       throw new Error(
         `Failed to analyze vision: ${error instanceof Error ? error.message : "Unknown error"}`,
       );

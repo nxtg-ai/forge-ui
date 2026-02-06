@@ -20,6 +20,7 @@ import { FooterPanel } from "../infinity-terminal/FooterPanel";
 import { KeyboardShortcutsHelp, type KeyboardShortcut } from "../ui/KeyboardShortcutsHelp";
 import type { OracleMessage } from "../infinity-terminal/OracleFeedMarquee";
 import { useLayoutOptional } from "../../contexts/LayoutContext";
+import { logger } from "../../utils/browser-logger";
 
 export interface AppShellProps {
   // Page identity (passed to AppHeader)
@@ -111,7 +112,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   const toggleHUD = layoutContext?.toggleGovernancePanel ?? onToggleGovernance ?? (() => {});
   const toggleFooter = useCallback(() => {
     // Footer toggle not commonly exposed, just log for now
-    console.log("Footer toggle requested");
+    logger.debug("Footer toggle requested");
   }, []);
 
   // Layout info from context

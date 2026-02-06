@@ -61,6 +61,7 @@ import type { Runspace } from "./core/runspace";
 import { EngagementProvider, useEngagement } from "./contexts/EngagementContext";
 import { LayoutProvider, useLayout } from "./contexts/LayoutContext";
 import { AppHeader } from "./components/layout";
+import { logger } from "./utils/browser-logger";
 
 // Loading component
 const LoadingOverlay: React.FC<{ message?: string }> = ({
@@ -173,11 +174,11 @@ function IntegratedApp() {
           setMcpSuggestions(result.data);
           setCurrentView("mcp-selection");
         } else {
-          console.error("Failed to get MCP suggestions:", result.error);
+          logger.error("Failed to get MCP suggestions:", result.error);
           setCurrentView("dashboard");
         }
       } catch (error) {
-        console.error("Error fetching MCP suggestions:", error);
+        logger.error("Error fetching MCP suggestions:", error);
         setCurrentView("dashboard");
       } finally {
         setLoadingMcpSuggestions(false);
@@ -195,7 +196,7 @@ function IntegratedApp() {
   // Handle MCP selection completion
   const handleMcpSelectionComplete = useCallback(
     async (selectedIds: string[]) => {
-      console.log("Selected MCP servers:", selectedIds);
+      logger.debug("Selected MCP servers:", selectedIds);
 
       try {
         // Send selected MCPs to backend for configuration
@@ -210,12 +211,12 @@ function IntegratedApp() {
         const result = await response.json();
 
         if (result.success) {
-          console.log("MCP configuration generated:", result.data);
+          logger.debug("MCP configuration generated:", result.data);
           // MCP config is written to .claude/mcp.json
           // User can run /[FRG]-init to complete setup
         }
       } catch (error) {
-        console.error("Error configuring MCPs:", error);
+        logger.error("Error configuring MCPs:", error);
       }
 
       // Navigate to dashboard
@@ -226,7 +227,7 @@ function IntegratedApp() {
 
   // Handle MCP selection skip
   const handleMcpSkip = useCallback(() => {
-    console.log("User skipped MCP selection");
+    logger.debug("User skipped MCP selection");
     setCurrentView("dashboard");
   }, []);
 
@@ -249,7 +250,7 @@ function IntegratedApp() {
   // YOLO mode will be managed via EngagementContext now
   // This handler is kept for backward compatibility but will be removed
   const handleYoloModeToggle = useCallback((active: boolean) => {
-    console.warn("handleYoloModeToggle is deprecated. Use EngagementContext instead.");
+    logger.warn("handleYoloModeToggle is deprecated. Use EngagementContext instead.");
   }, []);
 
   // Fetch runspaces on mount
@@ -270,7 +271,7 @@ function IntegratedApp() {
           }
         }
       } catch (error) {
-        console.error("Error fetching runspaces:", error);
+        logger.error("Error fetching runspaces:", error);
       } finally {
         setLoadingRunspaces(false);
       }
@@ -300,7 +301,7 @@ function IntegratedApp() {
         }
       }
     } catch (error) {
-      console.error("Error switching runspace:", error);
+      logger.error("Error switching runspace:", error);
     }
   }, []);
 
@@ -321,7 +322,7 @@ function IntegratedApp() {
       await apiClient.post(`/api/runspaces/${runspaceId}/start`, {});
       await loadRunspaces();
     } catch (error) {
-      console.error("Failed to start runspace:", error);
+      logger.error("Failed to start runspace:", error);
     }
   }, []);
 
@@ -330,7 +331,7 @@ function IntegratedApp() {
       await apiClient.post(`/api/runspaces/${runspaceId}/stop`, {});
       await loadRunspaces();
     } catch (error) {
-      console.error("Failed to stop runspace:", error);
+      logger.error("Failed to stop runspace:", error);
     }
   }, []);
 
@@ -339,7 +340,7 @@ function IntegratedApp() {
       await apiClient.delete(`/api/runspaces/${runspaceId}`, {});
       await loadRunspaces();
     } catch (error) {
-      console.error("Failed to delete runspace:", error);
+      logger.error("Failed to delete runspace:", error);
       throw error;
     }
   }, []);
@@ -358,7 +359,7 @@ function IntegratedApp() {
         }
       }
     } catch (error) {
-      console.error("Failed to load runspaces:", error);
+      logger.error("Failed to load runspaces:", error);
     } finally {
       setLoadingRunspaces(false);
     }
@@ -369,7 +370,7 @@ function IntegratedApp() {
     (mode: EngagementMode) => {
       // EngagementContext will handle this
       // This is just a bridge for components not yet using context
-      console.warn("handleModeChange called - consider using EngagementContext.setMode directly");
+      logger.warn("handleModeChange called - consider using EngagementContext.setMode directly");
     },
     [],
   );

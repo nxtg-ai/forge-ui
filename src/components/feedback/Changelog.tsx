@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { logger } from "../../utils/browser-logger";
 import { motion } from "framer-motion";
 import { SafeAnimatePresence as AnimatePresence } from "../ui/SafeAnimatePresence";
 import {
@@ -39,7 +40,7 @@ export const Changelog: React.FC<ChangelogProps> = ({ isOpen, onClose }) => {
         throw new Error("Failed to load changelog");
       }
     } catch (err) {
-      console.error("Error loading changelog:", err);
+      logger.error("Error loading changelog:", err);
       setError("Unable to load changelog");
     } finally {
       setLoading(false);

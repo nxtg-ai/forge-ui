@@ -6,6 +6,7 @@
 import { useState, useEffect } from "react";
 import type { Command } from "../components/types";
 import { renderIcon } from "../utils/icon-mapper";
+import { logger } from "../utils/browser-logger";
 
 interface CommandDTO {
   id: string;
@@ -66,7 +67,7 @@ export function useForgeCommands() {
         const errorMessage =
           err instanceof Error ? err.message : "Unknown error";
         setError(errorMessage);
-        console.error("[useForgeCommands] Failed to fetch commands:", err);
+        logger.error("[useForgeCommands] Failed to fetch commands:", err);
 
         // Fallback to empty array on error
         setCommands([]);

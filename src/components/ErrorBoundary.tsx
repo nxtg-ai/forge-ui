@@ -4,6 +4,7 @@
  */
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
+import { logger } from "../utils/browser-logger";
 import { AlertTriangle, RefreshCw, Home, Bug, Copy, CheckCircle } from "lucide-react";
 
 type FallbackVariant = "full-page" | "panel" | "card";
@@ -106,14 +107,14 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     // Log error details for debugging
-    console.error("ErrorBoundary caught an error:", error, errorInfo);
+    logger.error("ErrorBoundary caught an error:", error, errorInfo);
 
     // Call onError callback if provided
     if (this.props.onError) {
       try {
         this.props.onError(error, errorInfo);
       } catch (callbackError) {
-        console.error("Error in onError callback:", callbackError);
+        logger.error("Error in onError callback:", callbackError);
       }
     }
 
@@ -129,7 +130,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (process.env.NODE_ENV === "production") {
       this.reportErrorToService(error, errorInfo);
     } else {
-      console.error("Development error:", {
+      logger.error("Development error:", {
         error: error.toString(),
         componentStack: errorInfo.componentStack,
         timestamp: new Date().toISOString(),
@@ -178,11 +179,11 @@ export class ErrorBoundary extends Component<Props, State> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(errorPayload),
     }).catch((err) => {
-      console.error("Failed to report error to tracking service:", err);
+      logger.error("Failed to report error to tracking service:", err);
     });
 
     // Log to console as fallback
-    console.error("Production error reported:", errorPayload);
+    logger.error("Production error reported:", errorPayload);
   }
 
   copyErrorDetails = async () => {
@@ -215,7 +216,7 @@ ${error?.stack}
         this.setState({ errorCopied: false });
       }, 3000);
     } catch (err) {
-      console.error("Failed to copy error details:", err);
+      logger.error("Failed to copy error details:", err);
       alert("Failed to copy to clipboard");
     }
   };

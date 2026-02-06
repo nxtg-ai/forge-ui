@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from "react";
+import { logger } from "../../utils/browser-logger";
 import { motion } from "framer-motion";
 import { SafeAnimatePresence as AnimatePresence } from "../ui/SafeAnimatePresence";
 import {
@@ -92,9 +93,9 @@ export const BetaFeedback: React.FC<BetaFeedbackProps> = ({ onClose }) => {
         : [];
       feedbackList.push(feedback);
       localStorage.setItem("nxtg-beta-feedback", JSON.stringify(feedbackList));
-      console.log("Feedback saved locally for later submission");
+      logger.debug("Feedback saved locally for later submission");
     } catch (error) {
-      console.error("Failed to save feedback locally:", error);
+      logger.error("Failed to save feedback locally:", error);
     }
   }, []);
 
@@ -144,7 +145,7 @@ export const BetaFeedback: React.FC<BetaFeedbackProps> = ({ onClose }) => {
         throw new Error("Failed to submit feedback");
       }
     } catch (error) {
-      console.error("Failed to submit feedback to API:", error);
+      logger.error("Failed to submit feedback to API:", error);
       // Save locally as fallback
       saveFeedbackLocally(feedbackData);
       setSubmitStatus("success");

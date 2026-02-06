@@ -15,6 +15,7 @@ import {
   Eye,
 } from "lucide-react";
 import { IntelligenceHub } from "../intelligence";
+import { logger } from "../../utils/browser-logger";
 
 interface ContextFile {
   path: string;
@@ -108,7 +109,7 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = React.memo(({
           }
         }
       } catch (error) {
-        console.error("Failed to load real state data:", error);
+        logger.error("Failed to load real state data:", error);
       }
     };
 

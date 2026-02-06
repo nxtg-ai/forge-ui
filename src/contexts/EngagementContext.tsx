@@ -14,6 +14,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import type { EngagementMode, AutomationLevel } from "../components/types";
+import { logger } from "../utils/browser-logger";
 
 // Visibility hierarchy: CEO sees least, Founder sees everything
 const VISIBILITY_HIERARCHY: Record<EngagementMode, number> = {
@@ -96,7 +97,7 @@ export const EngagementProvider: React.FC<EngagementProviderProps> = ({
         }
       }
     } catch (error) {
-      console.warn("Failed to sync engagement mode to WebSocket:", error);
+      logger.warn("Failed to sync engagement mode to WebSocket:", error);
     }
   }, []);
 
@@ -116,7 +117,7 @@ export const EngagementProvider: React.FC<EngagementProviderProps> = ({
         }
       }
     } catch (error) {
-      console.warn("Failed to sync automation level to WebSocket:", error);
+      logger.warn("Failed to sync automation level to WebSocket:", error);
     }
   }, []);
 

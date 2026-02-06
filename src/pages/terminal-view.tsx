@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { SafeAnimatePresence as AnimatePresence } from "../components/ui/SafeAnimatePresence";
 import { Terminal, X, Layout, Maximize2, Info } from "lucide-react";
 import { useToast } from "../components/feedback/ToastSystem";
+import { logger } from "../utils/browser-logger";
 
 const TerminalView: React.FC = () => {
   const [showGovernancePanel, setShowGovernancePanel] = useState(true);
@@ -88,7 +89,7 @@ const TerminalView: React.FC = () => {
         {/* Center - Terminal */}
         <main className="flex-1 min-w-0 bg-black">
           <ClaudeTerminal
-            onCommandExecute={(cmd) => console.log("Command executed:", cmd)}
+            onCommandExecute={(cmd) => logger.debug("Command executed:", cmd)}
             onDangerousCommand={handleDangerousCommand}
             className="h-full"
           />
