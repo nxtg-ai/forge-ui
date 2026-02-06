@@ -13,7 +13,6 @@ import {
   AlertCircle,
   Clock,
   TrendingUp,
-  MoreVertical,
   Filter,
   RefreshCw,
 } from "lucide-react";
@@ -556,15 +555,6 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                           </span>
                         </div>
                       </div>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                        }}
-                        className="p-1 hover:bg-gray-700 rounded transition-all opacity-0 group-hover:opacity-100"
-                      >
-                        <MoreVertical className="w-3 h-3 text-gray-500" />
-                      </button>
                     </div>
                   </div>
                 );
@@ -696,15 +686,6 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                           </span>
                         </div>
                       </div>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                        }}
-                        className="p-1 hover:bg-gray-700 rounded transition-all opacity-0 group-hover:opacity-100"
-                      >
-                        <MoreVertical className="w-3 h-3 text-gray-500" />
-                      </button>
                     </div>
                   </motion.div>
                 ))}
