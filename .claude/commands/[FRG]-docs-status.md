@@ -1,133 +1,80 @@
-# /docs-status
-
-**Agent**: Release Sentinel
-**Purpose**: Show documentation health and pending updates
-
+---
+description: "Show documentation health and coverage"
 ---
 
-## Execution
-````python
-#!/usr/bin/env python3
-"""Documentation status checker"""
+# NXTG-Forge Documentation Status
 
-import json
-from pathlib import Path
-from datetime import datetime, timedelta
+You are the **Documentation Auditor** - analyze documentation health across the project.
 
-def load_state():
-    with open('.claude/state.json') as f:
-        return json.load(f)
+## Data Gathering
 
-def check_doc_health(state):
-    docs = state.get('documentation', {}).get('files', {})
-    
-    current = []
-    stale = []
-    critical = []
-    
-    for doc_path, info in docs.items():
-        health = info.get('health', 'unknown')
-        if health == 'current':
-            current.append(doc_path)
-        elif health == 'stale':
-            stale.append((doc_path, info.get('sections_stale', [])))
-        else:
-            critical.append(doc_path)
-    
-    return current, stale, critical
+Use native tools to analyze documentation state:
 
-def main():
-    state = load_state()
-    current, stale, critical = check_doc_health(state)
-    
-    coverage = state.get('documentation', {}).get('coverage_score', 0)
-    pending = state.get('documentation', {}).get('pending_updates', [])
-    
-    print("📚 Documentation Status")
-    print("=" * 50)
-    print()
-    
-    # Coverage score
-    if coverage >= 90:
-        print(f"  Coverage: {coverage}% ✅ Excellent")
-    elif coverage >= 70:
-        print(f"  Coverage: {coverage}% 🟡 Good")
-    else:
-        print(f"  Coverage: {coverage}% ❌ Needs attention")
-    print()
-    
-    # Health breakdown
-    print(f"  📗 Current: {len(current)} files")
-    print(f"  📙 Stale: {len(stale)} files")
-    print(f"  📕 Critical: {len(critical)} files")
-    print()
-    
-    # Stale details
-    if stale:
-        print("  Stale Documentation:")
-        for doc, sections in stale[:5]:
-            print(f"    • {doc}")
-            for section in sections[:3]:
-                print(f"      - {section}")
-        if len(stale) > 5:
-            print(f"    ... and {len(stale) - 5} more")
-        print()
-    
-    # Pending updates
-    if pending:
-        print("  Pending Updates:")
-        for update in pending[:5]:
-            priority_icon = "🔴" if update['priority'] == 'high' else "🟡"
-            print(f"    {priority_icon} {update['file']}")
-            print(f"       Reason: {update['reason']}")
-        print()
-    
-    # Recommendations
-    print("  Recommendations:")
-    if critical:
-        print("    1. Run '/docs-update --critical' to fix critical issues")
-    if stale:
-        print("    2. Run '/docs-update' to update stale sections")
-    if not critical and not stale:
-        print("    ✅ Documentation is healthy!")
-    
-    print()
-    print("  Run '/docs-audit' for detailed analysis")
+### 1. Find All Documentation Files
 
-if __name__ == '__main__':
-    main()
-````
+```bash
+# Markdown docs
+find docs -name "*.md" 2>/dev/null | sort
+find . -maxdepth 1 -name "*.md" | sort
+
+# Check for key docs
+ls README.md CHANGELOG.md CONTRIBUTING.md LICENSE 2>/dev/null
+```
+
+### 2. Check Source File Documentation
+
+Use Grep to find undocumented exports:
+- Search for `export (function|class|interface|const)` in `src/**/*.ts`
+- Check if preceding line has `/**` (JSDoc comment)
+- Count documented vs undocumented exports
+
+### 3. Check Documentation Freshness
+
+```bash
+# Compare doc modification times with source modification times
+# For each doc file, check if related source files are newer
+git log -1 --format="%ar" -- docs/ 2>/dev/null
+git log -1 --format="%ar" -- src/ 2>/dev/null
+```
+
+## Display Format
+
+```
+DOCUMENTATION STATUS
+======================
+
+Key Files:
+  README.md:       {EXISTS / MISSING}
+  CHANGELOG.md:    {EXISTS / MISSING}
+  CONTRIBUTING.md:  {EXISTS / MISSING}
+  LICENSE:         {EXISTS / MISSING}
+
+Documentation Directory:
+  docs/ files: {count}
+  {list doc files}
+
+Source Documentation:
+  Exported symbols: {total}
+  With JSDoc: {documented}
+  Without JSDoc: {undocumented}
+  Coverage: {percentage}%
+
+Freshness:
+  Docs last updated: {time_ago}
+  Source last updated: {time_ago}
+  {WARNING if source newer than docs}
+
+Recommendations:
+  1. {top recommendation}
+  2. {second recommendation}
 
 ---
+Actions:
+  /frg-docs-audit    Detailed documentation audit
+  /frg-docs-update   Update stale documentation
+```
 
-## Output Example
-````
-📚 Documentation Status
-==================================================
+## Error Handling
 
-  Coverage: 87% 🟡 Good
-
-  📗 Current: 12 files
-  📙 Stale: 3 files
-  📕 Critical: 0 files
-
-  Stale Documentation:
-    • docs/api/users.md
-      - POST /users
-      - DELETE /users/{id}
-    • docs/components/button.md
-      - Props table
-    • README.md
-      - Installation section
-
-  Pending Updates:
-    🔴 docs/api/users.md
-       Reason: New endpoint added: PATCH /users/{id}/avatar
-    🟡 docs/cli.md
-       Reason: New command added: forge export
-
-  Recommendations:
-    1. Run '/docs-update' to update stale sections
-
-  Run '/docs-audit' for detailed analysis
-````
+If docs/ directory doesn't exist, note it and suggest creating one.
+Always show whatever data IS available.

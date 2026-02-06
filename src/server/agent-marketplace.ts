@@ -1,6 +1,9 @@
 import fs from 'fs/promises';
 import path from 'path';
 import matter from 'gray-matter';
+import { getLogger } from '../utils/logger';
+
+const logger = getLogger('agent-marketplace');
 
 /**
  * Agent category classification
@@ -74,7 +77,7 @@ export class AgentMarketplace {
           const agent = await this.parseAgentFile(file);
           this.agents.set(agent.name, agent);
         } catch (error) {
-          console.error(`Failed to parse agent file ${file}:`, error);
+          logger.error(`Failed to parse agent file ${file}:`, error);
         }
       }
     } catch (error) {

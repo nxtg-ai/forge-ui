@@ -7,6 +7,9 @@
 
 import { promises as fs } from "fs";
 import * as path from "path";
+import { getLogger } from "../utils/logger";
+
+const logger = getLogger('init-first-run');
 
 const CLAUDE_DIR = ".claude";
 const FORGE_ENABLED_MARKER = path.join(CLAUDE_DIR, "FORGE-ENABLED");
@@ -53,7 +56,7 @@ export async function initializeUserEnvironment(): Promise<void> {
     return;
   }
 
-  console.log("🎉 Welcome to NXTG-Forge! Setting up your environment...\n");
+  logger.info("🎉 Welcome to NXTG-Forge! Setting up your environment...\n");
 
   // 1. Ensure runtime directories exist
   const runtimeDirs = [
@@ -87,7 +90,7 @@ export async function initializeUserEnvironment(): Promise<void> {
       const wasCopied = await copyIfNotExists(src, dest);
       if (wasCopied) {
         copiedCount++;
-        console.log(`  ✓ Created ${path.relative(process.cwd(), dest)}`);
+        logger.info(`  ✓ Created ${path.relative(process.cwd(), dest)}`);
       }
     }
   }
@@ -105,10 +108,10 @@ export async function initializeUserEnvironment(): Promise<void> {
     ),
   );
 
-  console.log("\n✨ NXTG-Forge initialized successfully!");
-  console.log("  • Runtime directories created");
-  console.log(`  • ${copiedCount} template file(s) copied`);
-  console.log("  • Ready to capture your vision!\n");
+  logger.info("\n✨ NXTG-Forge initialized successfully!");
+  logger.info("  • Runtime directories created");
+  logger.info(`  • ${copiedCount} template file(s) copied`);
+  logger.info("  • Ready to capture your vision!\n");
 }
 
 /**

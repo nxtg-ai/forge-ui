@@ -7,9 +7,13 @@
 
 import { WebSocketServer, WebSocket } from "ws";
 import * as http from "http";
+import * as crypto from "crypto";
 import type { RunspaceManager } from "../core/runspace-manager";
 import type { Runspace } from "../core/runspace";
 import { WSLBackend } from "../core/backends/wsl-backend";
+import { getLogger } from "../utils/logger";
+
+const logger = getLogger('pty-bridge');
 
 interface TerminalSession {
   runspaceId: string;
@@ -20,6 +24,7 @@ interface TerminalSession {
   cleanupTimer: ReturnType<typeof setTimeout> | null;
   scrollbackBuffer: string[];
   scrollbackSize: number;
+  authToken: string;
 }
 
 // How long to keep a PTY alive after WebSocket disconnects (5 minutes)
@@ -30,6 +35,74 @@ const MAX_SCROLLBACK_SIZE = 100 * 1024;
 const sessions = new Map<string, TerminalSession>();
 const wslBackend = new WSLBackend();
 
+// Security: Token-based authentication
+const authTokens = new Map<string, { sessionId: string; createdAt: number }>();
+const TOKEN_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
+
+// Security: Allowed origins (configurable via environment)
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
+  : [
+      "http://localhost:5050",
+      "http://localhost:5051",
+      "http://127.0.0.1:5050",
+      "http://127.0.0.1:5051",
+      "ws://localhost:5050",
+      "ws://localhost:5051",
+      "ws://127.0.0.1:5050",
+      "ws://127.0.0.1:5051",
+    ];
+
+// Security: Dangerous command patterns to block
+const DANGEROUS_COMMANDS = [
+  /rm\s+-rf\s+\//,  // rm -rf /
+  /dd\s+if=/,  // dd commands
+  /:\(\)\{:\|:&\};:/,  // Fork bombs
+  /mkfs\./,  // Filesystem formatting
+  />\s*\/dev\/sd[a-z]/,  // Direct disk writes
+  /chmod\s+-R\s+777\s+\//,  // Recursive 777 on root
+  /wget.*\|\s*bash/,  // Pipe to bash
+  /curl.*\|\s*bash/,  // Pipe to bash
+  /nc.*-e\s+\/bin\/(ba)?sh/,  // Netcat reverse shells
+];
+
+/**
+ * Generate secure authentication token
+ */
+function generateAuthToken(): string {
+  return crypto.randomBytes(32).toString("hex");
+}
+
+/**
+ * Generate secure session ID
+ */
+function generateSessionId(): string {
+  return crypto.randomBytes(32).toString("hex");
+}
+
+/**
+ * Validate origin header
+ */
+function validateOrigin(origin: string | undefined): boolean {
+  if (!origin) {
+    // Allow requests without origin (same-origin or native clients)
+    return true;
+  }
+
+  // Check if origin is in allowed list
+  return ALLOWED_ORIGINS.some(allowed => {
+    if (allowed === "*") return true;
+    return origin === allowed || origin.startsWith(allowed);
+  });
+}
+
+/**
+ * Check if command contains dangerous patterns
+ */
+function isDangerousCommand(command: string): boolean {
+  return DANGEROUS_COMMANDS.some(pattern => pattern.test(command));
+}
+
 /**
  * Initialize PTY bridge server with runspace support
  */
@@ -37,6 +110,16 @@ export function createPTYBridge(
   server: http.Server,
   runspaceManager: RunspaceManager,
 ) {
+  // Security: Periodic cleanup of expired tokens
+  const tokenCleanupInterval = setInterval(() => {
+    const now = Date.now();
+    for (const [token, data] of authTokens.entries()) {
+      if (now - data.createdAt > TOKEN_EXPIRY_MS) {
+        authTokens.delete(token);
+      }
+    }
+  }, 60000); // Run every minute
+
   // Create WebSocket server without auto-attach
   const wss = new WebSocketServer({ noServer: true });
 
@@ -52,7 +135,7 @@ export function createPTYBridge(
   });
 
   wss.on("error", (error) => {
-    console.error("[PTY Bridge] WebSocket server error:", error);
+    logger.error("[PTY Bridge] WebSocket server error:", error);
   });
 
   /**
@@ -85,7 +168,7 @@ export function createPTYBridge(
             break;
         }
       } catch (error) {
-        console.error("[PTY Bridge] Error handling message:", error);
+        logger.error("[PTY Bridge] Error handling message:", error);
       }
     });
 
@@ -93,14 +176,14 @@ export function createPTYBridge(
     // If session.ws has already been swapped to a new ws (reattach), this is a no-op.
     ws.on("close", () => {
       if (session.ws !== ws) {
-        console.log(`[PTY Bridge] Stale WebSocket closed for session ${session.sessionId}, ignoring`);
+        logger.info(`[PTY Bridge] Stale WebSocket closed for session ${session.sessionId}, ignoring`);
         return;
       }
-      console.log(`[PTY Bridge] WebSocket closed for session ${session.sessionId}, keeping PTY alive`);
+      logger.info(`[PTY Bridge] WebSocket closed for session ${session.sessionId}, keeping PTY alive`);
       session.ws = null;
 
       session.cleanupTimer = setTimeout(() => {
-        console.log(`[PTY Bridge] Session ${session.sessionId} timed out, cleaning up`);
+        logger.info(`[PTY Bridge] Session ${session.sessionId} timed out, cleaning up`);
         session.pty.pty.kill();
         sessions.delete(session.sessionId);
         wslBackend.removeSession(session.runspaceId);
@@ -108,7 +191,7 @@ export function createPTYBridge(
     });
 
     ws.on("error", (error) => {
-      console.error(`[PTY Bridge] WebSocket error for session ${session.sessionId}:`, error);
+      logger.error(`[PTY Bridge] WebSocket error for session ${session.sessionId}:`, error);
       if (session.ws === ws) {
         session.ws = null;
       }
@@ -129,18 +212,55 @@ export function createPTYBridge(
   }
 
   wss.on("connection", async (ws: WebSocket, request: http.IncomingMessage) => {
-    console.log("[PTY Bridge] New terminal connection");
+    logger.info("[PTY Bridge] New terminal connection");
 
     try {
+      // Security: Validate origin
+      const origin = request.headers.origin;
+      if (!validateOrigin(origin)) {
+        logger.error(`[PTY Bridge] Blocked connection from unauthorized origin: ${origin}`);
+        ws.send(JSON.stringify({ type: "error", data: "Unauthorized origin" }));
+        ws.close();
+        return;
+      }
+
       const url = new URL(request.url!, `http://${request.headers.host}`);
       const runspaceId = url.searchParams.get("runspace");
       const requestedSessionId = url.searchParams.get("sessionId");
+      const authToken = url.searchParams.get("token");
+
+      // Security: Validate auth token for session reattachment
+      if (requestedSessionId && authToken) {
+        const tokenData = authTokens.get(authToken);
+        if (!tokenData) {
+          logger.error(`[PTY Bridge] Invalid or expired auth token`);
+          ws.send(JSON.stringify({ type: "error", data: "Invalid or expired token" }));
+          ws.close();
+          return;
+        }
+
+        if (tokenData.sessionId !== requestedSessionId) {
+          logger.error(`[PTY Bridge] Token/session mismatch`);
+          ws.send(JSON.stringify({ type: "error", data: "Token does not match session" }));
+          ws.close();
+          return;
+        }
+
+        // Check token expiry
+        if (Date.now() - tokenData.createdAt > TOKEN_EXPIRY_MS) {
+          logger.error(`[PTY Bridge] Expired auth token`);
+          authTokens.delete(authToken);
+          ws.send(JSON.stringify({ type: "error", data: "Token expired" }));
+          ws.close();
+          return;
+        }
+      }
 
       // --- REATTACH to existing session ---
       if (requestedSessionId) {
         const existingSession = sessions.get(requestedSessionId);
         if (existingSession) {
-          console.log(`[PTY Bridge] Reattaching to session: ${requestedSessionId}`);
+          logger.info(`[PTY Bridge] Reattaching to session: ${requestedSessionId}`);
 
           // Cancel cleanup timer
           if (existingSession.cleanupTimer) {
@@ -157,10 +277,11 @@ export function createPTYBridge(
             oldWs.close();
           }
 
-          // Send session info
+          // Send session info with existing auth token
           ws.send(JSON.stringify({
             type: "session",
             sessionId: requestedSessionId,
+            token: existingSession.authToken,
             restored: true,
           }));
 
@@ -174,7 +295,7 @@ export function createPTYBridge(
 
           return;
         } else {
-          console.log(`[PTY Bridge] Session ${requestedSessionId} not found, creating new`);
+          logger.info(`[PTY Bridge] Session ${requestedSessionId} not found, creating new`);
         }
       }
 
@@ -185,7 +306,7 @@ export function createPTYBridge(
       if (runspaceId) {
         runspace = runspaceManager.getRunspace(runspaceId);
         if (!runspace) {
-          console.error(`[PTY Bridge] Runspace not found: ${runspaceId}`);
+          logger.error(`[PTY Bridge] Runspace not found: ${runspaceId}`);
           ws.send(JSON.stringify({ type: "error", data: `Runspace not found: ${runspaceId}` }));
           ws.close();
           return;
@@ -193,22 +314,27 @@ export function createPTYBridge(
       } else {
         runspace = runspaceManager.getActiveRunspace();
         if (!runspace) {
-          console.log("[PTY Bridge] No active runspace, using default shell mode");
+          logger.info("[PTY Bridge] No active runspace, using default shell mode");
           useDefaultShell = true;
         }
       }
 
-      let ptySession: { pty: { onData: (cb: (data: string) => void) => void; onExit: (cb: (info: { exitCode: number; signal: number }) => void) => void; write: (data: string) => void; kill: () => void; resize: (cols: number, rows: number) => void } };
+      let ptySession: { pty: { onData: (cb: (data: string) => void) => void; onExit: (cb: (info: { exitCode: number; signal?: number }) => void) => void; write: (data: string) => void; kill: () => void; resize: (cols: number, rows: number) => void } };
 
       if (useDefaultShell) {
-        console.log("[PTY Bridge] Creating default PTY session");
+        logger.info("[PTY Bridge] Creating default PTY session");
         ptySession = await wslBackend.createDefaultPTY();
       } else {
-        console.log(`[PTY Bridge] Attaching PTY to runspace: ${runspace!.displayName} (${runspace!.id})`);
+        logger.info(`[PTY Bridge] Attaching PTY to runspace: ${runspace!.displayName} (${runspace!.id})`);
         ptySession = await wslBackend.attachPTY(runspace!);
       }
 
-      const sessionId = requestedSessionId || Math.random().toString(36).substring(7);
+      // Security: Generate cryptographically secure session ID
+      const sessionId = requestedSessionId || generateSessionId();
+
+      // Security: Generate auth token for this session
+      const newAuthToken = generateAuthToken();
+      authTokens.set(newAuthToken, { sessionId, createdAt: Date.now() });
 
       const session: TerminalSession = {
         runspaceId: runspace?.id || "default",
@@ -219,11 +345,12 @@ export function createPTYBridge(
         cleanupTimer: null,
         scrollbackBuffer: [],
         scrollbackSize: 0,
+        authToken: newAuthToken,
       };
       sessions.set(sessionId, session);
 
-      // Send session info
-      ws.send(JSON.stringify({ type: "session", sessionId, restored: false }));
+      // Send session info with auth token
+      ws.send(JSON.stringify({ type: "session", sessionId, token: newAuthToken, restored: false }));
 
       // PTY output → active WebSocket (registered ONCE, reads session.ws on each call)
       ptySession.pty.onData((data: string) => {
@@ -238,8 +365,8 @@ export function createPTYBridge(
       });
 
       // PTY exit → cleanup
-      ptySession.pty.onExit(({ exitCode, signal }: { exitCode: number; signal: number }) => {
-        console.log(`[PTY Bridge] PTY exited: code=${exitCode}, signal=${signal}`);
+      ptySession.pty.onExit(({ exitCode, signal }: { exitCode: number; signal?: number }) => {
+        logger.info(`[PTY Bridge] PTY exited: code=${exitCode}, signal=${signal ?? 'none'}`);
         const currentWs = session.ws;
         if (currentWs && currentWs.readyState === WebSocket.OPEN) {
           currentWs.send(JSON.stringify({
@@ -261,14 +388,14 @@ export function createPTYBridge(
       wireWebSocket(ws, session);
 
     } catch (error) {
-      console.error("[PTY Bridge] Fatal error in connection handler:", error);
+      logger.error("[PTY Bridge] Fatal error in connection handler:", error);
       if (ws.readyState === WebSocket.OPEN) {
         ws.close();
       }
     }
   });
 
-  console.log("[PTY Bridge] WebSocket server initialized on /terminal");
+  logger.info("[PTY Bridge] WebSocket server initialized on /terminal");
   return wss;
 }
 
@@ -367,7 +494,17 @@ function executeCommand(
   session: TerminalSession,
   command: string,
 ) {
-  console.log(`[PTY Bridge] Executing command: ${command}`);
+  logger.info(`[PTY Bridge] Executing command: ${command}`);
+
+  // Security: Check for dangerous commands
+  if (isDangerousCommand(command)) {
+    logger.error(`[PTY Bridge] Blocked dangerous command: ${command}`);
+    const errorMsg = "\r\n\x1b[31m[SECURITY] Dangerous command blocked\x1b[0m\r\n";
+    if (session.ws && session.ws.readyState === WebSocket.OPEN) {
+      session.ws.send(JSON.stringify({ type: "output", data: errorMsg }));
+    }
+    return;
+  }
 
   // Write command to PTY
   ptySession.pty.write(command + "\r");
@@ -378,7 +515,7 @@ function executeCommand(
  * Cleanup all sessions
  */
 export function cleanupPTYBridge() {
-  console.log("[PTY Bridge] Cleaning up sessions...");
+  logger.info("[PTY Bridge] Cleaning up sessions...");
   sessions.forEach((session) => {
     // Cancel cleanup timers
     if (session.cleanupTimer) {
@@ -398,4 +535,5 @@ export function cleanupPTYBridge() {
     wslBackend.removeSession(session.runspaceId);
   });
   sessions.clear();
+  authTokens.clear();
 }

@@ -10,6 +10,7 @@ env/
 
 # Build outputs
 dist/
+dist-ui/
 build/
 out/
 *.tsbuildinfo

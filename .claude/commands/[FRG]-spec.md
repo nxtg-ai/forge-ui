@@ -1,221 +1,117 @@
-# Spec Command
+---
+description: "Generate technical specifications for features"
+---
 
-Generate comprehensive technical specifications from high-level requirements.
+# NXTG-Forge Spec Generator
 
-## Usage
+You are the **Spec Writer** - generate comprehensive technical specifications from feature descriptions.
 
-```bash
-/spec <feature-name> [--format <type>] [--output <file>] [--interactive]
-```
+## Parse Arguments
 
-## Arguments
+Arguments received: `$ARGUMENTS`
 
-- `feature-name`: Name or description of feature
-- `--format`: Output format (markdown, yaml, json)
-- `--output`: Write to file instead of stdout
-- `--interactive`: Interactive specification builder
+- If feature name provided: generate spec for that feature
+- `--interactive`: Step-by-step spec building with questions
+- `--output <file>`: Save to specific file
+- No arguments: ask what to spec using AskUserQuestion
 
-## What Gets Specified
+## Step 1: Understand the Feature
 
-A complete spec includes:
+If not in interactive mode, analyze the feature description and the current codebase to understand:
+1. What exists already (use Glob/Grep to find related code)
+2. What patterns are used (read existing implementations)
+3. What dependencies are available (read package.json)
 
-### 1. Requirements
-- Functional requirements
-- Non-functional requirements
-- User stories
-- Acceptance criteria
+## Step 2: Generate Spec
 
-### 2. Architecture
-- System components
-- Data models
-- API contracts
-- Integration points
+Create a structured specification:
 
-### 3. Implementation
-- File structure
-- Key classes/functions
-- Algorithm details
-- Error handling
-
-### 4. Testing
-- Test scenarios
-- Edge cases
-- Performance targets
-- Security requirements
-
-### 5. Documentation
-- API documentation
-- User guides
-- Deployment instructions
-
-## Spec Generation
-
-### Basic Spec
-
-```bash
-/spec "User authentication with JWT"
-```
-
-Output:
 ```markdown
-# Feature Specification: User Authentication with JWT
+# Feature Spec: {feature_name}
 
 ## Overview
-Implement JWT-based authentication system for user login and authorization.
+{1-2 sentence description}
 
 ## Requirements
 
 ### Functional
-- Users can register with email/password
-- Users can log in with credentials
-- System issues JWT tokens on successful login
-- Tokens expire after 24 hours
-- Users can refresh tokens
-- Protected endpoints require valid token
+- {requirement 1}
+- {requirement 2}
+- {requirement 3}
 
 ### Non-Functional
-- Token verification < 10ms
-- Support 10,000 concurrent users
-- 99.9% uptime
-- OWASP compliant
+- {performance requirement}
+- {security requirement}
 
 ## Architecture
 
 ### Components
-1. Authentication Service
-2. Token Manager
-3. User Repository
-4. Middleware
+{What new components/modules are needed}
 
 ### Data Models
+{New types/interfaces needed}
 
-User:
-- id: UUID
-- email: string
-- password_hash: string
-- created_at: datetime
+### Integration Points
+{How this connects to existing code}
 
-Token:
-- access_token: string
-- refresh_token: string
-- expires_at: datetime
+## Implementation Plan
 
-### API Endpoints
+### Files to Create
+- `src/{path}/{file}.ts` - {purpose}
+- `src/{path}/__tests__/{file}.test.ts` - {tests}
 
-POST /auth/register
-  Body: {email, password}
-  Returns: {user_id}
+### Files to Modify
+- `src/{existing}.ts` - {what changes}
 
-POST /auth/login
-  Body: {email, password}
-  Returns: {access_token, refresh_token}
-
-POST /auth/refresh
-  Body: {refresh_token}
-  Returns: {access_token}
-
-## Implementation
-
-### File Structure
-src/auth/
-├── models.py
-├── service.py
-├── routes.py
-├── middleware.py
-└── utils.py
-
-### Key Components
-
-AuthService:
-- register_user(email, password)
-- login_user(email, password)
-- verify_token(token)
-- refresh_token(refresh_token)
-
-TokenManager:
-- create_token(user_id)
-- verify_token(token)
-- decode_token(token)
-
-### Error Handling
-- InvalidCredentials
-- TokenExpired
-- InvalidToken
-- UserAlreadyExists
+### Implementation Steps
+1. {step}
+2. {step}
+3. {step}
 
 ## Testing
 
 ### Unit Tests
-- User registration validation
-- Password hashing
-- Token generation/verification
-- Token expiration
+- {test case 1}
+- {test case 2}
 
 ### Integration Tests
-- Full login flow
-- Token refresh flow
-- Protected endpoint access
+- {test case}
 
-### Security Tests
-- SQL injection prevention
-- Password strength
-- Token tampering detection
+### Edge Cases
+- {edge case}
 
 ## Acceptance Criteria
-- [ ] User can register
-- [ ] User can log in
-- [ ] Token is issued
-- [ ] Token expires
-- [ ] Token can be refreshed
-- [ ] Protected routes require token
-- [ ] All tests pass
-- [ ] Coverage > 80%
+- [ ] {criterion 1}
+- [ ] {criterion 2}
+- [ ] {criterion 3}
+- [ ] All tests passing
+- [ ] TypeScript compiles without errors
 
-## Estimated Effort: 16 hours
+## Estimated Complexity
+{LOW / MEDIUM / HIGH}
+
+## Dependencies
+- {any external libraries needed}
 ```
 
-### Interactive Spec
+## Step 3: Save Spec
 
-```bash
-/spec --interactive
+Save to `.claude/plans/{feature-slug}-spec.md`
+
+```
+Spec saved: .claude/plans/{feature-slug}-spec.md
+
+Next steps:
+  /frg-feature {feature_name}   Implement this feature
+  /frg-checkpoint save           Save state before starting
 ```
 
-Prompts for:
-- Feature name
-- User stories
-- Data models
-- Endpoints
-- Testing requirements
+## Interactive Mode (`--interactive`)
 
-### YAML Spec
+Ask questions step by step using AskUserQuestion:
+1. "What feature are you building?"
+2. "What are the key requirements?"
+3. "Any specific technical constraints?"
+4. "What should the tests cover?"
 
-```bash
-/spec "Payment processing" --format yaml --output payment-spec.yaml
-```
-
-## Spec Templates
-
-Pre-built templates for common features:
-
-- Authentication
-- CRUD operations
-- File upload
-- Real-time notifications
-- Payment processing
-- Search functionality
-
-## Best Practices
-
-1. Write specs before coding
-2. Include acceptance criteria
-3. Specify error cases
-4. Define performance targets
-5. Document assumptions
-6. Review specs with team
-7. Update specs as requirements change
-
-## See Also
-
-- `/feature` - Implement from spec
-- `/agent-assign` - Assign implementation
-- `/gap-analysis` - Validate completeness
+Build spec from answers.

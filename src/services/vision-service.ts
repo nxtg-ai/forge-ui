@@ -9,6 +9,9 @@ import * as yaml from "js-yaml";
 import { z } from "zod";
 import { BaseService, ServiceConfig } from "./base-service";
 import { Result, IntegrationError, ValidationError } from "../utils/result";
+import { getLogger } from "../utils/logger";
+
+const logger = getLogger("vision-service");
 import { VisionData, Goal, Metric, EngagementMode } from "../components/types";
 import {
   CanonicalVision,
@@ -378,7 +381,7 @@ export class VisionService extends BaseService {
           const capture = yaml.load(content) as VisionCaptureData;
           captures.push(capture);
         } catch (error) {
-          console.error(`Failed to load capture ${file}:`, error);
+          logger.error(`Failed to load capture ${file}: ${error}`);
         }
       }
 
@@ -538,14 +541,18 @@ export class VisionService extends BaseService {
     // Parse content sections
     const sections = this.parseMarkdownSections(content);
 
+    const mission = sections.mission || frontmatter.mission || "";
+    const goals = sections.goals || frontmatter.goals || [];
+    const constraints = sections.constraints || frontmatter.constraints || [];
+    const metrics = sections.metrics || frontmatter.successMetrics || [];
+    const timeframe = sections.timeframe || frontmatter.timeframe || "";
+
     return {
-      mission: sections.mission || (frontmatter.mission as string) || "",
-      goals: sections.goals || (frontmatter.goals as string[]) || [],
-      constraints:
-        sections.constraints || (frontmatter.constraints as string[]) || [],
-      successMetrics:
-        sections.metrics || (frontmatter.successMetrics as string[]) || [],
-      timeframe: sections.timeframe || (frontmatter.timeframe as string) || "",
+      mission: typeof mission === 'string' ? mission : String(mission),
+      goals: Array.isArray(goals) ? goals as string[] : [String(goals)],
+      constraints: Array.isArray(constraints) ? constraints as string[] : [String(constraints)],
+      successMetrics: Array.isArray(metrics) ? metrics as string[] : [String(metrics)],
+      timeframe: typeof timeframe === 'string' ? timeframe : String(timeframe),
       engagementMode:
         (frontmatter.engagementMode as EngagementMode) || "builder",
       createdAt: frontmatter.created

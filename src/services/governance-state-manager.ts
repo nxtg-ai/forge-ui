@@ -3,9 +3,12 @@
  * Handles state rotation, validation, and persistence
  */
 
-import { promises as fs } from "fs";
+import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
+import { getLogger } from "../utils/logger";
+
+const logger = getLogger("governance-state-manager");
 import type {
   GovernanceState,
   GovernanceConfig,
@@ -57,12 +60,12 @@ export class GovernanceStateManager {
     // Rotate sentinel logs if needed
     const rotatedState = this.rotateSentinelLogs(state, config);
 
-    // Add checksum for integrity
-    rotatedState.metadata.checksum = this.calculateChecksum(rotatedState);
-
     // Update timestamp
     rotatedState.timestamp = new Date().toISOString();
     rotatedState.metadata.lastSync = rotatedState.timestamp;
+
+    // Add checksum for integrity (must be after all mutations)
+    rotatedState.metadata.checksum = this.calculateChecksum(rotatedState);
 
     // Atomic write using temp file
     const tempPath = `${this.statePath}.tmp`;
@@ -149,7 +152,7 @@ export class GovernanceStateManager {
       await this.rotateBackups();
     } catch (error) {
       // Non-critical error, log but don't throw
-      console.error("Failed to create backup:", error);
+      logger.error(`Failed to create backup: ${error}`);
     }
   }
 
@@ -175,7 +178,7 @@ export class GovernanceStateManager {
         );
       }
     } catch (error) {
-      console.error("Failed to rotate backups:", error);
+      logger.error(`Failed to rotate backups: ${error}`);
     }
   }
 

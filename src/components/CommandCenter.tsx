@@ -37,6 +37,7 @@ interface CommandCenterProps {
   availableCommands: Command[];
   projectContext: ProjectContext;
   isExecuting: boolean;
+  isLoadingCommands?: boolean;
 }
 
 interface Command {
@@ -63,6 +64,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
   availableCommands,
   projectContext,
   isExecuting,
+  isLoadingCommands = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -94,10 +96,15 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
         setIsOpen(true);
       }
 
-      // Escape to close
+      // Escape to close or clear search
       if (e.key === "Escape") {
-        setIsOpen(false);
-        setSearchQuery("");
+        if (searchQuery) {
+          // If there's a search query, clear it first
+          setSearchQuery("");
+        } else {
+          // If search is empty, close the modal
+          setIsOpen(false);
+        }
       }
 
       // Enter to execute selected command
@@ -108,7 +115,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedCommand, isOpen]);
+  }, [selectedCommand, isOpen, searchQuery]);
 
   const handleCommandExecute = (command: Command) => {
     if (command.requiresConfirmation) {
@@ -135,25 +142,25 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
 
   const quickActions = [
     {
-      id: "status",
+      id: "frg-status",
       label: "Status",
       icon: <Activity className="w-4 h-4" />,
       color: "blue",
     },
     {
-      id: "feature",
+      id: "frg-feature",
       label: "New Feature",
       icon: <Plus className="w-4 h-4" />,
       color: "green",
     },
     {
-      id: "test",
+      id: "frg-test",
       label: "Run Tests",
       icon: <Play className="w-4 h-4" />,
       color: "purple",
     },
     {
-      id: "deploy",
+      id: "frg-deploy",
       label: "Deploy",
       icon: <Cloud className="w-4 h-4" />,
       color: "orange",
@@ -330,7 +337,17 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                   className="max-h-96 overflow-y-auto"
                   data-testid="command-center-commands-list"
                 >
-                  {filteredCommands.length > 0 ? (
+                  {isLoadingCommands ? (
+                    <div className="p-8 text-center">
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gray-800 flex items-center justify-center">
+                        <RotateCw className="w-8 h-8 text-gray-600 animate-spin" />
+                      </div>
+                      <p className="text-gray-400 mb-2">Loading commands...</p>
+                      <p className="text-sm text-gray-500">
+                        Fetching available NXTG-Forge commands
+                      </p>
+                    </div>
+                  ) : filteredCommands.length > 0 ? (
                     <div className="p-2">
                       {Object.entries(
                         filteredCommands.reduce(

@@ -117,10 +117,10 @@ const DEFAULT_COMMANDS: CommandCategory[] = [
     icon: <Sparkles className="w-4 h-4" />,
     color: "purple",
     commands: [
-      { id: "status", name: "Status Report", description: "Get current project status", category: "forge", icon: <Activity className="w-4 h-4" /> },
-      { id: "feature", name: "New Feature", description: "Start implementing a new feature", category: "forge", requiresConfirmation: true, icon: <Plus className="w-4 h-4" /> },
-      { id: "analyze", name: "Analyze Code", description: "Run static code analysis", category: "forge", icon: <Search className="w-4 h-4" /> },
-      { id: "vision-check", name: "Vision Check", description: "Verify alignment with project vision", category: "forge", icon: <Target className="w-4 h-4" /> },
+      { id: "frg-status", name: "Status Report", description: "Get current project status", category: "forge", icon: <Activity className="w-4 h-4" /> },
+      { id: "frg-feature", name: "New Feature", description: "Start implementing a new feature", category: "forge", requiresConfirmation: true, icon: <Plus className="w-4 h-4" /> },
+      { id: "frg-gap-analysis", name: "Gap Analysis", description: "Analyze test, doc, and security gaps", category: "forge", icon: <Search className="w-4 h-4" /> },
+      { id: "system-info", name: "System Info", description: "Node, npm, git versions, memory, disk", category: "forge", icon: <Settings className="w-4 h-4" /> },
     ],
   },
   {
@@ -129,10 +129,9 @@ const DEFAULT_COMMANDS: CommandCategory[] = [
     icon: <GitBranch className="w-4 h-4" />,
     color: "green",
     commands: [
-      { id: "git-status", name: "Git Status", description: "Show current git status", category: "git", icon: <GitBranch className="w-4 h-4" /> },
-      { id: "git-commit", name: "Smart Commit", description: "AI-generated commit message", category: "git", icon: <CheckCircle className="w-4 h-4" /> },
-      { id: "git-push", name: "Push Changes", description: "Push to remote", category: "git", requiresConfirmation: true, icon: <Cloud className="w-4 h-4" /> },
-      { id: "git-pr", name: "Create PR", description: "Create pull request", category: "git", requiresConfirmation: true, icon: <ExternalLink className="w-4 h-4" /> },
+      { id: "git-status", name: "Git Status", description: "Branch, changed files, recent commits", category: "git", icon: <GitBranch className="w-4 h-4" /> },
+      { id: "git-diff", name: "Git Diff", description: "Show staged and unstaged changes", category: "git", icon: <FileCode className="w-4 h-4" /> },
+      { id: "git-log", name: "Git Log", description: "Commit graph (last 20 commits)", category: "git", icon: <Clock className="w-4 h-4" /> },
     ],
   },
   {
@@ -141,10 +140,8 @@ const DEFAULT_COMMANDS: CommandCategory[] = [
     icon: <Shield className="w-4 h-4" />,
     color: "blue",
     commands: [
-      { id: "test-all", name: "Run All Tests", description: "Execute full test suite", category: "test", icon: <Play className="w-4 h-4" /> },
-      { id: "test-unit", name: "Unit Tests", description: "Run unit tests only", category: "test", icon: <FileCode className="w-4 h-4" /> },
-      { id: "test-integration", name: "Integration Tests", description: "Run integration tests", category: "test", icon: <Layers className="w-4 h-4" /> },
-      { id: "test-coverage", name: "Coverage Report", description: "Generate test coverage report", category: "test", icon: <BarChart3 className="w-4 h-4" /> },
+      { id: "frg-test", name: "Run All Tests", description: "Execute full vitest suite", category: "test", icon: <Play className="w-4 h-4" /> },
+      { id: "test-coverage", name: "Coverage Report", description: "Run tests with coverage analysis", category: "test", icon: <BarChart3 className="w-4 h-4" /> },
     ],
   },
   {
@@ -153,10 +150,19 @@ const DEFAULT_COMMANDS: CommandCategory[] = [
     icon: <Rocket className="w-4 h-4" />,
     color: "orange",
     commands: [
-      { id: "deploy-preview", name: "Deploy Preview", description: "Deploy to preview environment", category: "deploy", icon: <Cloud className="w-4 h-4" /> },
-      { id: "deploy-staging", name: "Deploy Staging", description: "Deploy to staging", category: "deploy", requiresConfirmation: true, icon: <Cloud className="w-4 h-4" /> },
-      { id: "deploy-production", name: "Deploy Production", description: "Deploy to production", category: "deploy", requiresConfirmation: true, icon: <Rocket className="w-4 h-4" /> },
-      { id: "rollback", name: "Rollback", description: "Rollback last deployment", category: "deploy", requiresConfirmation: true, icon: <RotateCw className="w-4 h-4" /> },
+      { id: "frg-deploy", name: "Build & Deploy", description: "Type-check then vite build", category: "deploy", requiresConfirmation: true, icon: <Rocket className="w-4 h-4" /> },
+    ],
+  },
+  {
+    id: "analyze",
+    name: "Analyze",
+    icon: <TrendingUp className="w-4 h-4" />,
+    color: "cyan",
+    commands: [
+      { id: "analyze-types", name: "Type Check", description: "Run tsc --noEmit", category: "analyze", icon: <FileCode className="w-4 h-4" /> },
+      { id: "analyze-lint", name: "Lint", description: "Run ESLint on src/", category: "analyze", icon: <Shield className="w-4 h-4" /> },
+      { id: "analyze-deps", name: "Outdated Deps", description: "Check for outdated npm packages", category: "analyze", icon: <Package className="w-4 h-4" /> },
+      { id: "analyze-bundle", name: "Bundle Size", description: "Production build with size report", category: "analyze", icon: <Database className="w-4 h-4" /> },
     ],
   },
 ];
@@ -587,6 +593,105 @@ const CommandPalette: React.FC<{
   );
 };
 
+// Command Result Display
+const CommandResultDisplay: React.FC<{
+  executed: ExecutedCommand;
+  onDismiss: () => void;
+  onRerun: () => void;
+}> = ({ executed, onDismiss, onRerun }) => {
+  const output = typeof executed.result === "object" && executed.result !== null
+    ? (executed.result as Record<string, unknown>).output as string || JSON.stringify(executed.result, null, 2)
+    : String(executed.result || "");
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl border overflow-hidden"
+      data-testid="command-result-display"
+    >
+      {/* Result Header */}
+      <div className={`
+        px-4 py-3 flex items-center justify-between
+        ${executed.status === "success"
+          ? "bg-green-500/10 border-b border-green-500/20"
+          : executed.status === "failed"
+            ? "bg-red-500/10 border-b border-red-500/20"
+            : "bg-blue-500/10 border-b border-blue-500/20"}
+      `}>
+        <div className="flex items-center gap-3">
+          {executed.status === "success" ? (
+            <CheckCircle className="w-5 h-5 text-green-400" />
+          ) : executed.status === "failed" ? (
+            <AlertCircle className="w-5 h-5 text-red-400" />
+          ) : (
+            <RotateCw className="w-5 h-5 text-blue-400 animate-spin" />
+          )}
+          <div>
+            <span className="font-semibold text-gray-100">{executed.command.name}</span>
+            <span className="text-xs text-gray-400 ml-3">
+              {executed.command.id}
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {executed.duration !== undefined && (
+            <span className="text-xs text-gray-400 tabular-nums">
+              {executed.duration < 1000
+                ? `${executed.duration}ms`
+                : `${(executed.duration / 1000).toFixed(1)}s`}
+            </span>
+          )}
+          <button
+            onClick={onRerun}
+            className="p-1.5 rounded-lg hover:bg-gray-700 transition-colors"
+            title="Run again"
+          >
+            <RotateCw className="w-4 h-4 text-gray-400" />
+          </button>
+          <button
+            onClick={onDismiss}
+            className="p-1.5 rounded-lg hover:bg-gray-700 transition-colors"
+            title="Dismiss"
+          >
+            <X className="w-4 h-4 text-gray-400" />
+          </button>
+        </div>
+      </div>
+
+      {/* Result Output */}
+      <div className="bg-gray-950 max-h-[60vh] overflow-y-auto">
+        {executed.status === "running" ? (
+          <div className="p-6 text-center">
+            <RotateCw className="w-8 h-8 text-blue-400 animate-spin mx-auto mb-3" />
+            <p className="text-gray-400">Executing {executed.command.name}...</p>
+          </div>
+        ) : output ? (
+          <pre className="p-4 text-sm font-mono text-gray-300 whitespace-pre-wrap break-words leading-relaxed">
+            {output}
+          </pre>
+        ) : (
+          <div className="p-6 text-center text-gray-500">
+            <p>No output</p>
+          </div>
+        )}
+      </div>
+
+      {/* Error Display */}
+      {executed.error && (
+        <div className="px-4 py-3 bg-red-500/5 border-t border-red-500/20">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+            <pre className="text-sm font-mono text-red-300 whitespace-pre-wrap break-words">
+              {executed.error}
+            </pre>
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+};
+
 // Quick Actions Grid
 const QuickActionsGrid: React.FC<{
   categories: CommandCategory[];
@@ -665,6 +770,7 @@ const CommandView: React.FC = () => {
   const [commandHistory, setCommandHistory] = useState<ExecutedCommand[]>([]);
   const [commandQueue, setCommandQueue] = useState<ExecutedCommand[]>([]);
   const [runningCommand, setRunningCommand] = useState<ExecutedCommand | null>(null);
+  const [activeResult, setActiveResult] = useState<ExecutedCommand | null>(null);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [announcement, setAnnouncement] = useState("");
@@ -714,6 +820,7 @@ const CommandView: React.FC = () => {
 
     setIsExecuting(true);
     setRunningCommand(executedCommand);
+    setActiveResult(executedCommand);
     setAnnouncement(`Executing ${command.name}`);
 
     try {
@@ -731,6 +838,7 @@ const CommandView: React.FC = () => {
       };
 
       setCommandHistory((prev) => [completedCommand, ...prev].slice(0, 50));
+      setActiveResult(completedCommand);
 
       if (response.success) {
         toast.success(`${command.name} completed`, {
@@ -743,7 +851,7 @@ const CommandView: React.FC = () => {
 
       // Broadcast via WebSocket
       if (isConnected) {
-        sendMessage({ type: "command.executed", payload: { command, result: response.data } });
+        sendMessage({ type: "command.executed", payload: { command: command.id, result: response.data } });
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -756,6 +864,7 @@ const CommandView: React.FC = () => {
       };
 
       setCommandHistory((prev) => [failedCommand, ...prev].slice(0, 50));
+      setActiveResult(failedCommand);
       toast.error(`${command.name} failed`, {
         message: errorMessage,
         actions: [
@@ -795,17 +904,19 @@ const CommandView: React.FC = () => {
   }
 
   // Process WebSocket messages
+  const toastRef = useRef(toast);
+  useEffect(() => { toastRef.current = toast; }, [toast]);
+
   useEffect(() => {
     if (messages.length > 0) {
       messages.forEach((message: CommandMessage) => {
         if (message.type === "command.executed") {
-          // Handle external command execution updates
-          toast.info("Command executed", { message: message.payload?.command?.name });
+          toastRef.current.info("Command executed", { message: message.payload?.command?.name });
         }
       });
       clearMessages();
     }
-  }, [messages, clearMessages, toast]);
+  }, [messages, clearMessages]);
 
   // Keyboard shortcuts (AppShell handles panel toggles, we just handle command palette)
   useEffect(() => {
@@ -893,50 +1004,33 @@ const CommandView: React.FC = () => {
           data-testid="command-view-container"
         >
           <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
-            {/* Hero Section */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center"
-            >
-              <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-purple-500/20 to-cyan-500/20 border border-purple-500/30 flex items-center justify-center">
-                <Command className="w-10 h-10 text-purple-400" />
-              </div>
-              <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent mb-3">
-                Forge Command Center
-              </h2>
-              <p className="text-gray-400 max-w-lg mx-auto mb-6">
-                Execute commands, run tests, deploy code, and manage your development workflow.
-                Press <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-xs">Ctrl+K</kbd> to open the command palette.
-              </p>
+            {/* Active Result Display */}
+            {activeResult && (
+              <CommandResultDisplay
+                executed={activeResult}
+                onDismiss={() => setActiveResult(null)}
+                onRerun={() => executeCommand(activeResult.command)}
+              />
+            )}
 
-              {/* Quick Stats */}
-              <div className="flex items-center justify-center gap-6 text-sm">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-400" />
-                  <span className="text-gray-300">{commandHistory.filter((c) => c.status === "success").length} successful</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-red-400" />
-                  <span className="text-gray-300">{commandHistory.filter((c) => c.status === "failed").length} failed</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-blue-400" />
-                  <span className="text-gray-300">{projectContext.activeAgents} agents active</span>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Quick Actions */}
+            {/* Quick Actions — always visible */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Zap className="w-5 h-5 text-yellow-400" />
-                Quick Actions
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-yellow-400" />
+                  Quick Actions
+                </h3>
+                <div className="flex items-center gap-4 text-xs text-gray-500">
+                  <span>{commandHistory.filter((c) => c.status === "success").length} passed</span>
+                  <span>{commandHistory.filter((c) => c.status === "failed").length} failed</span>
+                  <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-gray-400">/</kbd>
+                  <span>palette</span>
+                </div>
+              </div>
               <QuickActionsGrid
                 categories={DEFAULT_COMMANDS}
                 onExecute={executeCommand}
@@ -944,8 +1038,8 @@ const CommandView: React.FC = () => {
               />
             </motion.div>
 
-            {/* Recent Commands */}
-            {commandHistory.length > 0 && (
+            {/* Recent Commands — compact cards */}
+            {commandHistory.length > 0 && !activeResult && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -959,7 +1053,7 @@ const CommandView: React.FC = () => {
                   {commandHistory.slice(0, 4).map((executed) => (
                     <button
                       key={executed.id}
-                      onClick={() => executeCommand(executed.command)}
+                      onClick={() => setActiveResult(executed)}
                       className="p-3 rounded-lg bg-gray-900/50 border border-gray-800 hover:border-gray-700
                                  text-left transition-all flex items-center justify-between group"
                     >
@@ -979,7 +1073,7 @@ const CommandView: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      <RotateCw className="w-4 h-4 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <ChevronRight className="w-4 h-4 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </button>
                   ))}
                 </div>

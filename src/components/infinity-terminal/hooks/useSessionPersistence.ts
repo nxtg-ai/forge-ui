@@ -58,6 +58,7 @@ interface StoredSession {
   projectRoot: string;
   createdAt: string;
   lastAccess: string;
+  authToken?: string;
 }
 
 const STORAGE_KEY = "infinity-terminal-sessions";
@@ -101,6 +102,7 @@ export function useSessionPersistence(
 
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const stabilityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const isManualDisconnectRef = useRef(false);
 
@@ -172,13 +174,18 @@ export function useSessionPersistence(
   );
 
   // Get terminal WebSocket URL (with optional sessionId for reconnection)
-  const getWsUrl = useCallback((sessionId?: string) => {
+  const getWsUrl = useCallback((sessionId?: string, authToken?: string) => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const base = `${protocol}//${config.wsHost}:${config.wsPort}${config.wsPath}`;
+    const params = new URLSearchParams();
     if (sessionId) {
-      return `${base}?sessionId=${encodeURIComponent(sessionId)}`;
+      params.set("sessionId", sessionId);
     }
-    return base;
+    if (authToken) {
+      params.set("token", authToken);
+    }
+    const queryString = params.toString();
+    return queryString ? `${base}?${queryString}` : base;
   }, [config.wsHost, config.wsPort, config.wsPath]);
 
   // Alias for backward compatibility
@@ -195,12 +202,11 @@ export function useSessionPersistence(
 
     // Check if we've exceeded max reconnect attempts
     if (reconnectAttemptsRef.current >= config.maxReconnectAttempts) {
-      console.log(
-        "[InfinityTerminal] Max reconnect attempts reached, stopping",
-      );
-      const errorMsg =
-        "Terminal service unavailable. Is the API server running? (npm run dev)";
-      setState((prev) => ({ ...prev, error: errorMsg, connecting: false }));
+      setState((prev) => ({
+        ...prev,
+        error: "Terminal service unavailable. Is the API server running? (npm run dev)",
+        connecting: false,
+      }));
       return;
     }
 
@@ -215,13 +221,16 @@ export function useSessionPersistence(
       (s) => s.sessionName === sessionName,
     );
     const sessionId = existingSession?.sessionId || generateSessionId();
+    const authToken = existingSession?.authToken;
 
-    // Pass sessionId to backend so it can reattach to existing PTY
-    const url = getWsUrl(sessionId);
+    // Pass sessionId and token to backend so it can reattach to existing PTY
+    const url = getWsUrl(sessionId, authToken);
 
-    console.log(
-      `[InfinityTerminal] Connecting to ${url} (attempt ${reconnectAttemptsRef.current + 1}/${config.maxReconnectAttempts})${existingSession ? " [reconnecting]" : " [new]"}`,
-    );
+    if (reconnectAttemptsRef.current > 0) {
+      console.log(
+        `[InfinityTerminal] Reconnecting (attempt ${reconnectAttemptsRef.current + 1}/${config.maxReconnectAttempts})`,
+      );
+    }
 
     try {
       const ws = new WebSocket(url);
@@ -229,41 +238,48 @@ export function useSessionPersistence(
       ws.binaryType = "arraybuffer";
 
       ws.onopen = () => {
-        console.log("[InfinityTerminal] Connected");
-        reconnectAttemptsRef.current = 0;
-
-        const session = saveSession({
-          sessionId,
-          sessionName,
-          layout,
-          projectRoot: window.location.pathname,
-        });
+        // Don't reset reconnect counter immediately — wait for connection to be stable.
+        // If server rejects us (e.g. origin check), the connection opens then closes instantly.
+        // Resetting on open would create an infinite reconnect loop.
+        if (stabilityTimerRef.current) clearTimeout(stabilityTimerRef.current);
+        stabilityTimerRef.current = setTimeout(() => {
+          reconnectAttemptsRef.current = 0;
+          setState((prev) => ({ ...prev, reconnectAttempts: 0 }));
+        }, 3000);
 
         setState((prev) => ({
           ...prev,
-          sessionId: session.sessionId,
-          sessionName: session.sessionName,
+          sessionId,
+          sessionName,
           connected: true,
           connecting: false,
           error: null,
-          createdAt: new Date(session.createdAt),
-          lastActivity: new Date(),
-          reconnectAttempts: 0,
         }));
 
         onConnectionChangeRef.current?.(true);
       };
 
       ws.onclose = (event) => {
-        console.log(`[InfinityTerminal] Disconnected: ${event.code}`);
+        // Cancel stability timer — connection wasn't stable
+        if (stabilityTimerRef.current) {
+          clearTimeout(stabilityTimerRef.current);
+          stabilityTimerRef.current = null;
+        }
 
         setState((prev) => ({ ...prev, connected: false, connecting: false }));
         onConnectionChangeRef.current?.(false);
 
-        // Don't auto-reconnect if manually disconnected or max attempts reached
+        // Don't auto-reconnect if manually disconnected
         if (isManualDisconnectRef.current) {
           return;
         }
+
+        // Increment attempts BEFORE the check (not inside setTimeout)
+        reconnectAttemptsRef.current += 1;
+        setState((prev) => ({
+          ...prev,
+          reconnectAttempts: reconnectAttemptsRef.current,
+        }));
 
         // Auto-reconnect if enabled and under max attempts
         if (
@@ -271,31 +287,22 @@ export function useSessionPersistence(
           reconnectAttemptsRef.current < config.maxReconnectAttempts
         ) {
           const delay =
-            config.reconnectDelay * Math.pow(2, reconnectAttemptsRef.current);
-          console.log(
-            `[InfinityTerminal] Reconnecting in ${delay}ms... (attempt ${reconnectAttemptsRef.current + 1}/${config.maxReconnectAttempts})`,
-          );
+            config.reconnectDelay * Math.pow(2, reconnectAttemptsRef.current - 1);
 
           reconnectTimeoutRef.current = setTimeout(() => {
-            reconnectAttemptsRef.current += 1;
-            setState((prev) => ({
-              ...prev,
-              reconnectAttempts: reconnectAttemptsRef.current,
-            }));
             connect();
           }, delay);
-        } else if (
-          reconnectAttemptsRef.current >= config.maxReconnectAttempts
-        ) {
-          const errorMsg =
-            "Terminal service unavailable. Is the API server running? (npm run dev)";
+        } else {
+          const errorMsg = event.code === 1005
+            ? "Terminal connection rejected. Restart the API server."
+            : "Terminal service unavailable. Is the API server running? (npm run dev)";
           setState((prev) => ({ ...prev, error: errorMsg }));
         }
       };
 
-      ws.onerror = (error) => {
-        console.error("[InfinityTerminal] WebSocket error:", error);
-        // Don't set error here - let onclose handle the state
+      ws.onerror = () => {
+        // Don't log or set error here — onclose handles state and reconnection.
+        // Logging WebSocket errors just adds noise since the error object is opaque.
       };
 
       wsRef.current = ws;
@@ -324,6 +331,10 @@ export function useSessionPersistence(
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
+    }
+    if (stabilityTimerRef.current) {
+      clearTimeout(stabilityTimerRef.current);
+      stabilityTimerRef.current = null;
     }
 
     if (wsRef.current) {
@@ -391,6 +402,9 @@ export function useSessionPersistence(
     return () => {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (stabilityTimerRef.current) {
+        clearTimeout(stabilityTimerRef.current);
       }
       isManualDisconnectRef.current = true;
       if (wsRef.current) {

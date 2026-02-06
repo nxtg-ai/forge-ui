@@ -1,36 +1,22 @@
 /**
  * React Hooks for UI-Backend Integration
  * Centralized export for all integration hooks
+ *
+ * NOTE: For data hooks (vision, agents, commands, etc.), use hooks from
+ * useForgeIntegration.ts instead. This file only exports specialized hooks.
  */
 
+// File-based state management (reads from .claude/state/)
 export { useProjectState } from "./useProjectState";
 export type {
   UseProjectStateOptions,
   UseProjectStateReturn,
 } from "./useProjectState";
 
-export { useAgentActivity } from "./useAgentActivity";
-export type {
-  UseAgentActivityOptions,
-  UseAgentActivityReturn,
-} from "./useAgentActivity";
+// WebSocket connection management
+export { useRealtimeConnection } from "./useRealtimeConnection";
 
-export { useVision } from "./useVision";
-export type { UseVisionOptions, UseVisionReturn } from "./useVision";
-
-export { useCommands } from "./useCommands";
-export type {
-  UseCommandsOptions,
-  UseCommandsReturn,
-  CommandExecution,
-} from "./useCommands";
-
-export { useAutomation } from "./useAutomation";
-export type {
-  UseAutomationOptions,
-  UseAutomationReturn,
-} from "./useAutomation";
-
+// Keyboard shortcut utilities
 export {
   useKeyboardShortcuts,
   useKeyboardShortcut,
@@ -39,3 +25,17 @@ export {
   isShortcutAvailable,
 } from "./useKeyboardShortcuts";
 export type { ShortcutConfig, UseKeyboardShortcutsOptions } from "./useKeyboardShortcuts";
+
+// Dashboard data aggregation
+export { useDashboardData } from "./useDashboardData";
+export type { DashboardData, VisionData } from "./useDashboardData";
+
+// For API-based data hooks, import from useForgeIntegration:
+// import {
+//   useVision,
+//   useAgentActivities,
+//   useCommandExecution,
+//   useArchitectureDecisions,
+//   useYoloMode,
+//   useForgeIntegration,
+// } from './hooks/useForgeIntegration';

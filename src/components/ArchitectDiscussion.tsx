@@ -226,6 +226,9 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
                 Architecture Discussion
+                <span className="ml-3 text-xs font-medium px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 align-middle">
+                  Preview
+                </span>
               </h1>
               <p className="text-gray-400">{topic}</p>
             </div>
@@ -504,6 +507,20 @@ export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
                     {humanRole === "arbiter" && (
                       <button
                         data-testid="architect-discussion-revise-btn"
+                        onClick={() => {
+                          setMessages((prev) => [
+                            ...prev,
+                            {
+                              id: `revision-${Date.now()}`,
+                              architectId: "human",
+                              content: "Revision requested — please revisit the approach and address concerns.",
+                              type: "concern" as const,
+                              timestamp: new Date(),
+                            },
+                          ]);
+                          setCurrentPhase("discussion");
+                          setDecision(null);
+                        }}
                         className="px-6 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg font-medium transition-all"
                       >
                         Request Revision

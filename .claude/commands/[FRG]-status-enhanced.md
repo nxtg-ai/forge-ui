@@ -1,314 +1,147 @@
 ---
-description: "Enhanced status display with real-time dashboard (Phase 3)"
+description: "Enhanced status with detailed dashboard and metrics"
 ---
 
-# NXTG-Forge Enhanced Status
+# NXTG-Forge Enhanced Status Dashboard
 
-You are the **Enhanced Status Reporter** - show comprehensive project state with rich visualizations and metrics.
+You are the **Dashboard Reporter** - show a comprehensive, detailed project dashboard with metrics and recommendations.
 
-## Import Dashboard Service
+This is the enhanced version of `/frg-status` with deeper analysis.
 
-```python
-from pathlib import Path
-from forge.services import DashboardService, AnalyticsService
-from forge.utils import create_bar_chart, create_sparkline, render_trend
+## Data Gathering
 
-dashboard = DashboardService(Path.cwd())
-analytics = AnalyticsService(Path.cwd())
+Gather ALL data using native tools in parallel:
+
+### 1. Complete Git Analysis
+```bash
+# Branch info
+git branch --show-current
+git log --oneline -20
+git shortlog -sn --since="30 days ago" 2>/dev/null
+
+# Change stats
+git diff --stat main...HEAD 2>/dev/null
+git diff --shortstat HEAD~10..HEAD 2>/dev/null
+
+# Activity heatmap (commits per day last 7 days)
+for i in $(seq 0 6); do
+  date_str=$(date -d "$i days ago" +%Y-%m-%d 2>/dev/null || date -v-${i}d +%Y-%m-%d)
+  count=$(git log --oneline --after="$date_str 00:00" --before="$date_str 23:59" 2>/dev/null | wc -l)
+  echo "$date_str: $count"
+done
 ```
 
-## Get Dashboard Data
-
-```python
-# Get comprehensive dashboard data
-dashboard_result = dashboard.get_dashboard_data()
-if dashboard_result.is_error():
-    print(f"Error loading dashboard: {dashboard_result.error.message}")
-    exit(1)
-
-data = dashboard_result.value
+### 2. Full Test Analysis
+```bash
+npx vitest run --reporter=verbose 2>&1
 ```
 
-## Display Enhanced Status
-
-```
-╔════════════════════════════════════════════════════════════════════╗
-║                 NXTG-FORGE PROJECT DASHBOARD                       ║
-║                   {timestamp}                                      ║
-╚════════════════════════════════════════════════════════════════════╝
-
-┌─ HEALTH SCORE ──────────────────────────────────────────────────────┐
-│                                                                      │
-│   Score: {health_score}/100 {trend_indicator}                       │
-│   Status: {health_trend}                                            │
-│                                                                      │
-│   {health_score_bar_chart}                                          │
-│                                                                      │
-└──────────────────────────────────────────────────────────────────────┘
-
-┌─ ACTIVE WORKFLOWS ──────────────────────────────────────────────────┐
-│                                                                      │
-│   {list_active_workflows or "No active workflows"}                  │
-│                                                                      │
-└──────────────────────────────────────────────────────────────────────┘
-
-┌─ QUALITY METRICS ───────────────────────────────────────────────────┐
-│                                                                      │
-│   {quality_metrics_bar_chart}                                       │
-│                                                                      │
-│   Test Coverage:    {coverage}% {sparkline}                         │
-│   Test Pass Rate:   {pass_rate}% {trend}                            │
-│   Health Score:     {health}/100 {trend}                            │
-│                                                                      │
-└──────────────────────────────────────────────────────────────────────┘
-
-┌─ RECENT ACTIVITY ───────────────────────────────────────────────────┐
-│                                                                      │
-│   Commits (last 5):                                                 │
-│   {list_recent_commits}                                             │
-│                                                                      │
-│   Agent Activity:                                                   │
-│   {list_agent_activity}                                             │
-│                                                                      │
-└──────────────────────────────────────────────────────────────────────┘
-
-┌─ CHECKPOINTS ───────────────────────────────────────────────────────┐
-│                                                                      │
-│   {list_recent_checkpoints}                                         │
-│                                                                      │
-└──────────────────────────────────────────────────────────────────────┘
-
-┌─ RECOMMENDATIONS ───────────────────────────────────────────────────┐
-│                                                                      │
-│   {list_recommendations}                                            │
-│                                                                      │
-└──────────────────────────────────────────────────────────────────────┘
-
-═══════════════════════════════════════════════════════════════════════
-
-💡 Quick Actions:
-   Continue work:        /enable-forge → Continue
-   View analytics:       /status --analytics
-   Export metrics:       /status --export json|markdown|csv
-   Compare periods:      /status --compare "7 days" "30 days"
-
-📊 Advanced Views:
-   Full dashboard:       /status --dashboard
-   Trend analysis:       /status --trends
-   Technology insights:  /status --tech
-
-═══════════════════════════════════════════════════════════════════════
+### 3. TypeScript Health
+```bash
+npx tsc --noEmit 2>&1 | tail -20
 ```
 
-## Command-Line Arguments
-
-Parse additional arguments for enhanced views:
-
-**`/status --dashboard`**
-
-- Show full dashboard with all charts and visualizations
-- Uses `dashboard.generate_text_charts()`
-
-**`/status --analytics`**
-
-- Show analytics report with pattern detection
-- Uses `analytics.generate_analytics_report()`
-
-**`/status --trends`**
-
-- Show quality trend predictions
-- Uses `analytics.predict_quality_trends()`
-
-**`/status --tech`**
-
-- Show technology usage analysis
-- Uses `analytics.analyze_technology_usage()`
-
-**`/status --export <format>`**
-
-- Export in JSON, Markdown, Text, or CSV
-- Uses `dashboard.export_metrics(ExportFormat.<format>)`
-
-**`/status --compare <period1> <period2>`**
-
-- Compare metrics between two periods
-- Example: `/status --compare "last 7 days" "previous 7 days"`
-- Uses `dashboard.compare_periods()`
-
-## Implementation Examples
-
-### Show Dashboard with Charts
-
-```python
-# Get metrics
-metrics = list(data.quality_metrics.values())
-
-# Generate text charts
-charts = dashboard.generate_text_charts(metrics)
-print(charts)
+### 4. Security
+```bash
+npm audit --json 2>/dev/null | head -50
 ```
 
-### Show Analytics Report
+### 5. Code Metrics
+```bash
+# Total lines of code
+find src -name "*.ts" -not -name "*.test.ts" -not -path "*/__tests__/*" | xargs wc -l 2>/dev/null | tail -1
 
-```python
-# Generate analytics
-report_result = analytics.generate_analytics_report()
-if report_result.is_ok():
-    report = report_result.value
+# File count
+find src -name "*.ts" -not -name "*.test.ts" -not -path "*/__tests__/*" | wc -l
 
-    print("\n┌─ WORKFLOW PATTERNS ─────────────────────────────┐")
-    for pattern in report.workflow_patterns:
-        print(f"│  • {pattern.description}")
-        print(f"│    Confidence: {pattern.confidence:.0%}")
-        if pattern.recommendation:
-            print(f"│    💡 {pattern.recommendation}")
-    print("└─────────────────────────────────────────────────┘")
+# Test file count
+find src -name "*.test.ts" -o -name "*.spec.ts" | wc -l
 
-    if report.productivity_metrics:
-        pm = report.productivity_metrics
-        print("\n┌─ PRODUCTIVITY METRICS ──────────────────────────┐")
-        print(f"│  Commits/day:      {pm.commits_per_day:.1f}")
-        print(f"│  Avg commit size:  {pm.avg_commit_size:.0f} lines")
-        print(f"│  Test ratio:       {pm.test_to_code_ratio:.1%}")
-        print(f"│  Feature velocity: {pm.feature_velocity:.1f}/week")
-        print(f"│  Focus time:       {pm.focus_time_percentage:.0f}%")
-        print("└─────────────────────────────────────────────────┘")
-
-    if report.quality_predictions:
-        print("\n┌─ QUALITY PREDICTIONS (7 days) ─────────────────┐")
-        for pred in report.quality_predictions:
-            trend_icon = "↑" if pred.trend == "improving" else "↓" if pred.trend == "declining" else "→"
-            print(f"│  {pred.metric_name}:")
-            print(f"│    Current:  {pred.current_value:.1f}")
-            print(f"│    Predicted: {pred.predicted_value_7d:.1f} {trend_icon}")
-            print(f"│    Confidence: {pred.confidence:.0%}")
-        print("└─────────────────────────────────────────────────┘")
+# Type safety
+grep -rn "as any" src/ --include="*.ts" | grep -v test | grep -v __tests__ | wc -l
 ```
 
-### Export Metrics
+### 6. Governance & Agents
 
-```python
-# Export to different formats
-export_result = dashboard.export_metrics(ExportFormat.JSON)
-if export_result.is_ok():
-    print(export_result.value)
+Read `.claude/governance.json` and count `.claude/agents/*.md`.
+
+### 7. Dependencies
+```bash
+npm outdated 2>/dev/null | head -20
+jq '.dependencies | length' package.json 2>/dev/null
+jq '.devDependencies | length' package.json 2>/dev/null
 ```
 
-### Compare Periods
+## Display Enhanced Dashboard
 
-```python
-from datetime import datetime, timedelta
-from forge.services.dashboard_service import DateRange
+```
+NXTG-FORGE PROJECT DASHBOARD
+===============================
+Generated: {timestamp}
 
-# Define periods
-now = datetime.utcnow()
-period1 = DateRange(
-    start=now - timedelta(days=14),
-    end=now - timedelta(days=7)
-)
-period2 = DateRange(
-    start=now - timedelta(days=7),
-    end=now
-)
+PROJECT
+  Name: {name} v{version}
+  Branch: {branch} ({commit_hash})
+  Lines of code: {loc} across {file_count} files
 
-# Compare
-comparison_result = dashboard.compare_periods(period1, period2)
-if comparison_result.is_ok():
-    comp = comparison_result.value
+HEALTH SCORE: {calculated_score}/100
+  Tests:    {test_score}/25  ({pass_count}/{total_count} passing)
+  Types:    {type_score}/25  ({error_count} TS errors, {any_count} 'as any')
+  Security: {sec_score}/25   ({vuln_count} vulnerabilities)
+  Quality:  {qual_score}/25  ({console_count} console.logs, {todo_count} TODOs)
 
-    print(f"\n┌─ PERIOD COMPARISON ─────────────────────────────┐")
-    print(f"│  Summary: {comp.summary}")
-    print(f"│")
+GIT ACTIVITY (last 7 days)
+  Commits: {total_commits}
+  {commit_heatmap_visualization}
 
-    if comp.improvements:
-        print(f"│  Improvements:")
-        for improvement in comp.improvements:
-            print(f"│    ✓ {improvement}")
+  Recent:
+    {hash} {message} ({time})
+    {hash} {message} ({time})
+    {hash} {message} ({time})
 
-    if comp.regressions:
-        print(f"│  Regressions:")
-        for regression in comp.regressions:
-            print(f"│    ⚠ {regression}")
+TESTS
+  Suites: {suite_count}
+  Tests:  {pass}/{total} passing ({duration})
+  Coverage: {file_coverage}% file coverage
 
-    print("└─────────────────────────────────────────────────┘")
+TYPESCRIPT
+  Errors: {error_count}
+  Warnings: {warning_count}
+  Status: {CLEAN / {error_count} errors}
+
+SECURITY
+  Vulnerabilities: {critical} critical, {high} high, {moderate} moderate
+  Dependencies: {dep_count} prod, {dev_dep_count} dev
+  Outdated: {outdated_count}
+
+GOVERNANCE
+  Status: {status}
+  Workstreams: {active}/{total}
+  Agents: {agent_count} available
+  Commands: {command_count} available
+
+RECOMMENDATIONS
+  1. {based on lowest score dimension}
+  2. {based on second lowest}
+  3. {based on third lowest}
+
+---
+Quick Actions:
+  /frg-test          Run tests
+  /frg-gap-analysis  Deep analysis
+  /frg-optimize      Optimization scan
+  /frg-report        Activity report
 ```
 
-## Integration with Morning Report
+## Health Score Calculation
 
-If overnight session detected, show session report first:
-
-```python
-from forge.services import SessionReporter
-
-reporter = SessionReporter(Path.cwd())
-
-# Check for morning report
-should_show_result = reporter.should_display_report_on_startup()
-if should_show_result.unwrap_or(False):
-    # Get last session ID from state
-    with open(".claude/forge/state.json") as f:
-        state = json.load(f)
-    session_id = state.get("last_session", {}).get("id")
-
-    if session_id:
-        report_result = reporter.generate_session_report(session_id)
-        if report_result.is_ok():
-            print(reporter.format_report(report_result.value))
-            print("\n" + "═" * 60 + "\n")
-
-# Then show regular status
-# (continue with dashboard display)
-```
-
-## Overnight Activity Detection
-
-Detect if work happened overnight and show summary:
-
-```python
-# Check if last commit was > 4 hours ago
-import subprocess
-result = subprocess.run(
-    ["git", "log", "-1", "--format=%ar"],
-    capture_output=True,
-    text=True
-)
-
-if result.returncode == 0:
-    time_ago = result.stdout.strip()
-
-    if "hours ago" in time_ago:
-        hours = int(time_ago.split()[0])
-        if hours >= 4:
-            print("╭─ OVERNIGHT ACTIVITY DETECTED ────────────────────╮")
-            print("│                                                   │")
-            print("│  Work continued while you were away!              │")
-            print("│  Generating summary of changes...                │")
-            print("│                                                   │")
-            print("╰───────────────────────────────────────────────────╯\n")
-
-            # Show session report
-            # (as shown above)
-```
+Calculate a 0-100 score:
+- **Tests (25 pts)**: 25 * (passing / total). 0 if no tests.
+- **Types (25 pts)**: 25 if 0 TS errors, -5 per error, -1 per 'as any'. Min 0.
+- **Security (25 pts)**: 25 - (critical*10 + high*5 + moderate*2). Min 0.
+- **Quality (25 pts)**: 25 - (console.logs + TODOs/5). Min 0.
 
 ## Error Handling
 
-All operations use Result types for explicit error handling:
-
-```python
-# Pattern: Check for errors and provide fallbacks
-dashboard_result = dashboard.get_dashboard_data()
-if dashboard_result.is_error():
-    print(f"⚠️  Unable to load dashboard: {dashboard_result.error.message}")
-    print("   Falling back to basic status...")
-    # Show basic status from state.json
-    exit(0)  # Don't fail, degrade gracefully
-```
-
-## Performance Targets
-
-- Dashboard load: < 500ms
-- Chart generation: < 100ms
-- Analytics report: < 1s
-- Export operations: < 200ms
-
-All operations should be fast enough for interactive use.
+If any data source fails, show "N/A" and continue with available data.
+Always calculate the health score from available dimensions.

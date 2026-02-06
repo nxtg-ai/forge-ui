@@ -1,149 +1,104 @@
-# Upgrade Command
+---
+description: "Upgrade NXTG-Forge configuration and agents"
+---
 
-Upgrade NXTG-Forge version, migrate configurations, and update project structure.
+# NXTG-Forge Upgrade
 
-## Usage
+You are the **Upgrade Manager** - update NXTG-Forge configuration, agents, and commands to the latest version.
 
-```bash
-/upgrade [version] [--check] [--dry-run] [--backup]
+## Parse Arguments
+
+Arguments received: `$ARGUMENTS`
+
+Options:
+- No arguments: Check for updates and apply
+- `--check`: Only check what would be updated
+- `--agents`: Only update agent definitions
+- `--commands`: Only update command definitions
+- `--config`: Only update configuration files
+
+## Step 1: Current State Analysis
+
+Gather current setup info:
+
+1. Read `.claude/forge/config.yml` for current version
+2. Count current agents: `ls .claude/agents/*.md | wc -l`
+3. Count current commands: `ls .claude/commands/*.md | wc -l`
+4. Check governance: Read `.claude/governance.json`
+
+Display:
+```
+CURRENT NXTG-FORGE STATE
+===========================
+Config: {exists/missing}
+Agents: {count} defined
+Commands: {count} defined
+Governance: {active/missing}
+Hooks: {count} configured
 ```
 
-## Arguments
+## Step 2: Check for Gaps
 
-- `version`: Target version (latest if omitted)
-- `--check`: Check for available upgrades
-- `--dry-run`: Preview changes without applying
-- `--backup`: Create backup before upgrading
-
-## Upgrade Process
-
-### 1. Check Current Version
-
-```bash
-/upgrade --check
-```
-
-Output:
-```
-Current Version: 3.0.0
-Latest Version: 3.2.0
-
-Available Upgrades:
-- 3.0.0 → 3.1.0 (Minor)
-  - New: Multi-agent workflows
-  - New: Enhanced checkpointing
-  - Fixed: State synchronization
-
-- 3.1.0 → 3.2.0 (Patch)
-  - Fixed: Configuration validation
-  - Improved: Performance optimizations
-```
-
-### 2. Preview Upgrade
-
-```bash
-/upgrade --dry-run
-```
-
-### 3. Backup
-
-```bash
-/upgrade --backup
-```
-
-Creates: `.claude/backups/pre-upgrade-20250107.tar.gz`
-
-### 4. Perform Upgrade
-
-```bash
-/upgrade
-```
-
-Output:
-```
-Upgrading NXTG-Forge...
-
-Phase 1: Backup
-  ✓ Created backup: pre-upgrade-20250107.tar.gz
-
-Phase 2: Migration
-  ✓ Updated config schema
-  ✓ Migrated state.json
-  ✓ Updated hooks
-  ✓ Updated templates
-
-Phase 3: Verification
-  ✓ Config validated
-  ✓ State validated
-  ✓ All checks passed
-
-Upgrade complete: 3.0.0 → 3.2.0
-```
-
-## What Gets Upgraded
-
-1. Core system files
-2. Configuration schema
-3. State management
-4. Command definitions
-5. Skill definitions
-6. Templates
-7. Workflows
-8. Hooks
-
-## Breaking Changes
-
-Major version upgrades may include breaking changes:
+Compare current state against expected state:
+- Are all standard agents present?
+- Are all standard commands present?
+- Is governance.json valid?
+- Are hooks configured in settings.json?
 
 ```
-Upgrading to 4.0.0 includes breaking changes:
+UPGRADE ANALYSIS
+=================
+  Agents: {current}/{expected} ({missing} missing)
+  Commands: {current}/{expected} ({missing} missing)
+  Config: {valid/needs update}
+  Hooks: {configured/missing}
 
-1. State file format changed
-   Migration: Automatic
-   Impact: None if using latest state schema
-
-2. Hook signature updated
-   Migration: Manual update required
-   Files: .claude/hooks/*.sh
-
-3. Deprecated commands removed
-   - /old-command → Use /new-command instead
+  Items to update: {count}
 ```
 
-## Rollback
+## Step 3: Apply Updates
+
+### If `--check`, stop here and show what would change.
+
+For each missing or outdated item:
+1. Show what will be created/updated
+2. Create/update the file
+3. Confirm success
+
+```
+APPLYING UPDATES
+==================
+  [x] Updated {item}
+  [x] Created {item}
+  [x] Fixed {item}
+
+  {count} items updated successfully.
+```
+
+## Step 4: Verify
+
+After upgrade:
+1. Verify all files exist
+2. Validate JSON files parse correctly
+3. Run quick health check
+
+```
+UPGRADE COMPLETE
+==================
+  Before: {old_count} agents, {old_cmd_count} commands
+  After: {new_count} agents, {new_cmd_count} commands
+
+  All configurations valid.
+
+  Run /frg-status for full project state.
+```
+
+## Error Handling
 
 If upgrade fails:
-
-```bash
-/upgrade --rollback
 ```
+Upgrade failed: {error}
 
-Restores from pre-upgrade backup.
-
-## Configuration Migration
-
-Automatic migration of config files:
-
+No changes were made (or changes rolled back).
+Try: /frg-init to reinitialize from scratch.
 ```
-Old config.json → New config schema
-  + Added: agent_assignment settings
-  + Added: checkpoint_retention policy
-  - Removed: legacy_mode option
-  ~ Changed: state_sync.frequency (string → int)
-```
-
-## Best Practices
-
-1. Always create backup before upgrading
-2. Read release notes
-3. Test in development first
-4. Review breaking changes
-5. Update documentation
-6. Run tests after upgrade
-7. Verify integrations
-
-## See Also
-
-- `/init` - Initialize NXTG-Forge
-- `/status` - Check system health
-- `/checkpoint` - Create backup checkpoint

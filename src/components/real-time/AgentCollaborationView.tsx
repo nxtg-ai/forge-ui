@@ -64,7 +64,7 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
   const [hoveredAgent, setHoveredAgent] = useState<string | null>(null);
   const [typingAgents, setTypingAgents] = useState<Set<string>>(new Set());
 
-  // Simulate typing indicators
+  // Derive active indicators from agent status (not real-time typing events)
   useEffect(() => {
     const interval = setInterval(() => {
       const workingAgents = agents.filter(

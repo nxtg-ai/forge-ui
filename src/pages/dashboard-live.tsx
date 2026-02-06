@@ -11,19 +11,18 @@
  * - Full keyboard navigation and screen reader support
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { SafeAnimatePresence as AnimatePresence } from "../components/ui/SafeAnimatePresence";
 import { ChiefOfStaffDashboard } from "../components/ChiefOfStaffDashboard";
 import { CommandCenter } from "../components/CommandCenter";
+import { CommandOutputDrawer } from "../components/CommandOutputDrawer";
 import { LiveActivityFeed } from "../components/real-time/LiveActivityFeed";
 import { AgentCollaborationView } from "../components/real-time/AgentCollaborationView";
 import { GovernanceHUD } from "../components/governance";
 import { ContextWindowHUD } from "../components/terminal";
 import { AppShell } from "../components/layout";
-import { ErrorBoundary } from "../components/ErrorBoundary";
 import { type KeyboardShortcut } from "../components/ui/KeyboardShortcutsHelp";
-import type { OracleMessage } from "../components/infinity-terminal/OracleFeedMarquee";
 import {
   ToastProvider,
   useToast,
@@ -31,9 +30,12 @@ import {
 } from "../components/feedback/ToastSystem";
 import {
   useRealtimeConnection,
-  useOptimisticUpdate,
   useAdaptivePolling,
 } from "../hooks/useRealtimeConnection";
+import { useForgeCommands } from "../hooks/useForgeCommands";
+import { useDashboardData } from "../hooks/useDashboardData";
+import { useCommandOutput } from "../hooks/useCommandOutput";
+import { wsManager } from "../services/ws-manager";
 import { EngagementProvider, useEngagement } from "../contexts/EngagementContext";
 import { useLayout } from "../contexts/LayoutContext";
 import type {
@@ -45,13 +47,7 @@ import type {
 import {
   Activity,
   Users,
-  Zap,
-  Brain,
-  Shield,
-  MessageSquare,
-  Network,
   BarChart3,
-  RefreshCw,
 } from "lucide-react";
 
 // Dashboard keyboard shortcuts
@@ -62,13 +58,14 @@ const DASHBOARD_SHORTCUTS: KeyboardShortcut[] = [
   { key: "2", description: "Agents tab", category: "navigation" },
   { key: "3", description: "Activity tab", category: "navigation" },
   { key: "r", description: "Refresh data", category: "actions" },
+  { key: "Ctrl+`", description: "Toggle command output panel", category: "actions" },
   { key: "?", description: "Show keyboard shortcuts", category: "general" },
 ];
 
 // Dashboard with real-time integration
 const LiveDashboard: React.FC = () => {
   const { toast } = useToast();
-  const { mode: engagementMode } = useEngagement();
+  const { mode: engagementMode, setMode } = useEngagement();
 
   // Layout management from context
   const {
@@ -86,56 +83,25 @@ const LiveDashboard: React.FC = () => {
   );
   const [isExecuting, setIsExecuting] = useState(false);
 
+  // Command output drawer state
+  const commandOutput = useCommandOutput();
+
   // Screen reader announcements
   const [announcement, setAnnouncement] = useState("");
 
-  // Mock data - replace with real API
-  const [visionData] = useState({
-    mission:
-      "Build a next-generation development platform that orchestrates AI agents for rapid software delivery",
-    goals: [
-      "Automate 80% of development tasks",
-      "Reduce time-to-market by 10x",
-      "Maintain 99.9% code quality",
-    ],
-    constraints: ["Must be secure", "Must be scalable", "Must be maintainable"],
-    successMetrics: [
-      "Tasks automated",
-      "Development velocity",
-      "Code quality score",
-    ],
-    timeframe: "Q1 2024",
-  });
+  // Real data from API endpoints
+  const {
+    projectState,
+    visionData,
+    agents: realAgents,
+    loading: dashboardLoading,
+    error: dashboardError,
+    refresh: refreshDashboard,
+  } = useDashboardData();
 
-  const [projectState, setProjectState] = useState<ProjectState>({
-    phase: "building",
-    progress: 65,
-    blockers: [],
-    recentDecisions: [],
-    activeAgents: [],
-    healthScore: 87,
-  });
-
-  // Mock oracle messages for footer
-  const [oracleMessages] = useState<OracleMessage[]>([
-    {
-      id: "1",
-      type: "info",
-      message: "Dashboard initialized successfully",
-      timestamp: new Date(),
-    },
-    {
-      id: "2",
-      type: "success",
-      message: "Real-time connection established",
-      timestamp: new Date(),
-    },
-  ]);
-
-  // WebSocket connection for real-time updates
-  const { connectionState, messages, sendMessage, isConnected } =
+  // WebSocket connection for real-time updates (shared via wsManager singleton)
+  const { connectionState, isConnected } =
     useRealtimeConnection({
-      url: import.meta.env.VITE_WS_URL || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`,
       onOpen: () => {
         toast.success("Connected to Forge", {
           message: "Real-time updates enabled",
@@ -156,111 +122,32 @@ const LiveDashboard: React.FC = () => {
       },
     });
 
-  // Mock data updates - memoized callbacks
-  const updateAgentState = useCallback((agent: Agent) => {
-    setProjectState((prev) => ({
-      ...prev,
-      activeAgents: prev.activeAgents.map((a) =>
-        a.id === agent.id ? { ...a, ...agent } : a,
-      ),
-    }));
-  }, []);
-
-  const updateProjectProgress = useCallback((progress: number) => {
-    setProjectState((prev) => ({
-      ...prev,
-      progress: Math.min(100, progress),
-    }));
-
-    if (progress === 100) {
-      toast.success("Phase completed!", {
-        message: "Moving to the next phase...",
-        duration: 5000,
-      });
-    }
-  }, [toast]);
-
-  const handleNewBlocker = useCallback((blocker: Blocker) => {
-    setProjectState((prev) => ({
-      ...prev,
-      blockers: [blocker, ...prev.blockers].slice(0, 5),
-    }));
-
-    toast.warning("New blocker detected", {
-      message: blocker.title,
-      persistent: blocker.needsHuman,
-      actions: blocker.needsHuman
-        ? [
-            {
-              label: "View details",
-              onClick: () => setViewMode("overview"),
-            },
-          ]
-        : undefined,
-    });
-  }, [toast]);
-
-  const handleTaskCompleted = useCallback((task: { name: string }) => {
-    toast.success(`Task completed: ${task.name}`, {
-      duration: 3000,
-    });
-  }, [toast]);
-
-  // WebSocket message structure
-  interface RealtimeMessage {
-    type: 'agent_update' | 'project_progress' | 'blocker_detected' | 'task_completed';
-    payload: Agent | number | Blocker | { name: string };
-  }
-
-  // Process incoming WebSocket messages
-  const handleRealtimeMessage = useCallback((message: RealtimeMessage) => {
-    switch (message.type) {
-      case "agent_update":
-        updateAgentState(message.payload);
-        break;
-      case "project_progress":
-        updateProjectProgress(message.payload);
-        break;
-      case "blocker_detected":
-        handleNewBlocker(message.payload);
-        break;
-      case "task_completed":
-        handleTaskCompleted(message.payload);
-        break;
-    }
-  }, [updateAgentState, updateProjectProgress, handleNewBlocker, handleTaskCompleted]);
-
+  // Subscribe to specific event types for toasts (no blanket refresh)
   useEffect(() => {
-    messages.forEach((msg) => {
-      handleRealtimeMessage(msg);
-    });
-  }, [messages, handleRealtimeMessage]);
+    const unsubs = [
+      wsManager.subscribe("task_completed", (data: any) => {
+        toast.success(`Task completed: ${data?.name || "unknown"}`, {
+          duration: 3000,
+        });
+      }),
+      wsManager.subscribe("blocker_detected", (data: any) => {
+        toast.warning("New blocker detected", {
+          message: data?.title || "Unknown blocker",
+        });
+      }),
+    ];
+    return () => unsubs.forEach((unsub) => unsub());
+  }, [toast]);
 
-  // Optimistic updates for commands
-  const {
-    value: commandQueue,
-    update: updateCommandQueue,
-    isUpdating: isCommandExecuting,
-  } = useOptimisticUpdate<Command[]>([], async (commands) => {
-    const response = await fetch("/api/commands/execute", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ commands }),
-    });
-    return response.json();
-  });
+  // Fetch available commands from API
+  const { commands: availableCommands, isLoading: commandsLoading, error: commandsError } = useForgeCommands();
 
-  // Adaptive polling for non-WebSocket fallback
+  // Adaptive polling for non-WebSocket fallback - uses real dashboard refresh
   const { isPolling, forceRefresh } = useAdaptivePolling(
-    async () => {
-      const response = await fetch("/api/state");
-      if (!response.ok) return;
-      const result = await response.json();
-      if (result.success) setProjectState(result.data);
-    },
+    refreshDashboard,
     {
       enabled: !isConnected,
-      baseInterval: 2000,
+      baseInterval: 5000,
       maxInterval: 30000,
       onError: (error) => {
         toast.error("Failed to fetch status", {
@@ -270,49 +157,87 @@ const LiveDashboard: React.FC = () => {
     },
   );
 
-  // Command execution handler - memoized
+  // Show error toast if commands fail to load
+  useEffect(() => {
+    if (commandsError) {
+      toast.error("Failed to load commands", {
+        details: commandsError,
+        persistent: false,
+      });
+    }
+  }, [commandsError, toast]);
+
+  // Command execution handler - calls real /api/commands/execute endpoint
+  // Output is sent to the CommandOutputDrawer for full display.
+  // Toasts are now lightweight status notifications only (no truncated output).
   const handleCommandExecute = useCallback(async (command: string, args?: Record<string, unknown>) => {
     setIsExecuting(true);
 
-    // Show executing toast
-    const toastId = Date.now().toString();
-    toast.info("Executing command", {
-      ...toastPresets.commandExecuting(command),
-      id: toastId,
-    });
+    // Track in the output drawer
+    const entryId = commandOutput.startCommand(command);
 
     try {
-      // Optimistic update
-      await updateCommandQueue([
-        ...commandQueue,
-        { command, args, timestamp: new Date() },
-      ]);
+      const response = await fetch("/api/commands/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ command, args }),
+      });
 
-      // Send via WebSocket if connected
-      if (isConnected) {
-        sendMessage({
-          type: "execute_command",
-          payload: { command, args },
-        });
-      } else {
-        // Fallback to HTTP
-        const response = await fetch("/api/commands/execute", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ command, args }),
-        });
+      const result = await response.json();
 
-        if (!response.ok) throw new Error("Command execution failed");
+      if (!response.ok || !result.success) {
+        const output = result.data?.output || result.error || "Unknown error";
+        commandOutput.completeCommand(entryId, output, "error", result.data);
+
+        // Lightweight toast -- just the status, not the full output
+        toast.error(`${command} failed`, {
+          duration: 5000,
+          actions: [
+            {
+              label: "Retry",
+              onClick: () => handleCommandExecute(command, args),
+            },
+          ],
+        });
+        return;
       }
 
-      toast.success(`${command} completed successfully`, {
-        duration: 3000,
-      });
+      // Handle redirect commands (e.g., frg-feature -> terminal)
+      if (result.data?.redirect) {
+        const output = result.data.output || `Navigate to ${result.data.redirect}`;
+        commandOutput.completeCommand(entryId, output, "success");
+        toast.info(output, { duration: 5000 });
+        return;
+      }
+
+      // Full output goes to the drawer
+      const output = result.data?.output || "";
+      const metadata = result.data ? { ...result.data } : undefined;
+      // Remove the output string from metadata to avoid duplication
+      if (metadata) delete metadata.output;
+
+      commandOutput.completeCommand(entryId, output, "success", metadata);
+
+      // Lightweight success toast (no output, just status)
+      if (command === "frg-test" && result.data) {
+        const { passed, failed } = result.data;
+        toast.success(`Tests: ${passed} passed${failed ? `, ${failed} failed` : ""}`, {
+          duration: 4000,
+        });
+      } else if (command === "frg-deploy") {
+        toast.success("Build completed successfully", { duration: 4000 });
+      } else {
+        toast.success(`${command} completed`, { duration: 3000 });
+      }
+
+      // Refresh dashboard data after command execution
+      refreshDashboard();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      commandOutput.completeCommand(entryId, errorMessage, "error");
+
       toast.error(`${command} failed`, {
-        message: "An error occurred while executing the command",
-        details: errorMessage,
+        duration: 5000,
         actions: [
           {
             label: "Retry",
@@ -323,109 +248,65 @@ const LiveDashboard: React.FC = () => {
     } finally {
       setIsExecuting(false);
     }
-  }, [toast, commandQueue, updateCommandQueue, isConnected, sendMessage]);
+  }, [toast, refreshDashboard, commandOutput]);
 
-  // Mock available commands - memoized to prevent recreation
-  const availableCommands = useMemo(() => [
-    {
-      id: "status",
-      name: "Status Report",
-      description: "Get current project status",
-      category: "forge" as const,
-      icon: <Activity className="w-4 h-4" />,
-    },
-    {
-      id: "feature",
-      name: "New Feature",
-      description: "Start implementing a new feature",
-      category: "forge" as const,
-      icon: <Zap className="w-4 h-4" />,
-    },
-    {
-      id: "test",
-      name: "Run Tests",
-      description: "Execute test suite",
-      category: "test" as const,
-      icon: <Shield className="w-4 h-4" />,
-    },
-    {
-      id: "deploy",
-      name: "Deploy",
-      description: "Deploy to production",
-      category: "deploy" as const,
-      requiresConfirmation: true,
-      icon: <Network className="w-4 h-4" />,
-    },
-  ], []);
+  // Commands are now fetched via useForgeCommands hook
+  // Agents data fetched from worker pool API
+  const [workerAgents, setWorkerAgents] = useState<any[]>([]);
+  const [workerEdges, setWorkerEdges] = useState<any[]>([]);
 
-  // Mock agents data - memoized to prevent recreation
-  const mockAgents = useMemo(() => [
-    {
-      id: "arch-1",
-      name: "Architect",
-      role: "architect" as const,
-      status: "thinking" as const,
-      currentTask: "Designing authentication system",
-      confidence: 85,
-      collaboratingWith: ["dev-1"],
-      messagesInQueue: 2,
-      lastActivity: new Date(),
-      performance: {
-        tasksCompleted: 12,
-        successRate: 92,
-        avgResponseTime: 3.2,
-      },
-    },
-    {
-      id: "dev-1",
-      name: "Developer",
-      role: "developer" as const,
-      status: "working" as const,
-      currentTask: "Implementing user service",
-      confidence: 78,
-      collaboratingWith: ["arch-1", "qa-1"],
-      messagesInQueue: 0,
-      lastActivity: new Date(),
-      performance: {
-        tasksCompleted: 24,
-        successRate: 88,
-        avgResponseTime: 2.8,
-      },
-    },
-    {
-      id: "qa-1",
-      name: "QA Engineer",
-      role: "qa" as const,
-      status: "idle" as const,
-      currentTask: undefined,
-      confidence: 90,
-      collaboratingWith: [],
-      messagesInQueue: 5,
-      lastActivity: new Date(),
-      performance: {
-        tasksCompleted: 18,
-        successRate: 95,
-        avgResponseTime: 4.1,
-      },
-    },
-  ], []);
+  // Fetch real worker data for agent collaboration view
+  useEffect(() => {
+    const fetchWorkers = async () => {
+      try {
+        const response = await fetch("/api/workers");
+        if (!response.ok) return;
+        const result = await response.json();
+        if (result.success && result.data?.workers) {
+          const workers = result.data.workers;
+          // Transform workers to agent format for AgentCollaborationView
+          const agents = workers.map((w: any) => ({
+            id: w.id,
+            name: w.assignedWorkstream || `Worker ${w.id.slice(0, 6)}`,
+            role: w.assignedWorkstream === "architect" ? "architect" as const
+              : w.assignedWorkstream === "qa" ? "qa" as const
+              : w.assignedWorkstream === "devops" ? "devops" as const
+              : "developer" as const,
+            status: w.status === "idle" ? "idle" as const
+              : w.status === "busy" ? "working" as const
+              : w.status === "error" || w.status === "crashed" ? "blocked" as const
+              : "thinking" as const,
+            currentTask: w.currentTask?.command,
+            confidence: w.metrics?.successRate || 75,
+            collaboratingWith: [],
+            messagesInQueue: 0,
+            lastActivity: w.lastActivity ? new Date(w.lastActivity) : new Date(),
+            performance: {
+              tasksCompleted: w.metrics?.tasksCompleted || 0,
+              successRate: w.metrics?.successRate || 0,
+              avgResponseTime: w.metrics?.avgTaskDuration || 0,
+            },
+          }));
+          setWorkerAgents(agents);
 
-  const mockEdges = useMemo(() => [
-    {
-      from: "arch-1",
-      to: "dev-1",
-      type: "decision" as const,
-      isActive: true,
-      strength: 0.8,
-    },
-    {
-      from: "dev-1",
-      to: "qa-1",
-      type: "handoff" as const,
-      isActive: false,
-      strength: 0.5,
-    },
-  ], []);
+          // Build edges from consecutive workers
+          const edges = agents.slice(0, -1).map((a: any, i: number) => ({
+            from: a.id,
+            to: agents[i + 1].id,
+            type: "handoff" as const,
+            isActive: a.status === "working",
+            strength: 0.5,
+          }));
+          setWorkerEdges(edges);
+        }
+      } catch {
+        // Worker pool may not be initialized - that's fine
+      }
+    };
+    fetchWorkers();
+    const interval = setInterval(fetchWorkers, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Announce connection status changes
   useEffect(() => {
@@ -467,12 +348,12 @@ const LiveDashboard: React.FC = () => {
             <div
               data-testid="live-dashboard-status-bar"
               role="progressbar"
-              aria-label={isCommandExecuting ? "Command executing" : "No commands executing"}
-              aria-valuenow={isCommandExecuting ? undefined : 0}
+              aria-label={isExecuting ? "Command executing" : "No commands executing"}
+              aria-valuenow={isExecuting ? undefined : 0}
               className="fixed top-0 left-0 right-0 z-50 h-1 bg-gray-900"
             >
               <AnimatePresence>
-                {isCommandExecuting && (
+                {isExecuting && (
                   <motion.div
                     className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"
                     initial={{ x: "-100%" }}
@@ -572,9 +453,9 @@ const LiveDashboard: React.FC = () => {
             >
               <ChiefOfStaffDashboard
                 visionData={visionData}
-                projectState={projectState}
+                projectState={projectState as any}
                 agentActivity={[]}
-                onModeChange={() => {}} // No-op since mode is managed by EngagementContext
+                onModeChange={setMode}
                 currentMode={engagementMode}
               />
             </motion.div>
@@ -590,17 +471,20 @@ const LiveDashboard: React.FC = () => {
             >
               <h1 className="text-2xl font-bold mb-8">
                 Agent Collaboration Network
+                <span className="ml-3 text-xs font-medium px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 align-middle">
+                  Preview
+                </span>
               </h1>
               <AgentCollaborationView
-                agents={mockAgents}
-                edges={mockEdges}
+                agents={workerAgents}
+                edges={workerEdges}
                 viewMode="network"
               />
               <div className="mt-8">
                 <h2 className="text-lg font-semibold mb-4">Agent Details</h2>
                 <AgentCollaborationView
-                  agents={mockAgents}
-                  edges={mockEdges}
+                  agents={workerAgents}
+                  edges={workerEdges}
                   viewMode="list"
                 />
               </div>
@@ -622,20 +506,24 @@ const LiveDashboard: React.FC = () => {
         </AnimatePresence>
       </main>
 
-      {/* Command center */}
+      {/* Command center -- shifts up when output drawer is open */}
       <CommandCenter
         onCommandExecute={handleCommandExecute}
         availableCommands={availableCommands}
         projectContext={{
           name: "NXTG-Forge",
           phase: projectState.phase,
-          activeAgents: mockAgents.filter((a) => a.status !== "idle").length,
-          pendingTasks: 12,
+          activeAgents: workerAgents.filter((a: any) => a.status !== "idle").length,
+          pendingTasks: projectState.blockers.length,
           healthScore: projectState.healthScore,
           lastActivity: new Date(),
         }}
-        isExecuting={isExecuting || isCommandExecuting}
+        isExecuting={isExecuting}
+        isLoadingCommands={commandsLoading}
       />
+
+      {/* Command output drawer -- bottom slide-up panel for full output */}
+      <CommandOutputDrawer commandOutput={commandOutput} />
       </div>
     </AppShell>
   );

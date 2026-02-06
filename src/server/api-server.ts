@@ -20,8 +20,6 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import { GovernanceState } from "../types/governance.types";
 import { GovernanceStateManager } from "../services/governance-state-manager";
-import { MemoryService } from "../services/memory-service";
-import type { MemoryItem } from "../services/memory-service";
 import { AgentWorkerPool, PoolStatus, AgentTask } from "./workers";
 import { InitService } from "../services/init-service";
 import type {
@@ -38,8 +36,179 @@ import {
   flushSentry,
 } from "../monitoring/sentry";
 import swaggerRouter from "./swagger";
+import { StatusService } from "../services/status-service";
+import type { ForgeStatus } from "../services/status-service";
+import intelligenceRouter from "./routes/intelligence.js";
+import * as crypto from "crypto";
+import {
+  getIntelligenceContext,
+  injectIntelligence,
+} from "../utils/intelligence-injector";
+import { getLogger } from "../utils/logger";
 
 const app = express();
+const logger = getLogger('api-server');
+
+// ============= Security: Validation Schemas =============
+
+const visionCaptureSchema = z.object({
+  text: z.string().min(1).max(10000),
+});
+
+const commandExecuteSchema = z.object({
+  name: z.string().min(1).max(200),
+  args: z.record(z.string(), z.unknown()).optional(),
+  context: z.record(z.string(), z.unknown()).optional(),
+});
+
+const feedbackSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  category: z.string().min(1).max(100),
+  description: z.string().min(1).max(5000),
+  url: z.string().max(500).optional(),
+  userAgent: z.string().max(500).optional(),
+  timestamp: z.string().optional(),
+});
+
+const agentTaskSchema = z.object({
+  name: z.string().min(1).max(200),
+  type: z.string().min(1).max(100),
+  priority: z.enum(["low", "medium", "high", "critical"]).optional(),
+  context: z.record(z.string(), z.unknown()).optional(),
+});
+
+// ============= Security: Rate Limiting =============
+
+interface RateLimitEntry {
+  count: number;
+  resetTime: number;
+}
+
+class InMemoryRateLimiter {
+  private requests = new Map<string, RateLimitEntry>();
+  private cleanupInterval: NodeJS.Timeout;
+
+  constructor(
+    private windowMs: number,
+    private maxRequests: number,
+  ) {
+    // Cleanup expired entries every minute
+    this.cleanupInterval = setInterval(() => {
+      const now = Date.now();
+      for (const [key, entry] of this.requests.entries()) {
+        if (now > entry.resetTime) {
+          this.requests.delete(key);
+        }
+      }
+    }, 60000);
+  }
+
+  check(identifier: string): { allowed: boolean; remaining: number; resetTime: number } {
+    const now = Date.now();
+    const entry = this.requests.get(identifier);
+
+    if (!entry || now > entry.resetTime) {
+      const resetTime = now + this.windowMs;
+      this.requests.set(identifier, { count: 1, resetTime });
+      return { allowed: true, remaining: this.maxRequests - 1, resetTime };
+    }
+
+    if (entry.count >= this.maxRequests) {
+      return { allowed: false, remaining: 0, resetTime: entry.resetTime };
+    }
+
+    entry.count++;
+    return { allowed: true, remaining: this.maxRequests - entry.count, resetTime: entry.resetTime };
+  }
+
+  cleanup() {
+    clearInterval(this.cleanupInterval);
+    this.requests.clear();
+  }
+}
+
+// Rate limiters - generous for reads (dashboard polls multiple endpoints),
+// strict for writes and auth
+const isProd = process.env.NODE_ENV === "production";
+const generalLimiter = new InMemoryRateLimiter(60000, isProd ? 300 : 1000); // reads: generous
+const writeLimiter = new InMemoryRateLimiter(60000, isProd ? 30 : 100); // writes: moderate
+const authLimiter = new InMemoryRateLimiter(60000, isProd ? 10 : 50); // auth: strict
+
+// Rate limiting middleware factory
+function rateLimit(limiter: InMemoryRateLimiter) {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const identifier = req.ip || req.socket.remoteAddress || "unknown";
+    const result = limiter.check(identifier);
+
+    res.setHeader("X-RateLimit-Limit", limiter["maxRequests"]);
+    res.setHeader("X-RateLimit-Remaining", result.remaining);
+    res.setHeader("X-RateLimit-Reset", new Date(result.resetTime).toISOString());
+
+    if (!result.allowed) {
+      return res.status(429).json({
+        success: false,
+        error: "Too many requests",
+        retryAfter: Math.ceil((result.resetTime - Date.now()) / 1000),
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    next();
+  };
+}
+
+// ============= Security: WebSocket Authentication =============
+
+const wsAuthTokens = new Map<string, { createdAt: number; clientId: string }>();
+const WS_TOKEN_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
+
+function generateWSAuthToken(clientId: string): string {
+  const token = crypto.randomBytes(32).toString("hex");
+  wsAuthTokens.set(token, { createdAt: Date.now(), clientId });
+  return token;
+}
+
+function validateWSAuthToken(token: string | undefined): boolean {
+  if (!token) return false;
+  const data = wsAuthTokens.get(token);
+  if (!data) return false;
+  if (Date.now() - data.createdAt > WS_TOKEN_EXPIRY_MS) {
+    wsAuthTokens.delete(token);
+    return false;
+  }
+  return true;
+}
+
+// Cleanup expired tokens periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, data] of wsAuthTokens.entries()) {
+    if (now - data.createdAt > WS_TOKEN_EXPIRY_MS) {
+      wsAuthTokens.delete(token);
+    }
+  }
+}, 60000);
+
+// ============= Security: Input Validation Middleware =============
+
+function validateRequest(schema: z.ZodSchema) {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    try {
+      schema.parse(req.body);
+      next();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid request data",
+          details: error.issues,
+          timestamp: new Date().toISOString(),
+        });
+      }
+      next(error);
+    }
+  };
+}
 
 // Initialize Sentry early (before other middleware)
 let sentryReady = false;
@@ -53,11 +222,11 @@ initSentryServer()
         message: "API server starting",
         level: "info",
       });
-      console.log("[Sentry] Error tracking ready");
+      logger.info("[Sentry] Error tracking ready");
     }
   })
   .catch((err) => {
-    console.warn("[Sentry] Initialization failed:", err);
+    logger.warn("[Sentry] Initialization failed:", err);
   });
 const server = createServer(app);
 const wss = new WebSocketServer({ noServer: true });
@@ -65,6 +234,32 @@ const wss = new WebSocketServer({ noServer: true });
 // Initialize Governance State Manager
 const projectRoot = process.cwd();
 const governanceStateManager = new GovernanceStateManager(projectRoot);
+
+// File watcher for governance.json changes
+import { watch } from "fs";
+let governanceWatcher: ReturnType<typeof watch> | null = null;
+
+function setupGovernanceWatcher() {
+  const governancePath = path.join(projectRoot, ".claude/governance.json");
+
+  governanceWatcher = watch(governancePath, async (eventType) => {
+    if (eventType === "change") {
+      try {
+        // Read updated state
+        const state = await governanceStateManager.readState();
+
+        // Broadcast to all WebSocket clients
+        broadcast("governance.update", state);
+
+        logger.info("[Governance] State change detected and broadcast to clients");
+      } catch (error) {
+        logger.error("[Governance] Failed to read state after change:", error);
+      }
+    }
+  });
+
+  logger.info("[Governance] File watcher initialized");
+}
 
 // Initialize Worker Pool (lazy - starts on first request or explicit init)
 let workerPool: AgentWorkerPool | null = null;
@@ -82,22 +277,80 @@ async function getWorkerPool(): Promise<AgentWorkerPool> {
     });
 
     await workerPool.initialize();
-    console.log("[API] Worker pool initialized");
+    logger.info("[API] Worker pool initialized");
   }
   return workerPool;
 }
 
-// Middleware
+// ============= Security: Middleware Configuration =============
+
+// Security headers (basic implementation, helmet would provide more)
+app.use((req, res, next) => {
+  // NOTE: helmet package not installed - add with: npm install helmet
+  // For now, setting critical headers manually
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+
+  // Content Security Policy
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' data: blob:; " +
+    "font-src 'self' data:; " +
+    "connect-src 'self' ws: wss:; " +
+    "frame-ancestors 'none';"
+  );
+
+  next();
+});
+
+// CORS configuration - restrictive in production, permissive in dev
+const isProduction = process.env.NODE_ENV === "production";
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
+  : ["http://localhost:5050", "http://127.0.0.1:5050", "http://localhost:5173"];
+
 app.use(
   cors({
-    origin: true, // Allow all origins for multi-device access (mobile, tablet, etc.)
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      // In development, allow all origins for multi-device testing
+      if (!isProduction) {
+        return callback(null, true);
+      }
+
+      // In production, check against allowed list
+      if (allowedOrigins.includes(origin) || allowedOrigins.includes("*")) {
+        return callback(null, true);
+      }
+
+      logger.warn(`[Security] Blocked CORS request from unauthorized origin: ${origin}`);
+      callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   }),
 );
-app.use(express.json());
+
+// Request size limit to prevent DoS
+app.use(express.json({ limit: "1mb" }));
+
+// General rate limiting on all routes
+app.use(rateLimit(generalLimiter));
 
 // API Documentation (Swagger UI)
 app.use(swaggerRouter);
+
+// Intelligence Cards API (reads native MEMORY.md)
+app.use("/api/memory", intelligenceRouter);
 
 // Initialize core services
 const visionManager = new VisionSystem(process.cwd());
@@ -112,13 +365,37 @@ const mcpSuggestionEngine = new MCPSuggestionEngine();
 const runspaceManager = new RunspaceManager();
 // Initialize init service for project setup
 const initService = new InitService(projectRoot);
+// Initialize status service for /frg-status command
+const statusService = new StatusService(projectRoot);
 
 // WebSocket connection management
 const clients = new Set<WebSocket>();
 
-wss.on("connection", (ws) => {
+wss.on("connection", (ws, req) => {
+  // Security: Validate origin
+  const origin = req.headers.origin;
+  if (isProduction && origin && !allowedOrigins.includes(origin)) {
+    logger.error(`[Security] Blocked WebSocket from unauthorized origin: ${origin}`);
+    ws.send(JSON.stringify({ type: "error", error: "Unauthorized origin" }));
+    ws.close();
+    return;
+  }
+
+  // Security: Require authentication token (production only)
+  if (isProduction) {
+    const url = new URL(req.url!, `http://${req.headers.host}`);
+    const token = url.searchParams.get("token");
+
+    if (!validateWSAuthToken(token ?? undefined)) {
+      logger.error("[Security] WebSocket connection rejected: invalid or missing token");
+      ws.send(JSON.stringify({ type: "error", error: "Authentication required" }));
+      ws.close();
+      return;
+    }
+  }
+
   clients.add(ws);
-  console.log("New WebSocket client connected");
+  logger.info("New WebSocket client connected (authenticated)");
 
   // Send initial state
   ws.send(
@@ -134,17 +411,17 @@ wss.on("connection", (ws) => {
       const message = JSON.parse(data.toString());
       handleWSMessage(ws, message);
     } catch (error) {
-      console.error("Invalid WebSocket message:", error);
+      logger.error("Invalid WebSocket message:", error);
     }
   });
 
   ws.on("close", () => {
     clients.delete(ws);
-    console.log("WebSocket client disconnected");
+    logger.info("WebSocket client disconnected");
   });
 
   ws.on("error", (error) => {
-    console.error("WebSocket error:", error);
+    logger.error("WebSocket error:", error);
     clients.delete(ws);
   });
 });
@@ -173,12 +450,12 @@ async function handleWSMessage(ws: WebSocket, message: Record<string, unknown>) 
       break;
 
     case "state.update":
-      await stateManager.updateState(message.payload);
+      await stateManager.updateState(message.payload as any);
       broadcast("state.update", stateManager.getState());
       break;
 
     case "command.execute":
-      const result = await orchestrator.executeCommand(message.payload);
+      const result = await orchestrator.executeCommand(message.payload as string);
       ws.send(
         JSON.stringify({
           type: "command.result",
@@ -190,11 +467,33 @@ async function handleWSMessage(ws: WebSocket, message: Record<string, unknown>) 
 
     default:
       // Only log truly unknown message types (not common ones)
-      if (!['pong', 'heartbeat'].includes(message.type)) {
-        console.log("Unknown message type:", message.type);
+      if (!['pong', 'heartbeat'].includes(String(message.type || ''))) {
+        logger.info(`Unknown message type: ${message.type}`);
       }
   }
 }
+
+// ============= Security & Auth Endpoints =============
+
+// Get WebSocket authentication token
+app.post("/api/auth/ws-token", rateLimit(authLimiter), (req, res) => {
+  try {
+    const clientId = req.ip || req.socket.remoteAddress || crypto.randomBytes(8).toString("hex");
+    const token = generateWSAuthToken(clientId);
+
+    res.json({
+      success: true,
+      data: { token, expiresIn: WS_TOKEN_EXPIRY_MS },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to generate token",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
 
 // ============= Vision Endpoints =============
 
@@ -233,24 +532,29 @@ app.put("/api/vision", async (req, res) => {
   }
 });
 
-app.post("/api/vision/capture", async (req, res) => {
-  try {
-    const { text } = req.body;
-    const vision = await visionSystem.captureVision(text);
-    broadcast("vision.change", vision);
-    res.json({
-      success: true,
-      data: vision,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
+app.post(
+  "/api/vision/capture",
+  rateLimit(writeLimiter),
+  validateRequest(visionCaptureSchema),
+  async (req, res) => {
+    try {
+      const { text } = req.body;
+      const vision = await visionSystem.captureVision(text);
+      broadcast("vision.change", vision);
+      res.json({
+        success: true,
+        data: vision,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        timestamp: new Date().toISOString(),
+      });
+    }
+  },
+);
 
 app.get("/api/vision/history", async (req, res) => {
   try {
@@ -330,7 +634,7 @@ app.post("/api/mcp/suggestions", async (req, res) => {
       industry: detectIndustry(vision),
     };
 
-    console.log(
+    logger.info(
       "🤖 Generating MCP suggestions for vision:",
       visionContext.mission,
     );
@@ -342,7 +646,7 @@ app.post("/api/mcp/suggestions", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("MCP suggestion error:", error);
+    logger.error("MCP suggestion error:", error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -520,61 +824,41 @@ app.get("/api/agents/active", async (req, res) => {
   }
 });
 
-app.post("/api/agents/:agentId/tasks", async (req, res) => {
-  try {
-    const { agentId } = req.params;
-    const task = req.body;
-    const result = await coordinationService.assignTask(agentId, task);
+app.post(
+  "/api/agents/:agentId/tasks",
+  rateLimit(writeLimiter),
+  validateRequest(agentTaskSchema),
+  async (req, res) => {
+    try {
+      const agentId = String(req.params.agentId || '');
+      const task = req.body;
+      const result = await coordinationService.assignTask(agentId, task);
 
-    // Broadcast agent activity
-    broadcast("agent.activity", {
-      agent: agentId,
-      action: `Assigned task: ${task.name}`,
-      status: "started",
-      timestamp: new Date().toISOString(),
-    });
+      // Broadcast agent activity
+      broadcast("agent.activity", {
+        agent: agentId,
+        action: `Assigned task: ${task.name}`,
+        status: "started",
+        timestamp: new Date().toISOString(),
+      });
 
-    res.json({
-      success: true,
-      data: result,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
+      res.json({
+        success: true,
+        data: result,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        timestamp: new Date().toISOString(),
+      });
+    }
+  },
+);
 
 // ============= Command Endpoints =============
-
-app.post("/api/commands/execute", async (req, res) => {
-  try {
-    const command = req.body;
-    const result = await orchestrator.executeCommand(command);
-
-    // Broadcast command execution
-    broadcast("command.executed", {
-      command,
-      result,
-      timestamp: new Date().toISOString(),
-    });
-
-    res.json({
-      success: true,
-      data: { result },
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
+// Note: Main /api/commands/execute handler is below with EXECUTABLE_COMMANDS
 
 app.get("/api/commands/history", async (req, res) => {
   try {
@@ -606,6 +890,396 @@ app.post("/api/commands/suggestions", async (req, res) => {
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// Get available commands list
+app.get("/api/commands", async (req, res) => {
+  try {
+    // Import the forge commands registry
+    const { FORGE_COMMANDS } = await import("../config/forge-commands");
+
+    // Transform to UI-compatible format
+    const commands = FORGE_COMMANDS.map((cmd) => ({
+      id: cmd.id,
+      name: cmd.name,
+      description: cmd.description,
+      category: cmd.category,
+      hotkey: cmd.hotkey,
+      requiresConfirmation: cmd.requiresConfirmation,
+      severity: cmd.severity,
+      // Icon name is sent as string, component resolves on client
+      iconName: cmd.icon.name,
+    }));
+
+    res.json({
+      success: true,
+      data: commands,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// ============= Command Execution Endpoint =============
+
+// Whitelist of commands that can be executed from the UI
+const EXECUTABLE_COMMANDS: Record<string, () => Promise<{ success: boolean; output: string; data?: unknown }>> = {
+  "frg-status": async () => {
+    const result = await statusService.getStatus();
+    if (result.isErr()) {
+      return { success: false, output: result.error.message };
+    }
+    const status = result.unwrap();
+    const cliOutput = StatusService.formatForCLI(status);
+    return { success: true, output: cliOutput, data: status };
+  },
+
+  "frg-test": async () => {
+    const { execSync } = await import("child_process");
+    try {
+      const output = execSync("npx vitest run --reporter=verbose 2>&1", {
+        cwd: projectRoot,
+        timeout: 120000,
+        encoding: "utf-8",
+        maxBuffer: 1024 * 1024 * 5,
+      });
+      const passMatch = output.match(/(\d+) passed/);
+      const failMatch = output.match(/(\d+) failed/);
+      const passed = passMatch ? parseInt(passMatch[1]) : 0;
+      const failed = failMatch ? parseInt(failMatch[1]) : 0;
+      return {
+        success: failed === 0,
+        output,
+        data: { passed, failed, total: passed + failed },
+      };
+    } catch (error: any) {
+      const output = error.stdout || error.stderr || error.message;
+      const failMatch = output.match(/(\d+) failed/);
+      const passMatch = output.match(/(\d+) passed/);
+      return {
+        success: false,
+        output,
+        data: {
+          passed: passMatch ? parseInt(passMatch[1]) : 0,
+          failed: failMatch ? parseInt(failMatch[1]) : 0,
+        },
+      };
+    }
+  },
+
+  "frg-deploy": async () => {
+    const { execSync } = await import("child_process");
+    // Pre-flight: type check
+    try {
+      execSync("npx tsc --noEmit 2>&1", {
+        cwd: projectRoot,
+        timeout: 60000,
+        encoding: "utf-8",
+      });
+    } catch (error: any) {
+      return {
+        success: false,
+        output: `Pre-flight failed: TypeScript errors\n${error.stdout || error.message}`,
+      };
+    }
+    // Build
+    try {
+      const output = execSync("npx vite build 2>&1", {
+        cwd: projectRoot,
+        timeout: 60000,
+        encoding: "utf-8",
+      });
+      return { success: true, output, data: { stage: "build-complete" } };
+    } catch (error: any) {
+      return {
+        success: false,
+        output: `Build failed:\n${error.stdout || error.message}`,
+      };
+    }
+  },
+
+  "frg-feature": async () => {
+    return {
+      success: true,
+      output: "Feature creation requires the Infinity Terminal.\nNavigate to the Terminal page and use: /frg-feature <name>",
+      data: { redirect: "/terminal" },
+    };
+  },
+
+  "frg-gap-analysis": async () => {
+    const { execSync } = await import("child_process");
+    const lines: string[] = [];
+
+    // Test coverage
+    try {
+      const testOutput = execSync("npx vitest run --reporter=verbose 2>&1 | tail -5", {
+        cwd: projectRoot, timeout: 120000, encoding: "utf-8",
+      });
+      lines.push("## Test Coverage\n" + testOutput.trim());
+    } catch { lines.push("## Test Coverage\nFailed to run tests"); }
+
+    // Doc coverage
+    try {
+      const srcFiles = execSync("find src -name '*.ts' -o -name '*.tsx' | grep -v test | grep -v __tests__ | wc -l", {
+        cwd: projectRoot, timeout: 10000, encoding: "utf-8",
+      }).trim();
+      const docFiles = execSync("find docs -name '*.md' 2>/dev/null | wc -l", {
+        cwd: projectRoot, timeout: 10000, encoding: "utf-8",
+      }).trim();
+      lines.push(`## Documentation\nSource files: ${srcFiles}\nDoc files: ${docFiles}`);
+    } catch { lines.push("## Documentation\nFailed to analyze"); }
+
+    return { success: true, output: lines.join("\n\n") };
+  },
+
+  // ============= Git Commands =============
+
+  "git-status": async () => {
+    const { execSync } = await import("child_process");
+    try {
+      const branch = execSync("git branch --show-current 2>&1", {
+        cwd: projectRoot, timeout: 10000, encoding: "utf-8",
+      }).trim();
+      const status = execSync("git status --short 2>&1", {
+        cwd: projectRoot, timeout: 10000, encoding: "utf-8",
+      }).trim();
+      const log = execSync("git log --oneline -5 2>&1", {
+        cwd: projectRoot, timeout: 10000, encoding: "utf-8",
+      }).trim();
+      const ahead = execSync("git rev-list --count @{u}..HEAD 2>/dev/null || echo 'no upstream'", {
+        cwd: projectRoot, timeout: 10000, encoding: "utf-8",
+      }).trim();
+
+      const lines = [
+        `Branch: ${branch}`,
+        `Ahead of remote: ${ahead} commits`,
+        "",
+        "--- Changed Files ---",
+        status || "(working tree clean)",
+        "",
+        "--- Recent Commits ---",
+        log,
+      ];
+      return {
+        success: true,
+        output: lines.join("\n"),
+        data: { branch, changedFiles: status.split("\n").filter(Boolean).length },
+      };
+    } catch (error: any) {
+      return { success: false, output: error.message };
+    }
+  },
+
+  "git-diff": async () => {
+    const { execSync } = await import("child_process");
+    try {
+      const staged = execSync("git diff --cached --stat 2>&1", {
+        cwd: projectRoot, timeout: 10000, encoding: "utf-8",
+      }).trim();
+      const unstaged = execSync("git diff --stat 2>&1", {
+        cwd: projectRoot, timeout: 10000, encoding: "utf-8",
+      }).trim();
+      const lines = [
+        "--- Staged Changes ---",
+        staged || "(nothing staged)",
+        "",
+        "--- Unstaged Changes ---",
+        unstaged || "(no unstaged changes)",
+      ];
+      return { success: true, output: lines.join("\n") };
+    } catch (error: any) {
+      return { success: false, output: error.message };
+    }
+  },
+
+  "git-log": async () => {
+    const { execSync } = await import("child_process");
+    try {
+      const output = execSync("git log --oneline --graph --decorate -20 2>&1", {
+        cwd: projectRoot, timeout: 10000, encoding: "utf-8",
+      });
+      return { success: true, output };
+    } catch (error: any) {
+      return { success: false, output: error.message };
+    }
+  },
+
+  // ============= Analyze Commands =============
+
+  "analyze-types": async () => {
+    const { execSync } = await import("child_process");
+    try {
+      execSync("npx tsc --noEmit 2>&1", {
+        cwd: projectRoot, timeout: 60000, encoding: "utf-8",
+      });
+      return { success: true, output: "TypeScript: 0 errors. All types check out." };
+    } catch (error: any) {
+      const output = error.stdout || error.stderr || error.message;
+      const errorCount = (output.match(/error TS/g) || []).length;
+      return {
+        success: false,
+        output: `TypeScript: ${errorCount} error(s) found\n\n${output}`,
+        data: { errorCount },
+      };
+    }
+  },
+
+  "analyze-lint": async () => {
+    const { execSync } = await import("child_process");
+    try {
+      const output = execSync("npx eslint src --ext .ts,.tsx --format stylish 2>&1", {
+        cwd: projectRoot, timeout: 60000, encoding: "utf-8",
+        maxBuffer: 1024 * 1024 * 5,
+      });
+      return { success: true, output: output || "ESLint: No issues found." };
+    } catch (error: any) {
+      const output = error.stdout || error.stderr || error.message;
+      return { success: false, output };
+    }
+  },
+
+  "analyze-deps": async () => {
+    const { execSync } = await import("child_process");
+    try {
+      const outdated = execSync("npm outdated --json 2>/dev/null || echo '{}'", {
+        cwd: projectRoot, timeout: 30000, encoding: "utf-8",
+      });
+      const parsed = JSON.parse(outdated);
+      const entries = Object.entries(parsed);
+      if (entries.length === 0) {
+        return { success: true, output: "All dependencies are up to date." };
+      }
+      const lines = entries.map(([pkg, info]: [string, any]) =>
+        `${pkg}: ${info.current} → ${info.latest} (wanted: ${info.wanted})`
+      );
+      return {
+        success: true,
+        output: `${entries.length} outdated package(s):\n\n${lines.join("\n")}`,
+        data: { outdatedCount: entries.length },
+      };
+    } catch (error: any) {
+      return { success: false, output: error.message };
+    }
+  },
+
+  "analyze-bundle": async () => {
+    const { execSync } = await import("child_process");
+    try {
+      const output = execSync("npx vite build --mode production 2>&1 | tail -30", {
+        cwd: projectRoot, timeout: 120000, encoding: "utf-8",
+        maxBuffer: 1024 * 1024 * 5,
+      });
+      return { success: true, output };
+    } catch (error: any) {
+      return { success: false, output: error.stdout || error.message };
+    }
+  },
+
+  // ============= Test Variants =============
+
+  "test-coverage": async () => {
+    const { execSync } = await import("child_process");
+    try {
+      const output = execSync("npx vitest run --coverage --reporter=verbose 2>&1 | tail -40", {
+        cwd: projectRoot, timeout: 180000, encoding: "utf-8",
+        maxBuffer: 1024 * 1024 * 5,
+      });
+      return { success: true, output };
+    } catch (error: any) {
+      return { success: false, output: error.stdout || error.stderr || error.message };
+    }
+  },
+
+  // ============= Info Commands =============
+
+  "system-info": async () => {
+    const { execSync } = await import("child_process");
+    const os = await import("os");
+    try {
+      const nodeVersion = process.version;
+      const npmVersion = execSync("npm --version 2>&1", { encoding: "utf-8" }).trim();
+      const gitVersion = execSync("git --version 2>&1", { encoding: "utf-8" }).trim();
+      const platform = `${os.platform()} ${os.release()}`;
+      const memory = `${Math.round(os.totalmem() / 1024 / 1024 / 1024)}GB total, ${Math.round(os.freemem() / 1024 / 1024 / 1024)}GB free`;
+      const cpus = `${os.cpus().length} cores (${os.cpus()[0]?.model || "unknown"})`;
+      const uptime = `${Math.round(os.uptime() / 3600)}h`;
+      const diskUsage = execSync("df -h . 2>&1 | tail -1", { cwd: projectRoot, encoding: "utf-8" }).trim();
+
+      const lines = [
+        "--- Runtime ---",
+        `Node.js:  ${nodeVersion}`,
+        `npm:      ${npmVersion}`,
+        `Git:      ${gitVersion}`,
+        "",
+        "--- System ---",
+        `Platform: ${platform}`,
+        `Memory:   ${memory}`,
+        `CPUs:     ${cpus}`,
+        `Uptime:   ${uptime}`,
+        `Disk:     ${diskUsage}`,
+      ];
+      return { success: true, output: lines.join("\n") };
+    } catch (error: any) {
+      return { success: false, output: error.message };
+    }
+  },
+};
+
+app.post("/api/commands/execute", rateLimit(writeLimiter), async (req, res) => {
+  try {
+    const { command } = req.body;
+
+    if (!command || typeof command !== "string") {
+      return res.status(400).json({
+        success: false,
+        error: "Missing command ID",
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const handler = EXECUTABLE_COMMANDS[command];
+    if (!handler) {
+      return res.status(404).json({
+        success: false,
+        error: `Unknown command: ${command}. Available: ${Object.keys(EXECUTABLE_COMMANDS).join(", ")}`,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // Broadcast that command is starting
+    broadcast("command.started", { command, startedAt: new Date().toISOString() });
+
+    const result = await handler();
+
+    // Broadcast result
+    broadcast(result.success ? "command.completed" : "command.failed", {
+      command,
+      success: result.success,
+      completedAt: new Date().toISOString(),
+    });
+
+    res.json({
+      success: result.success,
+      data: {
+        command,
+        output: result.output,
+        ...(result.data || {}),
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    captureException(error instanceof Error ? error : String(error));
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Command execution failed",
       timestamp: new Date().toISOString(),
     });
   }
@@ -826,196 +1500,9 @@ app.get("/api/memory/seed", async (_req, res) => {
   }
 });
 
-// ============= Memory Persistence Endpoints =============
-
-import { MemoryService } from "../services/memory-service";
-
-// Initialize Memory Service
-const memoryService = new MemoryService({ projectRoot: process.cwd() });
-memoryService.initialize().catch((error) => {
-  console.error("Failed to initialize memory service:", error);
-});
-
-app.get("/api/memory", async (_req, res) => {
-  try {
-    const result = await memoryService.readMemory();
-
-    if (!result.isOk()) {
-      throw result.error;
-    }
-
-    res.json({
-      success: true,
-      data: result.unwrap(),
-      count: result.unwrap().length,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
-
-app.post("/api/memory", async (req, res) => {
-  try {
-    const item = req.body;
-
-    // Write to file system
-    const result = await memoryService.writeMemory(item);
-
-    if (!result.isOk()) {
-      throw result.error;
-    }
-
-    // Sync to governance
-    await memoryService.syncToGovernance("memory.created", {
-      id: item.id,
-      category: item.category,
-      content: item.content.substring(0, 100),
-      tags: item.tags,
-    });
-
-    res.json({
-      success: true,
-      data: item,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
-
-app.put("/api/memory/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const item = { ...req.body, id };
-
-    const result = await memoryService.updateMemory(item);
-
-    if (!result.isOk()) {
-      throw result.error;
-    }
-
-    // Sync to governance
-    await memoryService.syncToGovernance("memory.updated", {
-      id: item.id,
-      category: item.category,
-    });
-
-    res.json({
-      success: true,
-      data: item,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
-
-app.delete("/api/memory/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { category } = req.query;
-
-    if (!category || typeof category !== "string") {
-      res.status(400).json({
-        success: false,
-        error: "Category parameter is required",
-        timestamp: new Date().toISOString(),
-      });
-      return;
-    }
-
-    const result = await memoryService.deleteMemory(id, category as MemoryItem["category"]);
-
-    if (!result.isOk()) {
-      throw result.error;
-    }
-
-    // Sync to governance
-    await memoryService.syncToGovernance("memory.deleted", {
-      id,
-      category,
-    });
-
-    res.json({
-      success: true,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
-
-app.get("/api/memory/export", async (_req, res) => {
-  try {
-    const result = await memoryService.exportForContext();
-
-    if (!result.isOk()) {
-      throw result.error;
-    }
-
-    res.json({
-      success: true,
-      data: result.unwrap(),
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
-
-app.post("/api/memory/snapshot", async (req, res) => {
-  try {
-    const { name } = req.body;
-
-    const result = await memoryService.createSnapshot(name);
-
-    if (!result.isOk()) {
-      throw result.error;
-    }
-
-    // Sync to governance
-    await memoryService.syncToGovernance("memory.snapshot", {
-      name: name || "auto-snapshot",
-      path: result.unwrap(),
-    });
-
-    res.json({
-      success: true,
-      data: {
-        path: result.unwrap(),
-        name: name || "auto-snapshot",
-      },
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
+// ============= Memory Endpoints (Read-Only) =============
+// Note: Memory persistence now uses Claude Code's native memory system via MCP
+// These endpoints provide read-only seed data for the UI widget only
 
 // ============= Governance Endpoints =============
 
@@ -1110,6 +1597,10 @@ app.post("/api/governance/sentinel", async (req, res) => {
     // Append log using state manager (includes automatic rotation)
     await governanceStateManager.appendSentinelLog(entry);
 
+    // Broadcast governance update to all clients
+    const state = await governanceStateManager.readState();
+    broadcast("governance.update", state);
+
     res.json({
       success: true,
       message: "Sentinel log entry added",
@@ -1187,7 +1678,7 @@ app.post("/api/diffs/apply", async (req, res) => {
 
     // Diff application is handled by Claude Code's native file operations.
     // This endpoint provides UI notification and event broadcasting.
-    console.log(`📝 Applying diff to: ${filePath}`);
+    logger.info(`📝 Applying diff to: ${filePath}`);
 
     // Broadcast diff applied event
     broadcast("diff.applied", {
@@ -1223,7 +1714,7 @@ app.post("/api/diffs/reject", async (req, res) => {
 
     // Diff rejection notifies UI and broadcasts event.
     // Actual file state is managed by Claude Code.
-    console.log(`❌ Rejecting diff for: ${filePath}`);
+    logger.info(`❌ Rejecting diff for: ${filePath}`);
 
     // Broadcast diff rejected event
     broadcast("diff.rejected", {
@@ -1273,7 +1764,7 @@ app.post("/api/errors", async (req, res) => {
     const errorData = req.body;
 
     // Log error with structured format
-    console.error("🚨 Frontend Error Reported:", {
+    logger.error("🚨 Frontend Error Reported:", {
       message: errorData.message,
       name: errorData.name,
       url: errorData.url,
@@ -1308,7 +1799,7 @@ app.post("/api/errors", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Failed to log error:", error);
+    logger.error("Failed to log error:", error);
     res.status(500).json({
       success: false,
       error: "Failed to log error",
@@ -1665,11 +2156,39 @@ app.post("/api/workers/tasks", async (req, res) => {
       });
     }
 
+    // Get intelligence context for agent tasks
+    let enhancedCommand = command;
+    let enhancedArgs = args;
+
+    if (type === "agent" || type === "claude-code") {
+      // Extract context from command/args for relevance matching
+      const contextText = [command, ...(args || [])].join(" ");
+      const contextKeywords = contextText
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((w) => w.length > 3)
+        .slice(0, 10); // Limit to 10 keywords
+
+      // Get intelligence context (defaults: high+ priority, 500 tokens)
+      const intelligence = await getIntelligenceContext({
+        contextKeywords,
+        maxTokens: 500,
+        minPriority: "high",
+      });
+
+      // Inject intelligence into task
+      if (intelligence) {
+        const injected = injectIntelligence(command, args, intelligence);
+        enhancedCommand = injected.command;
+        enhancedArgs = injected.args;
+      }
+    }
+
     const taskId = await pool.submitTask({
       type,
       priority: priority || "medium",
-      command,
-      args,
+      command: enhancedCommand,
+      args: enhancedArgs,
       workstreamId,
       timeout,
       env,
@@ -1932,18 +2451,8 @@ app.post("/api/forge/init", async (req, res) => {
   try {
     const options: InitOptions = req.body;
 
-    // Initialize the service first if needed
-    const serviceInit = await initService.initialize();
-    if (serviceInit.isErr()) {
-      return res.status(500).json({
-        success: false,
-        error: serviceInit.error.message,
-        timestamp: new Date().toISOString(),
-      });
-    }
-
     // Perform initialization
-    const result = await initService.initialize(options);
+    const result = await initService.initializeProject(options);
 
     if (result.isErr()) {
       const error = result.error;
@@ -1978,6 +2487,42 @@ app.post("/api/forge/init", async (req, res) => {
   }
 });
 
+// Get project status (/frg-status command backend)
+app.get("/api/forge/status", async (req, res) => {
+  try {
+    const statusResult = await statusService.getStatus();
+
+    if (statusResult.isErr()) {
+      return res.status(500).json({
+        success: false,
+        error: statusResult.error.message,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const status = statusResult.unwrap();
+
+    // Support CLI format via query param
+    if (req.query.format === "cli") {
+      res.type("text/plain");
+      res.send(StatusService.formatForCLI(status));
+    } else {
+      res.json({
+        success: true,
+        data: status,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  } catch (error) {
+    captureException(error instanceof Error ? error : String(error));
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Status retrieval failed",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 // ============= Beta Feedback Endpoints =============
 
 const FEEDBACK_FILE = path.join(projectRoot, "data", "feedback.json");
@@ -1992,7 +2537,7 @@ async function ensureFeedbackFile() {
       await fs.writeFile(FEEDBACK_FILE, JSON.stringify([], null, 2));
     }
   } catch (error) {
-    console.error("Failed to initialize feedback file:", error);
+    logger.error("Failed to initialize feedback file:", error);
   }
 }
 
@@ -2000,25 +2545,20 @@ async function ensureFeedbackFile() {
 ensureFeedbackFile();
 
 // Submit feedback
-app.post("/api/feedback", async (req, res) => {
-  try {
-    const {
-      rating,
-      category,
-      description,
-      url,
-      userAgent,
-      timestamp,
-    } = req.body;
-
-    // Validate required fields
-    if (!rating || !category || !description) {
-      return res.status(400).json({
-        success: false,
-        error: "Missing required fields: rating, category, description",
-        timestamp: new Date().toISOString(),
-      });
-    }
+app.post(
+  "/api/feedback",
+  rateLimit(writeLimiter),
+  validateRequest(feedbackSchema),
+  async (req, res) => {
+    try {
+      const {
+        rating,
+        category,
+        description,
+        url,
+        userAgent,
+        timestamp,
+      } = req.body;
 
     // Create feedback entry
     const feedback = {
@@ -2057,14 +2597,15 @@ app.post("/api/feedback", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Failed to save feedback:", error);
+    logger.error("Failed to save feedback:", error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
       timestamp: new Date().toISOString(),
     });
   }
-});
+},
+);
 
 // Get all feedback (admin endpoint)
 app.get("/api/feedback", async (req, res) => {
@@ -2085,7 +2626,7 @@ app.get("/api/feedback", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Failed to read feedback:", error);
+    logger.error("Failed to read feedback:", error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -2139,7 +2680,7 @@ app.get("/api/feedback/stats", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Failed to calculate feedback stats:", error);
+    logger.error("Failed to calculate feedback stats:", error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -2163,9 +2704,62 @@ server.on("upgrade", (request, socket, head) => {
   // PTY bridge handles /terminal path in createPTYBridge
 });
 
+// ============= Safeguard: Duplicate Route Detector =============
+// Prevents the exact bug where a placeholder route shadows a real handler.
+// If two routes share the same method+path, the second is DEAD CODE in Express.
+// This detector crashes the server at startup so the bug is caught immediately.
+
+function detectDuplicateRoutes(expressApp: express.Application): void {
+  const seen = new Map<string, number>();
+  const duplicates: string[] = [];
+
+  // Express stores routes in app._router.stack
+  const stack = (expressApp as any)._router?.stack || [];
+  for (const layer of stack) {
+    if (layer.route) {
+      const route = layer.route;
+      for (const method of Object.keys(route.methods)) {
+        const key = `${method.toUpperCase()} ${route.path}`;
+        const count = (seen.get(key) || 0) + 1;
+        seen.set(key, count);
+        if (count > 1) {
+          duplicates.push(key);
+        }
+      }
+    }
+    // Also check mounted routers
+    if (layer.name === 'router' && layer.handle?.stack) {
+      const prefix = layer.regexp?.source?.replace?.(/[\\\/?^$]/g, '') || '';
+      for (const subLayer of layer.handle.stack) {
+        if (subLayer.route) {
+          for (const method of Object.keys(subLayer.route.methods)) {
+            const key = `${method.toUpperCase()} /${prefix}${subLayer.route.path}`;
+            const count = (seen.get(key) || 0) + 1;
+            seen.set(key, count);
+            if (count > 1) {
+              duplicates.push(key);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (duplicates.length > 0) {
+    const msg = `FATAL: Duplicate routes detected! These routes are registered multiple times (second handler is DEAD CODE):\n  ${duplicates.join('\n  ')}`;
+    logger.error(msg);
+    throw new Error(msg);
+  }
+
+  logger.info(`Route integrity check passed: ${seen.size} unique routes, 0 duplicates`);
+}
+
+// Run the check BEFORE listening — crash early if routes are broken
+detectDuplicateRoutes(app);
+
 server.listen(PORT, "0.0.0.0", async () => {
-  console.log(`NXTG-Forge API Server running on http://0.0.0.0:${PORT}`);
-  console.log(`WebSocket server available at ws://0.0.0.0:${PORT}/ws`);
+  logger.info(`NXTG-Forge API Server running on http://0.0.0.0:${PORT}`);
+  logger.info(`WebSocket server available at ws://0.0.0.0:${PORT}/ws`);
 
   // Initialize services
   orchestrator.initialize();
@@ -2175,34 +2769,49 @@ server.listen(PORT, "0.0.0.0", async () => {
 
   // Initialize RunspaceManager for multi-project support
   await runspaceManager.initialize();
-  console.log("RunspaceManager initialized");
+  logger.info("RunspaceManager initialized");
 
   // Initialize PTY Bridge for Claude Code Terminal (with runspace support)
   createPTYBridge(server, runspaceManager);
-  console.log(`PTY Bridge initialized at ws://localhost:${PORT}/terminal`);
+  logger.info(`PTY Bridge initialized at ws://localhost:${PORT}/terminal`);
 
-  console.log("All services initialized successfully");
+  // Setup governance file watcher for real-time updates
+  setupGovernanceWatcher();
+
+  logger.info("All services initialized successfully");
 });
 
 // Graceful shutdown
 process.on("SIGTERM", async () => {
-  console.log("SIGTERM received, closing server...");
+  logger.info("SIGTERM received, closing server...");
 
   // Flush Sentry events before shutdown
   if (sentryReady) {
-    console.log("Flushing Sentry events...");
+    logger.info("Flushing Sentry events...");
     await flushSentry(2000);
   }
 
   // Shutdown worker pool
   if (workerPool) {
     await workerPool.shutdown();
-    console.log("Worker pool shutdown complete");
+    logger.info("Worker pool shutdown complete");
   }
 
   // Shutdown runspace manager
   await runspaceManager.shutdown();
-  console.log("RunspaceManager shutdown complete");
+  logger.info("RunspaceManager shutdown complete");
+
+  // Close governance watcher
+  if (governanceWatcher) {
+    governanceWatcher.close();
+    logger.info("Governance watcher closed");
+  }
+
+  // Cleanup rate limiters
+  generalLimiter.cleanup();
+  writeLimiter.cleanup();
+  authLimiter.cleanup();
+  logger.info("Rate limiters cleaned up");
 
   // Close WebSocket connections
   clients.forEach((client) => {
@@ -2210,7 +2819,7 @@ process.on("SIGTERM", async () => {
   });
 
   server.close(() => {
-    console.log("Server closed");
+    logger.info("Server closed");
     process.exit(0);
   });
 });

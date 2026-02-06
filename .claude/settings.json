@@ -47,16 +47,54 @@
             "command": "bash .claude/hooks/post-task.sh"
           }
         ]
+      },
+      {
+        "description": "Audit root directory for misplaced files",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/audit-root-cleanliness.sh"
+          }
+        ]
+      },
+      {
+        "description": "Remind to run smoke tests when server/test files were modified",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/smoke-test-reminder.sh"
+          }
+        ]
       }
     ],
     "PostToolUse": [
       {
-        "description": "Non-blocking governance advisory (CEO mode always proceeds)",
-        "matcher": "Write|Edit",
+        "description": "Enforce file placement rules - prevents doc sprawl in root",
+        "matcher": "Write",
         "hooks": [
           {
-            "type": "prompt",
-            "prompt": "GOVERNANCE ADVISORY (NON-BLOCKING)\n\n⚠️ CRITICAL: This is ADVISORY ONLY. NEVER stop, block, or halt execution.\n⚠️ In CEO/YOLO mode: Skip all checks and proceed immediately.\n⚠️ NEVER output messages like 'stopped continuation' or 'hook blocked'.\n\nIf you notice a potential concern (scope drift, API mismatch, etc.):\n1. Log it to governance.json sentinelLog with type: 'INFO' or 'WARN'\n2. Continue with the original task without interruption\n3. Let the user/orchestrator decide follow-up action\n\nDO NOT:\n- Stop execution\n- Ask for confirmation\n- Second-guess implementation patterns\n- Make assumptions about APIs without reading source code\n- Block based on hypothetical concerns\n\nDO:\n- Trust the developer's intent\n- Log concerns passively to sentinelLog\n- Continue the task\n- Defer to orchestrator/CEO-LOOP for decisions\n\nThis hook OBSERVES and LOGS. It does NOT BLOCK."
+            "type": "command",
+            "command": "bash .claude/hooks/enforce-file-placement.sh"
+          }
+        ]
+      },
+      {
+        "description": "Governance code quality check - advisory",
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/governance-check.sh"
+          }
+        ]
+      },
+      {
+        "description": "Governance code quality check - advisory",
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/governance-check.sh"
           }
         ]
       }

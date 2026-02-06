@@ -1,182 +1,166 @@
 ---
-name: [FRG]-checkpoint
-description: Save and restore project state checkpoints
-category: project
+description: "Save and restore project state checkpoints"
 ---
 
-# NXTG-Forge Checkpoint Management
+# NXTG-Forge Checkpoint Manager
 
 You are the **Checkpoint Manager** - save and restore project state for safe experimentation and rollback.
 
-## Commands
+## Parse Arguments
 
-Parse the command arguments to determine the operation:
+Arguments received: `$ARGUMENTS`
 
-- `save [task-id]` - Save current state with optional task identifier
-- `restore [task-id]` - Restore from checkpoint
+Parse the first word as the operation:
+- `save [name]` - Save current state (default if no operation specified)
+- `restore <name>` - Restore from checkpoint
 - `list` - Show all checkpoints
-- `clear [task-id]` - Delete checkpoint
+- `clear <name>` - Delete a checkpoint
+- No arguments: defaults to `save` with auto-generated name
 
-## Checkpoint Operations
+## Operations
 
 ### Save Checkpoint
 
+1. Create checkpoint directory:
 ```bash
-# Create checkpoint directory if needed
 mkdir -p .claude/checkpoints
+```
 
-# Generate checkpoint ID (timestamp-based or use provided task-id)
-CHECKPOINT_ID="${task_id:-$(date +%Y%m%d-%H%M%S)}"
-CHECKPOINT_FILE=".claude/checkpoints/${CHECKPOINT_ID}.json"
+2. Generate checkpoint ID from argument or timestamp:
+   - If name provided: use it (sanitized)
+   - If no name: use format `cp-YYYYMMDD-HHMMSS`
 
-# Capture current state
-cat > "${CHECKPOINT_FILE}" <<EOF
+3. Gather state and write checkpoint file:
+```bash
+CHECKPOINT_ID="<generated_id>"
+
+# Gather git state
+GIT_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "N/A")
+GIT_BRANCH=$(git branch --show-current 2>/dev/null || echo "N/A")
+GIT_STATUS=$(git status --porcelain 2>/dev/null || echo "")
+```
+
+4. Read current governance state from `.claude/governance.json` if it exists.
+
+5. Write checkpoint JSON to `.claude/checkpoints/{id}.json`:
+```json
 {
-  "id": "${CHECKPOINT_ID}",
-  "timestamp": "$(date -Iseconds)",
-  "task_id": "${task_id:-auto}",
-  "description": "${description:-No description}",
-  "state": $(cat .claude/state.json 2>/dev/null || echo '{}'),
-  "git_commit": "$(git rev-parse HEAD 2>/dev/null || echo 'N/A')",
-  "git_branch": "$(git branch --show-current 2>/dev/null || echo 'N/A')",
-  "git_status": "$(git status --porcelain 2>/dev/null || echo '')",
-  "working_directory": "$(pwd)",
+  "id": "<checkpoint_id>",
+  "timestamp": "<ISO timestamp>",
+  "description": "<user description or auto>",
+  "git": {
+    "commit": "<hash>",
+    "branch": "<branch>",
+    "status": "<porcelain output>",
+    "hasUncommitted": true/false
+  },
+  "governance": { ... },
   "environment": {
-    "node_version": "$(node --version 2>/dev/null || echo 'N/A')",
-    "npm_version": "$(npm --version 2>/dev/null || echo 'N/A')"
+    "nodeVersion": "<version>",
+    "cwd": "<working directory>"
   }
 }
-EOF
+```
 
-echo "Checkpoint saved: ${CHECKPOINT_ID}"
-echo "Location: ${CHECKPOINT_FILE}"
+6. Display confirmation:
+```
+Checkpoint saved: {id}
+  Branch: {branch}
+  Commit: {hash}
+  Uncommitted changes: {yes/no}
+  Location: .claude/checkpoints/{id}.json
+
+Restore with: /frg-checkpoint restore {id}
 ```
 
 ### Restore Checkpoint
 
-```bash
-# Locate checkpoint
-CHECKPOINT_FILE=".claude/checkpoints/${task_id}.json"
+1. Read checkpoint file from `.claude/checkpoints/{name}.json`
+2. Display checkpoint contents
+3. Show what would change:
+```
+Checkpoint: {id}
+  Saved: {timestamp}
+  Branch: {branch}
+  Commit: {commit}
 
-if [ ! -f "${CHECKPOINT_FILE}" ]; then
-  echo "Error: Checkpoint '${task_id}' not found"
-  exit 1
-fi
+Current state:
+  Branch: {current_branch}
+  Commit: {current_commit}
 
-# Load checkpoint data
-CHECKPOINT=$(cat "${CHECKPOINT_FILE}")
+Changes needed:
+  - {description of differences}
 
-# Extract and restore state
-echo "${CHECKPOINT}" | jq '.state' > .claude/state.json
+Note: Git state is NOT automatically restored.
+To restore git state:
+  git checkout {branch}
+  git reset --hard {commit}  (WARNING: discards changes)
+```
 
-# Show git information
-GIT_COMMIT=$(echo "${CHECKPOINT}" | jq -r '.git_commit')
-GIT_BRANCH=$(echo "${CHECKPOINT}" | jq -r '.git_branch')
-
-echo "Checkpoint restored: ${task_id}"
-echo "Git commit: ${GIT_COMMIT}"
-echo "Git branch: ${GIT_BRANCH}"
-echo ""
-echo "Note: Git state not automatically restored. Use:"
-echo "  git checkout ${GIT_COMMIT}"
+4. If governance state was saved, offer to restore it:
+```
+Restore governance state? This will overwrite .claude/governance.json
 ```
 
 ### List Checkpoints
 
+1. Read all files in `.claude/checkpoints/`:
 ```bash
-echo "╔════════════════════════════════════════════════════════╗"
-echo "║              NXTG-Forge Checkpoints                    ║"
-echo "╚════════════════════════════════════════════════════════╝"
-echo ""
+ls .claude/checkpoints/*.json 2>/dev/null
+```
 
-if [ ! -d ".claude/checkpoints" ] || [ -z "$(ls -A .claude/checkpoints 2>/dev/null)" ]; then
-  echo "No checkpoints found."
-  exit 0
-fi
+2. For each file, read and extract summary info.
 
-for checkpoint in .claude/checkpoints/*.json; do
-  ID=$(jq -r '.id' "${checkpoint}")
-  TIMESTAMP=$(jq -r '.timestamp' "${checkpoint}")
-  TASK_ID=$(jq -r '.task_id // "N/A"' "${checkpoint}")
-  DESC=$(jq -r '.description // "No description"' "${checkpoint}")
-  BRANCH=$(jq -r '.git_branch' "${checkpoint}")
+3. Display:
+```
+NXTG-Forge Checkpoints
+========================
+{id}
+  Saved: {timestamp}
+  Branch: {branch}
+  Commit: {short_hash}
 
-  echo "📌 ${ID}"
-  echo "   Task: ${TASK_ID}"
-  echo "   Time: ${TIMESTAMP}"
-  echo "   Branch: ${BRANCH}"
-  echo "   Description: ${DESC}"
-  echo ""
-done
+{id}
+  Saved: {timestamp}
+  Branch: {branch}
+  Commit: {short_hash}
 
-echo "═════════════════════════════════════════════════════════"
-echo "Use: /[FRG]-checkpoint restore <id>"
+---
+Total: {count} checkpoint(s)
+
+Actions:
+  /frg-checkpoint restore <id>
+  /frg-checkpoint clear <id>
+```
+
+If no checkpoints exist:
+```
+No checkpoints found.
+
+Save one with: /frg-checkpoint save [name]
 ```
 
 ### Clear Checkpoint
 
-```bash
-# Delete checkpoint
-CHECKPOINT_FILE=".claude/checkpoints/${task_id}.json"
-
-if [ ! -f "${CHECKPOINT_FILE}" ]; then
-  echo "Error: Checkpoint '${task_id}' not found"
-  exit 1
-fi
-
-rm "${CHECKPOINT_FILE}"
-echo "Checkpoint deleted: ${task_id}"
+1. Verify the checkpoint exists
+2. Delete the file
+3. Confirm:
+```
+Checkpoint deleted: {id}
 ```
 
-## Usage Examples
+## Error Handling
 
-```bash
-# Save checkpoint with auto-generated ID
-/[FRG]-checkpoint save
+- If checkpoint not found: list available checkpoints
+- If directory doesn't exist: create it automatically
+- If write fails: show error and suggest checking permissions
 
-# Save checkpoint with specific task ID
-/[FRG]-checkpoint save auth-feature
+## Best Practices (show on first use)
 
-# Restore from checkpoint
-/[FRG]-checkpoint restore auth-feature
-
-# List all checkpoints
-/[FRG]-checkpoint list
-
-# Delete checkpoint
-/[FRG]-checkpoint clear auth-feature
 ```
-
-## Checkpoint Data Structure
-
-Each checkpoint contains:
-- Unique identifier (timestamp or task ID)
-- Timestamp of creation
-- Complete state.json snapshot
-- Git commit hash
-- Git branch name
-- Git working tree status
-- Working directory path
-- Environment information
-
-## Integration with Status
-
-The `/[FRG]-status` command shows checkpoint information:
-- Last checkpoint time
-- Total checkpoint count
-- Quick restore instructions
-
-## Best Practices
-
-1. **Before risky operations**: Save checkpoint before major changes
-2. **Feature milestones**: Checkpoint at completion of each feature phase
-3. **Experimentation**: Create checkpoint before trying experimental approaches
-4. **Daily snapshots**: End-of-day checkpoints for continuity
-5. **Clean up**: Remove old checkpoints periodically
-
-## Notes
-
-- Checkpoints are stored in `.claude/checkpoints/`
-- Git state is recorded but not automatically restored
-- Checkpoints are local (not committed to version control)
-- Add `.claude/checkpoints/` to `.gitignore`
+Tip: Create checkpoints before:
+  - Major refactoring
+  - Experimental changes
+  - Deployment
+  - End of work session
+```

@@ -6,6 +6,9 @@
 import { z } from "zod";
 import { BaseService, ServiceConfig } from "./base-service";
 import { Result, IntegrationError } from "../utils/result";
+import { getLogger } from "../utils/logger";
+
+const logger = getLogger("activity-service");
 import { Agent, AgentActivity, EngagementMode } from "../components/types";
 
 /**
@@ -513,7 +516,7 @@ export class ActivityService extends BaseService {
       try {
         callback(event);
       } catch (error) {
-        console.error("Stream subscriber error:", error);
+        logger.error(`Stream subscriber error: ${error}`);
       }
     });
   }

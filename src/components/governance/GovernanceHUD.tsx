@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import type { GovernanceState } from "../../types/governance.types";
 import { ConstitutionCard } from "./ConstitutionCard";
 import { ImpactMatrix } from "./ImpactMatrix";
@@ -6,6 +6,8 @@ import { OracleFeed } from "./OracleFeed";
 import { StrategicAdvisor } from "./StrategicAdvisor";
 import { WorkerPoolMetrics } from "./WorkerPoolMetrics";
 import { AgentActivityFeed } from "./AgentActivityFeed";
+import { wsManager, type ConnectionStatus } from "../../services/ws-manager";
+import { logger } from "../../utils/browser-logger";
 
 interface GovernanceHUDProps {
   className?: string;
@@ -15,41 +17,80 @@ export const GovernanceHUD: React.FC<GovernanceHUDProps> = ({ className }) => {
   const [state, setState] = useState<GovernanceState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [connectionStatus, setConnectionStatus] = useState<
+    "connecting" | "connected" | "disconnected" | "fallback"
+  >("connecting");
 
-  useEffect(() => {
-    const fetchState = async () => {
-      try {
-        const res = await fetch("/api/governance/state");
-        if (!res.ok) {
-          const errorText = await res.text();
-          console.error("API Error:", res.status, errorText);
-          throw new Error(`API returned ${res.status}: ${errorText}`);
-        }
+  const isMountedRef = useRef(true);
 
-        const response = await res.json();
-
-        // API wraps response in { success, data, timestamp }
-        if (response.data) {
-          setState(response.data);
-          setError(null);
-        } else {
-          throw new Error("Invalid response structure - missing data property");
-        }
-      } catch (err) {
-        console.error("Governance fetch error:", err);
-        setError(err instanceof Error ? err.message : "Unknown error occurred");
-      } finally {
-        setIsLoading(false);
+  // Fetch state from API
+  const fetchState = async () => {
+    try {
+      const res = await fetch("/api/governance/state");
+      if (!res.ok) {
+        const errorText = await res.text();
+        logger.warn("Governance API Error:", res.status, errorText);
+        throw new Error(`API returned ${res.status}: ${errorText}`);
       }
-    };
 
-    // Initial fetch
+      const response = await res.json();
+
+      if (response.data) {
+        setState(response.data);
+        setError(null);
+      } else {
+        throw new Error("Invalid response structure - missing data property");
+      }
+    } catch (err) {
+      logger.warn("Governance fetch error:", err);
+      setError(err instanceof Error ? err.message : "Unknown error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initial setup: HTTP fetch + wsManager subscription
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    // Fetch initial state
     fetchState();
 
-    // Poll every 2 seconds
-    const interval = setInterval(fetchState, 2000);
+    // Subscribe to governance updates via shared wsManager
+    const unsubMessage = wsManager.subscribe(
+      "governance.update",
+      (data: any) => {
+        if (!isMountedRef.current) return;
+        if (data) {
+          setState(data);
+          setError(null);
+        }
+      },
+    );
 
-    return () => clearInterval(interval);
+    // Track connection status from wsManager
+    const unsubState = wsManager.onStateChange((wsState) => {
+      if (!isMountedRef.current) return;
+
+      if (wsState.status === "connected") {
+        setConnectionStatus("connected");
+      } else if (
+        wsState.status === "disconnected" &&
+        wsState.reconnectAttempt >= 5
+      ) {
+        setConnectionStatus("fallback");
+      } else if (wsState.status === "reconnecting") {
+        setConnectionStatus("connecting");
+      } else {
+        setConnectionStatus("disconnected");
+      }
+    });
+
+    return () => {
+      isMountedRef.current = false;
+      unsubMessage();
+      unsubState();
+    };
   }, []);
 
   if (isLoading) {
@@ -74,8 +115,35 @@ export const GovernanceHUD: React.FC<GovernanceHUDProps> = ({ className }) => {
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-sm">Governance HUD</h2>
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-xs text-gray-500">Live</span>
+            <div
+              className={`w-2 h-2 rounded-full ${
+                connectionStatus === "connected"
+                  ? "bg-green-500 animate-pulse"
+                  : connectionStatus === "connecting"
+                    ? "bg-yellow-500 animate-pulse"
+                    : connectionStatus === "fallback"
+                      ? "bg-blue-500"
+                      : "bg-gray-500"
+              }`}
+              title={
+                connectionStatus === "connected"
+                  ? "Real-time updates active"
+                  : connectionStatus === "connecting"
+                    ? "Connecting..."
+                    : connectionStatus === "fallback"
+                      ? "Polling mode (5s)"
+                      : "Disconnected"
+              }
+            />
+            <span className="text-xs text-gray-500">
+              {connectionStatus === "connected"
+                ? "Live"
+                : connectionStatus === "fallback"
+                  ? "Polling"
+                  : connectionStatus === "connecting"
+                    ? "Connecting"
+                    : "Offline"}
+            </span>
           </div>
         </div>
       </header>

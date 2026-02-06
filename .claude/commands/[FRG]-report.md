@@ -2,286 +2,171 @@
 description: "Display comprehensive session activity report"
 ---
 
-# Session Activity Report
+# NXTG-Forge Session Report
 
-You are generating a **comprehensive session activity report** following UX-SPECIFICATION-FINAL.md Part VII standards.
-
-## Load Required Services
-
-First, import the SessionReporter service:
-
-```python
-from forge.services.session_reporter import SessionReporter
-from pathlib import Path
-
-# Initialize reporter
-reporter = SessionReporter(project_root=Path.cwd())
-```
+You are the **Session Reporter** - generate a comprehensive activity report from real git history and project state.
 
 ## Parse Arguments
 
 Arguments received: `$ARGUMENTS`
 
 Options:
+- No arguments: Full report for current session/branch
+- `--brief` or `-b`: Brief summary only
+- `--since <timespec>`: Activity since time (e.g., `--since "8 hours ago"`, `--since yesterday`)
+- `--json`: Output as JSON
+- `--branch <name>`: Report on specific branch (default: current)
 
-- `--brief` or `-b`: Show brief summary only (auto-display format)
-- `--full` or `-f`: Show full detailed report (default)
-- `--format=json`: Output as JSON instead of formatted text
-- `--since=<datetime>`: Show activity since specific time (ISO format)
+## Data Gathering
 
-## Generate Report
+Gather all data using native tools. Execute these in parallel where possible:
 
-### For Brief Summary
+### 1. Git Activity
 
-```python
-# Generate brief summary (Part VII: Brief Summary format)
-result = reporter.generate_brief_summary()
+```bash
+# Current branch
+git branch --show-current
 
-if result.is_ok():
-    summary = result.value
-    print(summary)
-else:
-    print(f"❌ Failed to generate report: {result.error.message}")
-    exit(1)
+# Commits (default: last 24 hours or since branch diverged from main)
+git log --oneline --since="24 hours ago" 2>/dev/null || git log --oneline -20
+
+# Detailed commit info
+git log --format="%h %s (%cr) <%an>" --since="24 hours ago" 2>/dev/null || git log --format="%h %s (%cr) <%an>" -20
+
+# Files changed
+git diff --stat main...HEAD 2>/dev/null || git diff --stat HEAD~5..HEAD
+
+# Insertions/deletions
+git diff --shortstat main...HEAD 2>/dev/null || git diff --shortstat HEAD~5..HEAD
 ```
 
-Expected output format:
+### 2. PR Status (if applicable)
 
-```
-✅ NXTG-FORGE-ENABLED
-
-╔═══════════════════════════════════════════════════════╗
-║  📊 OVERNIGHT SESSION COMPLETED                       ║
-╚═══════════════════════════════════════════════════════╝
-
-Feature: {Feature Name}
-Commits: {count} | Tests: +{count} | Coverage: {before}% → {after}%
-PR #{number}: ✅ Ready for review (all checks passing)
-
-View full report? Type /report or press Enter to continue
+```bash
+# Check for open PRs from current branch
+gh pr list --head "$(git branch --show-current)" --json number,title,state,url,checks 2>/dev/null
 ```
 
-### For Full Report
+### 3. Test Status
 
-```python
-# Generate comprehensive report (Part VII: Full Report format)
-result = reporter.generate_full_report()
-
-if result.is_ok():
-    report = result.value
-    print(report)
-else:
-    print(f"❌ Failed to generate report: {result.error.message}")
-    exit(1)
+```bash
+# Quick test count
+find src -name "*.test.ts" -o -name "*.spec.ts" 2>/dev/null | wc -l
 ```
 
-Expected output format:
+### 4. Governance Changes
 
-```
-╔═══════════════════════════════════════════════════════╗
-║  OVERNIGHT ACTIVITY REPORT                            ║
-║  Session: {start_time} - {end_time}                   ║
-╚═══════════════════════════════════════════════════════╝
+Read `.claude/governance.json` and check the sentinel log for recent entries.
 
-📊 SESSION SUMMARY
-   Duration: {duration}
-   Commits: {count}
-   Files changed: {count}
-   Tests added: {count}
-   Coverage: {before}% → {after}% (+{delta}%)
-   Health Score: {before} → {after} (+{delta})
+### 5. Checkpoint History
 
-🔗 GIT ACTIVITY
-   Branch: {branch_name}
-
-   Commits created:
-   • {hash} {message}
-   • {hash} {message}
-   [...]
-
-   📈 All commits pushed to: {remote}/{branch}
-
-   🔍 View commits:
-      {github_url}
-
-📝 PULL REQUEST CREATED
-   #{number}: {title}
-
-   Status: ✅ All checks passing
-   • CI/CD pipeline: ✓ Passed ({duration})
-   • Security scan: ✓ No issues
-   • Code review bot: ✓ Approved (high quality)
-   • Test coverage: ✓ {percentage}% (above {threshold}% threshold)
-
-   Ready for human review
-
-   🔍 View PR: {pr_url}
-
-🎯 QUALITY IMPROVEMENTS
-   • Security score: {before} → {after} (+{delta})
-   • Code smells: {before} → {after} ({delta})
-   • Technical debt: {before}h → {after}h ({delta}h)
-
-🔖 CHECKPOINTS CREATED
-   • {checkpoint_id} - {description}
-   • {checkpoint_id} - {description}
-
-💡 RECOMMENDED NEXT STEPS
-   1. {Next action 1}
-   2. {Next action 2}
-   3. {Next action 3}
-
-📍 AUDIT TRAIL
-   Session log: {path_to_session_json}
-   All actions are fully documented and reversible
-
-[Continue Working] [Create New Feature] [Health Check]
+```bash
+ls -la .claude/checkpoints/*.json 2>/dev/null
 ```
 
-## JSON Output Format
+## Display Format
 
-If `--format=json` specified:
+### Brief Summary (`--brief`)
 
-```python
-result = reporter.generate_report_json()
-
-if result.is_ok():
-    import json
-    print(json.dumps(result.value, indent=2))
-else:
-    print(json.dumps({
-        "error": result.error.message,
-        "detail": result.error.detail
-    }))
-    exit(1)
+```
+NXTG-Forge Session Summary
+============================
+Branch: {branch}
+Commits: {count} | Files changed: {count} | +{insertions}/-{deletions}
+Tests: {test_file_count} test files
+PR: {pr_status or "None"}
+Last commit: {hash} {message} ({time_ago})
 ```
 
-JSON structure:
+### Full Report (default)
+
+```
+NXTG-Forge Session Report
+============================
+Generated: {timestamp}
+
+SESSION OVERVIEW
+  Branch: {branch}
+  Duration: {time_since_first_commit} (approx)
+  Commits: {commit_count}
+  Files changed: {files_changed}
+  Lines: +{insertions} / -{deletions}
+
+GIT ACTIVITY
+  {hash} {message} ({time_ago})
+  {hash} {message} ({time_ago})
+  {hash} {message} ({time_ago})
+  ...
+
+  Files most changed:
+    {file}: +{ins}/-{del}
+    {file}: +{ins}/-{del}
+    {file}: +{ins}/-{del}
+
+{if PR exists}
+PULL REQUEST
+  #{number}: {title}
+  URL: {url}
+  Status: {state}
+  Checks: {check_status}
+{/if}
+
+TESTS
+  Test files: {count}
+  {If test results available, show pass/fail summary}
+
+GOVERNANCE
+  Status: {constitution_status}
+  Sentinel entries: {recent_count} recent
+  {List last 3 sentinel entries if available}
+
+{if checkpoints exist}
+CHECKPOINTS
+  {checkpoint_id} - {timestamp}
+  ...
+{/if}
+
+RECOMMENDATIONS
+  Based on the session activity:
+  1. {recommendation based on what was done}
+  2. {recommendation based on gaps found}
+  3. {recommendation for next steps}
+
+---
+Next steps:
+  /frg-status       Check current state
+  /frg-test         Run test suite
+  /frg-checkpoint   Save checkpoint
+  /frg-gap-analysis Identify remaining gaps
+```
+
+### JSON Output (`--json`)
+
+If `--json` is specified, output all gathered data as a structured JSON object:
 
 ```json
 {
-  "session": {
-    "start_time": "2026-01-08T09:00:00Z",
-    "end_time": "2026-01-08T17:30:00Z",
-    "duration_hours": 8.5
-  },
-  "summary": {
-    "commits": 12,
-    "files_changed": 45,
-    "tests_added": 23,
-    "coverage_before": 78.5,
-    "coverage_after": 85.2,
-    "coverage_delta": 6.7
-  },
-  "git_activity": {
-    "branch": "feature/auth-system",
-    "commits": [
-      {
-        "hash": "abc123",
-        "message": "feat: add JWT authentication",
-        "timestamp": "2026-01-08T10:30:00Z"
-      }
-    ],
-    "remote_url": "https://github.com/user/repo"
-  },
-  "pull_requests": [
-    {
-      "number": 42,
-      "title": "Add authentication system",
-      "url": "https://github.com/user/repo/pull/42",
-      "status": "passing",
-      "checks": {
-        "ci_cd": "passed",
-        "security": "passed",
-        "coverage": "passed"
-      }
-    }
-  ],
-  "quality": {
-    "security_score_before": 85,
-    "security_score_after": 92,
-    "code_smells_before": 15,
-    "code_smells_after": 8,
-    "tech_debt_hours_before": 24.5,
-    "tech_debt_hours_after": 18.2
-  },
-  "checkpoints": [
-    {
-      "id": "cp-2026-01-08-001",
-      "description": "Auth system baseline"
-    }
-  ],
-  "recommendations": [
-    "Review PR #42 for final approval",
-    "Add integration tests for OAuth flow",
-    "Update API documentation"
-  ]
+  "branch": "...",
+  "commits": [...],
+  "filesChanged": [...],
+  "stats": { "insertions": 0, "deletions": 0 },
+  "pullRequest": { ... },
+  "tests": { "fileCount": 0 },
+  "governance": { ... },
+  "checkpoints": [...],
+  "generatedAt": "..."
 }
 ```
 
 ## Error Handling
 
-If report generation fails:
-
+If git is not available or not a git repo:
 ```
-❌ Session Report Failed
-
-What happened:
-   Could not generate session activity report.
-
-Why it happened:
-   {error_detail}
-
-How to fix:
-   1. Check if state file exists: ls .claude/forge/state.json
-   2. Verify git repository: git status
-   3. Try brief report: /report --brief
-   4. Re-initialize if needed: /init --upgrade
-
-Need help? Try:
-   • /soundboard - Discuss troubleshooting
-   • GitHub: {issue_tracker_url}
+Not a git repository. Session report requires git history.
 ```
 
-## Interactive Options
-
-After displaying full report, present action options:
-
+If no commits found in timeframe:
 ```
-What would you like to do next?
-
-1. Continue Working
-   → Resume current feature development
-
-2. Create New Feature
-   → Start fresh feature with /feature
-
-3. Health Check
-   → Run comprehensive quality analysis
-
-4. View Git Activity
-   → Show detailed git log and diffs
-
-Your choice [1-4]:
+No commits found in the specified timeframe.
+Try: /frg-report --since "7 days ago"
 ```
-
-## Implementation Notes
-
-- Use SessionReporter service for all report generation
-- Follow UX-SPECIFICATION-FINAL.md Part VII formatting exactly
-- Ensure all data comes from state.json and git history
-- Include audit trail for transparency
-- Make reports machine-readable (JSON) and human-friendly (formatted)
-- Cache report data for 5 minutes to avoid redundant git queries
-
-## Success Criteria
-
-Report is successful when:
-
-- ✅ Displays all session activity accurately
-- ✅ Follows canonical UX format exactly
-- ✅ Git data matches actual repository state
-- ✅ Quality metrics are current and accurate
-- ✅ Recommendations are actionable and prioritized
-- ✅ JSON output is valid and complete
-- ✅ Interactive options work correctly

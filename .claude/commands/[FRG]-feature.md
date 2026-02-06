@@ -4,138 +4,122 @@ description: "Add a new feature with full agent orchestration"
 
 # NXTG-Forge Feature Implementation
 
-Arguments: `$ARGUMENTS`
+You are the **Feature Planner** - guide the user through designing and implementing a new feature with structured planning.
 
-Expected format: `/feature "Feature Name" [--priority high|medium|low] [--agent agent-name]`
+## Parse Arguments
 
-## Step 1: Parse Feature Request
+Arguments received: `$ARGUMENTS`
 
-```bash
-FEATURE_NAME="$ARGUMENTS"
-# Extract from arguments or prompt user
-```
+If arguments provided, use as the feature name/description.
+If no arguments, ask the user what they want to build.
 
-## Step 2: Create Feature Spec
+## Step 1: Feature Discovery
 
-Interactive spec building:
+Ask the user using AskUserQuestion:
+- What feature are you building? (if not in arguments)
+- What's the scope? (small/medium/large)
 
-```
-Feature: {feature_name}
+## Step 2: Codebase Analysis
 
-1. Description:
-   [What does this feature do?]
+Before planning, understand the current codebase:
 
-2. User Stories:
-   - As a [user type], I want [goal] so that [benefit]
+1. **Directory structure**: Use Glob to map `src/**/*.ts`
+2. **Existing patterns**: Use Grep to find similar implementations
+3. **Test patterns**: Check `src/**/__tests__/*.test.ts`
+4. **Dependencies**: Read `package.json` for available libraries
 
-3. Acceptance Criteria:
-   - [ ] Criterion 1
-   - [ ] Criterion 2
+## Step 3: Generate Feature Spec
 
-4. Technical Requirements:
-   - API endpoints needed?
-   - Database changes?
-   - New dependencies?
-   - UI components?
-
-5. Dependencies:
-   - Depends on which existing features?
-   - Blocks which planned features?
-
-6. Estimated Complexity: [low|medium|high|very-high]
-```
-
-Save to `.claude/features/{feature-id}-spec.md`
-
-## Step 3: Assign to Agent(s)
-
-```bash
-# Auto-determine best agent based on feature type
-forge agent-assign \
-  --feature .claude/features/{feature-id}-spec.md \
-  --recommend
-
-# Or use specified agent
-# --agent backend-master
-```
-
-## Step 4: Create Implementation Plan
-
-Selected agent creates detailed plan:
+Based on analysis, create a structured spec:
 
 ```
-Implementation Plan: {feature_name}
-====================================
+FEATURE SPEC: {feature_name}
+==============================
 
-Phase 1: Design (Lead Architect)
-  - [ ] Data model design
-  - [ ] API contract definition
-  - [ ] Architecture decision
+Description:
+  {What this feature does}
 
-Phase 2: Backend (Backend Master)
-  - [ ] Domain entities
-  - [ ] Use cases
-  - [ ] API endpoints
-  - [ ] Database migration
+Files to Create:
+  - src/{path}/{file}.ts - {purpose}
+  - src/{path}/__tests__/{file}.test.ts - {test purpose}
 
-Phase 3: Testing (QA Sentinel)
-  - [ ] Unit tests
-  - [ ] Integration tests
-  - [ ] E2E tests
+Files to Modify:
+  - src/{existing_file}.ts - {what changes}
 
-Phase 4: Documentation
-  - [ ] API docs
-  - [ ] User guide
-  - [ ] Update CHANGELOG
+Dependencies:
+  - {any new npm packages needed}
+
+Implementation Steps:
+  1. {Step 1 description}
+  2. {Step 2 description}
+  3. {Step 3 description}
+  ...
+
+Test Plan:
+  - Unit: {what to test}
+  - Integration: {what to test}
+
+Estimated Complexity: {LOW / MEDIUM / HIGH}
 ```
 
-## Step 5: Execute with Checkpoints
+Save the spec to `.claude/plans/{feature-slug}-spec.md`
 
-```bash
-# Execute each phase with checkpoints
-for phase in design backend testing docs; do
-  /checkpoint "Before $phase phase"
-  
-  # Execute phase with assigned agent
-  forge agent-execute \
-    --feature {feature-id} \
-    --phase $phase \
-    --checkpoint-on-complete
-  
-  # Update state
-  forge state update-feature \
-    --id {feature-id} \
-    --phase-complete $phase
-done
+## Step 4: Confirm Plan
+
+Present the spec to the user and ask for confirmation:
+- "Looks good, start implementing" -> Proceed to Step 5
+- "Modify the plan" -> Go back to Step 3
+- "Cancel" -> Exit
+
+## Step 5: Implementation
+
+Implement the feature following the spec:
+
+1. Create new files as specified
+2. Modify existing files as needed
+3. Write tests alongside implementation
+4. Follow existing code patterns and conventions
+
+After each major step, show progress:
+```
+Progress: {step}/{total}
+  [x] Created {file}
+  [x] Added tests for {component}
+  [ ] Wiring up {integration}
 ```
 
-## Step 6: Final Validation
+## Step 6: Validation
 
+After implementation:
+
+1. Run tests: `npx vitest run`
+2. Check types: `npx tsc --noEmit`
+3. Verify no regressions
+
+Display results:
 ```
-✅ Feature Implementation Complete!
+FEATURE COMPLETE: {feature_name}
+==================================
 
-Feature: {feature_name}
-Status: ✅ Completed
+Files created: {count}
+Files modified: {count}
+Tests added: {count}
+All tests: {PASSING / FAILING}
+Type check: {OK / ERRORS}
 
-Deliverables:
-  - Code: {files_changed} files
-  - Tests: {tests_added} tests ({coverage}% coverage)
-  - Docs: Updated
-
-Quality Check:
-  ✓ All tests passing
-  ✓ Coverage > threshold
-  ✓ Linting clean
-  ✓ Security scan passed
-
-State Updated:
-  - Feature marked complete in state.json
-  - Checkpoint created
-  - Next feature ready to start
-
-Next Steps:
-  1. Review changes: git diff
-  2. Manual testing if needed
-  3. Deploy: /deploy
-  4. Start next feature: /feature "next feature"
+Next steps:
+  /frg-test         Verify full test suite
+  /frg-checkpoint   Save current state
+  /frg-status       View updated project status
 ```
+
+## Step 7: Update Governance
+
+Add the feature to `.claude/governance.json` workstreams if it exists.
+
+## Error Handling
+
+If implementation hits blockers:
+1. Describe the blocker
+2. Suggest alternatives
+3. Ask user how to proceed

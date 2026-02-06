@@ -1,6 +1,7 @@
 /**
  * API Client Service
- * Central service for all backend communication
+ * Central service for all backend communication.
+ * WebSocket is handled by ws-manager.ts singleton - this class only does HTTP.
  */
 
 import { z } from "zod";
@@ -13,23 +14,18 @@ import type {
   AutomatedAction,
   YoloStatistics,
 } from "../components/types";
+import { wsManager } from "./ws-manager";
+import { logger } from "../utils/browser-logger";
 
 // API Configuration
 // In dev mode: use relative URLs (/api) - Vite proxies to localhost:5051
 // In production: use absolute URLs with current hostname
 const getApiBaseUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  if (import.meta.env.DEV) return '/api';  // Vite proxy handles this
-  const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+  if (import.meta.env.DEV) return "/api"; // Vite proxy handles this
+  const host =
+    typeof window !== "undefined" ? window.location.hostname : "localhost";
   return `http://${host}:5051/api`;
-};
-
-const getWsUrl = () => {
-  if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL;
-  // WebSocket needs absolute URL - use current host and Vite's port (5050) which proxies to 5051
-  const host = typeof window !== 'undefined' ? window.location.host : 'localhost:5050';
-  const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${host}/ws`;
 };
 
 // Response schemas for type safety
@@ -74,24 +70,9 @@ export interface WSMessage<T = unknown> {
 
 /**
  * API Client Class
+ * HTTP-only. WebSocket is delegated to wsManager singleton.
  */
 export class ApiClient {
-  private wsConnection: WebSocket | null = null;
-  private wsReconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectDelay = 1000; // Start with 1 second
-  private eventHandlers: Map<WSMessageType, Set<(data: unknown) => void>> =
-    new Map();
-  private requestQueue: Array<() => Promise<void>> = [];
-  private isProcessingQueue = false;
-
-  constructor() {
-    // Delay WebSocket init to allow API server to start (race condition fix)
-    setTimeout(() => {
-      this.initializeWebSocket();
-    }, 500);
-  }
-
   // ============= HTTP Methods =============
 
   private async request<T>(
@@ -105,7 +86,6 @@ export class ApiClient {
           "Content-Type": "application/json",
           ...options.headers,
         },
-        credentials: "include", // For session management
       });
 
       const data: unknown = await response.json();
@@ -119,7 +99,7 @@ export class ApiClient {
 
       return data as ApiResponse<T>;
     } catch (error) {
-      console.error(`API Request failed: ${endpoint}`, error);
+      logger.warn(`API Request failed: ${endpoint}`, error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
@@ -224,11 +204,12 @@ export class ApiClient {
   // ============= Command Execution =============
 
   async executeCommand(
-    command: Command,
-  ): Promise<ApiResponse<{ result: unknown }>> {
-    return this.request<{ result: unknown }>("/commands/execute", {
+    command: Command | string,
+  ): Promise<ApiResponse<{ command: string; output: string; [key: string]: unknown }>> {
+    const commandId = typeof command === "string" ? command : command.id;
+    return this.request<{ command: string; output: string; [key: string]: unknown }>("/commands/execute", {
       method: "POST",
-      body: JSON.stringify(command),
+      body: JSON.stringify({ command: commandId }),
     });
   }
 
@@ -292,150 +273,27 @@ export class ApiClient {
     return this.request<AutomatedAction[]>("/yolo/history");
   }
 
-  // ============= WebSocket Management =============
+  // ============= WebSocket (delegated to wsManager) =============
 
-  private initializeWebSocket() {
-    if (this.wsConnection?.readyState === WebSocket.OPEN) {
-      return;
-    }
-
-    try {
-      this.wsConnection = new WebSocket(getWsUrl());
-
-      this.wsConnection.onopen = () => {
-        console.log("WebSocket connected");
-        this.wsReconnectAttempts = 0;
-        this.reconnectDelay = 1000;
-        this.processQueuedRequests();
-      };
-
-      this.wsConnection.onmessage = (event) => {
-        try {
-          const message: WSMessage = JSON.parse(event.data);
-          this.handleWSMessage(message);
-        } catch (error) {
-          console.error("Failed to parse WebSocket message:", error);
-        }
-      };
-
-      this.wsConnection.onerror = (error) => {
-        console.error("WebSocket error:", error);
-      };
-
-      this.wsConnection.onclose = () => {
-        console.log("WebSocket closed");
-        this.attemptReconnect();
-      };
-    } catch (error) {
-      console.error("Failed to initialize WebSocket:", error);
-      this.attemptReconnect();
-    }
-  }
-
-  private attemptReconnect() {
-    if (this.wsReconnectAttempts >= this.maxReconnectAttempts) {
-      console.error("Max WebSocket reconnection attempts reached");
-      return;
-    }
-
-    this.wsReconnectAttempts++;
-    const delay = Math.min(
-      this.reconnectDelay * Math.pow(2, this.wsReconnectAttempts - 1),
-      30000,
-    );
-
-    console.log(
-      `Attempting WebSocket reconnection ${this.wsReconnectAttempts}/${this.maxReconnectAttempts} in ${delay}ms`,
-    );
-
-    setTimeout(() => {
-      this.initializeWebSocket();
-    }, delay);
-  }
-
-  private handleWSMessage(message: WSMessage) {
-    const handlers = this.eventHandlers.get(message.type);
-    if (handlers) {
-      handlers.forEach((handler) => {
-        try {
-          handler(message.payload);
-        } catch (error) {
-          console.error(
-            `Error in WebSocket handler for ${message.type}:`,
-            error,
-          );
-        }
-      });
-    }
-  }
-
-  public subscribe(
+  public subscribe<T = unknown>(
     eventType: WSMessageType,
-    handler: (data: unknown) => void,
+    handler: (data: T) => void,
   ): () => void {
-    if (!this.eventHandlers.has(eventType)) {
-      this.eventHandlers.set(eventType, new Set());
-    }
-
-    this.eventHandlers.get(eventType)!.add(handler);
-
-    // Return unsubscribe function
-    return () => {
-      const handlers = this.eventHandlers.get(eventType);
-      if (handlers) {
-        handlers.delete(handler);
-      }
-    };
+    return wsManager.subscribe<T>(eventType, handler);
   }
 
   public sendWSMessage<T>(type: WSMessageType, payload: T) {
-    if (this.wsConnection?.readyState === WebSocket.OPEN) {
-      const message: WSMessage<T> = {
-        type,
-        payload,
-        timestamp: new Date().toISOString(),
-        correlationId: crypto.randomUUID(),
-      };
-
-      this.wsConnection.send(JSON.stringify(message));
-    } else {
-      // Queue the message for later
-      this.requestQueue.push(async () => {
-        this.sendWSMessage(type, payload);
-      });
-    }
+    wsManager.send({
+      type,
+      payload,
+      timestamp: new Date().toISOString(),
+      correlationId: crypto.randomUUID(),
+    });
   }
-
-  private async processQueuedRequests() {
-    if (this.isProcessingQueue || this.requestQueue.length === 0) {
-      return;
-    }
-
-    this.isProcessingQueue = true;
-
-    while (this.requestQueue.length > 0) {
-      const request = this.requestQueue.shift();
-      if (request) {
-        try {
-          await request();
-        } catch (error) {
-          console.error("Failed to process queued request:", error);
-        }
-      }
-    }
-
-    this.isProcessingQueue = false;
-  }
-
-  // ============= Cleanup =============
 
   public disconnect() {
-    if (this.wsConnection) {
-      this.wsConnection.close();
-      this.wsConnection = null;
-    }
-    this.eventHandlers.clear();
-    this.requestQueue = [];
+    // Only disconnect wsManager if no other subscribers exist
+    // In practice, components manage their own wsManager subscriptions
   }
 }
 

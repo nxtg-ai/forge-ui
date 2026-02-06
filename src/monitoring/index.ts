@@ -41,6 +41,7 @@ export interface MonitoringConfig {
   enableAutoRecovery?: boolean;
   enableAlerts?: boolean;
   persistMetrics?: boolean;
+  [key: string]: unknown;
 }
 
 // Health status change event
@@ -48,6 +49,7 @@ export interface HealthStatusChange {
   previous: HealthStatus;
   current: HealthStatus;
   timestamp: Date;
+  [key: string]: unknown;
   reason?: string;
 }
 
@@ -67,6 +69,7 @@ export interface RollbackEvent {
   target?: string;
   params?: Record<string, unknown>;
   timestamp: Date;
+  [key: string]: unknown;
 }
 
 // Restart event
@@ -75,6 +78,7 @@ export interface RestartEvent {
   target?: string;
   params?: Record<string, unknown>;
   timestamp: Date;
+  [key: string]: unknown;
 }
 
 // Debug options
@@ -84,6 +88,7 @@ export interface DebugModeOptions {
   profilePerformance?: boolean;
   collectLogs?: boolean;
   outputPath?: string;
+  [key: string]: unknown;
 }
 
 // Monitoring status

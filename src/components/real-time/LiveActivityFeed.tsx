@@ -13,10 +13,11 @@ import {
   AlertCircle,
   Clock,
   TrendingUp,
-  MoreVertical,
   Filter,
   RefreshCw,
 } from "lucide-react";
+import { wsManager } from "../../services/ws-manager";
+import { logger } from "../../utils/browser-logger";
 
 interface ActivityItem {
   id: string;
@@ -47,6 +48,8 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pendingTimeoutsRef = useRef<Set<NodeJS.Timeout>>(new Set());
   const [filter, setFilter] = useState<"all" | "important" | "errors">("all");
@@ -59,88 +62,108 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
     };
   }, []);
 
+  // Fetch initial activities from API
+  useEffect(() => {
+    const fetchInitialActivities = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const apiUrl = import.meta.env.VITE_API_URL || "/api";
+        const response = await fetch(
+          `${apiUrl}/agents/activities?limit=${maxItems}&sortBy=timestamp&sortOrder=desc`,
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `Failed to fetch activities: ${response.statusText}`,
+          );
+        }
+
+        const result = await response.json();
+
+        if (result.success && Array.isArray(result.data)) {
+          const transformedActivities: ActivityItem[] = result.data.map(
+            (item: any) => ({
+              id:
+                item.id ||
+                `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              agentId: item.agentId || item.agent || "unknown",
+              agentName: item.agentName || item.agent || "Agent",
+              type:
+                item.type ||
+                (item.status === "completed"
+                  ? "completed"
+                  : item.status === "blocked"
+                    ? "blocked"
+                    : "working"),
+              action: item.action || item.message || "Activity",
+              details: item.details || item.description,
+              confidence: item.confidence,
+              timestamp: new Date(item.timestamp || Date.now()),
+              relatedAgents: item.relatedAgents,
+            }),
+          );
+
+          setActivities(transformedActivities);
+        } else {
+          setActivities([]);
+        }
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown error";
+        logger.warn(
+          "[LiveActivityFeed] Failed to fetch initial activities:",
+          errorMessage,
+        );
+        setError(errorMessage);
+        setActivities([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInitialActivities();
+  }, [maxItems]);
+
   // Virtual scrolling configuration
   const VIRTUAL_SCROLL_THRESHOLD = 50;
   const ESTIMATED_ROW_HEIGHT = 64;
 
-  // WebSocket connection
+  // Subscribe to real-time updates via shared wsManager
   useEffect(() => {
-    let ws: WebSocket | null = null;
-    let reconnectTimer: NodeJS.Timeout | null = null;
-    let reconnectAttempts = 0;
-    const maxReconnectAttempts = 3;
-    let isCancelled = false;
-
-    const connect = () => {
-      if (isCancelled) return;
-      if (reconnectAttempts >= maxReconnectAttempts) {
-        setIsReconnecting(false);
-        return;
-      }
-
-      try {
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = import.meta.env.VITE_WS_URL || `${wsProtocol}//${window.location.host}/ws`;
-        ws = new WebSocket(wsUrl);
-
-        ws.onopen = () => {
-          if (isCancelled) { ws?.close(); return; }
-          reconnectAttempts = 0;
-          setIsConnected(true);
-          setIsReconnecting(false);
+    const unsubMessage = wsManager.subscribe(
+      "agent.activity",
+      (payload: any) => {
+        if (!payload) return;
+        const activity: ActivityItem = {
+          id:
+            payload.id ||
+            `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          agentId: payload.agent || "unknown",
+          agentName: payload.agentName || payload.agent || "Agent",
+          type:
+            payload.status === "completed"
+              ? "completed"
+              : payload.status === "blocked"
+                ? "blocked"
+                : "working",
+          action: payload.action || "Activity",
+          details: payload.details,
+          timestamp: new Date(payload.timestamp || Date.now()),
         };
+        handleNewActivity(activity);
+      },
+    );
 
-        ws.onmessage = (event) => {
-          if (isCancelled) return;
-          try {
-            const message = JSON.parse(event.data);
-            // Only handle agent.activity messages
-            if (message.type === "agent.activity" && message.payload) {
-              const activity: ActivityItem = {
-                id: message.payload.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                agentId: message.payload.agent || "unknown",
-                agentName: message.payload.agentName || message.payload.agent || "Agent",
-                type: message.payload.status === "completed" ? "completed" :
-                      message.payload.status === "blocked" ? "blocked" : "working",
-                action: message.payload.action || "Activity",
-                details: message.payload.details,
-                timestamp: new Date(message.payload.timestamp || message.timestamp),
-              };
-              handleNewActivity(activity);
-            }
-          } catch (err) {
-            // Ignore malformed messages
-          }
-        };
-
-        ws.onerror = () => {
-          // Let onclose handle state
-        };
-
-        ws.onclose = () => {
-          if (isCancelled) return;
-          setIsConnected(false);
-          if (reconnectAttempts < maxReconnectAttempts) {
-            reconnectAttempts++;
-            const delay = 2000 * Math.pow(2, reconnectAttempts - 1);
-            setIsReconnecting(true);
-            reconnectTimer = setTimeout(connect, delay);
-          } else {
-            setIsReconnecting(false);
-          }
-        };
-      } catch (error) {
-        console.error("WebSocket connection failed:", error);
-        setIsReconnecting(false);
-      }
-    };
-
-    connect();
+    const unsubState = wsManager.onStateChange((state) => {
+      setIsConnected(state.status === "connected");
+      setIsReconnecting(state.status === "reconnecting");
+    });
 
     return () => {
-      isCancelled = true;
-      if (reconnectTimer) clearTimeout(reconnectTimer);
-      if (ws) ws.close();
+      unsubMessage();
+      unsubState();
     };
   }, []);
 
@@ -152,7 +175,6 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
           ...prev.slice(0, maxItems - 1),
         ];
 
-        // Mark old activities as not new after animation
         const timeout = setTimeout(() => {
           pendingTimeoutsRef.current.delete(timeout);
           setActivities((current) =>
@@ -166,7 +188,6 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
         return newActivities;
       });
 
-      // Auto-scroll to top for new activities
       if (autoScroll && scrollRef.current) {
         scrollRef.current.scrollTo({
           top: 0,
@@ -177,14 +198,72 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
     [maxItems, autoScroll],
   );
 
+  // Manual refresh function
+  const handleRefresh = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const apiUrl = import.meta.env.VITE_API_URL || "/api";
+      const response = await fetch(
+        `${apiUrl}/agents/activities?limit=${maxItems}&sortBy=timestamp&sortOrder=desc`,
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch activities: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success && Array.isArray(result.data)) {
+        const transformedActivities: ActivityItem[] = result.data.map(
+          (item: any) => ({
+            id:
+              item.id ||
+              `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            agentId: item.agentId || item.agent || "unknown",
+            agentName: item.agentName || item.agent || "Agent",
+            type:
+              item.type ||
+              (item.status === "completed"
+                ? "completed"
+                : item.status === "blocked"
+                  ? "blocked"
+                  : "working"),
+            action: item.action || item.message || "Activity",
+            details: item.details || item.description,
+            confidence: item.confidence,
+            timestamp: new Date(item.timestamp || Date.now()),
+            relatedAgents: item.relatedAgents,
+          }),
+        );
+
+        setActivities(transformedActivities);
+      } else {
+        setActivities([]);
+      }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Unknown error";
+      logger.warn(
+        "[LiveActivityFeed] Failed to refresh activities:",
+        errorMessage,
+      );
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [maxItems]);
+
   // Filter activities
   const filteredActivities = activities.filter((activity) => {
-    // Agent filter
-    if (filterByAgent.length > 0 && !filterByAgent.includes(activity.agentId)) {
+    if (
+      filterByAgent.length > 0 &&
+      !filterByAgent.includes(activity.agentId)
+    ) {
       return false;
     }
 
-    // Type filter
     if (
       filter === "important" &&
       activity.type !== "completed" &&
@@ -204,11 +283,11 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
     count: filteredActivities.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => ESTIMATED_ROW_HEIGHT,
-    overscan: 5, // Render 5 extra items above/below viewport for smooth scrolling
+    overscan: 5,
   });
 
-  // Determine if we should use virtual scrolling
-  const useVirtualScroll = filteredActivities.length > VIRTUAL_SCROLL_THRESHOLD;
+  const useVirtualScroll =
+    filteredActivities.length > VIRTUAL_SCROLL_THRESHOLD;
 
   const getActivityIcon = (type: ActivityItem["type"]) => {
     switch (type) {
@@ -286,6 +365,14 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                     : "Offline"}
               </span>
             </div>
+
+            {/* Error indicator */}
+            {error && (
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-900/20">
+                <AlertCircle className="w-3 h-3 text-red-400" />
+                <span className="text-xs text-red-400">Error</span>
+              </div>
+            )}
           </div>
 
           {/* Filters */}
@@ -330,10 +417,15 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
             </div>
 
             <button
-              data-testid="activity-feed-filter-btn"
-              className="p-1 hover:bg-gray-800 rounded transition-all"
+              data-testid="activity-feed-refresh-btn"
+              onClick={handleRefresh}
+              disabled={isLoading}
+              className="p-1 hover:bg-gray-800 rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Refresh activities"
             >
-              <Filter className="w-4 h-4 text-gray-400" />
+              <RefreshCw
+                className={`w-4 h-4 text-gray-400 ${isLoading ? "animate-spin" : ""}`}
+              />
             </button>
           </div>
         </div>
@@ -346,7 +438,6 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
       >
         {filteredActivities.length > 0 ? (
           useVirtualScroll ? (
-            // Virtual scrolling for large lists (>50 items)
             <div
               style={{
                 height: `${virtualizer.getTotalSize()}px`,
@@ -375,16 +466,15 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                       hover:bg-gray-800/30
                     `}
                   >
-                    {/* New activity glow */}
                     {activity.isNew && (
                       <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-transparent rounded-lg pointer-events-none animate-pulse" />
                     )}
 
                     <div className="flex items-start gap-3">
-                      {/* Icon */}
-                      <div className="mt-0.5">{getActivityIcon(activity.type)}</div>
+                      <div className="mt-0.5">
+                        {getActivityIcon(activity.type)}
+                      </div>
 
-                      {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1">
@@ -414,7 +504,8 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                                       {activity.relatedAgents.length > 3 && (
                                         <div className="w-5 h-5 rounded-full bg-gray-800 border border-gray-900 flex items-center justify-center">
                                           <span className="text-xs text-gray-500">
-                                            +{activity.relatedAgents.length - 3}
+                                            +
+                                            {activity.relatedAgents.length - 3}
                                           </span>
                                         </div>
                                       )}
@@ -433,7 +524,6 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                               </p>
                             )}
 
-                            {/* Confidence indicator */}
                             {activity.confidence !== undefined && (
                               <div className="mt-2 flex items-center gap-2">
                                 <div className="flex-1 max-w-[100px] h-1 bg-gray-800 rounded-full overflow-hidden">
@@ -445,7 +535,9 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                                           ? "bg-yellow-500"
                                           : "bg-red-500"
                                     }`}
-                                    style={{ width: `${activity.confidence ?? 0}%` }}
+                                    style={{
+                                      width: `${activity.confidence ?? 0}%`,
+                                    }}
                                   />
                                 </div>
                                 <span className="text-xs text-gray-500">
@@ -455,7 +547,6 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                             )}
                           </div>
 
-                          {/* Timestamp */}
                           <span
                             data-testid={`activity-feed-timestamp-${activity.id}`}
                             className="text-xs text-gray-500 whitespace-nowrap"
@@ -464,24 +555,12 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                           </span>
                         </div>
                       </div>
-
-                      {/* Actions menu */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Handle menu
-                        }}
-                        className="p-1 hover:bg-gray-700 rounded transition-all opacity-0 group-hover:opacity-100"
-                      >
-                        <MoreVertical className="w-3 h-3 text-gray-500" />
-                      </button>
                     </div>
                   </div>
                 );
               })}
             </div>
           ) : (
-            // Regular rendering for small lists (<=50 items)
             <div className="space-y-1">
               <AnimatePresence mode="popLayout">
                 {filteredActivities.map((activity, index) => (
@@ -508,7 +587,6 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                       hover:bg-gray-800/30
                     `}
                   >
-                    {/* New activity glow */}
                     {activity.isNew && (
                       <motion.div
                         initial={{ opacity: 1 }}
@@ -519,10 +597,10 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                     )}
 
                     <div className="flex items-start gap-3">
-                      {/* Icon */}
-                      <div className="mt-0.5">{getActivityIcon(activity.type)}</div>
+                      <div className="mt-0.5">
+                        {getActivityIcon(activity.type)}
+                      </div>
 
-                      {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1">
@@ -552,7 +630,8 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                                       {activity.relatedAgents.length > 3 && (
                                         <div className="w-5 h-5 rounded-full bg-gray-800 border border-gray-900 flex items-center justify-center">
                                           <span className="text-xs text-gray-500">
-                                            +{activity.relatedAgents.length - 3}
+                                            +
+                                            {activity.relatedAgents.length - 3}
                                           </span>
                                         </div>
                                       )}
@@ -571,7 +650,6 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                               </p>
                             )}
 
-                            {/* Confidence indicator */}
                             {activity.confidence !== undefined && (
                               <div className="mt-2 flex items-center gap-2">
                                 <div className="flex-1 max-w-[100px] h-1 bg-gray-800 rounded-full overflow-hidden">
@@ -584,7 +662,9 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                                           : "bg-red-500"
                                     }`}
                                     initial={{ width: 0 }}
-                                    animate={{ width: `${activity.confidence ?? 0}%` }}
+                                    animate={{
+                                      width: `${activity.confidence ?? 0}%`,
+                                    }}
                                     transition={{
                                       duration: 0.5,
                                       ease: [0.16, 1, 0.3, 1],
@@ -598,7 +678,6 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                             )}
                           </div>
 
-                          {/* Timestamp */}
                           <span
                             data-testid={`activity-feed-timestamp-${activity.id}`}
                             className="text-xs text-gray-500 whitespace-nowrap"
@@ -607,23 +686,44 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                           </span>
                         </div>
                       </div>
-
-                      {/* Actions menu */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Handle menu
-                        }}
-                        className="p-1 hover:bg-gray-700 rounded transition-all opacity-0 group-hover:opacity-100"
-                      >
-                        <MoreVertical className="w-3 h-3 text-gray-500" />
-                      </button>
                     </div>
                   </motion.div>
                 ))}
               </AnimatePresence>
             </div>
           )
+        ) : isLoading ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center justify-center py-12 text-center"
+          >
+            <div className="w-16 h-16 rounded-2xl bg-gray-800 flex items-center justify-center mb-4">
+              <RefreshCw className="w-8 h-8 text-blue-400 animate-spin" />
+            </div>
+            <p className="text-gray-400 mb-1">Loading activities...</p>
+            <p className="text-xs text-gray-500">
+              Fetching recent agent activity
+            </p>
+          </motion.div>
+        ) : error ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center justify-center py-12 text-center"
+          >
+            <div className="w-16 h-16 rounded-2xl bg-red-900/20 flex items-center justify-center mb-4">
+              <AlertCircle className="w-8 h-8 text-red-400" />
+            </div>
+            <p className="text-red-400 mb-1">Failed to load activities</p>
+            <p className="text-xs text-gray-500 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-all"
+            >
+              Retry
+            </button>
+          </motion.div>
         ) : (
           <motion.div
             initial={{ opacity: 0 }}
@@ -638,6 +738,9 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
               {isConnected
                 ? "Waiting for agent activity..."
                 : "Connecting to activity stream..."}
+            </p>
+            <p className="text-xs text-gray-500 mt-2">
+              Activities will appear here when agents start working
             </p>
           </motion.div>
         )}

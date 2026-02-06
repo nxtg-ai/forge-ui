@@ -228,7 +228,7 @@ export class AgentRouter extends EventEmitter {
    * Handle discovery requests
    */
   private handleDiscovery(message: AgentMessage): void {
-    const request = message.payload as DiscoveryRequest;
+    const request = message.payload as unknown as DiscoveryRequest;
     const agents = this.discover(request.capability);
 
     const response: DiscoveryResponse = {
@@ -239,7 +239,7 @@ export class AgentRouter extends EventEmitter {
       'router',
       message.from,
       'response',
-      response,
+      response as unknown as Record<string, unknown>,
       message.id
     );
 

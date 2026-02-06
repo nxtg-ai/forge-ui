@@ -119,7 +119,10 @@ export abstract class BaseService extends EventEmitter {
               error instanceof Error ? error.message : String(error),
               "INITIALIZATION_ERROR",
             );
-      this.emit("error", integrationError);
+      // Only emit error event if there are listeners to avoid unhandled error
+      if (this.listenerCount("error") > 0) {
+        this.emit("error", integrationError);
+      }
       return Result.err(integrationError);
     } finally {
       this.initPromise = undefined;
@@ -164,7 +167,7 @@ export abstract class BaseService extends EventEmitter {
     } catch (error) {
       if (error instanceof z.ZodError) {
         return Result.err(
-          new ValidationError("Validation failed", error.errors),
+          new ValidationError("Validation failed", error.issues),
         );
       }
       return Result.err(

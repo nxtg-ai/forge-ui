@@ -100,19 +100,21 @@ export const WorkerPoolMetrics: React.FC<WorkerPoolMetricsProps> = ({
   // Scale handlers
   const handleScaleUp = async () => {
     try {
-      await fetch("/api/workers/scale/up", { method: "POST" });
+      const res = await fetch("/api/workers/scale/up", { method: "POST" });
+      if (!res.ok) throw new Error(`Scale up failed (${res.status})`);
       onScaleUp?.();
     } catch (err) {
-      console.error("Scale up failed:", err);
+      setError(err instanceof Error ? err.message : "Scale up failed");
     }
   };
 
   const handleScaleDown = async () => {
     try {
-      await fetch("/api/workers/scale/down", { method: "POST" });
+      const res = await fetch("/api/workers/scale/down", { method: "POST" });
+      if (!res.ok) throw new Error(`Scale down failed (${res.status})`);
       onScaleDown?.();
     } catch (err) {
-      console.error("Scale down failed:", err);
+      setError(err instanceof Error ? err.message : "Scale down failed");
     }
   };
 

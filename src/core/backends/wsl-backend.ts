@@ -13,13 +13,16 @@ import {
   PTYSession,
   RunspaceHealth,
 } from "../runspace";
+import { getLogger } from "../../utils/logger";
+
+const logger = getLogger('wsl-backend');
 
 export class WSLBackend implements IRunspaceBackend {
   readonly type = "wsl" as const;
   private sessions = new Map<string, PTYSession>();
 
   async start(runspace: Runspace): Promise<void> {
-    console.log(`[WSLBackend] Starting runspace: ${runspace.displayName}`);
+    logger.info(`[WSLBackend] Starting runspace: ${runspace.displayName}`);
 
     // WSL backend is "always on" - we just note it's active
     // The actual PTY session is created on-demand when terminal is opened
@@ -27,7 +30,7 @@ export class WSLBackend implements IRunspaceBackend {
   }
 
   async stop(runspace: Runspace): Promise<void> {
-    console.log(`[WSLBackend] Stopping runspace: ${runspace.displayName}`);
+    logger.info(`[WSLBackend] Stopping runspace: ${runspace.displayName}`);
 
     // Kill any active PTY sessions
     const session = this.sessions.get(runspace.id);
@@ -40,7 +43,7 @@ export class WSLBackend implements IRunspaceBackend {
   }
 
   async suspend(runspace: Runspace): Promise<void> {
-    console.log(`[WSLBackend] Suspending runspace: ${runspace.displayName}`);
+    logger.info(`[WSLBackend] Suspending runspace: ${runspace.displayName}`);
 
     // For WSL, suspend = stop (no true pause capability)
     await this.stop(runspace);
@@ -48,14 +51,14 @@ export class WSLBackend implements IRunspaceBackend {
   }
 
   async resume(runspace: Runspace): Promise<void> {
-    console.log(`[WSLBackend] Resuming runspace: ${runspace.displayName}`);
+    logger.info(`[WSLBackend] Resuming runspace: ${runspace.displayName}`);
 
     // Resume = start
     await this.start(runspace);
   }
 
   async execute(runspace: Runspace, command: string): Promise<string> {
-    console.log(
+    logger.info(
       `[WSLBackend] Executing in ${runspace.displayName}: ${command}`,
     );
 
@@ -94,12 +97,12 @@ export class WSLBackend implements IRunspaceBackend {
   }
 
   async attachPTY(runspace: Runspace): Promise<PTYSession> {
-    console.log(`[WSLBackend] Attaching PTY to: ${runspace.displayName}`);
+    logger.info(`[WSLBackend] Attaching PTY to: ${runspace.displayName}`);
 
     // Check if session already exists
     let session = this.sessions.get(runspace.id);
     if (session) {
-      console.log(`[WSLBackend] Reusing existing PTY session`);
+      logger.info(`[WSLBackend] Reusing existing PTY session`);
       return session;
     }
 
@@ -137,7 +140,7 @@ export class WSLBackend implements IRunspaceBackend {
     runspace.ptySessionId = session.id;
     runspace.pid = pty.pid;
 
-    console.log(`[WSLBackend] PTY attached: ${session.id}, PID: ${pty.pid}`);
+    logger.info(`[WSLBackend] PTY attached: ${session.id}, PID: ${pty.pid}`);
 
     return session;
   }
@@ -176,12 +179,12 @@ export class WSLBackend implements IRunspaceBackend {
    * Used when no runspaces exist - spawns a basic shell in current directory
    */
   async createDefaultPTY(): Promise<PTYSession> {
-    console.log(`[WSLBackend] Creating default PTY session`);
+    logger.info(`[WSLBackend] Creating default PTY session`);
 
     // Check if default session already exists
     let session = this.sessions.get("default");
     if (session) {
-      console.log(`[WSLBackend] Reusing existing default PTY session`);
+      logger.info(`[WSLBackend] Reusing existing default PTY session`);
       return session;
     }
 
@@ -211,7 +214,7 @@ export class WSLBackend implements IRunspaceBackend {
 
     this.sessions.set("default", session);
 
-    console.log(
+    logger.info(
       `[WSLBackend] Default PTY created: ${session.id}, PID: ${pty.pid}`,
     );
 

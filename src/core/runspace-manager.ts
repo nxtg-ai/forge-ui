@@ -19,6 +19,9 @@ import {
   IRunspaceBackend,
 } from "./runspace";
 import { WSLBackend } from "./backends/wsl-backend";
+import { getLogger } from "../utils/logger";
+
+const logger = getLogger('runspace-manager');
 
 const FORGE_HOME = path.join(os.homedir(), ".forge");
 const REGISTRY_FILE = path.join(FORGE_HOME, "projects.json");
@@ -42,7 +45,7 @@ export class RunspaceManager extends EventEmitter {
    * Loads existing runspaces from disk
    */
   async initialize(): Promise<void> {
-    console.log("[RunspaceManager] Initializing...");
+    logger.info("[RunspaceManager] Initializing...");
 
     // Ensure .forge directory exists
     await fs.mkdir(FORGE_HOME, { recursive: true });
@@ -52,14 +55,14 @@ export class RunspaceManager extends EventEmitter {
     // Load registry
     await this.loadRegistry();
 
-    console.log(`[RunspaceManager] Loaded ${this.runspaces.size} runspaces`);
+    logger.info(`[RunspaceManager] Loaded ${this.runspaces.size} runspaces`);
 
     // Auto-start runspaces if configured
     for (const runspace of this.runspaces.values()) {
       if (runspace.autoStart) {
-        console.log(`[RunspaceManager] Auto-starting: ${runspace.displayName}`);
+        logger.info(`[RunspaceManager] Auto-starting: ${runspace.displayName}`);
         await this.startRunspace(runspace.id).catch((err) => {
-          console.error(`Failed to auto-start ${runspace.displayName}:`, err);
+          logger.error(`Failed to auto-start ${runspace.displayName}:`, err);
         });
       }
     }
@@ -69,7 +72,7 @@ export class RunspaceManager extends EventEmitter {
    * Create a new runspace
    */
   async createRunspace(config: CreateRunspaceConfig): Promise<Runspace> {
-    console.log(`[RunspaceManager] Creating runspace: ${config.name}`);
+    logger.info(`[RunspaceManager] Creating runspace: ${config.name}`);
 
     // Validate path exists
     try {
@@ -114,7 +117,7 @@ export class RunspaceManager extends EventEmitter {
     // Emit event
     this.emit("runspace.created", { type: "runspace.created", runspace });
 
-    console.log(`[RunspaceManager] Created runspace: ${runspace.id}`);
+    logger.info(`[RunspaceManager] Created runspace: ${runspace.id}`);
     return runspace;
   }
 
@@ -149,7 +152,7 @@ export class RunspaceManager extends EventEmitter {
       throw new Error(`Runspace not found: ${id}`);
     }
 
-    console.log(
+    logger.info(
       `[RunspaceManager] Switching to runspace: ${runspace.displayName}`,
     );
 
@@ -187,13 +190,13 @@ export class RunspaceManager extends EventEmitter {
     }
 
     if (runspace.status === "active") {
-      console.log(
+      logger.info(
         `[RunspaceManager] Runspace already active: ${runspace.displayName}`,
       );
       return;
     }
 
-    console.log(`[RunspaceManager] Starting runspace: ${runspace.displayName}`);
+    logger.info(`[RunspaceManager] Starting runspace: ${runspace.displayName}`);
 
     const backend = this.backends.get(runspace.backendType);
     if (!backend) {
@@ -218,13 +221,13 @@ export class RunspaceManager extends EventEmitter {
     }
 
     if (runspace.status === "stopped") {
-      console.log(
+      logger.info(
         `[RunspaceManager] Runspace already stopped: ${runspace.displayName}`,
       );
       return;
     }
 
-    console.log(`[RunspaceManager] Stopping runspace: ${runspace.displayName}`);
+    logger.info(`[RunspaceManager] Stopping runspace: ${runspace.displayName}`);
 
     const backend = this.backends.get(runspace.backendType);
     if (backend) {
@@ -254,7 +257,7 @@ export class RunspaceManager extends EventEmitter {
       throw new Error(`Runspace not found: ${id}`);
     }
 
-    console.log(
+    logger.info(
       `[RunspaceManager] Suspending runspace: ${runspace.displayName}`,
     );
 
@@ -284,7 +287,7 @@ export class RunspaceManager extends EventEmitter {
       throw new Error(`Runspace not found: ${id}`);
     }
 
-    console.log(`[RunspaceManager] Deleting runspace: ${runspace.displayName}`);
+    logger.info(`[RunspaceManager] Deleting runspace: ${runspace.displayName}`);
 
     // Stop if active
     if (runspace.status === "active") {
@@ -404,7 +407,7 @@ cache/
     } catch (error: unknown) {
       const isNodeError = error instanceof Error && "code" in error;
       if (!isNodeError || (error as NodeJS.ErrnoException).code !== "ENOENT") {
-        console.error("[RunspaceManager] Error loading registry:", error);
+        logger.error("[RunspaceManager] Error loading registry:", error);
       }
       // File doesn't exist yet, that's fine
     }
@@ -445,7 +448,7 @@ cache/
    * Cleanup on shutdown
    */
   async shutdown(): Promise<void> {
-    console.log("[RunspaceManager] Shutting down...");
+    logger.info("[RunspaceManager] Shutting down...");
 
     // Stop all active runspaces
     for (const [id, runspace] of this.runspaces.entries()) {
