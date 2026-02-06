@@ -668,8 +668,8 @@ const AppContent: React.FC<AppContentProps> = (props) => {
         <BetaBanner onFeedbackClick={() => setFeedbackModalOpen(true)} />
       )}
 
-      {/* Unified Navigation Header - hidden on terminal/marketing view (AppShell provides its own) */}
-      {currentView !== "infinity-terminal" && currentView !== "marketing" && (
+      {/* Unified Navigation Header - hidden on marketing view only */}
+      {currentView !== "marketing" && (
         <AppHeader
           currentView={currentView}
           onNavigate={(viewId) => setCurrentView(viewId)}
