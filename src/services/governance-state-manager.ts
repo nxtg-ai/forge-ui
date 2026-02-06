@@ -6,6 +6,9 @@
 import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
+import { getLogger } from "../utils/logger";
+
+const logger = getLogger("governance-state-manager");
 import type {
   GovernanceState,
   GovernanceConfig,
@@ -149,7 +152,7 @@ export class GovernanceStateManager {
       await this.rotateBackups();
     } catch (error) {
       // Non-critical error, log but don't throw
-      console.error("Failed to create backup:", error);
+      logger.error(`Failed to create backup: ${error}`);
     }
   }
 
@@ -175,7 +178,7 @@ export class GovernanceStateManager {
         );
       }
     } catch (error) {
-      console.error("Failed to rotate backups:", error);
+      logger.error(`Failed to rotate backups: ${error}`);
     }
   }
 

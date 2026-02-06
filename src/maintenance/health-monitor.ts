@@ -8,6 +8,9 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
+import { getLogger } from '../utils/logger';
+
+const logger = getLogger('health-monitor');
 
 /**
  * Action that can be taken in response to a health check
@@ -449,7 +452,7 @@ export class HealthMonitor {
         }
       }
     } catch (error) {
-      console.warn(`[HealthMonitor] Error cleaning up ${dir}:`, error);
+      logger.warn(`[HealthMonitor] Error cleaning up ${dir}: ${error}`);
     }
   }
 
@@ -464,7 +467,7 @@ export class HealthMonitor {
 
   private async vacuumDatabase(): Promise<void> {
     // This would use better-sqlite3 or similar to run VACUUM
-    console.log('[HealthMonitor] Database vacuum would run here');
+    logger.info('[HealthMonitor] Database vacuum would run here');
   }
 
   // ============================================================

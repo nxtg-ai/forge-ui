@@ -9,6 +9,9 @@ import * as yaml from "js-yaml";
 import { z } from "zod";
 import { BaseService, ServiceConfig } from "./base-service";
 import { Result, IntegrationError, ValidationError } from "../utils/result";
+import { getLogger } from "../utils/logger";
+
+const logger = getLogger("vision-service");
 import { VisionData, Goal, Metric, EngagementMode } from "../components/types";
 import {
   CanonicalVision,
@@ -378,7 +381,7 @@ export class VisionService extends BaseService {
           const capture = yaml.load(content) as VisionCaptureData;
           captures.push(capture);
         } catch (error) {
-          console.error(`Failed to load capture ${file}:`, error);
+          logger.error(`Failed to load capture ${file}: ${error}`);
         }
       }
 

@@ -15,6 +15,9 @@ import { Result } from '../utils/result';
 import { AICliAdapter, AdapterNotAvailableError } from './interface';
 import { ClaudeCodeAdapter } from './claude-code';
 import { MockAdapter } from './mock';
+import { getLogger } from '../utils/logger';
+
+const logger = getLogger('adapter-factory');
 
 /**
  * Factory for creating and managing AI CLI adapters
@@ -30,7 +33,7 @@ export class AdapterFactory {
   register(adapter: AICliAdapter): void {
     // Prevent duplicates
     if (this.adapters.some(a => a.name === adapter.name)) {
-      console.warn(`Adapter ${adapter.name} already registered, skipping`);
+      logger.warn(`Adapter ${adapter.name} already registered, skipping`);
       return;
     }
     this.adapters.push(adapter);
@@ -55,11 +58,11 @@ export class AdapterFactory {
       try {
         if (await adapter.isAvailable()) {
           this.activeAdapter = adapter;
-          console.log(`[AdapterFactory] Using adapter: ${adapter.name} v${adapter.version}`);
+          logger.info(`[AdapterFactory] Using adapter: ${adapter.name} v${adapter.version}`);
           return adapter;
         }
       } catch (error) {
-        console.warn(`[AdapterFactory] Error checking adapter ${adapter.name}:`, error);
+        logger.warn(`[AdapterFactory] Error checking adapter ${adapter.name}: ${error}`);
       }
     }
 

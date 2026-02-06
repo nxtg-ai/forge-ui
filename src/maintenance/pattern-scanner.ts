@@ -8,6 +8,9 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { LearningDatabase } from './learning-database';
+import { getLogger } from '../utils/logger';
+
+const logger = getLogger('pattern-scanner');
 
 /**
  * A discovered pattern from task analysis
@@ -138,7 +141,7 @@ export class PatternScanner {
         }
       }
     } catch (error) {
-      console.warn('[PatternScanner] Error scanning task completions:', error);
+      logger.warn(`[PatternScanner] Error scanning task completions: ${error}`);
     }
 
     return patterns;
@@ -199,7 +202,7 @@ export class PatternScanner {
         }
       }
     } catch (error) {
-      console.warn('[PatternScanner] Error scanning corrections:', error);
+      logger.warn(`[PatternScanner] Error scanning corrections: ${error}`);
     }
 
     return patterns;
@@ -249,7 +252,7 @@ export class PatternScanner {
         }
       }
     } catch (error) {
-      console.warn('[PatternScanner] Error scanning performance data:', error);
+      logger.warn(`[PatternScanner] Error scanning performance data: ${error}`);
     }
 
     return patterns;

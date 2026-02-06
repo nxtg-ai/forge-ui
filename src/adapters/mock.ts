@@ -8,6 +8,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import { getLogger } from '../utils/logger';
 import {
   BaseAdapter,
   AdapterCapability,
@@ -84,7 +85,7 @@ export class MockAdapter extends BaseAdapter {
     this.taskHistory.push(task);
 
     if (this.config.verbose) {
-      console.log(`[MockAdapter] Executing task: ${task.agentId} - ${task.objective}`);
+      getLogger('mock-adapter').info(`[MockAdapter] Executing task: ${task.agentId} - ${task.objective}`);
     }
 
     // Simulate random failures if configured
@@ -114,7 +115,7 @@ export class MockAdapter extends BaseAdapter {
     await this.simulateDelay();
 
     if (this.config.verbose) {
-      console.log(`[MockAdapter] Reading file: ${filePath}`);
+      getLogger('mock-adapter').info(`[MockAdapter] Reading file: ${filePath}`);
     }
 
     return fs.readFile(filePath, 'utf-8');
@@ -127,7 +128,7 @@ export class MockAdapter extends BaseAdapter {
     await this.simulateDelay();
 
     if (this.config.verbose) {
-      console.log(`[MockAdapter] Writing file: ${filePath}`);
+      getLogger('mock-adapter').info(`[MockAdapter] Writing file: ${filePath}`);
     }
 
     const dir = path.dirname(filePath);
@@ -142,7 +143,7 @@ export class MockAdapter extends BaseAdapter {
     await this.simulateDelay();
 
     if (this.config.verbose) {
-      console.log(`[MockAdapter] Executing shell: ${command}`);
+      getLogger('mock-adapter').info(`[MockAdapter] Executing shell: ${command}`);
     }
 
     const { exec } = await import('child_process');
@@ -190,7 +191,7 @@ export class MockAdapter extends BaseAdapter {
     await this.simulateDelay();
 
     if (this.config.verbose) {
-      console.log(`[MockAdapter] Spawning agent: ${agentId}`);
+      getLogger('mock-adapter').info(`[MockAdapter] Spawning agent: ${agentId}`);
     }
 
     const handle: AgentHandle = {

@@ -11,6 +11,9 @@ import { PerformanceAnalyzer } from './performance-analyzer';
 import { HealthMonitor } from './health-monitor';
 import { LearningDatabase } from './learning-database';
 import { UpdateApplier } from './update-applier';
+import { getLogger } from '../utils/logger';
+
+const logger = getLogger('maintenance-daemon');
 
 interface ScheduledTask {
   name: string;
@@ -121,11 +124,11 @@ export class MaintenanceDaemon extends EventEmitter {
    */
   async start(): Promise<void> {
     if (this.running) {
-      console.warn('[MaintenanceDaemon] Already running');
+      logger.warn('[MaintenanceDaemon] Already running');
       return;
     }
 
-    console.log('[MaintenanceDaemon] Starting...');
+    logger.info('[MaintenanceDaemon] Starting...');
 
     // Initialize database
     await this.learningDatabase.initialize();
@@ -146,7 +149,7 @@ export class MaintenanceDaemon extends EventEmitter {
     this.startScheduledTasks();
 
     this.emit('started');
-    console.log('[MaintenanceDaemon] Started successfully');
+    logger.info('[MaintenanceDaemon] Started successfully');
   }
 
   /**
@@ -157,7 +160,7 @@ export class MaintenanceDaemon extends EventEmitter {
       return;
     }
 
-    console.log('[MaintenanceDaemon] Stopping...');
+    logger.info('[MaintenanceDaemon] Stopping...');
 
     this.running = false;
 
@@ -171,7 +174,7 @@ export class MaintenanceDaemon extends EventEmitter {
     await this.learningDatabase.close();
 
     this.emit('stopped');
-    console.log('[MaintenanceDaemon] Stopped');
+    logger.info('[MaintenanceDaemon] Stopped');
   }
 
   /**
@@ -197,7 +200,7 @@ export class MaintenanceDaemon extends EventEmitter {
       this.log(`Pattern scan complete. Found ${patterns.length} patterns.`);
       this.emit('taskComplete', 'pattern-scan', { patternCount: patterns.length });
     } catch (error) {
-      console.error('[MaintenanceDaemon] Pattern scan failed:', error);
+      logger.error('[MaintenanceDaemon] Pattern scan failed:', error);
       this.emit('taskError', 'pattern-scan', error);
     }
   }
@@ -236,7 +239,7 @@ export class MaintenanceDaemon extends EventEmitter {
         suggestionCount: suggestions.length,
       });
     } catch (error) {
-      console.error('[MaintenanceDaemon] Performance analysis failed:', error);
+      logger.error('[MaintenanceDaemon] Performance analysis failed:', error);
       this.emit('taskError', 'performance-analysis', error);
     }
   }
@@ -266,7 +269,7 @@ export class MaintenanceDaemon extends EventEmitter {
               try {
                 await action.handler();
               } catch (fixError) {
-                console.error(`[MaintenanceDaemon] Auto-fix failed:`, fixError);
+                logger.error(`[MaintenanceDaemon] Auto-fix failed: ${fixError}`);
               }
             }
           }
@@ -280,7 +283,7 @@ export class MaintenanceDaemon extends EventEmitter {
         criticalCount: results.filter(r => r.status === 'critical').length,
       });
     } catch (error) {
-      console.error('[MaintenanceDaemon] Health check failed:', error);
+      logger.error('[MaintenanceDaemon] Health check failed:', error);
       this.emit('taskError', 'health-check', error);
     }
   }
@@ -300,7 +303,7 @@ export class MaintenanceDaemon extends EventEmitter {
       this.log(`Updates complete. Applied: ${results.applied}, Queued for review: ${results.queued}`);
       this.emit('taskComplete', 'apply-updates', results);
     } catch (error) {
-      console.error('[MaintenanceDaemon] Update application failed:', error);
+      logger.error('[MaintenanceDaemon] Update application failed:', error);
       this.emit('taskError', 'apply-updates', error);
     }
   }
@@ -402,7 +405,7 @@ export class MaintenanceDaemon extends EventEmitter {
 
   private log(message: string): void {
     if (this.config.verbose) {
-      console.log(`[MaintenanceDaemon] ${message}`);
+      logger.info(`[MaintenanceDaemon] ${message}`);
     }
   }
 }

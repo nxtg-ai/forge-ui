@@ -9,6 +9,9 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { LearningDatabase, SkillUpdateRecord } from './learning-database';
+import { getLogger } from '../utils/logger';
+
+const logger = getLogger('update-applier');
 
 /**
  * A proposed skill update
@@ -135,7 +138,7 @@ export class UpdateApplier {
       // Mark as applied
       await this.database.markUpdateApplied(update.id);
 
-      console.log(`[UpdateApplier] Applied update ${update.id} to ${update.skillFile}`);
+      logger.info(`[UpdateApplier] Applied update ${update.id} to ${update.skillFile}`);
     } catch (error) {
       // Rollback on failure
       await this.rollback(backupId);
@@ -195,7 +198,7 @@ export class UpdateApplier {
     // Mark update as rolled back
     await this.database.markUpdateRolledBack(backup.updateId);
 
-    console.log(`[UpdateApplier] Rolled back ${backup.originalPath} to backup ${backupId}`);
+    logger.info(`[UpdateApplier] Rolled back ${backup.originalPath} to backup ${backupId}`);
   }
 
   /**
@@ -322,7 +325,7 @@ export class UpdateApplier {
     if (ext === '.md' || ext === '.markdown') {
       // Check for basic markdown structure
       if (content.length > 0 && !content.includes('#') && !content.includes('-')) {
-        console.warn(`[UpdateApplier] Warning: ${filePath} may not be valid markdown`);
+        logger.warn(`[UpdateApplier] Warning: ${filePath} may not be valid markdown`);
       }
     }
 

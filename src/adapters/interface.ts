@@ -14,6 +14,9 @@
  */
 
 import { Result } from '../utils/result';
+import { getLogger } from '../utils/logger';
+
+const logger = getLogger('adapter-interface');
 
 /**
  * Capability that an adapter can provide
@@ -312,13 +315,13 @@ export abstract class BaseAdapter implements AICliAdapter {
 
   async globFiles(pattern: string, _cwd?: string): Promise<string[]> {
     // Default implementation - subclasses should override with native implementation
-    console.warn(`globFiles not natively implemented in ${this.name}, using fallback`);
+    logger.warn(`globFiles not natively implemented in ${this.name}, using fallback`);
     return [];
   }
 
   async grepFiles(pattern: string, _path?: string): Promise<string[]> {
     // Default implementation - subclasses should override with native implementation
-    console.warn(`grepFiles not natively implemented in ${this.name}, using fallback`);
+    logger.warn(`grepFiles not natively implemented in ${this.name}, using fallback`);
     return [];
   }
 

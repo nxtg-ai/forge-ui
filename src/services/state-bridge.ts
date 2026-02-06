@@ -6,6 +6,9 @@
 import { z } from "zod";
 import { BaseService, ServiceConfig } from "./base-service";
 import { Result, StateError, IntegrationError } from "../utils/result";
+import { getLogger } from "../utils/logger";
+
+const logger = getLogger("state-bridge");
 import {
   ProjectState,
   ProjectContext,
@@ -520,7 +523,7 @@ export class StateBridgeService extends BaseService {
       try {
         callback(update);
       } catch (error) {
-        console.error("Subscriber callback error:", error);
+        logger.error(`Subscriber callback error: ${error}`);
       }
     });
 
