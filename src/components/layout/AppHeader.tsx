@@ -40,6 +40,7 @@ import { ProjectSwitcher } from "../ProjectSwitcher";
 import { useEngagement } from "../../contexts/EngagementContext";
 import type { Runspace } from "../../core/runspace";
 import type { EngagementMode } from "../types";
+import logoSrc from "../../assets/logo-32.png";
 
 // Navigation route configuration - icons must match page AppShell icons
 const NAVIGATION_ROUTES = [
@@ -423,9 +424,12 @@ const MobileDrawer: React.FC<{
       >
             {/* Drawer Header */}
             <div className="flex items-center justify-between p-4 border-b border-gray-800">
-              <h2 className="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                NXTG-Forge
-              </h2>
+              <div className="flex items-center gap-2">
+                <img src={logoSrc} alt="" className="w-7 h-7 rounded" aria-hidden="true" />
+                <h2 className="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                  NXTG-Forge
+                </h2>
+              </div>
               <button
                 onClick={onClose}
                 aria-label="Close navigation menu"
@@ -555,9 +559,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               )}
 
               {/* Branding */}
-              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                NXTG-Forge
-              </h1>
+              <div className="flex items-center gap-2">
+                <img src={logoSrc} alt="" className="w-7 h-7 rounded" aria-hidden="true" />
+                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                  NXTG-Forge
+                </h1>
+              </div>
 
               {/* Project Switcher - Desktop */}
               {showProjectSwitcher && currentRunspace && runspaces && onRunspaceSwitch && onNewProject && onManageProjects && (
