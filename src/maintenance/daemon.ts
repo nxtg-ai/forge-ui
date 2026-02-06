@@ -213,10 +213,19 @@ export class MaintenanceDaemon extends EventEmitter {
 
     try {
       const metrics = await this.performanceAnalyzer.analyze();
-      await this.learningDatabase.storeMetrics(metrics);
+      // Transform AgentMetrics to match storeMetrics signature
+      const transformedMetrics = metrics.map(m => ({
+        agentId: m.agentId,
+        successRate: m.metrics.successRate,
+        tasksCompleted: m.metrics.tasksCompleted,
+        avgDurationMs: m.metrics.avgDuration,
+        overrideRate: m.metrics.userOverrideRate,
+        commonFailures: m.metrics.commonFailures,
+      }));
+      await this.learningDatabase.storeMetrics(transformedMetrics);
 
       // Generate improvement suggestions
-      const suggestions = await this.generateSuggestions(metrics);
+      const suggestions = await this.generateSuggestions(transformedMetrics);
       if (suggestions.length > 0) {
         await this.queueSuggestions(suggestions);
       }

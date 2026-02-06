@@ -55,8 +55,8 @@ const visionCaptureSchema = z.object({
 
 const commandExecuteSchema = z.object({
   name: z.string().min(1).max(200),
-  args: z.record(z.unknown()).optional(),
-  context: z.record(z.unknown()).optional(),
+  args: z.record(z.string(), z.unknown()).optional(),
+  context: z.record(z.string(), z.unknown()).optional(),
 });
 
 const feedbackSchema = z.object({
@@ -72,7 +72,7 @@ const agentTaskSchema = z.object({
   name: z.string().min(1).max(200),
   type: z.string().min(1).max(100),
   priority: z.enum(["low", "medium", "high", "critical"]).optional(),
-  context: z.record(z.unknown()).optional(),
+  context: z.record(z.string(), z.unknown()).optional(),
 });
 
 // ============= Security: Rate Limiting =============
@@ -199,7 +199,7 @@ function validateRequest(schema: z.ZodSchema) {
         return res.status(400).json({
           success: false,
           error: "Invalid request data",
-          details: error.errors,
+          details: error.issues,
           timestamp: new Date().toISOString(),
         });
       }
@@ -448,12 +448,12 @@ async function handleWSMessage(ws: WebSocket, message: Record<string, unknown>) 
       break;
 
     case "state.update":
-      await stateManager.updateState(message.payload);
+      await stateManager.updateState(message.payload as any);
       broadcast("state.update", stateManager.getState());
       break;
 
     case "command.execute":
-      const result = await orchestrator.executeCommand(message.payload);
+      const result = await orchestrator.executeCommand(message.payload as string);
       ws.send(
         JSON.stringify({
           type: "command.result",
@@ -465,7 +465,7 @@ async function handleWSMessage(ws: WebSocket, message: Record<string, unknown>) 
 
     default:
       // Only log truly unknown message types (not common ones)
-      if (!['pong', 'heartbeat'].includes(message.type)) {
+      if (!['pong', 'heartbeat'].includes(String(message.type || ''))) {
         console.log("Unknown message type:", message.type);
       }
   }
@@ -828,7 +828,7 @@ app.post(
   validateRequest(agentTaskSchema),
   async (req, res) => {
     try {
-      const { agentId } = req.params;
+      const agentId = String(req.params.agentId || '');
       const task = req.body;
       const result = await coordinationService.assignTask(agentId, task);
 
@@ -1107,12 +1107,12 @@ app.post("/api/commands/execute", rateLimit(writeLimiter), async (req, res) => {
       data: {
         command,
         output: result.output,
-        ...result.data,
+        ...(result.data || {}),
       },
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    captureException(error);
+    captureException(error instanceof Error ? error : String(error));
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : "Command execution failed",
@@ -2287,18 +2287,8 @@ app.post("/api/forge/init", async (req, res) => {
   try {
     const options: InitOptions = req.body;
 
-    // Initialize the service first if needed
-    const serviceInit = await initService.initialize();
-    if (serviceInit.isErr()) {
-      return res.status(500).json({
-        success: false,
-        error: serviceInit.error.message,
-        timestamp: new Date().toISOString(),
-      });
-    }
-
     // Perform initialization
-    const result = await initService.initialize(options);
+    const result = await initService.initializeProject(options);
 
     if (result.isErr()) {
       const error = result.error;
@@ -2360,7 +2350,7 @@ app.get("/api/forge/status", async (req, res) => {
       });
     }
   } catch (error) {
-    captureException(error);
+    captureException(error instanceof Error ? error : String(error));
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : "Status retrieval failed",

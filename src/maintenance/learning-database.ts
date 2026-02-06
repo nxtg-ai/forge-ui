@@ -159,7 +159,7 @@ export class LearningDatabase {
         patterns = patterns.filter(p => p.pattern.outcome === filter.outcome);
       }
       if (filter.minConfidence !== undefined) {
-        patterns = patterns.filter(p => p.pattern.confidence >= filter.minConfidence);
+        patterns = patterns.filter(p => p.pattern.confidence >= (filter.minConfidence ?? 0));
       }
       if (filter.agentId) {
         patterns = patterns.filter(p => p.agentId === filter.agentId);

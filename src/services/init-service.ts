@@ -509,7 +509,7 @@ export class InitService extends BaseService {
   /**
    * Full initialization workflow
    */
-  async initialize(
+  async initializeProject(
     options: InitOptions,
   ): Promise<Result<InitResult, IntegrationError | ValidationError>> {
     // Validate options

@@ -67,6 +67,7 @@ export interface DebugOptions {
   profilePerformance: boolean;
   collectLogs: boolean;
   outputPath?: string;
+  [key: string]: unknown;
 }
 
 export class DiagnosticTools {

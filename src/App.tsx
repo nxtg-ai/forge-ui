@@ -460,7 +460,7 @@ function IntegratedApp() {
             </button>
           </div>
         </div>
-        <ErrorDisplay errors={forge.errors.filter((e): e is string => e !== null)} />
+        <ErrorDisplay errors={forge.errors.filter((e): e is string => typeof e === 'string')} />
       </div>
     );
   }
@@ -480,7 +480,7 @@ function IntegratedApp() {
       >
         <AppContent
         currentView={currentView}
-        setCurrentView={setCurrentView}
+        setCurrentView={(view: string) => setCurrentView(view as typeof currentView)}
         selectedArchitect={selectedArchitect}
         setSelectedArchitect={setSelectedArchitect}
         visionSkipped={visionSkipped}
@@ -652,7 +652,7 @@ const AppContent: React.FC<AppContentProps> = (props) => {
             </button>
           </div>
         </div>
-        <ErrorDisplay errors={forge.errors} />
+        <ErrorDisplay errors={forge.errors.filter((e): e is string => typeof e === 'string')} />
       </div>
     );
   }
@@ -693,9 +693,9 @@ const AppContent: React.FC<AppContentProps> = (props) => {
         )}
 
         {/* MCP Selection View */}
-        {currentView === "mcp-selection" && mcpSuggestions && (
+        {currentView === "mcp-selection" && mcpSuggestions && 'essential' in mcpSuggestions && (
           <MCPSelectionView
-            suggestions={mcpSuggestions}
+            suggestions={mcpSuggestions as unknown as import('./orchestration/mcp-suggestion-engine').MCPSuggestion}
             onSelectionComplete={handleMcpSelectionComplete}
             onSkip={handleMcpSkip}
           />
@@ -739,10 +739,12 @@ const AppContent: React.FC<AppContentProps> = (props) => {
               onToggle={handleYoloModeToggle}
               statistics={
                 forge.yoloMode.statistics || {
-                  totalActions: 0,
+                  actionsToday: 0,
                   successRate: 0,
-                  averageTime: 0,
-                  savedHours: 0,
+                  timesSaved: 0,
+                  issuesFixed: 0,
+                  performanceGain: 0,
+                  costSaved: 0,
                 }
               }
               recentActions={forge.yoloMode.history || []}
@@ -780,7 +782,7 @@ const AppContent: React.FC<AppContentProps> = (props) => {
       />
 
       {/* Error Display */}
-      <ErrorDisplay errors={forge.errors} />
+      <ErrorDisplay errors={forge.errors.filter((e): e is string => typeof e === 'string')} />
 
       {/* Beta Feedback Components */}
       {feedbackModalOpen && (
@@ -821,15 +823,26 @@ const AppContent: React.FC<AppContentProps> = (props) => {
 
 // Dashboard wrapper that uses engagement context
 const DashboardWithEngagement: React.FC<{
-  visionData: VisionData;
+  visionData: import('./components/types').VisionData;
   projectState: ProjectState;
   agentActivity: AgentActivity[];
 }> = ({ visionData, projectState, agentActivity }) => {
   const { mode, setMode } = useEngagement();
 
+  // Convert VisionData goals to string[] if needed
+  const normalizedVisionData: import('./components/types').VisionData = {
+    ...visionData,
+    goals: Array.isArray(visionData.goals)
+      ? visionData.goals.map(g => typeof g === 'string' ? g : g.title)
+      : [],
+    successMetrics: Array.isArray(visionData.successMetrics)
+      ? visionData.successMetrics.map(m => typeof m === 'string' ? m : m.name)
+      : [],
+  };
+
   return (
     <ChiefOfStaffDashboard
-      visionData={visionData}
+      visionData={normalizedVisionData as any}
       projectState={projectState}
       agentActivity={agentActivity}
       onModeChange={setMode}

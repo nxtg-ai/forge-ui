@@ -66,6 +66,7 @@ export interface PerformanceAlert {
   threshold: number;
   actual: number;
   timestamp: Date;
+  [key: string]: unknown;
 }
 
 // Performance thresholds (in milliseconds)

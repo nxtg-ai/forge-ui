@@ -316,7 +316,7 @@ export function createPTYBridge(
         }
       }
 
-      let ptySession: { pty: { onData: (cb: (data: string) => void) => void; onExit: (cb: (info: { exitCode: number; signal: number }) => void) => void; write: (data: string) => void; kill: () => void; resize: (cols: number, rows: number) => void } };
+      let ptySession: { pty: { onData: (cb: (data: string) => void) => void; onExit: (cb: (info: { exitCode: number; signal?: number }) => void) => void; write: (data: string) => void; kill: () => void; resize: (cols: number, rows: number) => void } };
 
       if (useDefaultShell) {
         console.log("[PTY Bridge] Creating default PTY session");
@@ -362,8 +362,8 @@ export function createPTYBridge(
       });
 
       // PTY exit → cleanup
-      ptySession.pty.onExit(({ exitCode, signal }: { exitCode: number; signal: number }) => {
-        console.log(`[PTY Bridge] PTY exited: code=${exitCode}, signal=${signal}`);
+      ptySession.pty.onExit(({ exitCode, signal }: { exitCode: number; signal?: number }) => {
+        console.log(`[PTY Bridge] PTY exited: code=${exitCode}, signal=${signal ?? 'none'}`);
         const currentWs = session.ws;
         if (currentWs && currentWs.readyState === WebSocket.OPEN) {
           currentWs.send(JSON.stringify({
