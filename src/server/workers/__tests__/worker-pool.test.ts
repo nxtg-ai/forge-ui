@@ -20,7 +20,10 @@ vi.mock("crypto", () => ({
   ),
 }));
 
-describe("TaskQueue", () => {
+// TaskQueue tests removed — fully covered in task-queue.test.ts
+// Keeping only: Worker Pool Configuration, Security Constraints, Task Type Handling
+
+describe.skip("TaskQueue (see task-queue.test.ts)", () => {
   let queue: TaskQueue;
 
   beforeEach(() => {
