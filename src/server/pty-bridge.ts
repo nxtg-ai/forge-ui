@@ -11,6 +11,9 @@ import * as crypto from "crypto";
 import type { RunspaceManager } from "../core/runspace-manager";
 import type { Runspace } from "../core/runspace";
 import { WSLBackend } from "../core/backends/wsl-backend";
+import { getLogger } from "../utils/logger";
+
+const logger = getLogger('pty-bridge');
 
 interface TerminalSession {
   runspaceId: string;
@@ -132,7 +135,7 @@ export function createPTYBridge(
   });
 
   wss.on("error", (error) => {
-    console.error("[PTY Bridge] WebSocket server error:", error);
+    logger.error("[PTY Bridge] WebSocket server error:", error);
   });
 
   /**
@@ -165,7 +168,7 @@ export function createPTYBridge(
             break;
         }
       } catch (error) {
-        console.error("[PTY Bridge] Error handling message:", error);
+        logger.error("[PTY Bridge] Error handling message:", error);
       }
     });
 
@@ -173,14 +176,14 @@ export function createPTYBridge(
     // If session.ws has already been swapped to a new ws (reattach), this is a no-op.
     ws.on("close", () => {
       if (session.ws !== ws) {
-        console.log(`[PTY Bridge] Stale WebSocket closed for session ${session.sessionId}, ignoring`);
+        logger.info(`[PTY Bridge] Stale WebSocket closed for session ${session.sessionId}, ignoring`);
         return;
       }
-      console.log(`[PTY Bridge] WebSocket closed for session ${session.sessionId}, keeping PTY alive`);
+      logger.info(`[PTY Bridge] WebSocket closed for session ${session.sessionId}, keeping PTY alive`);
       session.ws = null;
 
       session.cleanupTimer = setTimeout(() => {
-        console.log(`[PTY Bridge] Session ${session.sessionId} timed out, cleaning up`);
+        logger.info(`[PTY Bridge] Session ${session.sessionId} timed out, cleaning up`);
         session.pty.pty.kill();
         sessions.delete(session.sessionId);
         wslBackend.removeSession(session.runspaceId);
@@ -188,7 +191,7 @@ export function createPTYBridge(
     });
 
     ws.on("error", (error) => {
-      console.error(`[PTY Bridge] WebSocket error for session ${session.sessionId}:`, error);
+      logger.error(`[PTY Bridge] WebSocket error for session ${session.sessionId}:`, error);
       if (session.ws === ws) {
         session.ws = null;
       }
@@ -209,13 +212,13 @@ export function createPTYBridge(
   }
 
   wss.on("connection", async (ws: WebSocket, request: http.IncomingMessage) => {
-    console.log("[PTY Bridge] New terminal connection");
+    logger.info("[PTY Bridge] New terminal connection");
 
     try {
       // Security: Validate origin
       const origin = request.headers.origin;
       if (!validateOrigin(origin)) {
-        console.error(`[PTY Bridge] Blocked connection from unauthorized origin: ${origin}`);
+        logger.error(`[PTY Bridge] Blocked connection from unauthorized origin: ${origin}`);
         ws.send(JSON.stringify({ type: "error", data: "Unauthorized origin" }));
         ws.close();
         return;
@@ -230,14 +233,14 @@ export function createPTYBridge(
       if (requestedSessionId && authToken) {
         const tokenData = authTokens.get(authToken);
         if (!tokenData) {
-          console.error(`[PTY Bridge] Invalid or expired auth token`);
+          logger.error(`[PTY Bridge] Invalid or expired auth token`);
           ws.send(JSON.stringify({ type: "error", data: "Invalid or expired token" }));
           ws.close();
           return;
         }
 
         if (tokenData.sessionId !== requestedSessionId) {
-          console.error(`[PTY Bridge] Token/session mismatch`);
+          logger.error(`[PTY Bridge] Token/session mismatch`);
           ws.send(JSON.stringify({ type: "error", data: "Token does not match session" }));
           ws.close();
           return;
@@ -245,7 +248,7 @@ export function createPTYBridge(
 
         // Check token expiry
         if (Date.now() - tokenData.createdAt > TOKEN_EXPIRY_MS) {
-          console.error(`[PTY Bridge] Expired auth token`);
+          logger.error(`[PTY Bridge] Expired auth token`);
           authTokens.delete(authToken);
           ws.send(JSON.stringify({ type: "error", data: "Token expired" }));
           ws.close();
@@ -257,7 +260,7 @@ export function createPTYBridge(
       if (requestedSessionId) {
         const existingSession = sessions.get(requestedSessionId);
         if (existingSession) {
-          console.log(`[PTY Bridge] Reattaching to session: ${requestedSessionId}`);
+          logger.info(`[PTY Bridge] Reattaching to session: ${requestedSessionId}`);
 
           // Cancel cleanup timer
           if (existingSession.cleanupTimer) {
@@ -292,7 +295,7 @@ export function createPTYBridge(
 
           return;
         } else {
-          console.log(`[PTY Bridge] Session ${requestedSessionId} not found, creating new`);
+          logger.info(`[PTY Bridge] Session ${requestedSessionId} not found, creating new`);
         }
       }
 
@@ -303,7 +306,7 @@ export function createPTYBridge(
       if (runspaceId) {
         runspace = runspaceManager.getRunspace(runspaceId);
         if (!runspace) {
-          console.error(`[PTY Bridge] Runspace not found: ${runspaceId}`);
+          logger.error(`[PTY Bridge] Runspace not found: ${runspaceId}`);
           ws.send(JSON.stringify({ type: "error", data: `Runspace not found: ${runspaceId}` }));
           ws.close();
           return;
@@ -311,7 +314,7 @@ export function createPTYBridge(
       } else {
         runspace = runspaceManager.getActiveRunspace();
         if (!runspace) {
-          console.log("[PTY Bridge] No active runspace, using default shell mode");
+          logger.info("[PTY Bridge] No active runspace, using default shell mode");
           useDefaultShell = true;
         }
       }
@@ -319,10 +322,10 @@ export function createPTYBridge(
       let ptySession: { pty: { onData: (cb: (data: string) => void) => void; onExit: (cb: (info: { exitCode: number; signal?: number }) => void) => void; write: (data: string) => void; kill: () => void; resize: (cols: number, rows: number) => void } };
 
       if (useDefaultShell) {
-        console.log("[PTY Bridge] Creating default PTY session");
+        logger.info("[PTY Bridge] Creating default PTY session");
         ptySession = await wslBackend.createDefaultPTY();
       } else {
-        console.log(`[PTY Bridge] Attaching PTY to runspace: ${runspace!.displayName} (${runspace!.id})`);
+        logger.info(`[PTY Bridge] Attaching PTY to runspace: ${runspace!.displayName} (${runspace!.id})`);
         ptySession = await wslBackend.attachPTY(runspace!);
       }
 
@@ -363,7 +366,7 @@ export function createPTYBridge(
 
       // PTY exit → cleanup
       ptySession.pty.onExit(({ exitCode, signal }: { exitCode: number; signal?: number }) => {
-        console.log(`[PTY Bridge] PTY exited: code=${exitCode}, signal=${signal ?? 'none'}`);
+        logger.info(`[PTY Bridge] PTY exited: code=${exitCode}, signal=${signal ?? 'none'}`);
         const currentWs = session.ws;
         if (currentWs && currentWs.readyState === WebSocket.OPEN) {
           currentWs.send(JSON.stringify({
@@ -385,14 +388,14 @@ export function createPTYBridge(
       wireWebSocket(ws, session);
 
     } catch (error) {
-      console.error("[PTY Bridge] Fatal error in connection handler:", error);
+      logger.error("[PTY Bridge] Fatal error in connection handler:", error);
       if (ws.readyState === WebSocket.OPEN) {
         ws.close();
       }
     }
   });
 
-  console.log("[PTY Bridge] WebSocket server initialized on /terminal");
+  logger.info("[PTY Bridge] WebSocket server initialized on /terminal");
   return wss;
 }
 
@@ -491,11 +494,11 @@ function executeCommand(
   session: TerminalSession,
   command: string,
 ) {
-  console.log(`[PTY Bridge] Executing command: ${command}`);
+  logger.info(`[PTY Bridge] Executing command: ${command}`);
 
   // Security: Check for dangerous commands
   if (isDangerousCommand(command)) {
-    console.error(`[PTY Bridge] Blocked dangerous command: ${command}`);
+    logger.error(`[PTY Bridge] Blocked dangerous command: ${command}`);
     const errorMsg = "\r\n\x1b[31m[SECURITY] Dangerous command blocked\x1b[0m\r\n";
     if (session.ws && session.ws.readyState === WebSocket.OPEN) {
       session.ws.send(JSON.stringify({ type: "output", data: errorMsg }));
@@ -512,7 +515,7 @@ function executeCommand(
  * Cleanup all sessions
  */
 export function cleanupPTYBridge() {
-  console.log("[PTY Bridge] Cleaning up sessions...");
+  logger.info("[PTY Bridge] Cleaning up sessions...");
   sessions.forEach((session) => {
     // Cancel cleanup timers
     if (session.cleanupTimer) {

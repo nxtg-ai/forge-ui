@@ -44,8 +44,10 @@ import {
   getIntelligenceContext,
   injectIntelligence,
 } from "../utils/intelligence-injector";
+import { getLogger } from "../utils/logger";
 
 const app = express();
+const logger = getLogger('api-server');
 
 // ============= Security: Validation Schemas =============
 
@@ -220,11 +222,11 @@ initSentryServer()
         message: "API server starting",
         level: "info",
       });
-      console.log("[Sentry] Error tracking ready");
+      logger.info("[Sentry] Error tracking ready");
     }
   })
   .catch((err) => {
-    console.warn("[Sentry] Initialization failed:", err);
+    logger.warn("[Sentry] Initialization failed:", err);
   });
 const server = createServer(app);
 const wss = new WebSocketServer({ noServer: true });
@@ -249,14 +251,14 @@ function setupGovernanceWatcher() {
         // Broadcast to all WebSocket clients
         broadcast("governance.update", state);
 
-        console.log("[Governance] State change detected and broadcast to clients");
+        logger.info("[Governance] State change detected and broadcast to clients");
       } catch (error) {
-        console.error("[Governance] Failed to read state after change:", error);
+        logger.error("[Governance] Failed to read state after change:", error);
       }
     }
   });
 
-  console.log("[Governance] File watcher initialized");
+  logger.info("[Governance] File watcher initialized");
 }
 
 // Initialize Worker Pool (lazy - starts on first request or explicit init)
@@ -275,7 +277,7 @@ async function getWorkerPool(): Promise<AgentWorkerPool> {
     });
 
     await workerPool.initialize();
-    console.log("[API] Worker pool initialized");
+    logger.info("[API] Worker pool initialized");
   }
   return workerPool;
 }
@@ -331,7 +333,7 @@ app.use(
         return callback(null, true);
       }
 
-      console.warn(`[Security] Blocked CORS request from unauthorized origin: ${origin}`);
+      logger.warn(`[Security] Blocked CORS request from unauthorized origin: ${origin}`);
       callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
@@ -373,7 +375,7 @@ wss.on("connection", (ws, req) => {
   // Security: Validate origin
   const origin = req.headers.origin;
   if (isProduction && origin && !allowedOrigins.includes(origin)) {
-    console.error(`[Security] Blocked WebSocket from unauthorized origin: ${origin}`);
+    logger.error(`[Security] Blocked WebSocket from unauthorized origin: ${origin}`);
     ws.send(JSON.stringify({ type: "error", error: "Unauthorized origin" }));
     ws.close();
     return;
@@ -385,7 +387,7 @@ wss.on("connection", (ws, req) => {
     const token = url.searchParams.get("token");
 
     if (!validateWSAuthToken(token ?? undefined)) {
-      console.error("[Security] WebSocket connection rejected: invalid or missing token");
+      logger.error("[Security] WebSocket connection rejected: invalid or missing token");
       ws.send(JSON.stringify({ type: "error", error: "Authentication required" }));
       ws.close();
       return;
@@ -393,7 +395,7 @@ wss.on("connection", (ws, req) => {
   }
 
   clients.add(ws);
-  console.log("New WebSocket client connected (authenticated)");
+  logger.info("New WebSocket client connected (authenticated)");
 
   // Send initial state
   ws.send(
@@ -409,17 +411,17 @@ wss.on("connection", (ws, req) => {
       const message = JSON.parse(data.toString());
       handleWSMessage(ws, message);
     } catch (error) {
-      console.error("Invalid WebSocket message:", error);
+      logger.error("Invalid WebSocket message:", error);
     }
   });
 
   ws.on("close", () => {
     clients.delete(ws);
-    console.log("WebSocket client disconnected");
+    logger.info("WebSocket client disconnected");
   });
 
   ws.on("error", (error) => {
-    console.error("WebSocket error:", error);
+    logger.error("WebSocket error:", error);
     clients.delete(ws);
   });
 });
@@ -466,7 +468,7 @@ async function handleWSMessage(ws: WebSocket, message: Record<string, unknown>) 
     default:
       // Only log truly unknown message types (not common ones)
       if (!['pong', 'heartbeat'].includes(String(message.type || ''))) {
-        console.log("Unknown message type:", message.type);
+        logger.info(`Unknown message type: ${message.type}`);
       }
   }
 }
@@ -632,7 +634,7 @@ app.post("/api/mcp/suggestions", async (req, res) => {
       industry: detectIndustry(vision),
     };
 
-    console.log(
+    logger.info(
       "🤖 Generating MCP suggestions for vision:",
       visionContext.mission,
     );
@@ -644,7 +646,7 @@ app.post("/api/mcp/suggestions", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("MCP suggestion error:", error);
+    logger.error("MCP suggestion error:", error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -1514,7 +1516,7 @@ app.post("/api/diffs/apply", async (req, res) => {
 
     // Diff application is handled by Claude Code's native file operations.
     // This endpoint provides UI notification and event broadcasting.
-    console.log(`📝 Applying diff to: ${filePath}`);
+    logger.info(`📝 Applying diff to: ${filePath}`);
 
     // Broadcast diff applied event
     broadcast("diff.applied", {
@@ -1550,7 +1552,7 @@ app.post("/api/diffs/reject", async (req, res) => {
 
     // Diff rejection notifies UI and broadcasts event.
     // Actual file state is managed by Claude Code.
-    console.log(`❌ Rejecting diff for: ${filePath}`);
+    logger.info(`❌ Rejecting diff for: ${filePath}`);
 
     // Broadcast diff rejected event
     broadcast("diff.rejected", {
@@ -1600,7 +1602,7 @@ app.post("/api/errors", async (req, res) => {
     const errorData = req.body;
 
     // Log error with structured format
-    console.error("🚨 Frontend Error Reported:", {
+    logger.error("🚨 Frontend Error Reported:", {
       message: errorData.message,
       name: errorData.name,
       url: errorData.url,
@@ -1635,7 +1637,7 @@ app.post("/api/errors", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Failed to log error:", error);
+    logger.error("Failed to log error:", error);
     res.status(500).json({
       success: false,
       error: "Failed to log error",
@@ -2373,7 +2375,7 @@ async function ensureFeedbackFile() {
       await fs.writeFile(FEEDBACK_FILE, JSON.stringify([], null, 2));
     }
   } catch (error) {
-    console.error("Failed to initialize feedback file:", error);
+    logger.error("Failed to initialize feedback file:", error);
   }
 }
 
@@ -2433,7 +2435,7 @@ app.post(
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Failed to save feedback:", error);
+    logger.error("Failed to save feedback:", error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -2462,7 +2464,7 @@ app.get("/api/feedback", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Failed to read feedback:", error);
+    logger.error("Failed to read feedback:", error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -2516,7 +2518,7 @@ app.get("/api/feedback/stats", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Failed to calculate feedback stats:", error);
+    logger.error("Failed to calculate feedback stats:", error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -2541,8 +2543,8 @@ server.on("upgrade", (request, socket, head) => {
 });
 
 server.listen(PORT, "0.0.0.0", async () => {
-  console.log(`NXTG-Forge API Server running on http://0.0.0.0:${PORT}`);
-  console.log(`WebSocket server available at ws://0.0.0.0:${PORT}/ws`);
+  logger.info(`NXTG-Forge API Server running on http://0.0.0.0:${PORT}`);
+  logger.info(`WebSocket server available at ws://0.0.0.0:${PORT}/ws`);
 
   // Initialize services
   orchestrator.initialize();
@@ -2552,49 +2554,49 @@ server.listen(PORT, "0.0.0.0", async () => {
 
   // Initialize RunspaceManager for multi-project support
   await runspaceManager.initialize();
-  console.log("RunspaceManager initialized");
+  logger.info("RunspaceManager initialized");
 
   // Initialize PTY Bridge for Claude Code Terminal (with runspace support)
   createPTYBridge(server, runspaceManager);
-  console.log(`PTY Bridge initialized at ws://localhost:${PORT}/terminal`);
+  logger.info(`PTY Bridge initialized at ws://localhost:${PORT}/terminal`);
 
   // Setup governance file watcher for real-time updates
   setupGovernanceWatcher();
 
-  console.log("All services initialized successfully");
+  logger.info("All services initialized successfully");
 });
 
 // Graceful shutdown
 process.on("SIGTERM", async () => {
-  console.log("SIGTERM received, closing server...");
+  logger.info("SIGTERM received, closing server...");
 
   // Flush Sentry events before shutdown
   if (sentryReady) {
-    console.log("Flushing Sentry events...");
+    logger.info("Flushing Sentry events...");
     await flushSentry(2000);
   }
 
   // Shutdown worker pool
   if (workerPool) {
     await workerPool.shutdown();
-    console.log("Worker pool shutdown complete");
+    logger.info("Worker pool shutdown complete");
   }
 
   // Shutdown runspace manager
   await runspaceManager.shutdown();
-  console.log("RunspaceManager shutdown complete");
+  logger.info("RunspaceManager shutdown complete");
 
   // Close governance watcher
   if (governanceWatcher) {
     governanceWatcher.close();
-    console.log("Governance watcher closed");
+    logger.info("Governance watcher closed");
   }
 
   // Cleanup rate limiters
   generalLimiter.cleanup();
   writeLimiter.cleanup();
   authLimiter.cleanup();
-  console.log("Rate limiters cleaned up");
+  logger.info("Rate limiters cleaned up");
 
   // Close WebSocket connections
   clients.forEach((client) => {
@@ -2602,7 +2604,7 @@ process.on("SIGTERM", async () => {
   });
 
   server.close(() => {
-    console.log("Server closed");
+    logger.info("Server closed");
     process.exit(0);
   });
 });

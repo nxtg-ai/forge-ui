@@ -9,6 +9,9 @@ import {
   getAllIntelligenceCards,
   getCompactIntelligenceCards,
 } from "../../utils/intelligence-parser.js";
+import { getLogger } from "../../utils/logger";
+
+const logger = getLogger('intelligence-route');
 
 const router = express.Router();
 
@@ -27,7 +30,7 @@ router.get("/intelligence", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Failed to parse intelligence cards:", error);
+    logger.error("Failed to parse intelligence cards:", error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
@@ -51,7 +54,7 @@ router.get("/intelligence/compact", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Failed to parse compact intelligence cards:", error);
+    logger.error("Failed to parse compact intelligence cards:", error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",

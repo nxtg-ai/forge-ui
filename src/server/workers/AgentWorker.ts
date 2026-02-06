@@ -21,6 +21,9 @@ import {
   ENV_WHITELIST,
   BLOCKED_COMMANDS,
 } from "./types";
+import { getLogger } from "../../utils/logger";
+
+const logger = getLogger('agent-worker');
 
 export class AgentWorker extends EventEmitter {
   readonly id: string;
@@ -363,14 +366,14 @@ export class AgentWorker extends EventEmitter {
     });
 
     this.process.on("exit", (code, signal) => {
-      console.log(`Worker ${this.id} exited: code=${code}, signal=${signal}`);
+      logger.info(`Worker ${this.id} exited: code=${code}, signal=${signal}`);
       this._status = "crashed";
       this.emit("status", this._status);
       this.emit("crashed", { code, signal });
     });
 
     this.process.on("error", (error) => {
-      console.error(`Worker ${this.id} error:`, error);
+      logger.error(`Worker ${this.id} error:`, error);
       this._status = "error";
       this.emit("status", this._status);
       this.emit("error", error);
