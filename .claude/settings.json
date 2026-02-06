@@ -56,6 +56,15 @@
             "command": "bash .claude/hooks/audit-root-cleanliness.sh"
           }
         ]
+      },
+      {
+        "description": "Remind to run smoke tests when server/test files were modified",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/smoke-test-reminder.sh"
+          }
+        ]
       }
     ],
     "PostToolUse": [

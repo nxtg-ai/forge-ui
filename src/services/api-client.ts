@@ -204,11 +204,12 @@ export class ApiClient {
   // ============= Command Execution =============
 
   async executeCommand(
-    command: Command,
-  ): Promise<ApiResponse<{ result: unknown }>> {
-    return this.request<{ result: unknown }>("/commands/execute", {
+    command: Command | string,
+  ): Promise<ApiResponse<{ command: string; output: string; [key: string]: unknown }>> {
+    const commandId = typeof command === "string" ? command : command.id;
+    return this.request<{ command: string; output: string; [key: string]: unknown }>("/commands/execute", {
       method: "POST",
-      body: JSON.stringify(command),
+      body: JSON.stringify({ command: commandId }),
     });
   }
 

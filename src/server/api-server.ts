@@ -858,37 +858,7 @@ app.post(
 );
 
 // ============= Command Endpoints =============
-
-app.post(
-  "/api/commands/execute",
-  rateLimit(writeLimiter),
-  validateRequest(commandExecuteSchema),
-  async (req, res) => {
-    try {
-      const command = req.body;
-      const result = await orchestrator.executeCommand(command);
-
-      // Broadcast command execution
-      broadcast("command.executed", {
-        command,
-        result,
-        timestamp: new Date().toISOString(),
-      });
-
-      res.json({
-        success: true,
-        data: { result },
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        timestamp: new Date().toISOString(),
-      });
-    }
-  },
-);
+// Note: Main /api/commands/execute handler is below with EXECUTABLE_COMMANDS
 
 app.get("/api/commands/history", async (req, res) => {
   try {
@@ -1068,6 +1038,198 @@ const EXECUTABLE_COMMANDS: Record<string, () => Promise<{ success: boolean; outp
     } catch { lines.push("## Documentation\nFailed to analyze"); }
 
     return { success: true, output: lines.join("\n\n") };
+  },
+
+  // ============= Git Commands =============
+
+  "git-status": async () => {
+    const { execSync } = await import("child_process");
+    try {
+      const branch = execSync("git branch --show-current 2>&1", {
+        cwd: projectRoot, timeout: 10000, encoding: "utf-8",
+      }).trim();
+      const status = execSync("git status --short 2>&1", {
+        cwd: projectRoot, timeout: 10000, encoding: "utf-8",
+      }).trim();
+      const log = execSync("git log --oneline -5 2>&1", {
+        cwd: projectRoot, timeout: 10000, encoding: "utf-8",
+      }).trim();
+      const ahead = execSync("git rev-list --count @{u}..HEAD 2>/dev/null || echo 'no upstream'", {
+        cwd: projectRoot, timeout: 10000, encoding: "utf-8",
+      }).trim();
+
+      const lines = [
+        `Branch: ${branch}`,
+        `Ahead of remote: ${ahead} commits`,
+        "",
+        "--- Changed Files ---",
+        status || "(working tree clean)",
+        "",
+        "--- Recent Commits ---",
+        log,
+      ];
+      return {
+        success: true,
+        output: lines.join("\n"),
+        data: { branch, changedFiles: status.split("\n").filter(Boolean).length },
+      };
+    } catch (error: any) {
+      return { success: false, output: error.message };
+    }
+  },
+
+  "git-diff": async () => {
+    const { execSync } = await import("child_process");
+    try {
+      const staged = execSync("git diff --cached --stat 2>&1", {
+        cwd: projectRoot, timeout: 10000, encoding: "utf-8",
+      }).trim();
+      const unstaged = execSync("git diff --stat 2>&1", {
+        cwd: projectRoot, timeout: 10000, encoding: "utf-8",
+      }).trim();
+      const lines = [
+        "--- Staged Changes ---",
+        staged || "(nothing staged)",
+        "",
+        "--- Unstaged Changes ---",
+        unstaged || "(no unstaged changes)",
+      ];
+      return { success: true, output: lines.join("\n") };
+    } catch (error: any) {
+      return { success: false, output: error.message };
+    }
+  },
+
+  "git-log": async () => {
+    const { execSync } = await import("child_process");
+    try {
+      const output = execSync("git log --oneline --graph --decorate -20 2>&1", {
+        cwd: projectRoot, timeout: 10000, encoding: "utf-8",
+      });
+      return { success: true, output };
+    } catch (error: any) {
+      return { success: false, output: error.message };
+    }
+  },
+
+  // ============= Analyze Commands =============
+
+  "analyze-types": async () => {
+    const { execSync } = await import("child_process");
+    try {
+      execSync("npx tsc --noEmit 2>&1", {
+        cwd: projectRoot, timeout: 60000, encoding: "utf-8",
+      });
+      return { success: true, output: "TypeScript: 0 errors. All types check out." };
+    } catch (error: any) {
+      const output = error.stdout || error.stderr || error.message;
+      const errorCount = (output.match(/error TS/g) || []).length;
+      return {
+        success: false,
+        output: `TypeScript: ${errorCount} error(s) found\n\n${output}`,
+        data: { errorCount },
+      };
+    }
+  },
+
+  "analyze-lint": async () => {
+    const { execSync } = await import("child_process");
+    try {
+      const output = execSync("npx eslint src --ext .ts,.tsx --format stylish 2>&1", {
+        cwd: projectRoot, timeout: 60000, encoding: "utf-8",
+        maxBuffer: 1024 * 1024 * 5,
+      });
+      return { success: true, output: output || "ESLint: No issues found." };
+    } catch (error: any) {
+      const output = error.stdout || error.stderr || error.message;
+      return { success: false, output };
+    }
+  },
+
+  "analyze-deps": async () => {
+    const { execSync } = await import("child_process");
+    try {
+      const outdated = execSync("npm outdated --json 2>/dev/null || echo '{}'", {
+        cwd: projectRoot, timeout: 30000, encoding: "utf-8",
+      });
+      const parsed = JSON.parse(outdated);
+      const entries = Object.entries(parsed);
+      if (entries.length === 0) {
+        return { success: true, output: "All dependencies are up to date." };
+      }
+      const lines = entries.map(([pkg, info]: [string, any]) =>
+        `${pkg}: ${info.current} → ${info.latest} (wanted: ${info.wanted})`
+      );
+      return {
+        success: true,
+        output: `${entries.length} outdated package(s):\n\n${lines.join("\n")}`,
+        data: { outdatedCount: entries.length },
+      };
+    } catch (error: any) {
+      return { success: false, output: error.message };
+    }
+  },
+
+  "analyze-bundle": async () => {
+    const { execSync } = await import("child_process");
+    try {
+      const output = execSync("npx vite build --mode production 2>&1 | tail -30", {
+        cwd: projectRoot, timeout: 120000, encoding: "utf-8",
+        maxBuffer: 1024 * 1024 * 5,
+      });
+      return { success: true, output };
+    } catch (error: any) {
+      return { success: false, output: error.stdout || error.message };
+    }
+  },
+
+  // ============= Test Variants =============
+
+  "test-coverage": async () => {
+    const { execSync } = await import("child_process");
+    try {
+      const output = execSync("npx vitest run --coverage --reporter=verbose 2>&1 | tail -40", {
+        cwd: projectRoot, timeout: 180000, encoding: "utf-8",
+        maxBuffer: 1024 * 1024 * 5,
+      });
+      return { success: true, output };
+    } catch (error: any) {
+      return { success: false, output: error.stdout || error.stderr || error.message };
+    }
+  },
+
+  // ============= Info Commands =============
+
+  "system-info": async () => {
+    const { execSync } = await import("child_process");
+    const os = await import("os");
+    try {
+      const nodeVersion = process.version;
+      const npmVersion = execSync("npm --version 2>&1", { encoding: "utf-8" }).trim();
+      const gitVersion = execSync("git --version 2>&1", { encoding: "utf-8" }).trim();
+      const platform = `${os.platform()} ${os.release()}`;
+      const memory = `${Math.round(os.totalmem() / 1024 / 1024 / 1024)}GB total, ${Math.round(os.freemem() / 1024 / 1024 / 1024)}GB free`;
+      const cpus = `${os.cpus().length} cores (${os.cpus()[0]?.model || "unknown"})`;
+      const uptime = `${Math.round(os.uptime() / 3600)}h`;
+      const diskUsage = execSync("df -h . 2>&1 | tail -1", { cwd: projectRoot, encoding: "utf-8" }).trim();
+
+      const lines = [
+        "--- Runtime ---",
+        `Node.js:  ${nodeVersion}`,
+        `npm:      ${npmVersion}`,
+        `Git:      ${gitVersion}`,
+        "",
+        "--- System ---",
+        `Platform: ${platform}`,
+        `Memory:   ${memory}`,
+        `CPUs:     ${cpus}`,
+        `Uptime:   ${uptime}`,
+        `Disk:     ${diskUsage}`,
+      ];
+      return { success: true, output: lines.join("\n") };
+    } catch (error: any) {
+      return { success: false, output: error.message };
+    }
   },
 };
 
@@ -2541,6 +2703,59 @@ server.on("upgrade", (request, socket, head) => {
   }
   // PTY bridge handles /terminal path in createPTYBridge
 });
+
+// ============= Safeguard: Duplicate Route Detector =============
+// Prevents the exact bug where a placeholder route shadows a real handler.
+// If two routes share the same method+path, the second is DEAD CODE in Express.
+// This detector crashes the server at startup so the bug is caught immediately.
+
+function detectDuplicateRoutes(expressApp: express.Application): void {
+  const seen = new Map<string, number>();
+  const duplicates: string[] = [];
+
+  // Express stores routes in app._router.stack
+  const stack = (expressApp as any)._router?.stack || [];
+  for (const layer of stack) {
+    if (layer.route) {
+      const route = layer.route;
+      for (const method of Object.keys(route.methods)) {
+        const key = `${method.toUpperCase()} ${route.path}`;
+        const count = (seen.get(key) || 0) + 1;
+        seen.set(key, count);
+        if (count > 1) {
+          duplicates.push(key);
+        }
+      }
+    }
+    // Also check mounted routers
+    if (layer.name === 'router' && layer.handle?.stack) {
+      const prefix = layer.regexp?.source?.replace?.(/[\\\/?^$]/g, '') || '';
+      for (const subLayer of layer.handle.stack) {
+        if (subLayer.route) {
+          for (const method of Object.keys(subLayer.route.methods)) {
+            const key = `${method.toUpperCase()} /${prefix}${subLayer.route.path}`;
+            const count = (seen.get(key) || 0) + 1;
+            seen.set(key, count);
+            if (count > 1) {
+              duplicates.push(key);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (duplicates.length > 0) {
+    const msg = `FATAL: Duplicate routes detected! These routes are registered multiple times (second handler is DEAD CODE):\n  ${duplicates.join('\n  ')}`;
+    logger.error(msg);
+    throw new Error(msg);
+  }
+
+  logger.info(`Route integrity check passed: ${seen.size} unique routes, 0 duplicates`);
+}
+
+// Run the check BEFORE listening — crash early if routes are broken
+detectDuplicateRoutes(app);
 
 server.listen(PORT, "0.0.0.0", async () => {
   logger.info(`NXTG-Forge API Server running on http://0.0.0.0:${PORT}`);

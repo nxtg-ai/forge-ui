@@ -355,7 +355,7 @@ describe("ApiClient", () => {
         expect.stringContaining("/api/commands/execute"),
         expect.objectContaining({
           method: "POST",
-          body: JSON.stringify(command),
+          body: JSON.stringify({ command: command.id }),
         }),
       );
     });
