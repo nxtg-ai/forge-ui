@@ -13,8 +13,8 @@ import {
   Activity,
   TrendingUp,
   Eye,
-  Download,
 } from "lucide-react";
+import { IntelligenceHub } from "../intelligence";
 
 interface ContextFile {
   path: string;
@@ -34,15 +34,6 @@ interface ContextWindowHUDProps {
   className?: string;
 }
 
-interface ContextNote {
-  id: string;
-  content: string;
-  category: "instruction" | "learning" | "decision" | "context" | "other";
-  tags: string[];
-  created: string;
-  updated: string;
-}
-
 export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = React.memo(({
   className = "",
 }) => {
@@ -53,8 +44,6 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = React.memo(({
     currentThought: "",
   });
 
-  const [contextNotes, setContextNotes] = useState<ContextNote[]>([]);
-  const [showExportInstructions, setShowExportInstructions] = useState(false);
   const [sessionInfo, setSessionInfo] = useState<{
     sessionId: string;
     startedAt: string;
@@ -76,99 +65,50 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = React.memo(({
             // Extract session info from conversation context
             if (state.conversationContext) {
               setSessionInfo({
-                sessionId: state.conversationContext.sessionId || state.metadata?.sessionId || "unknown",
-                startedAt: state.conversationContext.startedAt || new Date().toISOString(),
+                sessionId:
+                  state.conversationContext.sessionId ||
+                  state.metadata?.sessionId ||
+                  "unknown",
+                startedAt:
+                  state.conversationContext.startedAt ||
+                  new Date().toISOString(),
                 messageCount: state.conversationContext.messageCount || 0,
-                lastInteraction: state.conversationContext.lastInteraction || new Date().toISOString(),
+                lastInteraction:
+                  state.conversationContext.lastInteraction ||
+                  new Date().toISOString(),
               });
             }
 
             // Extract current tasks as "files being analyzed"
             if (state.currentTasks && state.currentTasks.length > 0) {
-              const taskFiles: ContextFile[] = state.currentTasks.map((task: { id: string; description: string; status: string }) => ({
-                path: task.description || `Task ${task.id}`,
-                tokens: Math.floor(Math.random() * 5000) + 1000, // Estimated
-                status: task.status === "completed" ? "complete" : task.status === "in_progress" ? "analyzing" : "reading",
-                lastAccessed: new Date(),
-              }));
+              const taskFiles: ContextFile[] = state.currentTasks.map(
+                (task: {
+                  id: string;
+                  description: string;
+                  status: string;
+                }) => ({
+                  path: task.description || `Task ${task.id}`,
+                  tokens: Math.floor(Math.random() * 5000) + 1000, // Estimated
+                  status:
+                    task.status === "completed"
+                      ? "complete"
+                      : task.status === "in_progress"
+                        ? "analyzing"
+                        : "reading",
+                  lastAccessed: new Date(),
+                }),
+              );
 
-              setContextData(prev => ({
+              setContextData((prev) => ({
                 ...prev,
                 files: taskFiles,
                 totalTokens: taskFiles.reduce((sum, f) => sum + f.tokens, 0),
               }));
             }
-
-            // Convert vision and principles to context notes
-            const notes: ContextNote[] = [];
-
-            if (state.vision?.mission) {
-              notes.push({
-                id: "vision-mission",
-                content: state.vision.mission,
-                category: "context",
-                tags: ["vision", "mission"],
-                created: state.vision.created || new Date().toISOString(),
-                updated: state.vision.updated || new Date().toISOString(),
-              });
-            }
-
-            if (state.vision?.principles && state.vision.principles.length > 0) {
-              state.vision.principles.forEach((principle: string, idx: number) => {
-                notes.push({
-                  id: `vision-principle-${idx}`,
-                  content: principle,
-                  category: "instruction",
-                  tags: ["vision", "principle"],
-                  created: state.vision.created || new Date().toISOString(),
-                  updated: state.vision.updated || new Date().toISOString(),
-                });
-              });
-            }
-
-            if (state.vision?.strategicGoals && state.vision.strategicGoals.length > 0) {
-              state.vision.strategicGoals.forEach((goal: { title: string; description?: string }, idx: number) => {
-                notes.push({
-                  id: `vision-goal-${idx}`,
-                  content: goal.description || goal.title,
-                  category: "decision",
-                  tags: ["vision", "goal"],
-                  created: state.vision.created || new Date().toISOString(),
-                  updated: state.vision.updated || new Date().toISOString(),
-                });
-              });
-            }
-
-            // Fallback to seed data if no real notes
-            if (notes.length === 0) {
-              const seedResponse = await fetch("/api/memory/seed");
-              if (seedResponse.ok) {
-                const seedData = await seedResponse.json();
-                if (seedData.success && seedData.items) {
-                  setContextNotes(seedData.items);
-                  console.log(`Loaded ${seedData.items.length} seed context notes (fallback)`);
-                }
-              }
-            } else {
-              setContextNotes(notes);
-              console.log(`Loaded ${notes.length} context notes from project state`);
-            }
           }
         }
       } catch (error) {
         console.error("Failed to load real state data:", error);
-        // Try seed data as fallback
-        try {
-          const seedResponse = await fetch("/api/memory/seed");
-          if (seedResponse.ok) {
-            const seedData = await seedResponse.json();
-            if (seedData.success && seedData.items) {
-              setContextNotes(seedData.items);
-            }
-          }
-        } catch (e) {
-          console.warn("Failed to load fallback seed data:", e);
-        }
       }
     };
 
@@ -193,24 +133,6 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = React.memo(({
     };
   }, []);
 
-  const handleExportToClaudeMemory = () => {
-    setShowExportInstructions(true);
-  };
-
-  const getCategoryColor = (category: ContextNote["category"]) => {
-    switch (category) {
-      case "instruction":
-        return "bg-red-500/10 border-red-500/30 text-red-400";
-      case "learning":
-        return "bg-blue-500/10 border-blue-500/30 text-blue-400";
-      case "decision":
-        return "bg-purple-500/10 border-purple-500/30 text-purple-400";
-      case "context":
-        return "bg-green-500/10 border-green-500/30 text-green-400";
-      default:
-        return "bg-gray-500/10 border-gray-500/30 text-gray-400";
-    }
-  };
 
   const tokenPercentage =
     contextData.maxTokens > 0 && contextData.totalTokens != null
@@ -328,90 +250,14 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = React.memo(({
         </div>
       )}
 
-      {/* Context Notes Section (Read-Only) */}
-      <div
+      {/* Intelligence Hub - Replaces Context Notes */}
+      <IntelligenceHub
         className={
           contextData.files.length > 0
-            ? "px-4 py-3 border-b border-gray-800 max-h-64 overflow-y-auto flex-shrink-0"
-            : "px-4 py-3 flex-1 min-h-0 overflow-y-auto"
+            ? "border-b border-gray-800 max-h-96 flex-shrink-0"
+            : "flex-1 min-h-0"
         }
-      >
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-            Context Notes
-          </h4>
-          <button
-            onClick={handleExportToClaudeMemory}
-            className="flex items-center gap-1 px-2 py-1 text-xs bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 rounded transition-colors"
-            title="Export to Claude Memory"
-          >
-            <Download className="w-3 h-3" />
-            Export
-          </button>
-        </div>
-
-        {showExportInstructions && (
-          <div className="mb-3 p-3 bg-purple-500/10 border border-purple-500/30 rounded-lg">
-            <div className="flex items-start gap-2 mb-2">
-              <Brain className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
-              <div>
-                <h5 className="text-sm font-semibold text-purple-400 mb-1">
-                  Export to Claude Code Memory
-                </h5>
-                <p className="text-xs text-gray-300 mb-2">
-                  To persist these notes using Claude Code's native memory system:
-                </p>
-                <ol className="text-xs text-gray-300 space-y-1 list-decimal list-inside">
-                  <li>Open a new Claude Code chat</li>
-                  <li>
-                    Copy the notes below and paste them with: "Store these in
-                    your memory for the nxtg-forge project"
-                  </li>
-                  <li>Claude will save them to the MCP memory server</li>
-                </ol>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowExportInstructions(false)}
-              className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
-            >
-              Close
-            </button>
-          </div>
-        )}
-
-        <div className="space-y-2">
-          {contextNotes.length === 0 ? (
-            <div className="text-center py-8 text-gray-500 text-sm">
-              No context notes available
-            </div>
-          ) : (
-            contextNotes.map((note) => (
-              <div
-                key={note.id}
-                className={`p-2 rounded border ${getCategoryColor(note.category)}`}
-              >
-                <div className="flex items-start justify-between gap-2 mb-1">
-                  <span className="text-xs font-semibold uppercase tracking-wide">
-                    {note.category}
-                  </span>
-                  <div className="flex flex-wrap gap-1">
-                    {note.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-xs px-1.5 py-0.5 bg-gray-800/50 rounded"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <p className="text-sm text-gray-300">{note.content}</p>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+      />
 
       {/* Files Heat Map + Footer Stats - Only show when files exist */}
       {contextData.files.length > 0 && (

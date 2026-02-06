@@ -55,6 +55,7 @@
     "@types/express": "^5.0.6",
     "@types/glob": "^8.1.0",
     "@types/node": "^20.0.0",
+    "@types/supertest": "^6.0.3",
     "@types/uuid": "^10.0.0",
     "@types/winston": "^2.4.4",
     "@types/ws": "^8.18.1",
@@ -67,6 +68,7 @@
     "glob": "^13.0.0",
     "jsdom": "^27.4.0",
     "prettier": "^3.0.0",
+    "supertest": "^7.2.2",
     "typescript": "^5.0.0",
     "vitest": "^4.0.18"
   },

@@ -170,3 +170,151 @@ describe("searchCommands", () => {
     expect(results).toHaveLength(0);
   });
 });
+
+describe("Additional command validation", () => {
+  it("should have unique command IDs", () => {
+    const ids = FORGE_COMMANDS.map((cmd) => cmd.id);
+    const uniqueIds = new Set(ids);
+    expect(ids.length).toBe(uniqueIds.size);
+  });
+
+  it("should have unique hotkeys", () => {
+    const hotkeys = FORGE_COMMANDS.filter((cmd) => cmd.hotkey).map(
+      (cmd) => cmd.hotkey,
+    );
+    const uniqueHotkeys = new Set(hotkeys);
+    expect(hotkeys.length).toBe(uniqueHotkeys.size);
+  });
+
+  it("should have valid severity values", () => {
+    const validSeverities = ["safe", "warning", "danger"];
+    FORGE_COMMANDS.forEach((cmd) => {
+      if (cmd.severity) {
+        expect(validSeverities).toContain(cmd.severity);
+      }
+    });
+  });
+
+  it("should have danger severity with requiresConfirmation", () => {
+    const dangerCommands = FORGE_COMMANDS.filter(
+      (cmd) => cmd.severity === "danger",
+    );
+    dangerCommands.forEach((cmd) => {
+      expect(cmd.requiresConfirmation).toBe(true);
+    });
+  });
+
+  it("should have valid icon components", () => {
+    FORGE_COMMANDS.forEach((cmd) => {
+      expect(cmd.icon).toBeDefined();
+      // Lucide icons are objects (React components), not raw functions
+      expect(typeof cmd.icon).toMatch(/^(function|object)$/);
+    });
+  });
+
+  it("should have non-empty names", () => {
+    FORGE_COMMANDS.forEach((cmd) => {
+      expect(cmd.name.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("should have non-empty descriptions", () => {
+    FORGE_COMMANDS.forEach((cmd) => {
+      expect(cmd.description.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("should have exactly 5 analyze commands", () => {
+    const analyzeCommands = getCommandsByCategory("analyze");
+    expect(analyzeCommands).toHaveLength(5);
+  });
+
+  it("should have exactly 2 git commands", () => {
+    const gitCommands = getCommandsByCategory("git");
+    expect(gitCommands).toHaveLength(2);
+  });
+
+  it("should have expected hotkey mappings", () => {
+    const hotkeyMap: Record<string, string> = {};
+    FORGE_COMMANDS.forEach((cmd) => {
+      if (cmd.hotkey) {
+        hotkeyMap[cmd.hotkey] = cmd.id;
+      }
+    });
+
+    expect(hotkeyMap["s"]).toBe("frg-status");
+    expect(hotkeyMap["g"]).toBe("frg-gap-analysis");
+    expect(hotkeyMap["t"]).toBe("frg-test");
+    expect(hotkeyMap["f"]).toBe("frg-feature");
+    expect(hotkeyMap["c"]).toBe("frg-checkpoint");
+    expect(hotkeyMap["d"]).toBe("frg-deploy");
+  });
+
+  it("should have short hotkeys (1 character)", () => {
+    FORGE_COMMANDS.forEach((cmd) => {
+      if (cmd.hotkey) {
+        expect(cmd.hotkey.length).toBe(1);
+      }
+    });
+  });
+
+  it("should mark restore, deploy, upgrade as requiring confirmation", () => {
+    const confirmationRequired = [
+      "frg-restore",
+      "frg-deploy",
+      "frg-upgrade",
+      "frg-init",
+      "frg-enable-forge",
+    ];
+
+    confirmationRequired.forEach((cmdId) => {
+      const cmd = getCommandById(cmdId);
+      expect(cmd?.requiresConfirmation).toBe(true);
+    });
+  });
+
+  it("should have forge category commands", () => {
+    const forgeCommands = getCommandsByCategory("forge");
+    expect(forgeCommands.length).toBeGreaterThan(5);
+
+    const forgeIds = forgeCommands.map((cmd) => cmd.id);
+    expect(forgeIds).toContain("frg-feature");
+    expect(forgeIds).toContain("frg-init");
+  });
+
+  it("should search partial matches", () => {
+    const results = searchCommands("doc");
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.some((cmd) => cmd.id.includes("docs"))).toBe(true);
+  });
+
+  it("should find commands with common words", () => {
+    const statusResults = searchCommands("status");
+    expect(statusResults.length).toBeGreaterThanOrEqual(2); // status and status-enhanced
+
+    const docsResults = searchCommands("docs");
+    expect(docsResults.length).toBeGreaterThanOrEqual(3); // docs-status, docs-update, docs-audit
+  });
+
+  it("should have consistent ID format", () => {
+    FORGE_COMMANDS.forEach((cmd) => {
+      expect(cmd.id).toMatch(/^frg-[a-z-]+$/);
+    });
+  });
+
+  it("should have categories matching expected structure", () => {
+    const categoryCounts = FORGE_COMMANDS.reduce(
+      (acc, cmd) => {
+        acc[cmd.category] = (acc[cmd.category] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
+    expect(categoryCounts.forge).toBeGreaterThan(0);
+    expect(categoryCounts.analyze).toBeGreaterThan(0);
+    expect(categoryCounts.test).toBe(1);
+    expect(categoryCounts.deploy).toBe(1);
+    expect(categoryCounts.git).toBe(2);
+  });
+});

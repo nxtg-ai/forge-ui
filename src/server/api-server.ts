@@ -38,8 +38,173 @@ import {
 import swaggerRouter from "./swagger";
 import { StatusService } from "../services/status-service";
 import type { ForgeStatus } from "../services/status-service";
+import intelligenceRouter from "./routes/intelligence.js";
+import * as crypto from "crypto";
+import {
+  getIntelligenceContext,
+  injectIntelligence,
+} from "../utils/intelligence-injector";
 
 const app = express();
+
+// ============= Security: Validation Schemas =============
+
+const visionCaptureSchema = z.object({
+  text: z.string().min(1).max(10000),
+});
+
+const commandExecuteSchema = z.object({
+  name: z.string().min(1).max(200),
+  args: z.record(z.unknown()).optional(),
+  context: z.record(z.unknown()).optional(),
+});
+
+const feedbackSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  category: z.string().min(1).max(100),
+  description: z.string().min(1).max(5000),
+  url: z.string().max(500).optional(),
+  userAgent: z.string().max(500).optional(),
+  timestamp: z.string().optional(),
+});
+
+const agentTaskSchema = z.object({
+  name: z.string().min(1).max(200),
+  type: z.string().min(1).max(100),
+  priority: z.enum(["low", "medium", "high", "critical"]).optional(),
+  context: z.record(z.unknown()).optional(),
+});
+
+// ============= Security: Rate Limiting =============
+
+interface RateLimitEntry {
+  count: number;
+  resetTime: number;
+}
+
+class InMemoryRateLimiter {
+  private requests = new Map<string, RateLimitEntry>();
+  private cleanupInterval: NodeJS.Timeout;
+
+  constructor(
+    private windowMs: number,
+    private maxRequests: number,
+  ) {
+    // Cleanup expired entries every minute
+    this.cleanupInterval = setInterval(() => {
+      const now = Date.now();
+      for (const [key, entry] of this.requests.entries()) {
+        if (now > entry.resetTime) {
+          this.requests.delete(key);
+        }
+      }
+    }, 60000);
+  }
+
+  check(identifier: string): { allowed: boolean; remaining: number; resetTime: number } {
+    const now = Date.now();
+    const entry = this.requests.get(identifier);
+
+    if (!entry || now > entry.resetTime) {
+      const resetTime = now + this.windowMs;
+      this.requests.set(identifier, { count: 1, resetTime });
+      return { allowed: true, remaining: this.maxRequests - 1, resetTime };
+    }
+
+    if (entry.count >= this.maxRequests) {
+      return { allowed: false, remaining: 0, resetTime: entry.resetTime };
+    }
+
+    entry.count++;
+    return { allowed: true, remaining: this.maxRequests - entry.count, resetTime: entry.resetTime };
+  }
+
+  cleanup() {
+    clearInterval(this.cleanupInterval);
+    this.requests.clear();
+  }
+}
+
+// Rate limiters
+const generalLimiter = new InMemoryRateLimiter(60000, 100); // 100 req/min
+const writeLimiter = new InMemoryRateLimiter(60000, 10); // 10 req/min for writes
+const authLimiter = new InMemoryRateLimiter(60000, 5); // 5 req/min for auth
+
+// Rate limiting middleware factory
+function rateLimit(limiter: InMemoryRateLimiter) {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const identifier = req.ip || req.socket.remoteAddress || "unknown";
+    const result = limiter.check(identifier);
+
+    res.setHeader("X-RateLimit-Limit", limiter["maxRequests"]);
+    res.setHeader("X-RateLimit-Remaining", result.remaining);
+    res.setHeader("X-RateLimit-Reset", new Date(result.resetTime).toISOString());
+
+    if (!result.allowed) {
+      return res.status(429).json({
+        success: false,
+        error: "Too many requests",
+        retryAfter: Math.ceil((result.resetTime - Date.now()) / 1000),
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    next();
+  };
+}
+
+// ============= Security: WebSocket Authentication =============
+
+const wsAuthTokens = new Map<string, { createdAt: number; clientId: string }>();
+const WS_TOKEN_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
+
+function generateWSAuthToken(clientId: string): string {
+  const token = crypto.randomBytes(32).toString("hex");
+  wsAuthTokens.set(token, { createdAt: Date.now(), clientId });
+  return token;
+}
+
+function validateWSAuthToken(token: string | undefined): boolean {
+  if (!token) return false;
+  const data = wsAuthTokens.get(token);
+  if (!data) return false;
+  if (Date.now() - data.createdAt > WS_TOKEN_EXPIRY_MS) {
+    wsAuthTokens.delete(token);
+    return false;
+  }
+  return true;
+}
+
+// Cleanup expired tokens periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, data] of wsAuthTokens.entries()) {
+    if (now - data.createdAt > WS_TOKEN_EXPIRY_MS) {
+      wsAuthTokens.delete(token);
+    }
+  }
+}, 60000);
+
+// ============= Security: Input Validation Middleware =============
+
+function validateRequest(schema: z.ZodSchema) {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    try {
+      schema.parse(req.body);
+      next();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid request data",
+          details: error.errors,
+          timestamp: new Date().toISOString(),
+        });
+      }
+      next(error);
+    }
+  };
+}
 
 // Initialize Sentry early (before other middleware)
 let sentryReady = false;
@@ -113,17 +278,75 @@ async function getWorkerPool(): Promise<AgentWorkerPool> {
   return workerPool;
 }
 
-// Middleware
+// ============= Security: Middleware Configuration =============
+
+// Security headers (basic implementation, helmet would provide more)
+app.use((req, res, next) => {
+  // NOTE: helmet package not installed - add with: npm install helmet
+  // For now, setting critical headers manually
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+
+  // Content Security Policy
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' data: blob:; " +
+    "font-src 'self' data:; " +
+    "connect-src 'self' ws: wss:; " +
+    "frame-ancestors 'none';"
+  );
+
+  next();
+});
+
+// CORS configuration - restrictive in production, permissive in dev
+const isProduction = process.env.NODE_ENV === "production";
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
+  : ["http://localhost:5050", "http://127.0.0.1:5050", "http://localhost:5173"];
+
 app.use(
   cors({
-    origin: true, // Allow all origins for multi-device access (mobile, tablet, etc.)
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      // In development, allow all origins for multi-device testing
+      if (!isProduction) {
+        return callback(null, true);
+      }
+
+      // In production, check against allowed list
+      if (allowedOrigins.includes(origin) || allowedOrigins.includes("*")) {
+        return callback(null, true);
+      }
+
+      console.warn(`[Security] Blocked CORS request from unauthorized origin: ${origin}`);
+      callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   }),
 );
-app.use(express.json());
+
+// Request size limit to prevent DoS
+app.use(express.json({ limit: "1mb" }));
+
+// General rate limiting on all routes
+app.use(rateLimit(generalLimiter));
 
 // API Documentation (Swagger UI)
 app.use(swaggerRouter);
+
+// Intelligence Cards API (reads native MEMORY.md)
+app.use("/api/memory", intelligenceRouter);
 
 // Initialize core services
 const visionManager = new VisionSystem(process.cwd());
@@ -144,9 +367,29 @@ const statusService = new StatusService(projectRoot);
 // WebSocket connection management
 const clients = new Set<WebSocket>();
 
-wss.on("connection", (ws) => {
+wss.on("connection", (ws, req) => {
+  // Security: Validate origin
+  const origin = req.headers.origin;
+  if (isProduction && origin && !allowedOrigins.includes(origin)) {
+    console.error(`[Security] Blocked WebSocket from unauthorized origin: ${origin}`);
+    ws.send(JSON.stringify({ type: "error", error: "Unauthorized origin" }));
+    ws.close();
+    return;
+  }
+
+  // Security: Require authentication token
+  const url = new URL(req.url!, `http://${req.headers.host}`);
+  const token = url.searchParams.get("token");
+
+  if (!validateWSAuthToken(token ?? undefined)) {
+    console.error("[Security] WebSocket connection rejected: invalid or missing token");
+    ws.send(JSON.stringify({ type: "error", error: "Authentication required" }));
+    ws.close();
+    return;
+  }
+
   clients.add(ws);
-  console.log("New WebSocket client connected");
+  console.log("New WebSocket client connected (authenticated)");
 
   // Send initial state
   ws.send(
@@ -224,6 +467,28 @@ async function handleWSMessage(ws: WebSocket, message: Record<string, unknown>) 
   }
 }
 
+// ============= Security & Auth Endpoints =============
+
+// Get WebSocket authentication token
+app.post("/api/auth/ws-token", rateLimit(authLimiter), (req, res) => {
+  try {
+    const clientId = req.ip || req.socket.remoteAddress || crypto.randomBytes(8).toString("hex");
+    const token = generateWSAuthToken(clientId);
+
+    res.json({
+      success: true,
+      data: { token, expiresIn: WS_TOKEN_EXPIRY_MS },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to generate token",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 // ============= Vision Endpoints =============
 
 app.get("/api/vision", async (req, res) => {
@@ -261,24 +526,29 @@ app.put("/api/vision", async (req, res) => {
   }
 });
 
-app.post("/api/vision/capture", async (req, res) => {
-  try {
-    const { text } = req.body;
-    const vision = await visionSystem.captureVision(text);
-    broadcast("vision.change", vision);
-    res.json({
-      success: true,
-      data: vision,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
+app.post(
+  "/api/vision/capture",
+  rateLimit(writeLimiter),
+  validateRequest(visionCaptureSchema),
+  async (req, res) => {
+    try {
+      const { text } = req.body;
+      const vision = await visionSystem.captureVision(text);
+      broadcast("vision.change", vision);
+      res.json({
+        success: true,
+        data: vision,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        timestamp: new Date().toISOString(),
+      });
+    }
+  },
+);
 
 app.get("/api/vision/history", async (req, res) => {
   try {
@@ -548,61 +818,71 @@ app.get("/api/agents/active", async (req, res) => {
   }
 });
 
-app.post("/api/agents/:agentId/tasks", async (req, res) => {
-  try {
-    const { agentId } = req.params;
-    const task = req.body;
-    const result = await coordinationService.assignTask(agentId, task);
+app.post(
+  "/api/agents/:agentId/tasks",
+  rateLimit(writeLimiter),
+  validateRequest(agentTaskSchema),
+  async (req, res) => {
+    try {
+      const { agentId } = req.params;
+      const task = req.body;
+      const result = await coordinationService.assignTask(agentId, task);
 
-    // Broadcast agent activity
-    broadcast("agent.activity", {
-      agent: agentId,
-      action: `Assigned task: ${task.name}`,
-      status: "started",
-      timestamp: new Date().toISOString(),
-    });
+      // Broadcast agent activity
+      broadcast("agent.activity", {
+        agent: agentId,
+        action: `Assigned task: ${task.name}`,
+        status: "started",
+        timestamp: new Date().toISOString(),
+      });
 
-    res.json({
-      success: true,
-      data: result,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
+      res.json({
+        success: true,
+        data: result,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        timestamp: new Date().toISOString(),
+      });
+    }
+  },
+);
 
 // ============= Command Endpoints =============
 
-app.post("/api/commands/execute", async (req, res) => {
-  try {
-    const command = req.body;
-    const result = await orchestrator.executeCommand(command);
+app.post(
+  "/api/commands/execute",
+  rateLimit(writeLimiter),
+  validateRequest(commandExecuteSchema),
+  async (req, res) => {
+    try {
+      const command = req.body;
+      const result = await orchestrator.executeCommand(command);
 
-    // Broadcast command execution
-    broadcast("command.executed", {
-      command,
-      result,
-      timestamp: new Date().toISOString(),
-    });
+      // Broadcast command execution
+      broadcast("command.executed", {
+        command,
+        result,
+        timestamp: new Date().toISOString(),
+      });
 
-    res.json({
-      success: true,
-      data: { result },
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
+      res.json({
+        success: true,
+        data: { result },
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+        timestamp: new Date().toISOString(),
+      });
+    }
+  },
+);
 
 app.get("/api/commands/history", async (req, res) => {
   try {
@@ -1543,11 +1823,39 @@ app.post("/api/workers/tasks", async (req, res) => {
       });
     }
 
+    // Get intelligence context for agent tasks
+    let enhancedCommand = command;
+    let enhancedArgs = args;
+
+    if (type === "agent" || type === "claude-code") {
+      // Extract context from command/args for relevance matching
+      const contextText = [command, ...(args || [])].join(" ");
+      const contextKeywords = contextText
+        .toLowerCase()
+        .split(/\s+/)
+        .filter((w) => w.length > 3)
+        .slice(0, 10); // Limit to 10 keywords
+
+      // Get intelligence context (defaults: high+ priority, 500 tokens)
+      const intelligence = await getIntelligenceContext({
+        contextKeywords,
+        maxTokens: 500,
+        minPriority: "high",
+      });
+
+      // Inject intelligence into task
+      if (intelligence) {
+        const injected = injectIntelligence(command, args, intelligence);
+        enhancedCommand = injected.command;
+        enhancedArgs = injected.args;
+      }
+    }
+
     const taskId = await pool.submitTask({
       type,
       priority: priority || "medium",
-      command,
-      args,
+      command: enhancedCommand,
+      args: enhancedArgs,
       workstreamId,
       timeout,
       env,
@@ -1914,25 +2222,20 @@ async function ensureFeedbackFile() {
 ensureFeedbackFile();
 
 // Submit feedback
-app.post("/api/feedback", async (req, res) => {
-  try {
-    const {
-      rating,
-      category,
-      description,
-      url,
-      userAgent,
-      timestamp,
-    } = req.body;
-
-    // Validate required fields
-    if (!rating || !category || !description) {
-      return res.status(400).json({
-        success: false,
-        error: "Missing required fields: rating, category, description",
-        timestamp: new Date().toISOString(),
-      });
-    }
+app.post(
+  "/api/feedback",
+  rateLimit(writeLimiter),
+  validateRequest(feedbackSchema),
+  async (req, res) => {
+    try {
+      const {
+        rating,
+        category,
+        description,
+        url,
+        userAgent,
+        timestamp,
+      } = req.body;
 
     // Create feedback entry
     const feedback = {
@@ -1978,7 +2281,8 @@ app.post("/api/feedback", async (req, res) => {
       timestamp: new Date().toISOString(),
     });
   }
-});
+},
+);
 
 // Get all feedback (admin endpoint)
 app.get("/api/feedback", async (req, res) => {
@@ -2126,6 +2430,12 @@ process.on("SIGTERM", async () => {
     governanceWatcher.close();
     console.log("Governance watcher closed");
   }
+
+  // Cleanup rate limiters
+  generalLimiter.cleanup();
+  writeLimiter.cleanup();
+  authLimiter.cleanup();
+  console.log("Rate limiters cleaned up");
 
   // Close WebSocket connections
   clients.forEach((client) => {
