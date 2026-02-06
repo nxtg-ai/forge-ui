@@ -16,6 +16,7 @@ import { motion } from "framer-motion";
 import { SafeAnimatePresence as AnimatePresence } from "../components/ui/SafeAnimatePresence";
 import { ChiefOfStaffDashboard } from "../components/ChiefOfStaffDashboard";
 import { CommandCenter } from "../components/CommandCenter";
+import { CommandOutputDrawer } from "../components/CommandOutputDrawer";
 import { LiveActivityFeed } from "../components/real-time/LiveActivityFeed";
 import { AgentCollaborationView } from "../components/real-time/AgentCollaborationView";
 import { GovernanceHUD } from "../components/governance";
@@ -33,6 +34,7 @@ import {
 } from "../hooks/useRealtimeConnection";
 import { useForgeCommands } from "../hooks/useForgeCommands";
 import { useDashboardData } from "../hooks/useDashboardData";
+import { useCommandOutput } from "../hooks/useCommandOutput";
 import { wsManager } from "../services/ws-manager";
 import { EngagementProvider, useEngagement } from "../contexts/EngagementContext";
 import { useLayout } from "../contexts/LayoutContext";
@@ -56,6 +58,7 @@ const DASHBOARD_SHORTCUTS: KeyboardShortcut[] = [
   { key: "2", description: "Agents tab", category: "navigation" },
   { key: "3", description: "Activity tab", category: "navigation" },
   { key: "r", description: "Refresh data", category: "actions" },
+  { key: "Ctrl+`", description: "Toggle command output panel", category: "actions" },
   { key: "?", description: "Show keyboard shortcuts", category: "general" },
 ];
 
@@ -79,6 +82,9 @@ const LiveDashboard: React.FC = () => {
     "overview",
   );
   const [isExecuting, setIsExecuting] = useState(false);
+
+  // Command output drawer state
+  const commandOutput = useCommandOutput();
 
   // Screen reader announcements
   const [announcement, setAnnouncement] = useState("");
@@ -162,13 +168,13 @@ const LiveDashboard: React.FC = () => {
   }, [commandsError, toast]);
 
   // Command execution handler - calls real /api/commands/execute endpoint
+  // Output is sent to the CommandOutputDrawer for full display.
+  // Toasts are now lightweight status notifications only (no truncated output).
   const handleCommandExecute = useCallback(async (command: string, args?: Record<string, unknown>) => {
     setIsExecuting(true);
 
-    toast.info(`Running ${command}...`, {
-      persistent: true,
-      id: `exec-${command}`,
-    });
+    // Track in the output drawer
+    const entryId = commandOutput.startCommand(command);
 
     try {
       const response = await fetch("/api/commands/execute", {
@@ -181,11 +187,11 @@ const LiveDashboard: React.FC = () => {
 
       if (!response.ok || !result.success) {
         const output = result.data?.output || result.error || "Unknown error";
-        // Truncate long output for toast
-        const summary = output.length > 200 ? output.slice(0, 200) + "..." : output;
+        commandOutput.completeCommand(entryId, output, "error", result.data);
+
+        // Lightweight toast -- just the status, not the full output
         toast.error(`${command} failed`, {
-          message: summary,
-          duration: 10000,
+          duration: 5000,
           actions: [
             {
               label: "Retry",
@@ -196,43 +202,42 @@ const LiveDashboard: React.FC = () => {
         return;
       }
 
-      // Handle redirect commands (e.g., frg-feature → terminal)
+      // Handle redirect commands (e.g., frg-feature -> terminal)
       if (result.data?.redirect) {
-        toast.info(result.data.output || `Navigate to ${result.data.redirect}`, {
-          duration: 5000,
-        });
+        const output = result.data.output || `Navigate to ${result.data.redirect}`;
+        commandOutput.completeCommand(entryId, output, "success");
+        toast.info(output, { duration: 5000 });
         return;
       }
 
-      // Show real results
+      // Full output goes to the drawer
       const output = result.data?.output || "";
-      const summary = output.length > 300 ? output.slice(0, 300) + "..." : output;
+      const metadata = result.data ? { ...result.data } : undefined;
+      // Remove the output string from metadata to avoid duplication
+      if (metadata) delete metadata.output;
 
-      // Command-specific success messages
+      commandOutput.completeCommand(entryId, output, "success", metadata);
+
+      // Lightweight success toast (no output, just status)
       if (command === "frg-test" && result.data) {
         const { passed, failed } = result.data;
         toast.success(`Tests: ${passed} passed${failed ? `, ${failed} failed` : ""}`, {
-          message: summary,
-          duration: 8000,
+          duration: 4000,
         });
       } else if (command === "frg-deploy") {
-        toast.success("Build completed successfully", {
-          message: summary,
-          duration: 5000,
-        });
+        toast.success("Build completed successfully", { duration: 4000 });
       } else {
-        toast.success(`${command} completed`, {
-          message: summary,
-          duration: 5000,
-        });
+        toast.success(`${command} completed`, { duration: 3000 });
       }
 
       // Refresh dashboard data after command execution
       refreshDashboard();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      commandOutput.completeCommand(entryId, errorMessage, "error");
+
       toast.error(`${command} failed`, {
-        message: errorMessage,
+        duration: 5000,
         actions: [
           {
             label: "Retry",
@@ -243,7 +248,7 @@ const LiveDashboard: React.FC = () => {
     } finally {
       setIsExecuting(false);
     }
-  }, [toast, refreshDashboard]);
+  }, [toast, refreshDashboard, commandOutput]);
 
   // Commands are now fetched via useForgeCommands hook
   // Agents data fetched from worker pool API
@@ -498,7 +503,7 @@ const LiveDashboard: React.FC = () => {
         </AnimatePresence>
       </main>
 
-      {/* Command center */}
+      {/* Command center -- shifts up when output drawer is open */}
       <CommandCenter
         onCommandExecute={handleCommandExecute}
         availableCommands={availableCommands}
@@ -513,6 +518,9 @@ const LiveDashboard: React.FC = () => {
         isExecuting={isExecuting}
         isLoadingCommands={commandsLoading}
       />
+
+      {/* Command output drawer -- bottom slide-up panel for full output */}
+      <CommandOutputDrawer commandOutput={commandOutput} />
       </div>
     </AppShell>
   );

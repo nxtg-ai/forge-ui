@@ -130,6 +130,16 @@ export interface Command {
   icon: React.ReactNode;
 }
 
+// Command Execution Results
+export interface CommandResult {
+  id: string;
+  command: string;
+  output: string;
+  success: boolean;
+  timestamp: Date;
+  durationMs: number;
+}
+
 // Automation and YOLO Mode
 export type AutomationLevel =
   | "conservative"
