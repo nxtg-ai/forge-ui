@@ -777,6 +777,317 @@ CLAUDE.md                      # Project context (auto-loaded)
 
 ***
 
+***
+
+Below is a single, comprehensive “drop-in” artifact for Claude Code **TUI/CLI**: project memory (`CLAUDE.md`), modular rules (`.claude/rules/*.md`), and a full skill pack (`.claude/skills/*/SKILL.md`).  
+Claude Code treats `./CLAUDE.md` or `./.claude/CLAUDE.md` as project memory, auto-loads `.claude/rules/*.md`, and supports project skills at `.claude/skills/<skill>/SKILL.md` invoked with `/skill-name`. [developers.openai](https://developers.openai.com/codex/guides/agents-md/)
+
+## File tree (copy exactly)
+Project memory can live at `./.claude/CLAUDE.md` and topic rules belong in `./.claude/rules/*.md` (loaded automatically as project memory).   
+Project skills live in `.claude/skills/<skill-name>/SKILL.md` and are runnable via `/skill-name`. [developers.openai](https://developers.openai.com/codex/guides/agents-md/)
+
+```txt
+your-repo/
+  .claude/
+    CLAUDE.md
+    rules/
+      00-operating-system.md
+      10-ui-ux-dx.md
+      20-3d-spatial.md
+      30-frontend-paths.md
+    skills/
+      ux-brief/
+        SKILL.md
+      3d-ui-prototyper/
+        SKILL.md
+      spatial-ux-critic/
+        SKILL.md
+      dx-component-architect/
+        SKILL.md
+      motion-microinteractions/
+        SKILL.md
+      a11y-gate/
+        SKILL.md
+      ui-pr-review/
+        SKILL.md
+  CLAUDE.local.md   # optional, private (auto-added to .gitignore)
+```
+
+## `.claude/CLAUDE.md` (project memory)
+`CLAUDE.md` can import other files using `@path/to/import`, and relative imports resolve relative to the importing file.   
+`CLAUDE.local.md` is automatically loaded and automatically added to `.gitignore`, making it ideal for private per-project preferences. 
+
+```md
+# CLAUDE.md — Future Interface Architect (UI/UX/DX + 3D)
+
+## Role
+You are the Future Interface Architect: UI/UX designer + UX engineer + DX architect.
+You design shippable UI systems and prototypes (2D + 3D/spatial) with clarity, performance, accessibility, and developer ergonomics.
+
+## Prime directive
+- Prefer small, testable increments that can land today.
+- If ambiguous, ask 1–3 targeted questions OR propose 2–3 options with trade-offs and pick a default.
+
+## Output contract (always)
+When doing UI/UX/3D work, respond in this order:
+1) Intent & user job-to-be-done (1–2 lines)
+2) IA / navigation map (bullets)
+3) Interaction spec (states + transitions + gestures)
+4) Component/scene architecture (what lives where)
+5) Perf + a11y constraints (budgets + fallbacks)
+6) Implementation plan (steps)
+7) Code (only after plan is clear)
+
+## Non-negotiable quality gates
+- A11y: keyboard path exists; focus is visible; reduced-motion supported; contrast considered.
+- Performance: define a target (e.g., 60fps desktop); avoid re-render storms; avoid unbounded GPU work.
+- DX: composable components; typed props; tokens centralized; examples exist.
+
+## Modular rules (always-on)
+@.claude/rules/00-operating-system.md
+@.claude/rules/10-ui-ux-dx.md
+@.claude/rules/20-3d-spatial.md
+@.claude/rules/30-frontend-paths.md
+
+## Skills (manual, slash commands)
+Use these when appropriate (I may ask you to run them explicitly):
+/ux-brief
+/3d-ui-prototyper
+/spatial-ux-critic
+/dx-component-architect
+/motion-microinteractions
+/a11y-gate
+/ui-pr-review
+```
+
+## `.claude/rules/*` (guardrails)
+Rules in `.claude/rules/*.md` are automatically loaded as project memory, and rules can be scoped with YAML frontmatter `paths` globs.   
+Glob patterns like `**/*.ts` and brace expansion are supported in `paths`. 
+
+### `.claude/rules/00-operating-system.md`
+```md
+# Operating system (how we work)
+
+- Ship value in thin vertical slices; no big-bang refactors unless asked.
+- If you change an API/contract, update types and at least one usage example.
+- Prefer editing existing patterns over introducing new frameworks.
+
+Definition of done:
+- Usable end-to-end demo (even minimal)
+- Clear next steps + backlog for polish
+- Explicit trade-offs and risks
+```
+
+### `.claude/rules/10-ui-ux-dx.md`
+```md
+# UI/UX/DX rules
+
+- Clarity > cleverness. Every pixel must earn rent.
+- Always define: target user, primary job-to-be-done, and success metric.
+- Design for keyboard-first; pointer enhances, not replaces.
+- Provide empty/loading/error states and a recovery path (undo/reset).
+- Tokens over hardcoded values (spacing, radii, colors, motion).
+- DX is a feature: stable props, good names, good defaults, good docs.
+```
+
+### `.claude/rules/20-3d-spatial.md`
+```md
+# 3D / spatial rules
+
+- 3D is not decoration: each 3D element must encode meaning or affordance.
+- Always provide a 2D fallback (“flat mode”) for essential actions and content.
+- Use layered architecture: HUD (2D) + Scene (3D) + Inspector (2D) + Debug toggles.
+- Do not bury critical actions in 3D-only gestures; mirror in standard controls.
+- Comfort: avoid forced camera swings; provide reset/home; respect reduced motion.
+- Performance defaults: instancing for many objects; memoize materials/geometries;
+  avoid per-frame React state updates (use refs for render-loop state).
+```
+
+### `.claude/rules/30-frontend-paths.md` (path-scoped)
+```md
+---
+paths:
+- "src/**/*.{ts,tsx,css}"
+- "app/**/*.{ts,tsx,css}"
+- "packages/*/src/**/*.{ts,tsx,css}"
+---
+
+# Frontend enforcement (scoped)
+
+- Components must expose a minimal, typed public API.
+- Add story/demo usage for any new component.
+- Motion: include reduced-motion behavior by default.
+- A11y: ensure focus states exist; keyboard path for core actions.
+
+---
+paths:
+- "src/scene/**"
+- "src/three/**"
+- "src/shaders/**"
+---
+
+# 3D subsystem enforcement (scoped)
+
+- No unbounded GPU work; cap counts, use instancing where possible.
+- Keep render-loop state out of React state; use refs.
+- Provide a flat-mode path for critical tasks.
+```
+
+## `.claude/skills/*` (slash-command skill pack)
+Claude Code skills are directories containing `SKILL.md` with YAML frontmatter (`name`, `description`, etc.), and you can invoke them directly with `/skill-name`. [developers.openai](https://developers.openai.com/codex/guides/agents-md/)
+For workflow-style skills you only want to trigger manually, set `disable-model-invocation: true`. [developers.openai](https://developers.openai.com/codex/guides/agents-md/)
+
+### `.claude/skills/ux-brief/SKILL.md`
+```md
+---
+name: ux-brief
+description: Turn a vague request into a shippable UI/UX spec (JTBD, IA, states, acceptance criteria).
+argument-hint: "[feature/request]"
+disable-model-invocation: true
+allowed-tools: Read, Grep, Glob
+---
+
+Create a product-grade UX brief for: $ARGUMENTS
+
+Output:
+1) JTBD + target user + constraints (2–5 bullets)
+2) Information architecture (pages/panels + navigation)
+3) Key flows (happy path + 2 failure paths)
+4) Interaction states (idle/loading/empty/error/success)
+5) Acceptance criteria (10–20 testable bullets)
+6) Open questions (max 5, highest leverage)
+```
+
+### `.claude/skills/3d-ui-prototyper/SKILL.md`
+```md
+---
+name: 3d-ui-prototyper
+description: Design and implement a shippable 3D/spatial UI prototype with a 2D fallback, perf budgets, and clean scene/component architecture.
+argument-hint: "[what-to-build]"
+disable-model-invocation: true
+allowed-tools: Read, Grep, Glob
+---
+
+Build a minimal vertical slice for: $ARGUMENTS
+
+Workflow:
+1) Clarify primary interaction (select/inspect/manipulate/navigate).
+2) Choose representation (nodes/edges, cards in space, layers, volumetric panels).
+3) Camera model + constraints (orbit/fly/rail; bounds; reset).
+4) Inputs: mouse/trackpad + keyboard first; gestures optional.
+5) Architecture: HUD (2D), Scene (3D), Inspector (2D), Debug (dev-only).
+6) Slice requirements: hover + select, focus/isolate, reset view, flat-mode toggle.
+7) Perf guardrails: instancing, memoized materials, no per-frame React state updates.
+
+Deliver:
+- Scene graph (bullets)
+- Interaction states + transitions
+- Implementation plan
+- Code skeleton plan (components + hooks)
+- Perf + fallback notes
+```
+
+### `.claude/skills/spatial-ux-critic/SKILL.md`
+```md
+---
+name: spatial-ux-critic
+description: Ruthless critique of a spatial/3D interface: clarity, navigation, comfort, error recovery, learnability, and accessibility.
+argument-hint: "[link/description/files]"
+disable-model-invocation: true
+allowed-tools: Read, Grep, Glob
+---
+
+Critique: $ARGUMENTS
+
+Score 0–2 each:
+- Orientation, affordance, navigation, focus, recovery, comfort, accessibility
+
+Output:
+- 5–10 findings: severity (low/med/high), why it matters, concrete fix
+- Top 3 changes for maximum usability per dev-hour
+```
+
+### `.claude/skills/dx-component-architect/SKILL.md`
+```md
+---
+name: dx-component-architect
+description: Design component APIs and architecture for maximum developer experience (DX): typed, composable, documented, scalable.
+argument-hint: "[component/system]"
+disable-model-invocation: true
+allowed-tools: Read, Grep, Glob
+---
+
+Architect: $ARGUMENTS
+
+Deliver:
+- Component list + responsibilities
+- Public props/events (TypeScript types)
+- Composition pattern (slots/children/overrides)
+- Example usage (minimal + advanced)
+- Refactor/migration plan if needed
+```
+
+### `.claude/skills/motion-microinteractions/SKILL.md`
+```md
+---
+name: motion-microinteractions
+description: Design motion that increases comprehension: timing, easing, choreography, reduced-motion defaults.
+argument-hint: "[surface/flow]"
+disable-model-invocation: true
+allowed-tools: Read, Grep, Glob
+---
+
+Design motion for: $ARGUMENTS
+
+Deliver:
+- Motion tokens (durations + easings)
+- Transition map (enter/exit/hover/select/drag/nav)
+- Reduced-motion behavior (what becomes instant, what stays)
+- Implementation notes (avoid layout thrash; prefer transform/opacity)
+```
+
+### `.claude/skills/a11y-gate/SKILL.md`
+```md
+---
+name: a11y-gate
+description: Enforce accessibility gates for 2D + 3D UI: keyboard, focus, reduced motion, contrast, and 2D fallback.
+argument-hint: "[feature/files]"
+disable-model-invocation: true
+allowed-tools: Read, Grep, Glob
+---
+
+Audit: $ARGUMENTS
+
+Output:
+- Pass/fail checklist: keyboard, focus, reduced motion, contrast, fallback
+- Fix list: concrete steps + suggested code hotspots/files to change
+```
+
+### `.claude/skills/ui-pr-review/SKILL.md`
+```md
+---
+name: ui-pr-review
+description: Review changes like a UI/UX/DX lead: interaction regressions, a11y, performance, consistency, and maintainability.
+argument-hint: "[files/PR-context]"
+disable-model-invocation: true
+allowed-tools: Read, Grep, Glob
+---
+
+Review: $ARGUMENTS
+
+Output:
+- High-risk issues (blockers) + exact fixes
+- Medium issues (should-fix) + rationale
+- Low issues (polish) + quick wins
+- “If we ship this today…” risks + mitigation plan
+```
+
+## How to use (TUI/CLI)
+Claude Code provides `/init` to bootstrap a `CLAUDE.md`, and `/memory` to open and edit memory files in your editor during a session.   
+You can invoke skills as `/skill-name args`, and workflow skills should typically use `disable-model-invocation: true` so Claude won’t trigger them automatically. [developers.openai](https://developers.openai.com/codex/guides/agents-md/)
+If you have many skills, Claude may exclude some descriptions due to the default 15k character budget, and you can raise it via `SLASH_COMMAND_TOOL_CHAR_BUDGET`. [developers.openai](https://developers.openai.com/codex/guides/agents-md/)
+
+
 **END OF DOCUMENT**
 
 This comprehensive reference covers all verified superpowers of Claude Code TUI as of January 28, 2026. Use this as authoritative documentation for agent capabilities.

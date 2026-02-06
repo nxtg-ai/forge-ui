@@ -6,165 +6,155 @@ description: "Display complete project state (zero-context-friendly)"
 
 You are the **Status Reporter** - show complete project state in a zero-context-friendly format.
 
-## Load State
+## Data Gathering
 
+Gather all data using native tools. Execute these in parallel where possible:
+
+### 1. Project Info
+
+Read `package.json` in the project root to get:
+- Project name
+- Version
+- Dependencies count
+
+### 2. Git Status
+
+Run these bash commands:
 ```bash
-# Load current state
-STATE=$(cat .claude/state.json)
+git branch --show-current
+git status --porcelain
+git log --oneline -5
+git rev-parse --short HEAD
 ```
+
+### 3. Test Status
+
+Run vitest in reporter mode:
+```bash
+npx vitest run --reporter=verbose 2>&1 | tail -20
+```
+
+If that takes too long, just count test files:
+```bash
+find src -name "*.test.ts" -o -name "*.spec.ts" | wc -l
+```
+
+### 4. Governance State
+
+Read `.claude/governance.json` if it exists. Extract:
+- Constitution directive
+- Constitution status
+- Workstream count and statuses
+- Sentinel log entries (last 5)
+
+### 5. Agent Inventory
+
+List available agents:
+```bash
+ls .claude/agents/*.md 2>/dev/null | wc -l
+```
+
+And list their names:
+```bash
+ls .claude/agents/*.md 2>/dev/null | xargs -I{} basename {} .md
+```
+
+### 6. Command Inventory
+
+Count available commands:
+```bash
+ls .claude/commands/*.md 2>/dev/null | wc -l
+```
+
+### 7. Build Status
+
+Check if TypeScript compiles:
+```bash
+npx tsc --noEmit 2>&1 | tail -5
+```
+
+### 8. Hook Status
+
+Read `.claude/settings.json` and list configured hooks.
 
 ## Display Format
 
+Present the gathered data in this format:
+
 ```
-╔════════════════════════════════════════════════════════╗
-║           NXTG-Forge Project Status                    ║
-╚════════════════════════════════════════════════════════╝
+NXTG-Forge Project Status
+==========================
 
-📦 PROJECT: {project_name}
-   Type: {project_type}
-   Created: {created_at}
-   Forge Version: {forge_version}
+PROJECT: {name} v{version}
+  Path: {cwd}
+  Commit: {short_hash}
+  Branch: {branch}
 
-📐 ARCHITECTURE
-   Pattern: {architecture_pattern}
-   Backend: {backend_lang}/{backend_framework}
-   Frontend: {frontend_framework}
-   Database: {database_type}
-   Cache: {cache_type}
+GIT STATUS
+  Branch: {branch} ({ahead} ahead, {behind} behind)
+  Staged: {staged_count}
+  Modified: {modified_count}
+  Untracked: {untracked_count}
 
-🎯 DEVELOPMENT PHASE: {current_phase}
-   ✓ Completed: {phases_completed}
-   → Current: {current_phase}
-   ☐ Remaining: {phases_remaining}
+  Recent commits:
+    {hash} {message}
+    {hash} {message}
+    {hash} {message}
 
-🚀 FEATURES
-   ✅ Completed: {completed_count}
-      {list_completed_features}
-   
-   🔄 In Progress: {in_progress_count}
-      {list_in_progress_features_with_progress}
-   
-   📋 Planned: {planned_count}
-      {list_planned_features}
+TESTS
+  Test files: {test_file_count}
+  Status: {passing}/{total} passing
+  Coverage: {coverage}% (if available)
 
-🤖 AGENTS
-   Active: {active_agents}
-   Available: {available_agents}
-   
-   Last Task:
-     Agent: {last_agent}
-     Task: {last_task}
-     Status: {last_status}
+BUILD
+  TypeScript: {OK or ERROR with count}
 
-🔌 MCP SERVERS
-   ✓ Connected: {connected_mcp_servers}
-   ⚠ Recommended: {recommended_mcp_servers}
+GOVERNANCE
+  Status: {constitution_status}
+  Directive: {directive_first_50_chars}...
+  Workstreams: {active}/{total}
+  Sentinel entries: {count}
 
-✅ QUALITY METRICS
-   Tests:
-     Unit: {unit_tests_passing}/{unit_tests_total} ({unit_coverage}%)
-     Integration: {int_tests_passing}/{int_tests_total} ({int_coverage}%)
-     E2E: {e2e_tests_passing}/{e2e_tests_total} ({e2e_coverage}%)
-   
-   Code Quality:
-     Linting: {linting_issues} issues
-     Security: {critical_vulns} critical, {high_vulns} high
+AGENTS: {count} available
+  {agent_names_list}
 
-💾 STATE MANAGEMENT
-   Last Checkpoint: {last_checkpoint_time}
-   Total Checkpoints: {checkpoint_count}
-   
-   Last Session:
-     ID: {session_id}
-     Status: {session_status}
-     Resume: claude --resume {session_id}
+COMMANDS: {count} available
 
-📊 PROJECT HEALTH: {overall_health_score}/100
-   System Status: {health_status}
-   Uptime: {system_uptime}
+HOOKS: {hook_count} configured
+  {hook_descriptions}
 
-   Health Checks:
-   ✓ UI Responsiveness: {ui_score}%
-   ✓ Backend Availability: {backend_score}%
-   ✓ State Sync: {state_sync_score}%
-   ✓ Agent Execution: {agent_score}%
-   ✓ File System: {fs_score}%
-   ✓ Memory Usage: {memory_score}%
-   ✓ Command Processing: {command_score}%
-   ✓ Automation: {automation_score}%
-
-   Performance Metrics:
-   Average Latency: {avg_latency}ms
-   Error Rate: {error_rate}%
-   Active Alerts: {active_alerts}
-
-═════════════════════════════════════════════════════════
-
-💡 Quick Actions:
-   Continue work:    /resume
-   New feature:      /feature "feature name"
-   Save checkpoint:  /checkpoint "description"
-   Gap analysis:     /gap-analysis
-   Deploy:           /deploy
-
-📖 Full Details:
-   State file:   .claude/state.json
-   Spec:         docs/PROJECT-SPEC.md
-   Architecture: docs/ARCHITECTURE.md
-
-═════════════════════════════════════════════════════════
+---
+Quick Actions:
+  /frg-test          Run full test suite
+  /frg-checkpoint    Save current state
+  /frg-gap-analysis  Analyze project gaps
+  /frg-report        Session activity report
 ```
 
 ## Parse Arguments
 
-If `--json` flag: output raw state.json
-If `--detail <section>`: show detailed view of section (features/agents/quality/etc)
-If `--export`: export state to shareable format
+If `$ARGUMENTS` contains:
+- `--json`: Output all gathered data as a JSON object instead of formatted text
+- `--git`: Show only git section with more detail (full log, diff stats)
+- `--tests`: Show only test section with full test output
+- `--governance`: Show only governance section with full sentinel log
 
-## Health Score Integration
+## Error Handling
 
-```typescript
-// Use the integrated health monitoring system
-import { MonitoringSystem } from '../src/monitoring';
+If any data source is unavailable, show "N/A" for that section rather than failing.
+Always show whatever data IS available.
 
-async function getHealthStatus() {
-    const monitoring = new MonitoringSystem();
-    const health = await monitoring.getHealthMonitor().performHealthCheck();
+## Zero-Context Recovery
 
-    return {
-        overallScore: health.overallScore,
-        status: health.status,
-        uptime: formatUptime(health.uptime),
-        checks: health.checks,
-        recommendations: health.recommendations,
-        performance: monitoring.getPerformanceMonitor().generateReport(),
-        errors: monitoring.getErrorTracker().generateReport(),
-        alerts: monitoring.getAlertingSystem().getActiveAlerts()
-    };
-}
-
-// Run diagnostics if requested
-if (args.includes('--diagnostics')) {
-    const diagnostics = await monitoring.runDiagnostics();
-    console.log(monitoring.getDiagnosticTools().formatDiagnosticSummary(diagnostics));
-}
-```
-
-## Zero-Context Recovery Info
-
-If status shows `session_status: interrupted`:
+If governance shows interrupted session or git has uncommitted changes, add a recovery section:
 
 ```
-⚠️  INTERRUPTED SESSION DETECTED
+RECOVERY NEEDED
+  Uncommitted changes detected.
+  Last commit: {hash} {message} ({time_ago})
 
-You can resume exactly where you left off:
-
-1. Resume session:
-   claude --resume {session_id}
-
-2. Or continue with checkpoint:
-   /restore {last_checkpoint_id}
-
-3. Or view what was in progress:
-   cat .claude/checkpoints/{last_checkpoint_file}
+  Options:
+    1. Continue working on current changes
+    2. /frg-checkpoint save   (checkpoint current state)
+    3. git stash              (stash changes)
 ```

@@ -1,175 +1,108 @@
-# /docs-audit
-
-**Agent**: Release Sentinel  
-**Purpose**: Comprehensive documentation quality audit
-
+---
+description: "Comprehensive documentation quality audit"
 ---
 
-## Checks Performed
+# NXTG-Forge Documentation Audit
+
+You are the **Documentation Auditor** - perform a comprehensive quality audit of all project documentation.
+
+## Audit Dimensions
+
+Run all checks using native tools:
 
 ### 1. Coverage Analysis
-- Which code files have documentation?
-- Which exports are undocumented?
-- Which public APIs lack examples?
 
-### 2. Freshness Analysis
-- When was each doc last updated?
-- Which docs are older than their source files?
-- Version mismatches?
+Use Grep and Glob to measure:
+- Count all exported symbols in `src/**/*.ts` (excluding tests)
+- Count which have JSDoc/TSDoc comments
+- Calculate documentation coverage percentage
 
-### 3. Quality Analysis
-- Broken links (internal and external)
-- Code examples that don't compile
-- Missing required sections
-- Outdated screenshots
-
-### 4. Consistency Analysis
-- Terminology consistency
-- Formatting consistency
-- Style guide compliance
-
----
-
-## Output Report
-````markdown
-# Documentation Audit Report
-Generated: 2026-01-08 14:30:00
-
-## Summary
-
-| Metric | Score | Status |
-|--------|-------|--------|
-| Coverage | 87% | 🟡 Good |
-| Freshness | 72% | 🟡 Good |
-| Quality | 94% | ✅ Excellent |
-| Consistency | 88% | 🟡 Good |
-| **Overall** | **85%** | 🟡 Good |
-
-## Coverage Details
-
-### Fully Documented (12 files)
-- src/api/routes/users.ts ✅
-- src/api/routes/projects.ts ✅
-- src/components/ui/button.tsx ✅
-...
-
-### Partially Documented (3 files)
-- src/api/routes/webhooks.ts (60%)
-  - Missing: DELETE endpoint, error responses
-- src/services/avatar.ts (40%)
-  - Missing: Public methods documentation
-...
-
-### Undocumented (2 files)
-- src/utils/crypto.ts ❌
-- src/services/cache.ts ❌
-
-## Freshness Details
-
-### Recently Updated (< 7 days)
-- docs/api/users.md (2 days ago)
-- CHANGELOG.md (1 day ago)
-
-### Potentially Stale (> 30 days)
-- docs/architecture/overview.md (45 days)
-  - Source changed: 12 days ago
-  - ⚠️ May need update
-
-### Definitely Stale (> 90 days)
-- docs/deployment.md (120 days)
-  - ❌ Needs immediate attention
-
-## Quality Issues
-
-### Broken Links (2)
-- docs/api/overview.md:45 -> /api/legacy (404)
-- README.md:12 -> https://old-domain.com/docs (404)
-
-### Failing Examples (1)
-- docs/getting-started.md:89
-```typescript
-  // This import no longer exists
-  import { oldFunction } from './utils';
-```
-
-### Missing Sections (3)
-- docs/api/webhooks.md: Missing "Error Responses"
-- docs/components/input.md: Missing "Accessibility"
-- docs/cli.md: Missing "Examples"
-
-## Recommendations
-
-### High Priority
-1. Fix broken links in docs/api/overview.md
-2. Update stale docs/deployment.md
-3. Add documentation for src/utils/crypto.ts
-
-### Medium Priority
-4. Update failing code example in getting-started.md
-5. Add missing sections to API docs
-6. Review architecture docs for accuracy
-
-### Low Priority
-7. Improve consistency in terminology
-8. Add more examples to component docs
-
-## Action Items
-
-Run these commands to address issues:
 ```bash
-# Fix high priority
-/docs-update --file docs/api/overview.md
-/docs-update --file docs/deployment.md
-/docs-generate api src/utils/crypto.ts
+# Count exports
+grep -rn "^export " src/ --include="*.ts" | grep -v test | grep -v __tests__ | wc -l
 
-# Fix medium priority
-/docs-validate --fix-examples
-/docs-update --add-sections
+# Count documented exports (preceded by /** ... */)
 ```
-````
-````
+
+### 2. File Inventory
+
+```bash
+# All documentation files
+find . -name "*.md" -not -path "*/node_modules/*" -not -path "*/.git/*" | sort
+
+# Key files check
+for f in README.md CHANGELOG.md CONTRIBUTING.md LICENSE; do
+  [ -f "$f" ] && echo "EXISTS: $f" || echo "MISSING: $f"
+done
+```
+
+### 3. Link Validation
+
+Use Grep to find markdown links and verify they point to existing files:
+```bash
+# Find all internal links in docs
+grep -rn '\[.*\](\..*\.md)' docs/ --include="*.md" 2>/dev/null
+```
+
+For each link, verify the target file exists.
+
+### 4. Code Example Validation
+
+Find code blocks in docs and check if they reference existing functions/files:
+```bash
+grep -A5 '```typescript' docs/**/*.md 2>/dev/null
+```
+
+### 5. Freshness Check
+
+```bash
+# Find oldest documentation files
+find docs -name "*.md" -exec stat --format="%Y %n" {} \; 2>/dev/null | sort -n | head -10
+```
+
+## Audit Report
+
+```
+DOCUMENTATION AUDIT REPORT
+=============================
+Generated: {timestamp}
+
+SCORES
+  Coverage:    {pct}% ({documented}/{total} exports)
+  Completeness: {pct}% ({existing}/{expected} key files)
+  Freshness:   {pct}% ({current}/{total} docs up-to-date)
+  Link Health: {pct}% ({valid}/{total} links working)
+
+  Overall: {average}%
+
+COVERAGE DETAILS
+  Documented exports: {count}
+  Undocumented exports: {count}
+  Files with no docs: {list}
+
+KEY FILES
+  README.md:       {status}
+  CHANGELOG.md:    {status}
+  CONTRIBUTING.md: {status}
+  LICENSE:         {status}
+  docs/API.md:     {status}
+
+FRESHNESS
+  Most stale: {file} (last updated {time_ago})
+  Most current: {file} (updated {time_ago})
+
+ISSUES FOUND
+  {severity} - {description}
+  {severity} - {description}
+  ...
+
+RECOMMENDATIONS
+  1. [{priority}] {recommendation}
+  2. [{priority}] {recommendation}
+  3. [{priority}] {recommendation}
 
 ---
-
-## Complete Agent Ecosystem for Documentation
-````
-┌─────────────────────────────────────────────────────────────────┐
-│                    DOCUMENTATION FLOW                           │
-└─────────────────────────────────────────────────────────────────┘
-
-  Developer writes code
-         │
-         ▼
-  ┌──────────────┐
-  │ Any Agent    │  Creates/modifies code
-  │ (Backend,    │  with proper annotations
-  │  Frontend,   │  (JSDoc, TSDoc, decorators)
-  │  CLI, etc)   │
-  └──────┬───────┘
-         │
-         ▼
-  ┌──────────────┐
-  │ QA Sentinel  │  Validates code quality
-  │              │  Checks doc annotations present
-  └──────┬───────┘
-         │
-         ▼
-  ┌──────────────────────────────────────────────────────────────┐
-  │                    RELEASE SENTINEL                          │
-  │                                                              │
-  │  1. Detect changed files                                     │
-  │  2. Check doc mappings                                       │
-  │  3. Run appropriate generators:                              │
-  │     • API docs from OpenAPI/annotations                      │
-  │     • Component docs from TypeScript                         │
-  │     • CLI docs from command decorators                       │
-  │  4. Update CHANGELOG from commits                            │
-  │  5. Flag manual updates needed                               │
-  │  6. Validate all docs (links, examples)                      │
-  │  7. Update state.json                                        │
-  │  8. Generate commit message                                  │
-  │                                                              │
-  └──────────────────────────────────────────────────────────────┘
-         │
-         ▼
-  Documentation stays in sync! ✅
+Actions:
+  /frg-docs-update           Fix stale docs
+  /frg-docs-update --jsdoc   Add missing JSDoc
+```

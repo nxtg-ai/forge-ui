@@ -1,90 +1,75 @@
-# Restore Command
+---
+description: "Restore project state from a checkpoint"
+---
 
-Restore project state from checkpoints, recovering from failures or rolling back changes.
+# NXTG-Forge Restore
 
-## Usage
+You are the **Restore Manager** - restore project state from a previously saved checkpoint.
 
+This command is a shortcut for `/frg-checkpoint restore`.
+
+## Parse Arguments
+
+Arguments received: `$ARGUMENTS`
+
+- If a checkpoint ID is provided: restore that specific checkpoint
+- If `--preview` flag: show what would be restored without changing anything
+- If no arguments: list available checkpoints and ask user to choose
+
+## Execution
+
+### No arguments - Interactive restore
+
+1. List all checkpoints in `.claude/checkpoints/`:
 ```bash
-/restore <checkpoint-id> [--preview] [--partial] [--verify]
+ls .claude/checkpoints/*.json 2>/dev/null
 ```
 
-## Arguments
+2. For each checkpoint, read and display summary
+3. Ask user which checkpoint to restore using AskUserQuestion
+4. Execute restore
 
-- `checkpoint-id`: ID of checkpoint to restore from
-- `--preview`: Show what will be restored without making changes
-- `--partial`: Restore specific components only
-- `--verify`: Verify checkpoint integrity before restoring
+### With checkpoint ID
 
-## Restore Workflow
+1. Read `.claude/checkpoints/{id}.json`
+2. Display what will be restored:
+```
+RESTORE PREVIEW
+================
+Checkpoint: {id}
+Saved: {timestamp}
+Branch at save: {branch}
+Commit at save: {commit}
 
-### 1. List Available Checkpoints
+Current state:
+  Branch: {current_branch}
+  Commit: {current_commit}
+  Uncommitted changes: {count}
 
-```bash
-/checkpoint --list
+This will restore:
+  - Governance state from checkpoint
+  - Git info displayed for reference (not auto-restored)
 ```
 
-### 2. Preview Restore
+3. Ask for confirmation
+4. Restore governance.json if it was saved
+5. Display restoration complete message
 
-```bash
-/restore checkpoint-20250107-120000 --preview
-```
+### Preview mode (`--preview`)
 
-Output:
-```
-Restore Preview for checkpoint-20250107-120000
+Same as above but skip the actual restore step. Just show what would happen.
 
-Will restore:
-  - State file (.claude/state.json)
-  - Configuration (8 files)
-  - Feature tracking (3 active features)
-  - Git commit: abc123
-  
-Files to restore: 142 files
-Files to modify: 7 files
-Files to delete: 2 files
+## Safety
 
-Changes:
-  + src/auth/oauth.py (will be deleted)
-  M src/auth/models.py (will be reverted)
-  M src/auth/routes.py (will be reverted)
-```
+- Always show a diff between current state and checkpoint state before restoring
+- Warn if there are uncommitted changes that would be affected
+- Suggest creating a new checkpoint of current state before restoring:
+  ```
+  Tip: Save current state first with /frg-checkpoint save before-restore
+  ```
 
-### 3. Verify Checkpoint
+## Error Handling
 
-```bash
-/restore checkpoint-20250107-120000 --verify
-```
-
-### 4. Restore
-
-```bash
-/restore checkpoint-20250107-120000
-```
-
-## Partial Restore
-
-Restore only specific components:
-
-```bash
-/restore checkpoint-001 --partial state,config
-```
-
-Options:
-- `state` - Project state only
-- `config` - Configuration files only
-- `features` - Feature tracking only
-- `files` - Source files only
-
-## Safety Features
-
-1. Creates backup before restoring
-2. Verifies checkpoint integrity
-3. Validates Git state
-4. Confirms destructive changes
-5. Allows rollback of restore
-
-## See Also
-
-- `/checkpoint` - Create checkpoints
-- `/status` - View current state
-- `/deploy` - Deployment with rollback
+- Checkpoint not found: list available checkpoints
+- No checkpoints directory: suggest `/frg-checkpoint save` first
+- Corrupt checkpoint file: show error details

@@ -1,132 +1,80 @@
-# /docs-update
-
-**Agent**: Release Sentinel
-**Purpose**: Update documentation based on code changes
-
+---
+description: "Update stale documentation based on code changes"
 ---
 
-## Usage
-````bash
-/docs-update                    # Update all stale docs
-/docs-update --critical         # Only critical issues
-/docs-update --file <path>      # Specific file
-/docs-update --dry-run          # Preview changes
-/docs-update --auto-commit      # Auto-commit after update
-````
+# NXTG-Forge Documentation Updater
 
----
+You are the **Documentation Updater** - identify and update stale documentation based on recent code changes.
 
-## Execution Flow
-````
-1. Load documentation state from state.json
-2. Identify files needing updates
-3. For each file:
-   a. Check doc mapping for generator
-   b. If auto-update enabled:
-      - Run generator
-      - Apply changes
-      - Update state
-   c. If manual:
-      - Flag for human review
-      - Provide suggestions
-4. Validate updated docs (links, examples)
-5. Update state.json with new timestamps
-6. Report results
-````
+## Parse Arguments
 
----
+Arguments received: `$ARGUMENTS`
 
-## Auto-Update Generators
+Options:
+- No arguments: Find and update all stale docs
+- `--file <path>`: Update specific documentation file
+- `--dry-run`: Show what would be updated without changing anything
+- `--jsdoc`: Focus on adding/updating JSDoc comments in source
 
-### API Documentation Generator
-````python
-def generate_api_docs(source_file: str, doc_file: str):
-    """Generate API docs from source code annotations"""
-    
-    # Parse source file for endpoint decorators
-    endpoints = parse_endpoints(source_file)
-    
-    for endpoint in endpoints:
-        # Extract JSDoc/TSDoc annotations
-        annotations = extract_annotations(endpoint)
-        
-        # Generate markdown
-        markdown = render_endpoint_template(
-            method=endpoint.method,
-            path=endpoint.path,
-            description=annotations.description,
-            params=annotations.params,
-            returns=annotations.returns,
-            errors=annotations.errors,
-            examples=annotations.examples,
-        )
-        
-        # Update doc file
-        update_doc_section(doc_file, endpoint.path, markdown)
-````
+## Step 1: Identify Stale Documentation
 
-### Component Documentation Generator
-````python
-def generate_component_docs(source_file: str, doc_file: str):
-    """Generate component docs from TypeScript interfaces"""
-    
-    # Parse TypeScript for interface
-    interface = parse_component_interface(source_file)
-    
-    # Extract props
-    props = extract_props(interface)
-    
-    # Generate props table
-    props_table = generate_props_table(props)
-    
-    # Extract examples from JSDoc
-    examples = extract_examples(source_file)
-    
-    # Generate markdown
-    markdown = render_component_template(
-        name=interface.name,
-        description=interface.description,
-        props=props_table,
-        examples=examples,
-    )
-    
-    # Update doc file
-    write_doc(doc_file, markdown)
-````
+### Find recently changed source files
+```bash
+# Files changed in last 7 days
+git diff --name-only HEAD~20 -- src/ 2>/dev/null | sort -u
 
----
+# Files changed but docs not updated
+git log --oneline --since="7 days ago" -- src/ 2>/dev/null
+git log --oneline --since="7 days ago" -- docs/ 2>/dev/null
+```
 
-## Output Example
-````
-📝 Documentation Update
+### Compare source and doc timestamps
+For each doc file in `docs/`, check if the related source files have been modified more recently.
 
-Analyzing changes...
+## Step 2: Analyze What Needs Updating
 
-  Auto-updating:
-    ✅ docs/api/users.md
-       - Added PATCH /users/{id}/avatar section
-       - Updated response examples
-       
-    ✅ docs/components/button.md
-       - Updated props table (added 'loading' prop)
-       - Added new example
-       
-  Needs human review:
-    📋 docs/architecture/overview.md
-       - New service added: AvatarService
-       - Suggested sections to add:
-         • Service responsibility
-         • Integration points
-         • Data flow diagram
+For each stale doc:
+1. Read the current doc content
+2. Read the related source code
+3. Identify discrepancies (new functions, changed interfaces, removed features)
 
-  Validated:
-    ✓ All internal links working
-    ✓ All code examples compile
-    ✓ No broken external links
+## Step 3: Update Documentation
 
-  State updated:
-    - docs/api/users.md: version 2.2.0
-    - docs/components/button.md: version 2.2.0
+For each identified gap:
+1. Show the user what will change
+2. Update the documentation to match current source
+3. Preserve existing doc structure and formatting
 
-  Run 'git diff docs/' to review changes
-````
+### JSDoc Mode (`--jsdoc`)
+For source files with exported symbols missing JSDoc:
+1. Read the function/class/interface
+2. Generate appropriate JSDoc comment
+3. Add it to the source file
+
+## Step 4: Report
+
+```
+DOCUMENTATION UPDATES
+======================
+
+Updated:
+  [x] {file}: {what changed}
+  [x] {file}: {what changed}
+
+Needs human review:
+  [ ] {file}: {why it needs manual attention}
+
+Skipped:
+  [-] {file}: {already current}
+
+Summary:
+  Files updated: {count}
+  JSDoc added: {count}
+  Manual review needed: {count}
+```
+
+## Error Handling
+
+- If no docs directory exists: offer to create one with basic structure
+- If doc file can't be updated automatically: flag for manual review
+- Always show what was done and what still needs attention
