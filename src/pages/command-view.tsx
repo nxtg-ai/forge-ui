@@ -966,7 +966,6 @@ const CommandView: React.FC = () => {
           />
         }
         showLeftPanel={historyPanelVisible}
-        leftPanelWidth={320}
         leftPanelTitle="Command History"
 
         // Right Panel - Queue
@@ -980,7 +979,6 @@ const CommandView: React.FC = () => {
           </ErrorBoundary>
         }
         showRightPanel={queuePanelVisible}
-        rightPanelWidth={320}
         rightPanelTitle="Execution Queue"
 
         // Footer

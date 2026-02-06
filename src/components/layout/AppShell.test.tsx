@@ -53,6 +53,18 @@ vi.mock("../infinity-terminal/FooterPanel", () => ({
   ),
 }));
 
+vi.mock("../../hooks/useResizablePanels", () => ({
+  useResizablePanels: () => ({
+    leftWidth: 25,
+    rightWidth: 25,
+    containerRef: { current: null },
+    startLeftDrag: vi.fn(),
+    startRightDrag: vi.fn(),
+    isDragging: false,
+    resetWidths: vi.fn(),
+  }),
+}));
+
 vi.mock("../ui/KeyboardShortcutsHelp", () => ({
   KeyboardShortcutsHelp: ({ isOpen, onClose }: any) =>
     isOpen ? (
@@ -272,7 +284,7 @@ describe("AppShell", () => {
       expect(shell).toHaveClass("custom-class");
       expect(shell).toHaveClass("flex");
       expect(shell).toHaveClass("flex-col");
-      expect(shell).toHaveClass("h-screen");
+      expect(shell).toHaveClass("flex-1");
     });
 
     it("renders main content area", () => {

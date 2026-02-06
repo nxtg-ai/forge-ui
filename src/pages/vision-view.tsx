@@ -860,8 +860,6 @@ const VisionView: React.FC = () => {
         rightPanel={rightPanelContent}
         showLeftPanel={historyPanelVisible}
         showRightPanel={alignmentPanelVisible}
-        leftPanelWidth={320}
-        rightPanelWidth={320}
         leftPanelTitle="Vision History"
         rightPanelTitle="Alignment & Progress"
         showFooter={true}

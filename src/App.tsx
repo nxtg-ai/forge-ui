@@ -661,7 +661,7 @@ const AppContent: React.FC<AppContentProps> = (props) => {
   return (
     <div
       data-testid="app-container"
-      className="min-h-screen bg-black text-white"
+      className="flex flex-col min-h-screen bg-black text-white"
     >
       {/* Beta Banner */}
       {currentView !== "marketing" && (
@@ -686,8 +686,10 @@ const AppContent: React.FC<AppContentProps> = (props) => {
         />
       )}
 
-      {/* Main Content - hidden on terminal/marketing view */}
-      <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ${currentView === "infinity-terminal" || currentView === "marketing" ? "hidden" : ""}`}>
+      {/* Main Content - constrained width for non-panel views */}
+      <main className={`flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 ${
+        ["infinity-terminal", "marketing", "dashboard", "vision-display", "command", "architect"].includes(currentView) ? "hidden" : ""
+      }`}>
         {/* Vision Capture View */}
         {currentView === "vision-capture" && (
           <VisionCapture onVisionSubmit={handleVisionCapture} mode="initial" />
@@ -717,20 +719,8 @@ const AppContent: React.FC<AppContentProps> = (props) => {
           </div>
         )}
 
-        {/* Lazy-loaded pages wrapped in Suspense */}
+        {/* Lazy-loaded non-panel pages */}
         <Suspense fallback={<LazyLoadFallback />}>
-          {/* Dashboard View - Full panel architecture with mode selector */}
-          {currentView === "dashboard" && <DashboardLive />}
-
-          {/* Vision View - Full SOTA page with panel architecture */}
-          {currentView === "vision-display" && <VisionPage />}
-
-          {/* Command Center View - SOTA Page with panel architecture */}
-          {currentView === "command" && <CommandPage />}
-
-          {/* Architect View - SOTA Page with real API integration */}
-          {currentView === "architect" && <ArchitectPage />}
-
           {/* Architect Demo - For marketing videos */}
           {currentView === "architect-demo" && <ArchitectDemo />}
 
@@ -757,7 +747,15 @@ const AppContent: React.FC<AppContentProps> = (props) => {
         {currentView === "terminal" && <TerminalView />}
       </main>
 
-      {/* Infinity Terminal View - rendered outside max-w container for full-width layout */}
+      {/* Full-width AppShell views - rendered outside constrained main */}
+      <Suspense fallback={<LazyLoadFallback />}>
+        {currentView === "dashboard" && <DashboardLive />}
+        {currentView === "vision-display" && <VisionPage />}
+        {currentView === "command" && <CommandPage />}
+        {currentView === "architect" && <ArchitectPage />}
+      </Suspense>
+
+      {/* Infinity Terminal View - full-width with own AppShell */}
       {currentView === "infinity-terminal" && (
         <InfinityTerminalView onNavigate={(viewId) => setCurrentView(viewId)} />
       )}

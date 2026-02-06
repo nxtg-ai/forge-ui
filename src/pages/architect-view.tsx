@@ -1067,7 +1067,6 @@ const ArchitectView: React.FC = () => {
           />
         }
         showLeftPanel={historyPanelVisible}
-        leftPanelWidth={320}
         leftPanelTitle="Decision History"
 
         // Right Panel - Impact Analysis
@@ -1081,7 +1080,6 @@ const ArchitectView: React.FC = () => {
           </ErrorBoundary>
         }
         showRightPanel={impactPanelVisible}
-        rightPanelWidth={320}
         rightPanelTitle="Impact Analysis"
 
         // Footer

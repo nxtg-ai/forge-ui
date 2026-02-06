@@ -1,17 +1,21 @@
 /**
  * AppShell Component
- * Unified layout structure composing header, panels, and content
+ * Unified full-width layout with resizable 3-column panels
  *
- * Layout Architecture:
- * ┌─────────────────────────────────┐
- * │ AppHeader (unified, 64px)       │
- * ├──────┬──────────────┬───────────┤
- * │Left  │   children   │  Right    │
- * │Panel │  (scrollable)│  Panel    │
- * │      │              │           │
- * ├──────┴──────────────┴───────────┤
- * │ FooterPanel (optional)          │
- * └─────────────────────────────────┘
+ * Layout Architecture (default 25% | 50% | 25%):
+ * ┌─────────────────────────────────────────┐
+ * │ AppHeader (unified, 64px)               │
+ * ├────────┬─┬──────────────┬─┬─────────────┤
+ * │ Left   │▐│   children   │▐│   Right     │
+ * │ Panel  │▐│  (scrollable)│▐│   Panel     │
+ * │  25%   │▐│     50%      │▐│    25%      │
+ * ├────────┴─┴──────────────┴─┴─────────────┤
+ * │ FooterPanel (optional)                  │
+ * └─────────────────────────────────────────┘
+ *
+ * ▐ = drag-to-resize handles
+ * Double-click handle to reset to defaults
+ * Widths persist to localStorage
  */
 
 import React, { useCallback, useEffect } from "react";
@@ -20,6 +24,7 @@ import { FooterPanel } from "../infinity-terminal/FooterPanel";
 import { KeyboardShortcutsHelp, type KeyboardShortcut } from "../ui/KeyboardShortcutsHelp";
 import type { OracleMessage } from "../infinity-terminal/OracleFeedMarquee";
 import { useLayoutOptional } from "../../contexts/LayoutContext";
+import { useResizablePanels } from "../../hooks/useResizablePanels";
 import { logger } from "../../utils/browser-logger";
 
 export interface AppShellProps {
@@ -37,8 +42,7 @@ export interface AppShellProps {
   rightPanel?: React.ReactNode;
   showLeftPanel?: boolean;
   showRightPanel?: boolean;
-  leftPanelWidth?: number;
-  rightPanelWidth?: number;
+  overlayPanelWidth?: number;
   leftPanelTitle?: string;
   rightPanelTitle?: string;
 
@@ -63,6 +67,26 @@ export interface AppShellProps {
 }
 
 /**
+ * Resize handle between panels - drag to resize, double-click to reset
+ */
+const ResizeHandle: React.FC<{
+  onMouseDown: (e: React.MouseEvent) => void;
+  onDoubleClick: () => void;
+}> = ({ onMouseDown, onDoubleClick }) => (
+  <div
+    onMouseDown={onMouseDown}
+    onDoubleClick={onDoubleClick}
+    className="w-1.5 flex-shrink-0 cursor-col-resize group relative z-10"
+    title="Drag to resize, double-click to reset"
+  >
+    {/* Wide invisible hit target */}
+    <div className="absolute inset-y-0 -left-1 -right-1" />
+    {/* Visible handle line */}
+    <div className="w-full h-full bg-gray-800 group-hover:bg-purple-500/50 group-active:bg-purple-400 transition-colors" />
+  </div>
+);
+
+/**
  * AppShell - Main layout compositor
  *
  * Responsibilities:
@@ -71,6 +95,7 @@ export interface AppShellProps {
  * - Handle keyboard shortcuts at shell level
  * - Coordinate panel visibility and modes
  * - Dispatch resize events for terminal compatibility
+ * - Provide drag-to-resize handles between columns
  */
 export const AppShell: React.FC<AppShellProps> = ({
   title,
@@ -82,8 +107,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   rightPanel,
   showLeftPanel: leftPanelProp,
   showRightPanel: rightPanelProp,
-  leftPanelWidth = 280,
-  rightPanelWidth = 320,
+  overlayPanelWidth = 320,
   leftPanelTitle,
   rightPanelTitle,
   children,
@@ -111,7 +135,6 @@ export const AppShell: React.FC<AppShellProps> = ({
   const toggleSidebar = layoutContext?.toggleContextPanel ?? onToggleContext ?? (() => {});
   const toggleHUD = layoutContext?.toggleGovernancePanel ?? onToggleGovernance ?? (() => {});
   const toggleFooter = useCallback(() => {
-    // Footer toggle not commonly exposed, just log for now
     logger.debug("Footer toggle requested");
   }, []);
 
@@ -130,6 +153,17 @@ export const AppShell: React.FC<AppShellProps> = ({
     terminalHeight: "100%",
     paneLayout: "single" as const,
   };
+
+  // Resizable panel widths (percentage-based, persisted to localStorage)
+  const {
+    leftWidth,
+    rightWidth,
+    containerRef,
+    startLeftDrag,
+    startRightDrag,
+    isDragging,
+    resetWidths,
+  } = useResizablePanels();
 
   // Keyboard shortcuts state
   const [showKeyboardHelp, setShowKeyboardHelp] = React.useState(false);
@@ -199,7 +233,7 @@ export const AppShell: React.FC<AppShellProps> = ({
     toggleHUD();
   }, [toggleHUD]);
 
-  // Render header (placeholder until AppHeader is created)
+  // Render header
   const renderHeader = () => (
     <header
       className="h-16 border-b border-gray-800 bg-gray-900/95 backdrop-blur-sm flex-shrink-0 sticky top-0 z-30"
@@ -250,29 +284,41 @@ export const AppShell: React.FC<AppShellProps> = ({
     );
   };
 
+  // Panel width: percentage for fixed mode, pixels for overlay mode
+  const leftPanelW = panelMode === "overlay" ? overlayPanelWidth : `${leftWidth}%`;
+  const rightPanelW = panelMode === "overlay" ? overlayPanelWidth : `${rightWidth}%`;
+
   return (
     <div
-      className={`flex flex-col h-screen bg-gray-950 text-white overflow-hidden ${className}`}
+      className={`flex flex-col flex-1 min-h-0 bg-gray-950 text-white overflow-hidden ${className}`}
       data-testid="app-shell"
     >
       {/* Header */}
       {renderHeader()}
 
       {/* Main Layout Area */}
-      <div className="flex flex-1 overflow-hidden relative">
+      <div
+        ref={containerRef}
+        className={`flex flex-1 overflow-hidden relative ${isDragging ? "select-none" : ""}`}
+      >
         {/* Left Panel */}
         {leftPanel && (
           <Panel
             side="left"
             mode={panelMode}
             visible={sidebarVisible}
-            width={leftPanelWidth}
+            width={leftPanelW}
             onClose={panelMode === "overlay" ? handleLeftPanelClose : undefined}
             title={leftPanelTitle}
             className="h-full"
           >
             {leftPanel}
           </Panel>
+        )}
+
+        {/* Left Resize Handle */}
+        {leftPanel && sidebarVisible && panelMode === "fixed" && (
+          <ResizeHandle onMouseDown={startLeftDrag} onDoubleClick={resetWidths} />
         )}
 
         {/* Main Content Area */}
@@ -283,13 +329,18 @@ export const AppShell: React.FC<AppShellProps> = ({
           {children}
         </main>
 
+        {/* Right Resize Handle */}
+        {rightPanel && hudVisible && panelMode === "fixed" && (
+          <ResizeHandle onMouseDown={startRightDrag} onDoubleClick={resetWidths} />
+        )}
+
         {/* Right Panel */}
         {rightPanel && (
           <Panel
             side="right"
             mode={panelMode}
             visible={hudVisible}
-            width={rightPanelWidth}
+            width={rightPanelW}
             onClose={panelMode === "overlay" ? handleRightPanelClose : undefined}
             title={rightPanelTitle}
             className="h-full"
