@@ -639,6 +639,39 @@ app.post("/api/commands/suggestions", async (req, res) => {
   }
 });
 
+// Get available commands list
+app.get("/api/commands", async (req, res) => {
+  try {
+    // Import the forge commands registry
+    const { FORGE_COMMANDS } = await import("../config/forge-commands");
+
+    // Transform to UI-compatible format
+    const commands = FORGE_COMMANDS.map((cmd) => ({
+      id: cmd.id,
+      name: cmd.name,
+      description: cmd.description,
+      category: cmd.category,
+      hotkey: cmd.hotkey,
+      requiresConfirmation: cmd.requiresConfirmation,
+      severity: cmd.severity,
+      // Icon name is sent as string, component resolves on client
+      iconName: cmd.icon.name,
+    }));
+
+    res.json({
+      success: true,
+      data: commands,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 // ============= Architecture Endpoints =============
 
 app.get("/api/architecture/decisions", async (req, res) => {

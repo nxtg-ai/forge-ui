@@ -47,6 +47,8 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pendingTimeoutsRef = useRef<Set<NodeJS.Timeout>>(new Set());
   const [filter, setFilter] = useState<"all" | "important" | "errors">("all");
@@ -58,6 +60,56 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
       pendingTimeoutsRef.current.clear();
     };
   }, []);
+
+  // Fetch initial activities from API
+  useEffect(() => {
+    const fetchInitialActivities = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const apiUrl = import.meta.env.VITE_API_URL || '/api';
+        const response = await fetch(`${apiUrl}/agents/activities?limit=${maxItems}&sortBy=timestamp&sortOrder=desc`);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch activities: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success && Array.isArray(result.data)) {
+          // Transform API response to ActivityItem format
+          const transformedActivities: ActivityItem[] = result.data.map((item: any) => ({
+            id: item.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            agentId: item.agentId || item.agent || "unknown",
+            agentName: item.agentName || item.agent || "Agent",
+            type: item.type || (item.status === "completed" ? "completed" :
+                  item.status === "blocked" ? "blocked" : "working"),
+            action: item.action || item.message || "Activity",
+            details: item.details || item.description,
+            confidence: item.confidence,
+            timestamp: new Date(item.timestamp || Date.now()),
+            relatedAgents: item.relatedAgents,
+          }));
+
+          setActivities(transformedActivities);
+        } else {
+          // No activities yet - this is normal for a fresh system
+          setActivities([]);
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        console.error('[LiveActivityFeed] Failed to fetch initial activities:', errorMessage);
+        setError(errorMessage);
+        // Don't block the UI - continue with empty activities
+        setActivities([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInitialActivities();
+  }, [maxItems]);
 
   // Virtual scrolling configuration
   const VIRTUAL_SCROLL_THRESHOLD = 50;
@@ -177,6 +229,48 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
     [maxItems, autoScroll],
   );
 
+  // Manual refresh function
+  const handleRefresh = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const apiUrl = import.meta.env.VITE_API_URL || '/api';
+      const response = await fetch(`${apiUrl}/agents/activities?limit=${maxItems}&sortBy=timestamp&sortOrder=desc`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch activities: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success && Array.isArray(result.data)) {
+        const transformedActivities: ActivityItem[] = result.data.map((item: any) => ({
+          id: item.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          agentId: item.agentId || item.agent || "unknown",
+          agentName: item.agentName || item.agent || "Agent",
+          type: item.type || (item.status === "completed" ? "completed" :
+                item.status === "blocked" ? "blocked" : "working"),
+          action: item.action || item.message || "Activity",
+          details: item.details || item.description,
+          confidence: item.confidence,
+          timestamp: new Date(item.timestamp || Date.now()),
+          relatedAgents: item.relatedAgents,
+        }));
+
+        setActivities(transformedActivities);
+      } else {
+        setActivities([]);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('[LiveActivityFeed] Failed to refresh activities:', errorMessage);
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [maxItems]);
+
   // Filter activities
   const filteredActivities = activities.filter((activity) => {
     // Agent filter
@@ -286,6 +380,14 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
                     : "Offline"}
               </span>
             </div>
+
+            {/* Error indicator */}
+            {error && (
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-900/20">
+                <AlertCircle className="w-3 h-3 text-red-400" />
+                <span className="text-xs text-red-400">Error</span>
+              </div>
+            )}
           </div>
 
           {/* Filters */}
@@ -330,10 +432,13 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
             </div>
 
             <button
-              data-testid="activity-feed-filter-btn"
-              className="p-1 hover:bg-gray-800 rounded transition-all"
+              data-testid="activity-feed-refresh-btn"
+              onClick={handleRefresh}
+              disabled={isLoading}
+              className="p-1 hover:bg-gray-800 rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Refresh activities"
             >
-              <Filter className="w-4 h-4 text-gray-400" />
+              <RefreshCw className={`w-4 h-4 text-gray-400 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
@@ -624,6 +729,40 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
               </AnimatePresence>
             </div>
           )
+        ) : isLoading ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center justify-center py-12 text-center"
+          >
+            <div className="w-16 h-16 rounded-2xl bg-gray-800 flex items-center justify-center mb-4">
+              <RefreshCw className="w-8 h-8 text-blue-400 animate-spin" />
+            </div>
+            <p className="text-gray-400 mb-1">Loading activities...</p>
+            <p className="text-xs text-gray-500">
+              Fetching recent agent activity
+            </p>
+          </motion.div>
+        ) : error ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center justify-center py-12 text-center"
+          >
+            <div className="w-16 h-16 rounded-2xl bg-red-900/20 flex items-center justify-center mb-4">
+              <AlertCircle className="w-8 h-8 text-red-400" />
+            </div>
+            <p className="text-red-400 mb-1">Failed to load activities</p>
+            <p className="text-xs text-gray-500 mb-4">
+              {error}
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-all"
+            >
+              Retry
+            </button>
+          </motion.div>
         ) : (
           <motion.div
             initial={{ opacity: 0 }}
@@ -638,6 +777,9 @@ export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
               {isConnected
                 ? "Waiting for agent activity..."
                 : "Connecting to activity stream..."}
+            </p>
+            <p className="text-xs text-gray-500 mt-2">
+              Activities will appear here when agents start working
             </p>
           </motion.div>
         )}

@@ -11,7 +11,7 @@
  * - Full keyboard navigation and screen reader support
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { SafeAnimatePresence as AnimatePresence } from "../components/ui/SafeAnimatePresence";
 import { ChiefOfStaffDashboard } from "../components/ChiefOfStaffDashboard";
@@ -21,9 +21,7 @@ import { AgentCollaborationView } from "../components/real-time/AgentCollaborati
 import { GovernanceHUD } from "../components/governance";
 import { ContextWindowHUD } from "../components/terminal";
 import { AppShell } from "../components/layout";
-import { ErrorBoundary } from "../components/ErrorBoundary";
 import { type KeyboardShortcut } from "../components/ui/KeyboardShortcutsHelp";
-import type { OracleMessage } from "../components/infinity-terminal/OracleFeedMarquee";
 import {
   ToastProvider,
   useToast,
@@ -34,6 +32,8 @@ import {
   useOptimisticUpdate,
   useAdaptivePolling,
 } from "../hooks/useRealtimeConnection";
+import { useForgeCommands } from "../hooks/useForgeCommands";
+import { useDashboardData } from "../hooks/useDashboardData";
 import { EngagementProvider, useEngagement } from "../contexts/EngagementContext";
 import { useLayout } from "../contexts/LayoutContext";
 import type {
@@ -45,13 +45,7 @@ import type {
 import {
   Activity,
   Users,
-  Zap,
-  Brain,
-  Shield,
-  MessageSquare,
-  Network,
   BarChart3,
-  RefreshCw,
 } from "lucide-react";
 
 // Dashboard keyboard shortcuts
@@ -89,48 +83,15 @@ const LiveDashboard: React.FC = () => {
   // Screen reader announcements
   const [announcement, setAnnouncement] = useState("");
 
-  // Mock data - replace with real API
-  const [visionData] = useState({
-    mission:
-      "Build a next-generation development platform that orchestrates AI agents for rapid software delivery",
-    goals: [
-      "Automate 80% of development tasks",
-      "Reduce time-to-market by 10x",
-      "Maintain 99.9% code quality",
-    ],
-    constraints: ["Must be secure", "Must be scalable", "Must be maintainable"],
-    successMetrics: [
-      "Tasks automated",
-      "Development velocity",
-      "Code quality score",
-    ],
-    timeframe: "Q1 2024",
-  });
-
-  const [projectState, setProjectState] = useState<ProjectState>({
-    phase: "building",
-    progress: 65,
-    blockers: [],
-    recentDecisions: [],
-    activeAgents: [],
-    healthScore: 87,
-  });
-
-  // Mock oracle messages for footer
-  const [oracleMessages] = useState<OracleMessage[]>([
-    {
-      id: "1",
-      type: "info",
-      message: "Dashboard initialized successfully",
-      timestamp: new Date(),
-    },
-    {
-      id: "2",
-      type: "success",
-      message: "Real-time connection established",
-      timestamp: new Date(),
-    },
-  ]);
+  // Real data from API endpoints
+  const {
+    projectState,
+    visionData,
+    agents: realAgents,
+    loading: dashboardLoading,
+    error: dashboardError,
+    refresh: refreshDashboard,
+  } = useDashboardData();
 
   // WebSocket connection for real-time updates
   const { connectionState, messages, sendMessage, isConnected } =
@@ -156,92 +117,36 @@ const LiveDashboard: React.FC = () => {
       },
     });
 
-  // Mock data updates - memoized callbacks
-  const updateAgentState = useCallback((agent: Agent) => {
-    setProjectState((prev) => ({
-      ...prev,
-      activeAgents: prev.activeAgents.map((a) =>
-        a.id === agent.id ? { ...a, ...agent } : a,
-      ),
-    }));
-  }, []);
-
-  const updateProjectProgress = useCallback((progress: number) => {
-    setProjectState((prev) => ({
-      ...prev,
-      progress: Math.min(100, progress),
-    }));
-
-    if (progress === 100) {
-      toast.success("Phase completed!", {
-        message: "Moving to the next phase...",
-        duration: 5000,
-      });
-    }
-  }, [toast]);
-
-  const handleNewBlocker = useCallback((blocker: Blocker) => {
-    setProjectState((prev) => ({
-      ...prev,
-      blockers: [blocker, ...prev.blockers].slice(0, 5),
-    }));
-
-    toast.warning("New blocker detected", {
-      message: blocker.title,
-      persistent: blocker.needsHuman,
-      actions: blocker.needsHuman
-        ? [
-            {
-              label: "View details",
-              onClick: () => setViewMode("overview"),
-            },
-          ]
-        : undefined,
-    });
-  }, [toast]);
-
-  const handleTaskCompleted = useCallback((task: { name: string }) => {
-    toast.success(`Task completed: ${task.name}`, {
-      duration: 3000,
-    });
-  }, [toast]);
-
-  // WebSocket message structure
-  interface RealtimeMessage {
-    type: 'agent_update' | 'project_progress' | 'blocker_detected' | 'task_completed';
-    payload: Agent | number | Blocker | { name: string };
-  }
-
-  // Process incoming WebSocket messages
-  const handleRealtimeMessage = useCallback((message: RealtimeMessage) => {
-    switch (message.type) {
-      case "agent_update":
-        updateAgentState(message.payload);
-        break;
-      case "project_progress":
-        updateProjectProgress(message.payload);
-        break;
-      case "blocker_detected":
-        handleNewBlocker(message.payload);
-        break;
-      case "task_completed":
-        handleTaskCompleted(message.payload);
-        break;
-    }
-  }, [updateAgentState, updateProjectProgress, handleNewBlocker, handleTaskCompleted]);
-
+  // Process incoming WebSocket messages - refresh dashboard data on updates
   useEffect(() => {
-    messages.forEach((msg) => {
-      handleRealtimeMessage(msg);
-    });
-  }, [messages, handleRealtimeMessage]);
+    if (messages.length > 0) {
+      messages.forEach((msg: any) => {
+        if (msg.type === "task_completed") {
+          toast.success(`Task completed: ${msg.payload?.name || "unknown"}`, {
+            duration: 3000,
+          });
+        } else if (msg.type === "blocker_detected") {
+          toast.warning("New blocker detected", {
+            message: msg.payload?.title || "Unknown blocker",
+          });
+        }
+      });
+      // Refresh real data when we get WebSocket events
+      refreshDashboard();
+    }
+  }, [messages, toast, refreshDashboard]);
 
   // Optimistic updates for commands
+  interface CommandExecution {
+    command: string;
+    args?: Record<string, unknown>;
+    timestamp: Date;
+  }
   const {
     value: commandQueue,
     update: updateCommandQueue,
     isUpdating: isCommandExecuting,
-  } = useOptimisticUpdate<Command[]>([], async (commands) => {
+  } = useOptimisticUpdate<CommandExecution[]>([], async (commands) => {
     const response = await fetch("/api/commands/execute", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -250,17 +155,15 @@ const LiveDashboard: React.FC = () => {
     return response.json();
   });
 
-  // Adaptive polling for non-WebSocket fallback
+  // Fetch available commands from API
+  const { commands: availableCommands, isLoading: commandsLoading, error: commandsError } = useForgeCommands();
+
+  // Adaptive polling for non-WebSocket fallback - uses real dashboard refresh
   const { isPolling, forceRefresh } = useAdaptivePolling(
-    async () => {
-      const response = await fetch("/api/state");
-      if (!response.ok) return;
-      const result = await response.json();
-      if (result.success) setProjectState(result.data);
-    },
+    refreshDashboard,
     {
       enabled: !isConnected,
-      baseInterval: 2000,
+      baseInterval: 5000,
       maxInterval: 30000,
       onError: (error) => {
         toast.error("Failed to fetch status", {
@@ -269,6 +172,16 @@ const LiveDashboard: React.FC = () => {
       },
     },
   );
+
+  // Show error toast if commands fail to load
+  useEffect(() => {
+    if (commandsError) {
+      toast.error("Failed to load commands", {
+        details: commandsError,
+        persistent: false,
+      });
+    }
+  }, [commandsError, toast]);
 
   // Command execution handler - memoized
   const handleCommandExecute = useCallback(async (command: string, args?: Record<string, unknown>) => {
@@ -325,107 +238,63 @@ const LiveDashboard: React.FC = () => {
     }
   }, [toast, commandQueue, updateCommandQueue, isConnected, sendMessage]);
 
-  // Mock available commands - memoized to prevent recreation
-  const availableCommands = useMemo(() => [
-    {
-      id: "status",
-      name: "Status Report",
-      description: "Get current project status",
-      category: "forge" as const,
-      icon: <Activity className="w-4 h-4" />,
-    },
-    {
-      id: "feature",
-      name: "New Feature",
-      description: "Start implementing a new feature",
-      category: "forge" as const,
-      icon: <Zap className="w-4 h-4" />,
-    },
-    {
-      id: "test",
-      name: "Run Tests",
-      description: "Execute test suite",
-      category: "test" as const,
-      icon: <Shield className="w-4 h-4" />,
-    },
-    {
-      id: "deploy",
-      name: "Deploy",
-      description: "Deploy to production",
-      category: "deploy" as const,
-      requiresConfirmation: true,
-      icon: <Network className="w-4 h-4" />,
-    },
-  ], []);
+  // Commands are now fetched via useForgeCommands hook
+  // Agents data fetched from worker pool API
+  const [workerAgents, setWorkerAgents] = useState<any[]>([]);
+  const [workerEdges, setWorkerEdges] = useState<any[]>([]);
 
-  // Mock agents data - memoized to prevent recreation
-  const mockAgents = useMemo(() => [
-    {
-      id: "arch-1",
-      name: "Architect",
-      role: "architect" as const,
-      status: "thinking" as const,
-      currentTask: "Designing authentication system",
-      confidence: 85,
-      collaboratingWith: ["dev-1"],
-      messagesInQueue: 2,
-      lastActivity: new Date(),
-      performance: {
-        tasksCompleted: 12,
-        successRate: 92,
-        avgResponseTime: 3.2,
-      },
-    },
-    {
-      id: "dev-1",
-      name: "Developer",
-      role: "developer" as const,
-      status: "working" as const,
-      currentTask: "Implementing user service",
-      confidence: 78,
-      collaboratingWith: ["arch-1", "qa-1"],
-      messagesInQueue: 0,
-      lastActivity: new Date(),
-      performance: {
-        tasksCompleted: 24,
-        successRate: 88,
-        avgResponseTime: 2.8,
-      },
-    },
-    {
-      id: "qa-1",
-      name: "QA Engineer",
-      role: "qa" as const,
-      status: "idle" as const,
-      currentTask: undefined,
-      confidence: 90,
-      collaboratingWith: [],
-      messagesInQueue: 5,
-      lastActivity: new Date(),
-      performance: {
-        tasksCompleted: 18,
-        successRate: 95,
-        avgResponseTime: 4.1,
-      },
-    },
-  ], []);
+  // Fetch real worker data for agent collaboration view
+  useEffect(() => {
+    const fetchWorkers = async () => {
+      try {
+        const response = await fetch("/api/workers");
+        if (!response.ok) return;
+        const result = await response.json();
+        if (result.success && result.data?.workers) {
+          const workers = result.data.workers;
+          // Transform workers to agent format for AgentCollaborationView
+          const agents = workers.map((w: any) => ({
+            id: w.id,
+            name: w.assignedWorkstream || `Worker ${w.id.slice(0, 6)}`,
+            role: w.assignedWorkstream === "architect" ? "architect" as const
+              : w.assignedWorkstream === "qa" ? "qa" as const
+              : w.assignedWorkstream === "devops" ? "devops" as const
+              : "developer" as const,
+            status: w.status === "idle" ? "idle" as const
+              : w.status === "busy" ? "working" as const
+              : w.status === "error" || w.status === "crashed" ? "blocked" as const
+              : "thinking" as const,
+            currentTask: w.currentTask?.command,
+            confidence: w.metrics?.successRate || 75,
+            collaboratingWith: [],
+            messagesInQueue: 0,
+            lastActivity: w.lastActivity ? new Date(w.lastActivity) : new Date(),
+            performance: {
+              tasksCompleted: w.metrics?.tasksCompleted || 0,
+              successRate: w.metrics?.successRate || 0,
+              avgResponseTime: w.metrics?.avgTaskDuration || 0,
+            },
+          }));
+          setWorkerAgents(agents);
 
-  const mockEdges = useMemo(() => [
-    {
-      from: "arch-1",
-      to: "dev-1",
-      type: "decision" as const,
-      isActive: true,
-      strength: 0.8,
-    },
-    {
-      from: "dev-1",
-      to: "qa-1",
-      type: "handoff" as const,
-      isActive: false,
-      strength: 0.5,
-    },
-  ], []);
+          // Build edges from consecutive workers
+          const edges = agents.slice(0, -1).map((a: any, i: number) => ({
+            from: a.id,
+            to: agents[i + 1].id,
+            type: "handoff" as const,
+            isActive: a.status === "working",
+            strength: 0.5,
+          }));
+          setWorkerEdges(edges);
+        }
+      } catch {
+        // Worker pool may not be initialized - that's fine
+      }
+    };
+    fetchWorkers();
+    const interval = setInterval(fetchWorkers, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Announce connection status changes
   useEffect(() => {
@@ -572,7 +441,7 @@ const LiveDashboard: React.FC = () => {
             >
               <ChiefOfStaffDashboard
                 visionData={visionData}
-                projectState={projectState}
+                projectState={projectState as any}
                 agentActivity={[]}
                 onModeChange={() => {}} // No-op since mode is managed by EngagementContext
                 currentMode={engagementMode}
@@ -592,15 +461,15 @@ const LiveDashboard: React.FC = () => {
                 Agent Collaboration Network
               </h1>
               <AgentCollaborationView
-                agents={mockAgents}
-                edges={mockEdges}
+                agents={workerAgents}
+                edges={workerEdges}
                 viewMode="network"
               />
               <div className="mt-8">
                 <h2 className="text-lg font-semibold mb-4">Agent Details</h2>
                 <AgentCollaborationView
-                  agents={mockAgents}
-                  edges={mockEdges}
+                  agents={workerAgents}
+                  edges={workerEdges}
                   viewMode="list"
                 />
               </div>
@@ -629,12 +498,13 @@ const LiveDashboard: React.FC = () => {
         projectContext={{
           name: "NXTG-Forge",
           phase: projectState.phase,
-          activeAgents: mockAgents.filter((a) => a.status !== "idle").length,
-          pendingTasks: 12,
+          activeAgents: workerAgents.filter((a: any) => a.status !== "idle").length,
+          pendingTasks: projectState.blockers.length,
           healthScore: projectState.healthScore,
           lastActivity: new Date(),
         }}
         isExecuting={isExecuting || isCommandExecuting}
+        isLoadingCommands={commandsLoading}
       />
       </div>
     </AppShell>
