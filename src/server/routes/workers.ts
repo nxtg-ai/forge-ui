@@ -89,6 +89,58 @@ export function createWorkerRoutes(ctx: RouteContext): express.Router {
     }
   });
 
+  // Worker pool health check (must be before /:workerId to avoid being caught by param route)
+  router.get("/health", async (req, res) => {
+    try {
+      const pool = ctx.getWorkerPool();
+      if (!pool) {
+        return res.json({
+          success: true,
+          data: {
+            status: "stopped",
+            workers: { total: 0, active: 0, idle: 0, error: 0 },
+            queue: { depth: 0, oldestTaskAge: 0 },
+            lastCheck: new Date().toISOString(),
+          },
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const status = pool.getStatus();
+      const metrics = status.metrics;
+
+      res.json({
+        success: true,
+        data: {
+          status:
+            metrics.errorWorkers > metrics.totalWorkers * 0.5
+              ? "unhealthy"
+              : metrics.errorWorkers > 0
+                ? "degraded"
+                : "healthy",
+          workers: {
+            total: metrics.totalWorkers,
+            active: metrics.activeWorkers,
+            idle: metrics.idleWorkers,
+            error: metrics.errorWorkers,
+          },
+          queue: {
+            depth: metrics.tasksQueued,
+            avgWaitTime: metrics.avgQueueWaitTime,
+          },
+          lastCheck: new Date().toISOString(),
+        },
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to check health",
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
+
   // Get individual worker
   router.get("/:workerId", async (req, res) => {
     try {
@@ -300,58 +352,6 @@ export function createWorkerRoutes(ctx: RouteContext): express.Router {
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : "Failed to scale down",
-        timestamp: new Date().toISOString(),
-      });
-    }
-  });
-
-  // Worker pool health check
-  router.get("/health", async (req, res) => {
-    try {
-      const pool = ctx.getWorkerPool();
-      if (!pool) {
-        return res.json({
-          success: true,
-          data: {
-            status: "stopped",
-            workers: { total: 0, active: 0, idle: 0, error: 0 },
-            queue: { depth: 0, oldestTaskAge: 0 },
-            lastCheck: new Date().toISOString(),
-          },
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      const status = pool.getStatus();
-      const metrics = status.metrics;
-
-      res.json({
-        success: true,
-        data: {
-          status:
-            metrics.errorWorkers > metrics.totalWorkers * 0.5
-              ? "unhealthy"
-              : metrics.errorWorkers > 0
-                ? "degraded"
-                : "healthy",
-          workers: {
-            total: metrics.totalWorkers,
-            active: metrics.activeWorkers,
-            idle: metrics.idleWorkers,
-            error: metrics.errorWorkers,
-          },
-          queue: {
-            depth: metrics.tasksQueued,
-            avgWaitTime: metrics.avgQueueWaitTime,
-          },
-          lastCheck: new Date().toISOString(),
-        },
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : "Failed to check health",
         timestamp: new Date().toISOString(),
       });
     }

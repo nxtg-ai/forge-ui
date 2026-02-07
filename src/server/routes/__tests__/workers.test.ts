@@ -1,12 +1,11 @@
 /**
  * Worker Routes Tests - Comprehensive test coverage for workers.ts
  *
- * COVERAGE (58 tests, 53 passing, 5 skipped due to route ordering bug):
- * - Statements: 92.23%
- * - Branches: 76.56%
- * - Functions: 92.30%
- * - Lines: 92.23%
- * - Uncovered: lines 310-352 (health endpoint inaccessible due to route order)
+ * COVERAGE (56 tests, all passing):
+ * - Statements: ~95%
+ * - Branches: ~80%
+ * - Functions: ~95%
+ * - Lines: ~95%
  *
  * Tests all worker pool routes: initialization, status, metrics, tasks, scaling, health
  *
@@ -17,16 +16,14 @@
  * - Task submission, status, and cancellation
  * - Intelligence injection for agent tasks (with context extraction)
  * - Pool scaling (up/down) with default and custom counts
- * - Health checks (currently blocked by route ordering bug)
+ * - Health checks
  * - Pool shutdown
  * - Error handling (service errors, validation failures, non-Error exceptions)
  * - Edge cases (null pool, missing tasks, missing workers, null priority)
  * - Timestamp validation in all responses
  *
- * Known Issue:
- * The GET /health endpoint (line 309) is defined AFTER GET /:workerId (line 93),
- * causing Express to match /health as /:workerId with workerId="health".
- * 5 tests are skipped pending a route order fix.
+ * Route ordering: GET /health is defined before GET /:workerId to avoid
+ * Express matching /health as a workerId parameter.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -790,46 +787,7 @@ describe("Worker Routes", () => {
   // ============= Health Check Routes =============
 
   describe("GET /api/workers/health", () => {
-    // NOTE: There is a route ordering bug in workers.ts
-    // The route GET /:workerId (line 93) is defined BEFORE GET /health (line 309)
-    // This means /health is caught by /:workerId with workerId="health"
-    // These tests verify the ACTUAL behavior (returns 404 for worker "health" not found)
-    // not the INTENDED behavior (health check endpoint)
-
-    it("is currently inaccessible due to route ordering bug", async () => {
-      // /health is caught by /:workerId route
-      mockWorkerPool.getWorker.mockReturnValue(null);
-
-      const res = await request(app)
-        .get("/api/workers/health")
-        .expect(404);
-
-      expect(res.body.success).toBe(false);
-      expect(res.body.error).toBe("Worker not found");
-      expect(mockWorkerPool.getWorker).toHaveBeenCalledWith("health");
-    });
-
-    it("would work if a worker named 'health' existed", async () => {
-      // This demonstrates that /health is being interpreted as a workerId
-      const mockWorker = {
-        id: "health",
-        status: "idle",
-        pid: 99999,
-      };
-      mockWorkerPool.getWorker.mockReturnValue(mockWorker);
-
-      const res = await request(app)
-        .get("/api/workers/health")
-        .expect(200);
-
-      expect(res.body.success).toBe(true);
-      expect(res.body.data).toEqual(mockWorker);
-      expect(mockWorkerPool.getWorker).toHaveBeenCalledWith("health");
-    });
-
-    // TODO: These tests will pass once the route ordering bug is fixed
-    // The fix: move GET /health route BEFORE GET /:workerId in workers.ts
-    it.skip("should return healthy status (after route fix)", async () => {
+    it("should return healthy status", async () => {
       const mockStatus = {
         status: "running",
         metrics: {
@@ -863,7 +821,7 @@ describe("Worker Routes", () => {
       expect(res.body.data.lastCheck).toBeDefined();
     });
 
-    it.skip("should return degraded status when some workers are in error (after route fix)", async () => {
+    it("should return degraded status when some workers are in error", async () => {
       const mockStatus = {
         status: "running",
         metrics: {
@@ -887,7 +845,7 @@ describe("Worker Routes", () => {
       expect(res.body.data.workers.error).toBe(1);
     });
 
-    it.skip("should return unhealthy status when more than half workers are in error (after route fix)", async () => {
+    it("should return unhealthy status when more than half workers are in error", async () => {
       const mockStatus = {
         status: "running",
         metrics: {
@@ -911,7 +869,7 @@ describe("Worker Routes", () => {
       expect(res.body.data.workers.error).toBe(3);
     });
 
-    it.skip("should return stopped status when pool is not initialized (after route fix)", async () => {
+    it("should return stopped status when pool is not initialized", async () => {
       mockCtx.getWorkerPool = vi.fn(() => null as any);
 
       const res = await request(app)
@@ -932,7 +890,7 @@ describe("Worker Routes", () => {
       });
     });
 
-    it.skip("should handle health check errors (after route fix)", async () => {
+    it("should handle health check errors", async () => {
       mockWorkerPool.getStatus.mockImplementation(() => {
         throw new Error("Health check failed");
       });
