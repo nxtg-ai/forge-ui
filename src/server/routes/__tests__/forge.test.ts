@@ -23,6 +23,19 @@ vi.mock("../../../monitoring/sentry", () => ({
   captureException: vi.fn(),
 }));
 
+// Mock fs/promises for feedback endpoints
+const mockFs = vi.hoisted(() => ({
+  mkdir: vi.fn().mockResolvedValue(undefined),
+  access: vi.fn().mockResolvedValue(undefined),
+  readFile: vi.fn().mockResolvedValue("[]"),
+  writeFile: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("fs/promises", () => ({
+  ...mockFs,
+  default: mockFs,
+}));
+
 // Create a mock RouteContext with all required properties
 function createMockContext(overrides?: Partial<RouteContext & { getWsClientCount: () => number; sentryReady: boolean }>): RouteContext & { getWsClientCount: () => number; sentryReady: boolean } {
   return {
@@ -749,12 +762,14 @@ describe("Forge Routes", () => {
   });
 
   // ============= Feedback Endpoints =============
-  // Note: Feedback endpoints use fs.promises for file I/O which requires
-  // complex mocking. These are tested in integration tests instead.
 
-  describe.skip("POST /api/feedback", () => {
+  describe("POST /api/feedback", () => {
+    beforeEach(() => {
+      mockFs.readFile.mockResolvedValue("[]");
+      mockFs.writeFile.mockResolvedValue(undefined);
+    });
+
     it("submits feedback successfully with valid data", async () => {
-
       const feedback = {
         rating: 5,
         category: "feature",
@@ -781,7 +796,7 @@ describe("Forge Routes", () => {
       const response = await request(app)
         .post("/api/feedback")
         .send({
-          rating: 6, // Invalid
+          rating: 6,
           category: "bug",
           description: "Test",
         });
@@ -802,10 +817,26 @@ describe("Forge Routes", () => {
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
     });
+
+    it("handles write errors", async () => {
+      mockFs.writeFile.mockRejectedValue(new Error("Disk full"));
+
+      const response = await request(app)
+        .post("/api/feedback")
+        .send({
+          rating: 4,
+          category: "feature",
+          description: "Test feedback",
+        });
+
+      expect(response.status).toBe(500);
+      expect(response.body.success).toBe(false);
+    });
   });
 
-  describe.skip("GET /api/feedback", () => {
+  describe("GET /api/feedback", () => {
     it("returns empty feedback list", async () => {
+      mockFs.readFile.mockResolvedValue("[]");
 
       const response = await request(app)
         .get("/api/feedback");
@@ -817,19 +848,73 @@ describe("Forge Routes", () => {
     });
 
     it("returns and sorts feedback by timestamp", async () => {
+      const feedbackList = [
+        { id: "f1", rating: 3, category: "bug", description: "Old", timestamp: "2026-01-01T00:00:00Z" },
+        { id: "f2", rating: 5, category: "feature", description: "New", timestamp: "2026-02-01T00:00:00Z" },
+      ];
+      mockFs.readFile.mockResolvedValue(JSON.stringify(feedbackList));
 
-      // Test body would go here
+      const response = await request(app)
+        .get("/api/feedback");
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.count).toBe(2);
+      // Sorted newest first
+      expect(response.body.data[0].id).toBe("f2");
+    });
+
+    it("handles read errors", async () => {
+      mockFs.readFile.mockRejectedValue(new Error("File not found"));
+
+      const response = await request(app)
+        .get("/api/feedback");
+
+      expect(response.status).toBe(500);
+      expect(response.body.success).toBe(false);
     });
   });
 
-  describe.skip("GET /api/feedback/stats", () => {
+  describe("GET /api/feedback/stats", () => {
     it("calculates stats for empty feedback", async () => {
+      mockFs.readFile.mockResolvedValue("[]");
 
-      // Test body would go here
+      const response = await request(app)
+        .get("/api/feedback/stats");
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.totalCount).toBe(0);
+      expect(response.body.data.averageRating).toBe(0);
     });
 
     it("calculates stats correctly", async () => {
-      // Test body would go here
+      const feedbackList = [
+        { id: "f1", rating: 3, category: "bug", description: "A", timestamp: new Date().toISOString() },
+        { id: "f2", rating: 5, category: "feature", description: "B", timestamp: new Date().toISOString() },
+        { id: "f3", rating: 4, category: "bug", description: "C", timestamp: new Date().toISOString() },
+      ];
+      mockFs.readFile.mockResolvedValue(JSON.stringify(feedbackList));
+
+      const response = await request(app)
+        .get("/api/feedback/stats");
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.totalCount).toBe(3);
+      expect(response.body.data.averageRating).toBe(4);
+      expect(response.body.data.byCategory.bug).toBe(2);
+      expect(response.body.data.byCategory.feature).toBe(1);
+    });
+
+    it("handles read errors", async () => {
+      mockFs.readFile.mockRejectedValue(new Error("Read error"));
+
+      const response = await request(app)
+        .get("/api/feedback/stats");
+
+      expect(response.status).toBe(500);
+      expect(response.body.success).toBe(false);
     });
   });
 });
