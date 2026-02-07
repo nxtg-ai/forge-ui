@@ -48,7 +48,9 @@ export default defineConfig({
       '@utils': path.resolve(__dirname, './src/utils'),
       '@test': path.resolve(__dirname, './src/test'),
       // Mock @sentry/node for tests (not installed as dependency)
-      '@sentry/node': path.resolve(__dirname, './src/test/mocks/sentry.ts')
+      '@sentry/node': path.resolve(__dirname, './src/test/mocks/sentry.ts'),
+      // Mock @sentry/react for tests (not installed as dependency)
+      '@sentry/react': path.resolve(__dirname, './src/test/mocks/sentry-react.ts')
     }
   }
 });
