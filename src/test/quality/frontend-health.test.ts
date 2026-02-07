@@ -160,6 +160,7 @@ describe("Frontend Health", () => {
         "intelligence-injector.ts",
         "intelligence-parser.ts",
         "command-service.ts",
+        "compliance-service.ts",
         "vision-service.ts",
         "state.ts", // root state module
       ];

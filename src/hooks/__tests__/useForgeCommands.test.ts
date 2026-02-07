@@ -5,9 +5,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { useForgeCommands } from "../useForgeCommands";
+import { apiFetch } from "../../utils/api-fetch";
 
-// Mock fetch
-global.fetch = vi.fn();
+// Mock apiFetch module
+vi.mock("../../utils/api-fetch", () => ({
+  apiFetch: vi.fn(),
+}));
+
+const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
 
 // Mock icon mapper - return a React element
 vi.mock("../../utils/icon-mapper", () => ({
@@ -30,7 +35,7 @@ describe("useForgeCommands", () => {
   });
 
   it("should initialize with loading state", () => {
-    (global.fetch as any).mockImplementation(() => new Promise(() => {}));
+    mockApiFetch.mockImplementation(() => new Promise(() => {}));
 
     const { result } = renderHook(() => useForgeCommands());
 
@@ -58,7 +63,7 @@ describe("useForgeCommands", () => {
       },
     ];
 
-    (global.fetch as any).mockResolvedValue({
+    mockApiFetch.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
         success: true,
@@ -81,7 +86,7 @@ describe("useForgeCommands", () => {
   });
 
   it("should handle HTTP error responses", async () => {
-    (global.fetch as any).mockResolvedValue({
+    mockApiFetch.mockResolvedValue({
       ok: false,
       status: 500,
       statusText: "Internal Server Error",
@@ -98,7 +103,7 @@ describe("useForgeCommands", () => {
   });
 
   it("should handle network errors", async () => {
-    (global.fetch as any).mockRejectedValue(new Error("Network failure"));
+    mockApiFetch.mockRejectedValue(new Error("Network failure"));
 
     const { result } = renderHook(() => useForgeCommands());
 
@@ -111,7 +116,7 @@ describe("useForgeCommands", () => {
   });
 
   it("should handle API error response", async () => {
-    (global.fetch as any).mockResolvedValue({
+    mockApiFetch.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
         success: false,
@@ -141,7 +146,7 @@ describe("useForgeCommands", () => {
       },
     ];
 
-    (global.fetch as any).mockResolvedValue({
+    mockApiFetch.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
         success: true,
@@ -175,7 +180,7 @@ describe("useForgeCommands", () => {
       },
     ];
 
-    (global.fetch as any).mockResolvedValue({
+    mockApiFetch.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
         success: true,
@@ -209,7 +214,7 @@ describe("useForgeCommands", () => {
       },
     ];
 
-    (global.fetch as any).mockResolvedValue({
+    mockApiFetch.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
         success: true,
@@ -229,7 +234,7 @@ describe("useForgeCommands", () => {
   });
 
   it("should fetch from correct API endpoint", async () => {
-    (global.fetch as any).mockResolvedValue({
+    mockApiFetch.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
         success: true,
@@ -240,14 +245,14 @@ describe("useForgeCommands", () => {
     renderHook(() => useForgeCommands());
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalled();
+      expect(mockApiFetch).toHaveBeenCalled();
     });
 
-    expect(global.fetch).toHaveBeenCalledWith("/api/commands");
+    expect(mockApiFetch).toHaveBeenCalledWith("/api/commands");
   });
 
   it("should only fetch once on mount", async () => {
-    (global.fetch as any).mockResolvedValue({
+    mockApiFetch.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
         success: true,
@@ -258,19 +263,19 @@ describe("useForgeCommands", () => {
     const { rerender } = renderHook(() => useForgeCommands());
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(mockApiFetch).toHaveBeenCalledTimes(1);
     });
 
     // Rerender should not trigger another fetch
     rerender();
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(mockApiFetch).toHaveBeenCalledTimes(1);
     });
   });
 
   it("should handle empty command list", async () => {
-    (global.fetch as any).mockResolvedValue({
+    mockApiFetch.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
         success: true,
@@ -289,7 +294,7 @@ describe("useForgeCommands", () => {
   });
 
   it("should handle malformed JSON response", async () => {
-    (global.fetch as any).mockResolvedValue({
+    mockApiFetch.mockResolvedValue({
       ok: true,
       json: () => Promise.reject(new Error("Invalid JSON")),
     });

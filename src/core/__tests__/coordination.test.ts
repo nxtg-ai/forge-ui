@@ -31,7 +31,8 @@ describe("AgentCoordinationProtocol", () => {
   });
 
   afterEach(() => {
-    // Clean up any pending timers
+    // Clean up the message processor interval to prevent test suite from hanging
+    protocol.destroy();
     vi.clearAllTimers();
   });
 

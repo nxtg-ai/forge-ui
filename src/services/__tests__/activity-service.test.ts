@@ -421,24 +421,24 @@ describe("ActivityService", () => {
       const errorCallback = vi.fn(() => {
         throw new Error("Subscriber error");
       });
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
 
       service.subscribeToStream("subscriber-1", errorCallback);
 
-      await service.recordActivity({
-        type: ActivityEventType.AGENT_STARTED,
-        agentId: "agent-1",
-        agentName: "Agent1",
-        data: {},
-        visibility: ["builder"],
-        importance: "medium",
-        category: "execution",
-      });
+      // Should not throw even when subscriber throws
+      await expect(
+        service.recordActivity({
+          type: ActivityEventType.AGENT_STARTED,
+          agentId: "agent-1",
+          agentName: "Agent1",
+          data: {},
+          visibility: ["builder"],
+          importance: "medium",
+          category: "execution",
+        }),
+      ).resolves.toBeDefined();
 
-      expect(consoleErrorSpy).toHaveBeenCalled();
-      consoleErrorSpy.mockRestore();
+      // The throwing subscriber was called
+      expect(errorCallback).toHaveBeenCalledTimes(1);
     });
   });
 

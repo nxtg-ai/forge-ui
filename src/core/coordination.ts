@@ -110,6 +110,7 @@ export class AgentCoordinationProtocol extends EventEmitter {
   private status: CoordinationStatus = CoordinationStatus.IDLE;
   private messageHandlers: Map<string, (message: Message) => Promise<AgentResponse>> =
     new Map();
+  private processorInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     super();
@@ -117,10 +118,21 @@ export class AgentCoordinationProtocol extends EventEmitter {
   }
 
   /**
+   * Stop the message processor and clean up resources
+   */
+  destroy(): void {
+    if (this.processorInterval) {
+      clearInterval(this.processorInterval);
+      this.processorInterval = null;
+    }
+    this.removeAllListeners();
+  }
+
+  /**
    * Start message processing loop
    */
   private startMessageProcessor(): void {
-    setInterval(() => {
+    this.processorInterval = setInterval(() => {
       this.processMessageQueues();
     }, 100); // Process every 100ms
   }

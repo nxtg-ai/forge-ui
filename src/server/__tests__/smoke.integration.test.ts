@@ -51,11 +51,12 @@ beforeAll(async () => {
   killPort(PORT);
   await new Promise((r) => setTimeout(r, 500));
 
-  // Start the REAL server
+  // Start the REAL server (detached so we can kill the whole process group)
   serverProcess = spawn("npx", ["tsx", path.join(PROJECT_ROOT, "src/server/api-server.ts")], {
     cwd: PROJECT_ROOT,
     env: { ...process.env, PORT: String(PORT), NODE_ENV: "test" },
     stdio: ["ignore", "pipe", "pipe"],
+    detached: true,
   });
 
   // Collect stderr for debugging
@@ -69,12 +70,11 @@ beforeAll(async () => {
 }, 20000);
 
 afterAll(async () => {
-  if (serverProcess) {
-    serverProcess.kill("SIGTERM");
-    // Give it a moment to clean up
+  if (serverProcess && serverProcess.pid) {
+    // Kill the entire process group (negative PID) to catch child processes
+    try { process.kill(-serverProcess.pid, "SIGTERM"); } catch { /* already dead */ }
     await new Promise((r) => setTimeout(r, 1000));
-    // Force kill if still alive
-    try { serverProcess.kill("SIGKILL"); } catch { /* already dead */ }
+    try { process.kill(-serverProcess.pid, "SIGKILL"); } catch { /* already dead */ }
   }
   killPort(PORT);
 }, 10000);

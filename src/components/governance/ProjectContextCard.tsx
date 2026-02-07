@@ -103,7 +103,7 @@ export const ProjectContextCard: React.FC<{ className?: string }> = ({
     };
   }, []);
 
-  if (!ctx) return null;
+  if (!ctx || !ctx.tests || !ctx.health) return null;
 
   const { git, tests, health } = ctx;
   const totalTests = tests.passing + tests.failing + tests.skipped;

@@ -80,11 +80,18 @@ vi.mock("../AgentActivityFeed", () => ({
   ),
 }));
 
+// Mock apiFetch module
+vi.mock("../../../utils/api-fetch", () => ({
+  apiFetch: vi.fn(),
+}));
+
 // Import after mocks are set up
 import { GovernanceHUD } from "../GovernanceHUD";
+import { apiFetch } from "../../../utils/api-fetch";
+
+const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
 
 describe("GovernanceHUD", () => {
-  let mockFetch: ReturnType<typeof vi.fn>;
   let stateChangeHandler: ((state: WSConnectionState) => void) | null = null;
   let governanceUpdateHandler: ((data: any) => void) | null = null;
 
@@ -127,10 +134,6 @@ describe("GovernanceHUD", () => {
     stateChangeHandler = null;
     governanceUpdateHandler = null;
 
-    // Mock fetch
-    mockFetch = vi.fn();
-    global.fetch = mockFetch;
-
     // Clear mock calls
     vi.clearAllMocks();
 
@@ -166,7 +169,7 @@ describe("GovernanceHUD", () => {
 
   describe("Loading State", () => {
     test("shows loading state initially", async () => {
-      mockFetch.mockImplementation(
+      mockApiFetch.mockImplementation(
         () =>
           new Promise(() => {
             /* never resolves */
@@ -180,7 +183,7 @@ describe("GovernanceHUD", () => {
     });
 
     test("shows loading spinner", async () => {
-      mockFetch.mockImplementation(
+      mockApiFetch.mockImplementation(
         () =>
           new Promise(() => {
             /* never resolves */
@@ -196,7 +199,7 @@ describe("GovernanceHUD", () => {
 
   describe("Error State", () => {
     test("shows error state on fetch failure", async () => {
-      mockFetch.mockRejectedValueOnce(new Error("Network error"));
+      mockApiFetch.mockRejectedValueOnce(new Error("Network error"));
 
       render(<GovernanceHUD />);
 
@@ -206,7 +209,7 @@ describe("GovernanceHUD", () => {
     });
 
     test("displays error message", async () => {
-      mockFetch.mockRejectedValueOnce(new Error("API unavailable"));
+      mockApiFetch.mockRejectedValueOnce(new Error("API unavailable"));
 
       render(<GovernanceHUD />);
 
@@ -217,7 +220,7 @@ describe("GovernanceHUD", () => {
     });
 
     test("shows error state on API error response", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: false,
         status: 500,
         text: async () => "Internal Server Error",
@@ -234,7 +237,7 @@ describe("GovernanceHUD", () => {
 
   describe("Data Fetching", () => {
     test("fetches governance state on mount", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -245,12 +248,12 @@ describe("GovernanceHUD", () => {
       render(<GovernanceHUD />);
 
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith("/api/governance/state");
+        expect(mockApiFetch).toHaveBeenCalledWith("/api/governance/state");
       });
     });
 
     test("renders governance state after successful fetch", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -266,7 +269,7 @@ describe("GovernanceHUD", () => {
     });
 
     test("handles response without data property", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -285,7 +288,7 @@ describe("GovernanceHUD", () => {
 
   describe("Header", () => {
     test("displays header with title", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -301,7 +304,7 @@ describe("GovernanceHUD", () => {
     });
 
     test("shows connecting status initially", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -317,7 +320,7 @@ describe("GovernanceHUD", () => {
     });
 
     test("displays connection status indicator", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -336,7 +339,7 @@ describe("GovernanceHUD", () => {
 
   describe("Sub-components Rendering", () => {
     beforeEach(async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -402,7 +405,7 @@ describe("GovernanceHUD", () => {
     test("component renders and uses wsManager (integration)", async () => {
       // This test verifies that the component successfully integrates with wsManager
       // The refactored component no longer creates its own WebSocket but delegates to wsManager
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -421,7 +424,7 @@ describe("GovernanceHUD", () => {
     });
 
     test("updates to connected status when wsManager connects", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -465,7 +468,7 @@ describe("GovernanceHUD", () => {
     });
 
     test("handles governance state updates", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -485,7 +488,7 @@ describe("GovernanceHUD", () => {
 
     test("component lifecycle management", async () => {
       // Verifies that component mounts and unmounts cleanly with wsManager integration
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -507,7 +510,7 @@ describe("GovernanceHUD", () => {
 
   describe("WebSocket Reconnection", () => {
     test("shows connecting status during reconnection", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -536,7 +539,7 @@ describe("GovernanceHUD", () => {
     });
 
     test("shows connecting for multiple reconnection attempts", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -578,7 +581,7 @@ describe("GovernanceHUD", () => {
     });
 
     test("shows fallback status after max reconnect attempts", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -632,7 +635,7 @@ describe("GovernanceHUD", () => {
 
   describe("Fallback Status Display", () => {
     test("shows initial connecting status", async () => {
-      mockFetch.mockResolvedValue({
+      mockApiFetch.mockResolvedValue({
         ok: true,
         json: async () => ({
           success: true,
@@ -653,7 +656,7 @@ describe("GovernanceHUD", () => {
     test("component displays appropriate status based on wsManager state", async () => {
       // The refactored component relies on wsManager for all connection logic.
       // It displays status but doesn't implement connection/polling itself.
-      mockFetch.mockResolvedValue({
+      mockApiFetch.mockResolvedValue({
         ok: true,
         json: async () => ({
           success: true,
@@ -698,7 +701,7 @@ describe("GovernanceHUD", () => {
 
   describe("Custom className", () => {
     test("applies custom className prop", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,

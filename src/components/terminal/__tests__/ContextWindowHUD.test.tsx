@@ -15,6 +15,14 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ContextWindowHUD } from "../ContextWindowHUD";
+import { apiFetch } from "../../../utils/api-fetch";
+
+// Mock apiFetch module
+vi.mock("../../../utils/api-fetch", () => ({
+  apiFetch: vi.fn(),
+}));
+
+const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
 
 // Mock framer-motion
 vi.mock("framer-motion", () => ({
@@ -52,11 +60,8 @@ vi.mock("../../intelligence", () => ({
 }));
 
 describe("ContextWindowHUD", () => {
-  let mockFetch: ReturnType<typeof vi.fn>;
-
   beforeEach(() => {
-    mockFetch = vi.fn();
-    global.fetch = mockFetch;
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -66,7 +71,7 @@ describe("ContextWindowHUD", () => {
 
   describe("Data Fetching", () => {
     test("fetches state data on mount", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -91,20 +96,20 @@ describe("ContextWindowHUD", () => {
 
       await waitFor(
         () => {
-          expect(mockFetch).toHaveBeenCalledWith("/api/state");
+          expect(mockApiFetch).toHaveBeenCalledWith("/api/state");
         },
         { timeout: 3000 }
       );
     });
 
     test("handles fetch error gracefully", async () => {
-      mockFetch.mockRejectedValueOnce(new Error("Network error"));
+      mockApiFetch.mockRejectedValueOnce(new Error("Network error"));
 
       render(<ContextWindowHUD />);
 
       await waitFor(
         () => {
-          expect(mockFetch).toHaveBeenCalledWith("/api/state");
+          expect(mockApiFetch).toHaveBeenCalledWith("/api/state");
         },
         { timeout: 3000 }
       );
@@ -116,7 +121,7 @@ describe("ContextWindowHUD", () => {
     test("refreshes data every 10 seconds", async () => {
       vi.useFakeTimers();
 
-      mockFetch.mockResolvedValue({
+      mockApiFetch.mockResolvedValue({
         ok: true,
         json: async () => ({
           success: true,
@@ -132,7 +137,7 @@ describe("ContextWindowHUD", () => {
 
       // Wait for initial fetch
       await vi.waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledTimes(1);
+        expect(mockApiFetch).toHaveBeenCalledTimes(1);
       });
 
       // Advance timer by 10 seconds
@@ -140,7 +145,7 @@ describe("ContextWindowHUD", () => {
 
       // Verify second fetch occurred
       await vi.waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledTimes(2);
+        expect(mockApiFetch).toHaveBeenCalledTimes(2);
       });
 
       vi.useRealTimers();
@@ -149,7 +154,7 @@ describe("ContextWindowHUD", () => {
     test("clears interval on unmount", async () => {
       vi.useFakeTimers();
 
-      mockFetch.mockResolvedValue({
+      mockApiFetch.mockResolvedValue({
         ok: true,
         json: async () => ({
           success: true,
@@ -165,7 +170,7 @@ describe("ContextWindowHUD", () => {
 
       // Wait for initial fetch
       await vi.waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledTimes(1);
+        expect(mockApiFetch).toHaveBeenCalledTimes(1);
       });
 
       unmount();
@@ -174,7 +179,7 @@ describe("ContextWindowHUD", () => {
       await vi.advanceTimersByTimeAsync(10000);
 
       // Should not fetch after unmount
-      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockApiFetch).toHaveBeenCalledTimes(1);
 
       vi.useRealTimers();
     }, 15000);
@@ -185,7 +190,7 @@ describe("ContextWindowHUD", () => {
       const sessionId = "session-abc123xyz";
       const lastInteraction = new Date();
 
-      mockFetch.mockResolvedValue({
+      mockApiFetch.mockResolvedValue({
         ok: true,
         json: async () => ({
           success: true,
@@ -223,7 +228,7 @@ describe("ContextWindowHUD", () => {
     test("displays last active time", async () => {
       const lastInteraction = new Date();
 
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -253,7 +258,7 @@ describe("ContextWindowHUD", () => {
 
   describe("Token Usage Bar", () => {
     test("displays token usage", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -282,7 +287,7 @@ describe("ContextWindowHUD", () => {
     });
 
     test("displays token capacity percentage", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -305,7 +310,7 @@ describe("ContextWindowHUD", () => {
     });
 
     test("shows token count", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -330,7 +335,7 @@ describe("ContextWindowHUD", () => {
 
   describe("Context Notes", () => {
     test("displays context notes from vision data", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -362,7 +367,7 @@ describe("ContextWindowHUD", () => {
     });
 
     test("displays no context notes message when empty", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -385,7 +390,7 @@ describe("ContextWindowHUD", () => {
     });
 
     test("categorizes notes correctly", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -416,7 +421,7 @@ describe("ContextWindowHUD", () => {
     });
 
     test("displays tags on notes", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -446,7 +451,7 @@ describe("ContextWindowHUD", () => {
 
   describe("Export Functionality", () => {
     test("shows export button", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -469,7 +474,7 @@ describe("ContextWindowHUD", () => {
     });
 
     test("displays export instructions when export clicked", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -492,7 +497,7 @@ describe("ContextWindowHUD", () => {
     });
 
     test("closes export instructions", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -517,7 +522,7 @@ describe("ContextWindowHUD", () => {
 
   describe("Files Section", () => {
     test("displays files when currentTasks present", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -553,7 +558,7 @@ describe("ContextWindowHUD", () => {
     });
 
     test("shows file status icons", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -588,7 +593,7 @@ describe("ContextWindowHUD", () => {
     });
 
     test("displays footer stats with file counts", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -619,7 +624,7 @@ describe("ContextWindowHUD", () => {
 
   describe("Fallback to Seed Data", () => {
     test("loads seed data when no vision data present", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -645,7 +650,7 @@ describe("ContextWindowHUD", () => {
 
   describe("Context Event Listening", () => {
     test("listens for context-window-update events", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -695,7 +700,7 @@ describe("ContextWindowHUD", () => {
     });
 
     test("removes event listener on unmount", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,
@@ -729,7 +734,7 @@ describe("ContextWindowHUD", () => {
 
   describe("Custom className", () => {
     test("applies custom className prop", async () => {
-      mockFetch.mockResolvedValueOnce({
+      mockApiFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           success: true,

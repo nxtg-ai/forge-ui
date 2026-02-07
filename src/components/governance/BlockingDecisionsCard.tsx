@@ -101,7 +101,7 @@ export const BlockingDecisionsCard: React.FC<{ className?: string }> = ({
     };
   }, []);
 
-  if (!data) return null;
+  if (!data || !data.summary) return null;
 
   const { blockedWorkstreams, actionItems, pendingDecisions, summary } = data;
   const totalIssues =
