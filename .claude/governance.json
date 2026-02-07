@@ -239,16 +239,17 @@
     {
       "id": "ws-doc-hygiene",
       "name": "Documentation Hygiene & Organization",
-      "description": "Clean up 39 root markdown files, organize into docs/ subdirectories, clean .claude/forge/ duplication, ensure fresh install enforces structure.",
-      "status": "active",
-      "risk": "medium",
+      "description": "Root cleaned to 5 standard files (README, LICENSE, CLAUDE, CHANGELOG, CONTRIBUTING, SECURITY). 18 docs organized into subdirs. .claude/forge/ cleaned of stale config.",
+      "status": "completed",
+      "risk": "low",
       "owner": "forge-builder",
       "dependencies": [],
       "startedAt": "2026-02-04T06:00:00Z",
-      "progress": 16,
+      "completedAt": "2026-02-06T23:45:00Z",
+      "progress": 100,
       "metrics": {
-        "progress": 16,
-        "tasksCompleted": 1,
+        "progress": 100,
+        "tasksCompleted": 6,
         "totalTasks": 6,
         "blockers": 0
       },
@@ -261,27 +262,27 @@
         {
           "id": "h2",
           "name": "Move reports to docs/reports/",
-          "status": "pending"
+          "status": "completed"
         },
         {
           "id": "h3",
           "name": "Move arch docs to docs/architecture/",
-          "status": "pending"
+          "status": "completed"
         },
         {
           "id": "h4",
           "name": "Move ops docs to docs/operations/",
-          "status": "pending"
+          "status": "completed"
         },
         {
           "id": "h5",
           "name": "Move guides to docs/guides/",
-          "status": "pending"
+          "status": "completed"
         },
         {
           "id": "h6",
           "name": "Clean .claude/forge/ duplication",
-          "status": "pending"
+          "status": "completed"
         }
       ]
     },
