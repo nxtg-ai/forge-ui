@@ -145,7 +145,7 @@ The dashboard is optional — commands work without it.
 ## Test Coverage
 
 - **110 test files**
-- **4145 tests passing, 0 failures**
+- **4085 tests passing, 0 failures**
 - **0 TypeScript errors** (strict mode)
 
 ```bash
