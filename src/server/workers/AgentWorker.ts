@@ -21,6 +21,7 @@ import {
   ENV_WHITELIST,
   BLOCKED_COMMANDS,
 } from "./types";
+import type { SpawnConfig } from "../../adapters/backend";
 import { getLogger } from "../../utils/logger";
 
 const logger = getLogger('agent-worker');
@@ -32,10 +33,12 @@ export class AgentWorker extends EventEmitter {
   private _currentTask: AgentTask | null = null;
   private _metrics: WorkerMetrics;
   private context: AgentContext;
+  private spawnConfig?: SpawnConfig;
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private taskTimeout: NodeJS.Timeout | null = null;
   private startedAt: Date;
   private lastActivity: Date;
+  private jsonLinesBuffer: string = "";
   private pendingResponses: Map<
     string,
     { resolve: Function; reject: Function; timeout: NodeJS.Timeout }
@@ -44,9 +47,11 @@ export class AgentWorker extends EventEmitter {
   constructor(
     id: string,
     resourceLimits: ResourceLimits = DEFAULT_RESOURCE_LIMITS,
+    spawnConfig?: SpawnConfig,
   ) {
     super();
     this.id = id;
+    this.spawnConfig = spawnConfig;
     this.startedAt = new Date();
     this.lastActivity = new Date();
 
@@ -108,7 +113,13 @@ export class AgentWorker extends EventEmitter {
   }
 
   /**
-   * Spawn worker process
+   * Spawn worker process.
+   *
+   * When a SpawnConfig is provided:
+   *  - mode "fork"  → Node IPC (original behavior)
+   *  - mode "spawn" → child_process.spawn with JSON lines over stdin/stdout
+   *
+   * Without a SpawnConfig the original fork behavior is preserved.
    */
   async spawn(): Promise<void> {
     if (this.process) {
@@ -121,38 +132,48 @@ export class AgentWorker extends EventEmitter {
     // Create working directory
     await fs.mkdir(this.context.workingDirectory, { recursive: true });
 
-    // Fork worker process
-    const workerScript = path.join(__dirname, "worker-process.js");
+    const workerEnv = {
+      ...this.context.environmentVariables,
+      WORKER_ID: this.id,
+      WORKER_DIR: this.context.workingDirectory,
+      ...(this.spawnConfig?.env || {}),
+    };
 
-    // Check if compiled JS exists, otherwise use TS with tsx
-    const scriptExists = await fs
-      .access(workerScript)
-      .then(() => true)
-      .catch(() => false);
-
-    if (scriptExists) {
-      this.process = fork(workerScript, [], {
+    if (this.spawnConfig?.mode === "spawn") {
+      // External CLI backend (codex, gemini, etc.)
+      this.process = spawn(this.spawnConfig.command, this.spawnConfig.args, {
         cwd: this.context.workingDirectory,
-        env: {
-          ...this.context.environmentVariables,
-          WORKER_ID: this.id,
-          WORKER_DIR: this.context.workingDirectory,
-        },
-        stdio: ["pipe", "pipe", "pipe", "ipc"],
+        env: { ...process.env, ...workerEnv },
+        stdio: ["pipe", "pipe", "pipe"],
       });
     } else {
-      // Development mode - use tsx
-      const tsScript = path.join(__dirname, "worker-process.ts");
-      this.process = fork(tsScript, [], {
-        cwd: this.context.workingDirectory,
-        env: {
-          ...this.context.environmentVariables,
-          WORKER_ID: this.id,
-          WORKER_DIR: this.context.workingDirectory,
-        },
-        execArgv: ["--import", "tsx"],
-        stdio: ["pipe", "pipe", "pipe", "ipc"],
-      });
+      // Fork mode — either from SpawnConfig or original default behavior
+      const scriptCommand = this.spawnConfig?.command;
+      const workerScript = scriptCommand || path.join(__dirname, "worker-process.js");
+
+      const scriptExists = await fs
+        .access(workerScript)
+        .then(() => true)
+        .catch(() => false);
+
+      if (scriptExists) {
+        this.process = fork(workerScript, this.spawnConfig?.args || [], {
+          cwd: this.context.workingDirectory,
+          env: workerEnv,
+          stdio: ["pipe", "pipe", "pipe", "ipc"],
+        });
+      } else {
+        // Development mode - use tsx
+        const tsScript = scriptCommand
+          ? scriptCommand.replace(/\.js$/, ".ts")
+          : path.join(__dirname, "worker-process.ts");
+        this.process = fork(tsScript, this.spawnConfig?.args || [], {
+          cwd: this.context.workingDirectory,
+          env: workerEnv,
+          execArgv: ["--import", "tsx"],
+          stdio: ["pipe", "pipe", "pipe", "ipc"],
+        });
+      }
     }
 
     // Set up event handlers
@@ -361,9 +382,23 @@ export class AgentWorker extends EventEmitter {
   private setupProcessHandlers(): void {
     if (!this.process) return;
 
-    this.process.on("message", (msg: IPCMessage) => {
-      this.handleMessage(msg);
-    });
+    const useJsonLines =
+      this.spawnConfig?.communicationProtocol === "jsonlines";
+
+    if (useJsonLines) {
+      // JSON lines transport: messages arrive as newline-delimited JSON on stdout
+      this.setupJsonLinesHandlers();
+    } else {
+      // Node IPC transport (default for fork mode)
+      this.process.on("message", (msg: IPCMessage) => {
+        this.handleMessage(msg);
+      });
+
+      // Capture stdout/stderr as plain output
+      this.process.stdout?.on("data", (data) => {
+        this.emit("stdout", data.toString());
+      });
+    }
 
     this.process.on("exit", (code, signal) => {
       logger.info(`Worker ${this.id} exited: code=${code}, signal=${signal}`);
@@ -379,13 +414,36 @@ export class AgentWorker extends EventEmitter {
       this.emit("error", error);
     });
 
-    // Capture stdout/stderr
-    this.process.stdout?.on("data", (data) => {
-      this.emit("stdout", data.toString());
-    });
-
     this.process.stderr?.on("data", (data) => {
       this.emit("stderr", data.toString());
+    });
+  }
+
+  /**
+   * Set up JSON lines transport for spawn-mode workers.
+   * Buffers stdout data and parses newline-delimited JSON messages.
+   */
+  private setupJsonLinesHandlers(): void {
+    if (!this.process?.stdout) return;
+
+    this.process.stdout.on("data", (chunk: Buffer) => {
+      this.jsonLinesBuffer += chunk.toString();
+      const lines = this.jsonLinesBuffer.split("\n");
+
+      // Keep the last (potentially incomplete) line in the buffer
+      this.jsonLinesBuffer = lines.pop() || "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        try {
+          const msg: IPCMessage = JSON.parse(trimmed);
+          this.handleMessage(msg);
+        } catch {
+          // Not JSON — emit as plain stdout
+          this.emit("stdout", trimmed);
+        }
+      }
     });
   }
 
@@ -426,8 +484,18 @@ export class AgentWorker extends EventEmitter {
   }
 
   private sendMessage(msg: IPCMessage): void {
-    if (this.process && this.process.connected) {
-      this.process.send(msg);
+    if (!this.process) return;
+
+    if (this.spawnConfig?.communicationProtocol === "jsonlines") {
+      // JSON lines over stdin
+      if (this.process.stdin?.writable) {
+        this.process.stdin.write(JSON.stringify(msg) + "\n");
+      }
+    } else {
+      // Node IPC
+      if (this.process.connected) {
+        this.process.send(msg);
+      }
     }
   }
 

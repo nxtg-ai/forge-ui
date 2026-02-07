@@ -23,6 +23,8 @@ import { MCPSuggestionEngine } from "../orchestration/mcp-suggestion-engine";
 import { RunspaceManager } from "../core/runspace-manager";
 import { GovernanceStateManager } from "../services/governance-state-manager";
 import { AgentWorkerPool } from "./workers";
+import { DEFAULT_POOL_CONFIG } from "./workers/types";
+import { detectBackend } from "../adapters/backend-detector";
 import { InitService } from "../services/init-service";
 import { StatusService } from "../services/status-service";
 import { ComplianceService } from "../services/compliance-service";
@@ -91,13 +93,22 @@ const initService = new InitService(projectRoot);
 const statusService = new StatusService(projectRoot);
 const complianceService = new ComplianceService(projectRoot);
 
-// ============= Worker Pool (Disabled - pending multi-framework adapter) =============
-// The worker pool spawns Node child processes that don't exist yet.
-// Claude Code uses native Agent Teams (Task tool + TeamCreate) instead.
-// This will be re-enabled with a proper adapter layer for Codex/Gemini/generic CLIs.
-// See governance workstream: ws-agent-adapter
+// ============= Worker Pool (Auto-detected backend) =============
 
 let workerPool: AgentWorkerPool | null = null;
+
+async function initializeWorkerPool(): Promise<void> {
+  const backend = await detectBackend();
+  if (backend.name === "claude-code") {
+    logger.info("Claude Code detected — using native Agent Teams, worker pool disabled");
+    return;
+  }
+  const config = { ...DEFAULT_POOL_CONFIG, spawnConfig: backend.getSpawnConfig() };
+  workerPool = new AgentWorkerPool(config);
+  await workerPool.initialize();
+  logger.info(`Worker pool initialized with ${backend.name} backend`);
+}
+
 function getWorkerPool(): AgentWorkerPool | null {
   return workerPool;
 }
@@ -385,6 +396,15 @@ server.listen(PORT, "0.0.0.0", async () => {
   logger.info(`PTY Bridge initialized at ws://localhost:${PORT}/terminal`);
 
   setupGovernanceWatcher();
+
+  // Initialize worker pool with auto-detected backend
+  try {
+    await initializeWorkerPool();
+  } catch (err: unknown) {
+    logger.warn("Worker pool initialization failed (non-fatal):", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
 
   // Post startup sentinel log with live context
   try {

@@ -3,6 +3,8 @@
  * Type definitions for the parallel agent execution system
  */
 
+import type { SpawnConfig } from "../../adapters/backend";
+
 export type WorkerStatus =
   | "idle"
   | "busy"
@@ -122,6 +124,7 @@ export interface PoolConfig {
   healthCheckInterval: number; // ms
   taskTimeout: number; // ms
   workerStartTimeout: number; // ms
+  spawnConfig?: SpawnConfig;
 }
 
 /**

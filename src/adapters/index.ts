@@ -36,3 +36,15 @@ export {
   writeFile,
   executeShell,
 } from './factory';
+
+// Backend interface and implementations
+export type { AgentBackend, SpawnConfig } from './backend';
+export {
+  ClaudeCodeBackend,
+  CodexBackend,
+  GeminiBackend,
+  NodeWorkerBackend,
+} from './backend';
+
+// Backend detection
+export { detectBackend } from './backend-detector';

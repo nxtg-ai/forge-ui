@@ -300,7 +300,7 @@ export class AgentWorkerPool extends EventEmitter {
 
   private async spawnWorker(): Promise<void> {
     const workerId = `worker-${uuidv4().slice(0, 8)}`;
-    const worker = new AgentWorker(workerId, DEFAULT_RESOURCE_LIMITS);
+    const worker = new AgentWorker(workerId, DEFAULT_RESOURCE_LIMITS, this.config.spawnConfig);
 
     // Set up event handlers
     worker.on("status", (status) => {
