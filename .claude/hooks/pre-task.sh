@@ -78,5 +78,10 @@ done
 # 6. Check Python tools
 check_python_tools || log_info "Install tools with: pip install $(get_formatter) $(get_linter) $(get_type_checker)"
 
+# 7. Post session start to sentinel (non-blocking)
+BRANCH=$(get_current_branch)
+UNCOMMITTED=$(count_uncommitted_files)
+post_sentinel_event "INFO" "session-hook" "Session started on branch $BRANCH ($UNCOMMITTED uncommitted files)" "low" &
+
 log_success "Pre-task checks complete"
 exit 0

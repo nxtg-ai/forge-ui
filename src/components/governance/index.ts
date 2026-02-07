@@ -9,3 +9,5 @@ export { ImpactMatrix } from "./ImpactMatrix";
 export { OracleFeed } from "./OracleFeed";
 export { StrategicAdvisor } from "./StrategicAdvisor";
 export { ProjectContextCard } from "./ProjectContextCard";
+export { MemoryInsightsCard } from "./MemoryInsightsCard";
+export { BlockingDecisionsCard } from "./BlockingDecisionsCard";

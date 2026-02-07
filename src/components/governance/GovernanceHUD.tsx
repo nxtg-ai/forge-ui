@@ -7,6 +7,8 @@ import { StrategicAdvisor } from "./StrategicAdvisor";
 import { WorkerPoolMetrics } from "./WorkerPoolMetrics";
 import { ProjectContextCard } from "./ProjectContextCard";
 import { AgentActivityFeed } from "./AgentActivityFeed";
+import { MemoryInsightsCard } from "./MemoryInsightsCard";
+import { BlockingDecisionsCard } from "./BlockingDecisionsCard";
 import { wsManager, type ConnectionStatus } from "../../services/ws-manager";
 import { logger } from "../../utils/browser-logger";
 
@@ -156,6 +158,8 @@ export const GovernanceHUD: React.FC<GovernanceHUDProps> = ({ className }) => {
         <ConstitutionCard constitution={state.constitution} />
         <WorkerPoolMetrics />
         <ImpactMatrix workstreams={state.workstreams} />
+        <BlockingDecisionsCard />
+        <MemoryInsightsCard />
         <AgentActivityFeed maxEntries={15} />
         <OracleFeed logs={state.sentinelLog} />
       </div>

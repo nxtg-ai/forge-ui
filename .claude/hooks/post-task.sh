@@ -158,5 +158,14 @@ if [ -f "$DOC_MAPPING_FILE" ] && has_command jq; then
     fi
 fi
 
+# 10. Post session completion to sentinel (non-blocking)
+STATUS="${TASK_STATUS:-completed}"
+FILES="${FILES_MODIFIED:-0}"
+if [ "$STATUS" = "success" ] || [ "$STATUS" = "completed" ]; then
+    post_sentinel_event "SUCCESS" "session-hook" "Session completed ($FILES files modified)" "low" &
+elif [ "$STATUS" = "failed" ]; then
+    post_sentinel_event "WARN" "session-hook" "Session ended with failures ($FILES files modified)" "medium" &
+fi
+
 log_success "Post-task checks complete"
 exit 0

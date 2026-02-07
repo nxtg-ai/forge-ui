@@ -1634,6 +1634,178 @@ app.get("/api/governance/live-context", async (req, res) => {
   }
 });
 
+app.get("/api/governance/memory-insights", async (req, res) => {
+  try {
+    const os = await import("os");
+    const homeDir = os.default.homedir();
+
+    // Find native Claude memory file
+    const memoryGlob = path.join(
+      homeDir,
+      ".claude/projects/*/memory/MEMORY.md",
+    );
+    const { glob } = await import("glob");
+    const memoryFiles = await glob(memoryGlob);
+
+    // Also check project-specific memory path
+    const projectMemoryPath = path.join(
+      homeDir,
+      ".claude/projects/-home-axw-projects-NXTG-Forge-v3/memory/MEMORY.md",
+    );
+
+    let memoryContent = "";
+    const targetPath =
+      memoryFiles.find((f) => f.includes("NXTG-Forge")) || projectMemoryPath;
+
+    try {
+      memoryContent = await fs.readFile(targetPath, "utf-8");
+    } catch {
+      // No memory file found
+    }
+
+    // Parse sections from MEMORY.md
+    const sections: {
+      title: string;
+      items: string[];
+      type: "rule" | "decision" | "discovery" | "other";
+    }[] = [];
+    const lines = memoryContent.replace(/\r/g, "").split("\n");
+    let currentSection = "";
+    let currentItems: string[] = [];
+    let currentType: "rule" | "decision" | "discovery" | "other" = "other";
+
+    for (const line of lines) {
+      if (line.startsWith("## ")) {
+        if (currentSection && currentItems.length > 0) {
+          sections.push({
+            title: currentSection,
+            items: currentItems.slice(0, 5),
+            type: currentType,
+          });
+        }
+        currentSection = line.replace(/^#+\s*/, "");
+        currentItems = [];
+        if (currentSection.toLowerCase().includes("rule"))
+          currentType = "rule";
+        else if (currentSection.toLowerCase().includes("decision"))
+          currentType = "decision";
+        else if (currentSection.toLowerCase().includes("discovery"))
+          currentType = "discovery";
+        else currentType = "other";
+      } else if (line.startsWith("### ")) {
+        currentItems.push(line.replace(/^#+\s*/, ""));
+      }
+    }
+    if (currentSection && currentItems.length > 0) {
+      sections.push({
+        title: currentSection,
+        items: currentItems.slice(0, 5),
+        type: currentType,
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        hasMemory: memoryContent.length > 0,
+        sections: sections.slice(0, 6),
+        totalRules: sections
+          .filter((s) => s.type === "rule")
+          .reduce((sum, s) => sum + s.items.length, 0),
+        totalDecisions: sections
+          .filter((s) => s.type === "decision")
+          .reduce((sum, s) => sum + s.items.length, 0),
+        lastModified: memoryContent.length > 0
+          ? (await fs.stat(targetPath)).mtime.toISOString()
+          : null,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: "Failed to read memory insights",
+      message: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+app.get("/api/governance/blockers", async (req, res) => {
+  try {
+    const state = await governanceStateManager.readState();
+
+    // Extract blockers from workstreams
+    const blockedWorkstreams = state.workstreams
+      .filter(
+        (ws) =>
+          ws.status === "blocked" ||
+          ws.risk === "high" ||
+          (ws.metrics?.blockers ?? 0) > 0,
+      )
+      .map((ws) => ({
+        id: ws.id,
+        name: ws.name,
+        status: ws.status,
+        risk: ws.risk,
+        blockerCount: ws.metrics?.blockers ?? 0,
+        progress: ws.progress,
+      }));
+
+    // Extract actionRequired sentinel entries
+    const actionItems = (state.sentinelLog || [])
+      .filter(
+        (entry) =>
+          entry.actionRequired === true ||
+          entry.type === "ERROR" ||
+          entry.type === "CRITICAL",
+      )
+      .slice(-10)
+      .map((entry) => ({
+        id: entry.id,
+        type: entry.type,
+        message: entry.message,
+        source: entry.source,
+        timestamp: entry.timestamp,
+        actionRequired: entry.actionRequired ?? false,
+      }));
+
+    // Extract pending decision workstreams
+    const pendingDecisions = state.workstreams
+      .filter((ws) => ws.status === "pending")
+      .map((ws) => ({
+        id: ws.id,
+        name: ws.name,
+        taskCount: ws.tasks?.length ?? 0,
+        dependencies: ws.dependencies ?? [],
+      }));
+
+    res.json({
+      success: true,
+      data: {
+        blockedWorkstreams,
+        actionItems,
+        pendingDecisions,
+        summary: {
+          totalBlockers: blockedWorkstreams.length,
+          totalActionItems: actionItems.length,
+          totalPending: pendingDecisions.length,
+          needsAttention:
+            blockedWorkstreams.length > 0 || actionItems.length > 0,
+        },
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: "Failed to gather blocker data",
+      message: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 app.get("/api/governance/validate", async (req, res) => {
   try {
     const result = await governanceStateManager.validateStateIntegrity();
