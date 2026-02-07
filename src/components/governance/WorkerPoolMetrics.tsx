@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { SafeAnimatePresence as AnimatePresence } from "../ui/SafeAnimatePresence";
+import { apiFetch } from "../../utils/api-fetch";
 import {
   Cpu,
   Activity,
@@ -57,7 +58,7 @@ export const WorkerPoolMetrics: React.FC<WorkerPoolMetricsProps> = ({
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        const res = await fetch("/api/workers");
+        const res = await apiFetch("/api/workers");
         if (!res.ok) throw new Error("Failed to fetch worker status");
 
         const data = await res.json();
@@ -84,7 +85,7 @@ export const WorkerPoolMetrics: React.FC<WorkerPoolMetricsProps> = ({
   const handleInitPool = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch("/api/workers/init", { method: "POST" });
+      const res = await apiFetch("/api/workers/init", { method: "POST" });
       const data = await res.json();
       if (data.success) {
         setPoolStatus(data.data.status);
@@ -100,7 +101,7 @@ export const WorkerPoolMetrics: React.FC<WorkerPoolMetricsProps> = ({
   // Scale handlers
   const handleScaleUp = async () => {
     try {
-      const res = await fetch("/api/workers/scale/up", { method: "POST" });
+      const res = await apiFetch("/api/workers/scale/up", { method: "POST" });
       if (!res.ok) throw new Error(`Scale up failed (${res.status})`);
       onScaleUp?.();
     } catch (err) {
@@ -110,7 +111,7 @@ export const WorkerPoolMetrics: React.FC<WorkerPoolMetricsProps> = ({
 
   const handleScaleDown = async () => {
     try {
-      const res = await fetch("/api/workers/scale/down", { method: "POST" });
+      const res = await apiFetch("/api/workers/scale/down", { method: "POST" });
       if (!res.ok) throw new Error(`Scale down failed (${res.status})`);
       onScaleDown?.();
     } catch (err) {

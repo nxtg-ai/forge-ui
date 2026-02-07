@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import type { Command } from "../components/types";
 import { renderIcon } from "../utils/icon-mapper";
 import { logger } from "../utils/browser-logger";
+import { apiFetch } from "../utils/api-fetch";
 
 interface CommandDTO {
   id: string;
@@ -40,7 +41,7 @@ export function useForgeCommands() {
         setIsLoading(true);
         setError(null);
 
-        const response = await fetch("/api/commands");
+        const response = await apiFetch("/api/commands");
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }

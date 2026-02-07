@@ -36,6 +36,7 @@ import { useForgeCommands } from "../hooks/useForgeCommands";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { useCommandOutput } from "../hooks/useCommandOutput";
 import { wsManager } from "../services/ws-manager";
+import { apiFetch } from "../utils/api-fetch";
 import { EngagementProvider, useEngagement } from "../contexts/EngagementContext";
 import { useLayout } from "../contexts/LayoutContext";
 import type {
@@ -177,7 +178,7 @@ const LiveDashboard: React.FC = () => {
     const entryId = commandOutput.startCommand(command);
 
     try {
-      const response = await fetch("/api/commands/execute", {
+      const response = await apiFetch("/api/commands/execute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ command, args }),
@@ -259,7 +260,7 @@ const LiveDashboard: React.FC = () => {
   useEffect(() => {
     const fetchWorkers = async () => {
       try {
-        const response = await fetch("/api/workers");
+        const response = await apiFetch("/api/workers");
         if (!response.ok) return;
         const result = await response.json();
         if (result.success && result.data?.workers) {

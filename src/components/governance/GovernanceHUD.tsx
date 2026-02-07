@@ -11,6 +11,7 @@ import { MemoryInsightsCard } from "./MemoryInsightsCard";
 import { BlockingDecisionsCard } from "./BlockingDecisionsCard";
 import { wsManager, type ConnectionStatus } from "../../services/ws-manager";
 import { logger } from "../../utils/browser-logger";
+import { apiFetch } from "../../utils/api-fetch";
 
 interface GovernanceHUDProps {
   className?: string;
@@ -29,7 +30,7 @@ export const GovernanceHUD: React.FC<GovernanceHUDProps> = ({ className }) => {
   // Fetch state from API
   const fetchState = async () => {
     try {
-      const res = await fetch("/api/governance/state");
+      const res = await apiFetch("/api/governance/state");
       if (!res.ok) {
         const errorText = await res.text();
         logger.warn("Governance API Error:", res.status, errorText);

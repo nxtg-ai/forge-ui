@@ -8,6 +8,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { SafeAnimatePresence as AnimatePresence } from "../ui/SafeAnimatePresence";
+import { apiFetch } from "../../utils/api-fetch";
 import {
   Brain,
   ChevronDown,
@@ -67,7 +68,7 @@ export const MemoryInsightsCard: React.FC<{ className?: string }> = ({
 
     const fetchInsights = async () => {
       try {
-        const res = await fetch("/api/governance/memory-insights");
+        const res = await apiFetch("/api/governance/memory-insights");
         if (!res.ok) return;
         const json = await res.json();
         if (isMountedRef.current && json.success && json.data) {

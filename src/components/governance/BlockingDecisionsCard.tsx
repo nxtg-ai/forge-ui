@@ -8,6 +8,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { SafeAnimatePresence as AnimatePresence } from "../ui/SafeAnimatePresence";
+import { apiFetch } from "../../utils/api-fetch";
 import {
   ShieldAlert,
   ChevronDown,
@@ -80,7 +81,7 @@ export const BlockingDecisionsCard: React.FC<{ className?: string }> = ({
 
     const fetchBlockers = async () => {
       try {
-        const res = await fetch("/api/governance/blockers");
+        const res = await apiFetch("/api/governance/blockers");
         if (!res.ok) return;
         const json = await res.json();
         if (isMountedRef.current && json.success && json.data) {

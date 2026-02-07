@@ -7,6 +7,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { SafeAnimatePresence as AnimatePresence } from "../ui/SafeAnimatePresence";
+import { apiFetch } from "../../utils/api-fetch";
 import {
   FileText,
   Brain,
@@ -57,7 +58,7 @@ export const ContextWindowHUD: React.FC<ContextWindowHUDProps> = React.memo(({
     const loadRealData = async () => {
       try {
         // Fetch real project state
-        const response = await fetch("/api/state");
+        const response = await apiFetch("/api/state");
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.data) {

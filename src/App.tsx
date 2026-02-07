@@ -46,6 +46,7 @@ import {
   useForgeIntegration,
 } from "./hooks/useForgeIntegration";
 import { apiClient } from "./services/api-client";
+import { apiFetch } from "./utils/api-fetch";
 import type {
   EngagementMode,
   Architect,
@@ -160,7 +161,7 @@ function IntegratedApp() {
       // Fetch MCP suggestions
       setLoadingMcpSuggestions(true);
       try {
-        const response = await fetch(
+        const response = await apiFetch(
           `/api/mcp/suggestions`,
           {
             method: "POST",
@@ -200,7 +201,7 @@ function IntegratedApp() {
 
       try {
         // Send selected MCPs to backend for configuration
-        const response = await fetch(
+        const response = await apiFetch(
           `/api/mcp/configure`,
           {
             method: "POST",
@@ -258,7 +259,7 @@ function IntegratedApp() {
     const fetchRunspaces = async () => {
       try {
         setLoadingRunspaces(true);
-        const response = await fetch(`/api/runspaces`);
+        const response = await apiFetch(`/api/runspaces`);
         const result = await response.json();
 
         if (result.success) {
@@ -283,7 +284,7 @@ function IntegratedApp() {
   // Handle runspace switch
   const handleRunspaceSwitch = useCallback(async (runspaceId: string) => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/runspaces/${runspaceId}/switch`,
         {
           method: "POST",
@@ -294,7 +295,7 @@ function IntegratedApp() {
       if (result.success) {
         setActiveRunspace(result.data);
         // Refresh runspaces list
-        const listResponse = await fetch(`/api/runspaces`);
+        const listResponse = await apiFetch(`/api/runspaces`);
         const listResult = await listResponse.json();
         if (listResult.success) {
           setRunspaces(listResult.data.runspaces || []);

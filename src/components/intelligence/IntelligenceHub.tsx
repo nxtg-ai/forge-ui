@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { Brain, Layers, AlertCircle, RefreshCw } from "lucide-react";
 import { IntelligenceCard } from "./IntelligenceCard";
 import { logger } from "../../utils/browser-logger";
+import { apiFetch } from "../../utils/api-fetch";
 
 interface IntelligenceCardData {
   id: string;
@@ -38,7 +39,7 @@ export const IntelligenceHub: React.FC<IntelligenceHubProps> = React.memo(
 
     const loadIntelligence = async () => {
       try {
-        const response = await fetch("/api/memory/intelligence");
+        const response = await apiFetch("/api/memory/intelligence");
         if (!response.ok) {
           throw new Error(`Failed to fetch intelligence: ${response.status}`);
         }

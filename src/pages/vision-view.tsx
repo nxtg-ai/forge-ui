@@ -53,6 +53,7 @@ import {
   useAdaptivePolling,
 } from "../hooks/useRealtimeConnection";
 import { useVision } from "../hooks/useForgeIntegration";
+import { apiFetch } from "../utils/api-fetch";
 import { apiClient } from "../services/api-client";
 import type { OracleMessage } from "../components/infinity-terminal/OracleFeedMarquee";
 import type { VisionData, Goal, Metric } from "../components/types";
@@ -639,7 +640,7 @@ const VisionView: React.FC = () => {
     setHistoryLoading(true);
     try {
       // Try to fetch from API - if it fails, use empty array
-      const response = await fetch("/api/vision/history");
+      const response = await apiFetch("/api/vision/history");
       if (response.ok) {
         const result = await response.json();
         if (result.success && result.data) {
@@ -661,7 +662,7 @@ const VisionView: React.FC = () => {
   // Check alignment
   const checkAlignment = useCallback(async (decision: string): Promise<AlignmentCheck | null> => {
     try {
-      const response = await fetch("/api/vision/alignment", {
+      const response = await apiFetch("/api/vision/alignment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ decision }),

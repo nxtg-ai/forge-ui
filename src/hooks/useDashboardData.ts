@@ -9,6 +9,7 @@ import { ProjectState, Agent } from "../components/types";
 import type { ForgeStatus } from "../services/status-service";
 import { wsManager } from "../services/ws-manager";
 import { logger } from "../utils/browser-logger";
+import { apiFetch } from "../utils/api-fetch";
 
 // API base URL helper
 const getApiBase = () => {
@@ -96,7 +97,7 @@ export function useDashboardData(): DashboardData {
     fallback: T,
   ): Promise<T> => {
     try {
-      const response = await fetch(`${getApiBase()}${endpoint}`);
+      const response = await apiFetch(`${getApiBase()}${endpoint}`);
       if (!response.ok) {
         logger.debug(`[Dashboard] ${endpoint} returned ${response.status}`);
         return fallback;

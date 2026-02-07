@@ -7,6 +7,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { SafeAnimatePresence as AnimatePresence } from "../ui/SafeAnimatePresence";
+import { apiFetch } from "../../utils/api-fetch";
 import {
   GitBranch,
   GitCommit,
@@ -82,7 +83,7 @@ export const ProjectContextCard: React.FC<{ className?: string }> = ({
 
     const fetchContext = async () => {
       try {
-        const res = await fetch("/api/governance/live-context");
+        const res = await apiFetch("/api/governance/live-context");
         if (!res.ok) return;
         const json = await res.json();
         if (isMountedRef.current && json.success && json.data) {
