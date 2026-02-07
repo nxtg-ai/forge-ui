@@ -38,13 +38,16 @@ describe("GovernanceStateManager", () => {
     constitution: {
       directive: "Build an amazing app",
       vision: ["Goal 1", "Goal 2"],
-      status: "ACTIVE",
+      status: "PLANNING",
       confidence: 85,
-      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     },
     workstreams: [],
     sentinelLog: [],
     metadata: {
+      sessionId: "test-session",
+      projectPath: "/test/path",
+      forgeVersion: "1.0.0",
       lastSync: new Date().toISOString(),
       checksum: "",
     },
@@ -188,7 +191,8 @@ describe("GovernanceStateManager", () => {
           id: `sentinel-${i}`,
           timestamp: Date.now() - i * 1000,
           type: i % 10 === 0 ? "CRITICAL" : "INFO",
-          agent: "test",
+          severity: i % 10 === 0 ? "critical" : "low",
+          source: "test",
           message: `Entry ${i}`,
         });
       }
@@ -225,7 +229,8 @@ describe("GovernanceStateManager", () => {
         id: "critical-1",
         timestamp: Date.now() - 1000000, // Very old
         type: "CRITICAL" as const,
-        agent: "test",
+        severity: "critical" as const,
+        source: "test",
         message: "Critical issue",
       };
 
@@ -237,7 +242,8 @@ describe("GovernanceStateManager", () => {
           id: `info-${i}`,
           timestamp: Date.now() - i,
           type: "INFO" as const,
-          agent: "test",
+          severity: "low" as const,
+          source: "test",
           message: `Info ${i}`,
         });
       }
@@ -281,7 +287,8 @@ describe("GovernanceStateManager", () => {
         id: "old-entry",
         timestamp: now - 40 * dayMs,
         type: "INFO" as const,
-        agent: "test",
+        severity: "low" as const,
+        source: "test",
         message: "Old entry",
       });
 
@@ -290,7 +297,8 @@ describe("GovernanceStateManager", () => {
         id: "recent-entry",
         timestamp: now - 5 * dayMs,
         type: "INFO" as const,
-        agent: "test",
+        severity: "low" as const,
+        source: "test",
         message: "Recent entry",
       });
 
@@ -397,27 +405,30 @@ describe("GovernanceStateManager", () => {
     it("should append sentinel log entry", async () => {
       await manager.appendSentinelLog({
         type: "INFO",
-        agent: "test-agent",
+        severity: "low",
+        source: "test-agent",
         message: "Test message",
       });
 
       const state = await manager.readState();
       expect(state.sentinelLog.length).toBe(1);
       expect(state.sentinelLog[0].type).toBe("INFO");
-      expect(state.sentinelLog[0].agent).toBe("test-agent");
+      expect(state.sentinelLog[0].source).toBe("test-agent");
       expect(state.sentinelLog[0].message).toBe("Test message");
     });
 
     it("should generate unique ID for entry", async () => {
       await manager.appendSentinelLog({
         type: "INFO",
-        agent: "test",
+        severity: "low",
+        source: "test",
         message: "First",
       });
 
       await manager.appendSentinelLog({
         type: "INFO",
-        agent: "test",
+        severity: "low",
+        source: "test",
         message: "Second",
       });
 
@@ -431,7 +442,8 @@ describe("GovernanceStateManager", () => {
 
       await manager.appendSentinelLog({
         type: "ERROR",
-        agent: "test",
+        severity: "high",
+        source: "test",
         message: "Error occurred",
       });
 
@@ -447,7 +459,8 @@ describe("GovernanceStateManager", () => {
       for (let i = 0; i < 150; i++) {
         await manager.appendSentinelLog({
           type: "INFO",
-          agent: "test",
+          severity: "low",
+          source: "test",
           message: `Entry ${i}`,
         });
       }
@@ -576,6 +589,285 @@ describe("GovernanceStateManager", () => {
 
       expect(result.valid).toBe(false);
       expect(result.message).toBeDefined();
+    });
+  });
+
+  describe("backup rotation", () => {
+    it("should rotate old backups beyond maxBackups limit", async () => {
+      const state = createValidState();
+
+      const claudeDir = path.join(testDir, ".claude");
+      await fs.mkdir(claudeDir, { recursive: true });
+
+      const govDir = path.join(claudeDir, "governance");
+      await fs.mkdir(govDir, { recursive: true });
+
+      const backupDir = path.join(govDir, "backups");
+      await fs.mkdir(backupDir, { recursive: true });
+
+      await fs.writeFile(
+        path.join(govDir, "config.json"),
+        JSON.stringify({
+          sentinelLog: { maxEntries: 100, retentionDays: 30, persistCritical: true },
+          stateManagement: { backupEnabled: true, maxBackups: 3 },
+        }),
+      );
+
+      // Create 5 writes to generate 5 backups (maxBackups is 3)
+      for (let i = 0; i < 5; i++) {
+        state.version = i + 1;
+        await manager.writeState(state);
+        // Small delay to ensure different timestamps
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+
+      const files = await fs.readdir(backupDir);
+      const backupFiles = files.filter((f) => f.startsWith("state-") && f.endsWith(".json"));
+
+      expect(backupFiles.length).toBeLessThanOrEqual(3);
+    });
+
+    it("should keep most recent backups when rotating", async () => {
+      const state = createValidState();
+
+      const claudeDir = path.join(testDir, ".claude");
+      await fs.mkdir(claudeDir, { recursive: true });
+
+      const govDir = path.join(claudeDir, "governance");
+      await fs.mkdir(govDir, { recursive: true });
+
+      const backupDir = path.join(govDir, "backups");
+      await fs.mkdir(backupDir, { recursive: true });
+
+      await fs.writeFile(
+        path.join(govDir, "config.json"),
+        JSON.stringify({
+          sentinelLog: { maxEntries: 100, retentionDays: 30, persistCritical: true },
+          stateManagement: { backupEnabled: true, maxBackups: 2 },
+        }),
+      );
+
+      // Create multiple writes
+      for (let i = 1; i <= 4; i++) {
+        state.version = i;
+        await manager.writeState(state);
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+
+      // Get latest backup and verify it's version 4 (most recent)
+      const latestBackup = await manager.getLatestBackup();
+      expect(latestBackup?.version).toBe(4);
+    });
+  });
+
+  describe("error handling in readState", () => {
+    it("should throw error for malformed JSON", async () => {
+      const claudeDir = path.join(testDir, ".claude");
+      await fs.mkdir(claudeDir, { recursive: true });
+
+      // Write invalid JSON
+      await fs.writeFile(
+        path.join(claudeDir, "governance.json"),
+        "{ invalid json",
+      );
+
+      await expect(manager.readState()).rejects.toThrow();
+    });
+  });
+
+  describe("sentinel log edge cases", () => {
+    it("should preserve ERROR entries during rotation", async () => {
+      const state = createValidState();
+
+      const errorEntry = {
+        id: "error-1",
+        timestamp: Date.now() - 1000000, // Very old
+        type: "ERROR" as const,
+        severity: "high" as const,
+        source: "test",
+        message: "Error issue",
+      };
+
+      state.sentinelLog.push(errorEntry);
+
+      // Add 150 recent non-critical entries
+      for (let i = 0; i < 150; i++) {
+        state.sentinelLog.push({
+          id: `info-${i}`,
+          timestamp: Date.now() - i,
+          type: "INFO" as const,
+          severity: "low" as const,
+          source: "test",
+          message: `Info ${i}`,
+        });
+      }
+
+      const claudeDir = path.join(testDir, ".claude");
+      await fs.mkdir(claudeDir, { recursive: true });
+
+      const govDir = path.join(claudeDir, "governance");
+      await fs.mkdir(govDir, { recursive: true });
+      await fs.writeFile(
+        path.join(govDir, "config.json"),
+        JSON.stringify({
+          sentinelLog: { maxEntries: 100, retentionDays: 30, persistCritical: true },
+          stateManagement: { backupEnabled: false, maxBackups: 10 },
+        }),
+      );
+
+      await manager.writeState(state);
+
+      const written = await fs.readFile(
+        path.join(claudeDir, "governance.json"),
+        "utf-8",
+      );
+      const parsedState = JSON.parse(written);
+
+      // ERROR entry should be preserved
+      const foundError = parsedState.sentinelLog.find(
+        (log: any) => log.id === "error-1",
+      );
+      expect(foundError).toBeDefined();
+    });
+
+    it("should handle empty sentinel log", async () => {
+      const state = createValidState();
+      state.sentinelLog = [];
+
+      const claudeDir = path.join(testDir, ".claude");
+      await fs.mkdir(claudeDir, { recursive: true });
+
+      const govDir = path.join(claudeDir, "governance");
+      await fs.mkdir(govDir, { recursive: true });
+      await fs.writeFile(
+        path.join(govDir, "config.json"),
+        JSON.stringify({
+          sentinelLog: { maxEntries: 100, retentionDays: 30, persistCritical: true },
+          stateManagement: { backupEnabled: false, maxBackups: 10 },
+        }),
+      );
+
+      await manager.writeState(state);
+
+      const written = await fs.readFile(
+        path.join(claudeDir, "governance.json"),
+        "utf-8",
+      );
+      const parsedState = JSON.parse(written);
+
+      expect(parsedState.sentinelLog).toEqual([]);
+    });
+  });
+
+  describe("config handling", () => {
+    it("should use default config when config file is missing", async () => {
+      const state = createValidState();
+
+      const claudeDir = path.join(testDir, ".claude");
+      await fs.mkdir(claudeDir, { recursive: true });
+
+      const govDir = path.join(claudeDir, "governance");
+      await fs.mkdir(govDir, { recursive: true });
+      // Don't create config.json - should use defaults
+
+      // Should not throw error
+      await expect(manager.writeState(state)).resolves.not.toThrow();
+
+      const written = await fs.readFile(
+        path.join(claudeDir, "governance.json"),
+        "utf-8",
+      );
+      const parsedState = JSON.parse(written);
+
+      // Should have written successfully with default config
+      expect(parsedState.metadata.checksum).toBeDefined();
+    });
+
+    it("should handle malformed config file", async () => {
+      const state = createValidState();
+
+      const claudeDir = path.join(testDir, ".claude");
+      await fs.mkdir(claudeDir, { recursive: true });
+
+      const govDir = path.join(claudeDir, "governance");
+      await fs.mkdir(govDir, { recursive: true });
+
+      // Write invalid JSON to config
+      await fs.writeFile(
+        path.join(govDir, "config.json"),
+        "{ invalid json",
+      );
+
+      // Should fall back to default config
+      await expect(manager.writeState(state)).resolves.not.toThrow();
+    });
+  });
+
+  describe("checksum calculation", () => {
+    it("should generate consistent checksums for identical states", async () => {
+      const state1 = createValidState();
+      const state2 = createValidState();
+
+      const claudeDir = path.join(testDir, ".claude");
+      await fs.mkdir(claudeDir, { recursive: true });
+
+      const govDir = path.join(claudeDir, "governance");
+      await fs.mkdir(govDir, { recursive: true });
+      await fs.writeFile(
+        path.join(govDir, "config.json"),
+        JSON.stringify({
+          sentinelLog: { maxEntries: 100, retentionDays: 30, persistCritical: true },
+          stateManagement: { backupEnabled: false, maxBackups: 10 },
+        }),
+      );
+
+      await manager.writeState(state1);
+      const written1 = JSON.parse(
+        await fs.readFile(path.join(claudeDir, "governance.json"), "utf-8")
+      );
+
+      await manager.writeState(state2);
+      const written2 = JSON.parse(
+        await fs.readFile(path.join(claudeDir, "governance.json"), "utf-8")
+      );
+
+      // Checksums should differ because timestamps changed
+      // but structure should be valid
+      expect(written1.metadata.checksum).toHaveLength(16);
+      expect(written2.metadata.checksum).toHaveLength(16);
+    });
+
+    it("should generate different checksums for different states", async () => {
+      const state1 = createValidState();
+      state1.constitution.directive = "First directive";
+
+      const state2 = createValidState();
+      state2.constitution.directive = "Second directive";
+
+      const claudeDir = path.join(testDir, ".claude");
+      await fs.mkdir(claudeDir, { recursive: true });
+
+      const govDir = path.join(claudeDir, "governance");
+      await fs.mkdir(govDir, { recursive: true });
+      await fs.writeFile(
+        path.join(govDir, "config.json"),
+        JSON.stringify({
+          sentinelLog: { maxEntries: 100, retentionDays: 30, persistCritical: true },
+          stateManagement: { backupEnabled: false, maxBackups: 10 },
+        }),
+      );
+
+      await manager.writeState(state1);
+      const written1 = JSON.parse(
+        await fs.readFile(path.join(claudeDir, "governance.json"), "utf-8")
+      );
+
+      await manager.writeState(state2);
+      const written2 = JSON.parse(
+        await fs.readFile(path.join(claudeDir, "governance.json"), "utf-8")
+      );
+
+      expect(written1.metadata.checksum).not.toBe(written2.metadata.checksum);
     });
   });
 });

@@ -133,9 +133,18 @@ session-*.log
 .claude/reports/*
 !.claude/reports/.gitkeep
 
+# Runtime data (feedback, user-generated)
+data/
+
+# Governance backups (auto-generated, can be large)
+.claude/governance/backups/
+
 # Runtime markers and migrations
 .claude/FORGE-ENABLED
 .claude/MIGRATION-COMPLETE.md
+
+# Playwright MCP screenshots (debug artifacts)
+.playwright-mcp/
 
 # All .local files (user-specific overrides)
 **/*.local.md

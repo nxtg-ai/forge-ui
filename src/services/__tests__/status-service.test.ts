@@ -428,6 +428,410 @@ describe("StatusService", () => {
         expect(result.value.project.forgeVersion).toBe("0.0.0");
       }
     });
+
+  });
+
+  describe("getLiveContext", () => {
+    it("should gather live git context", async () => {
+      const mockGit = {
+        status: vi.fn().mockResolvedValue({
+          current: "main",
+          ahead: 2,
+          behind: 1,
+          modified: ["file1.ts"],
+          staged: ["file2.ts"],
+          not_added: ["file3.ts"],
+        }),
+        log: vi.fn().mockResolvedValue({
+          latest: {
+            hash: "abc123def456",
+            message: "feat: add new feature",
+            date: "2026-02-06T12:00:00Z",
+            author_name: "Test Author",
+          },
+        }),
+      };
+      vi.mocked(simpleGit).mockReturnValue(mockGit as any);
+
+      const context = await service.getLiveContext();
+
+      expect(context.git.branch).toBe("main");
+      expect(context.git.ahead).toBe(2);
+      expect(context.git.behind).toBe(1);
+      expect(context.git.uncommittedCount).toBe(3);
+      expect(context.git.lastCommit).toEqual({
+        hash: "abc123d",
+        message: "feat: add new feature",
+        date: "2026-02-06T12:00:00Z",
+        author: "Test Author",
+      });
+      expect(context.timestamp).toBeDefined();
+    });
+
+    it("should handle non-git repository gracefully", async () => {
+      const mockGit = {
+        status: vi.fn().mockRejectedValue(new Error("Not a git repo")),
+        log: vi.fn().mockRejectedValue(new Error("Not a git repo")),
+      };
+      vi.mocked(simpleGit).mockReturnValue(mockGit as any);
+
+      const context = await service.getLiveContext();
+
+      expect(context.git.branch).toBe("unknown");
+      expect(context.git.lastCommit).toBeNull();
+      expect(context.git.uncommittedCount).toBe(0);
+      expect(context.git.ahead).toBe(0);
+      expect(context.git.behind).toBe(0);
+    });
+
+    it("should handle missing last commit", async () => {
+      const mockGit = {
+        status: vi.fn().mockResolvedValue({
+          current: "main",
+          ahead: 0,
+          behind: 0,
+          modified: [],
+          staged: [],
+          not_added: [],
+        }),
+        log: vi.fn().mockResolvedValue({
+          latest: null,
+        }),
+      };
+      vi.mocked(simpleGit).mockReturnValue(mockGit as any);
+
+      const context = await service.getLiveContext();
+
+      expect(context.git.lastCommit).toBeNull();
+    });
+
+    it("should read cached test results", async () => {
+      // Create test results file
+      const stateDir = path.join(testDir, ".claude/state");
+      await fs.mkdir(stateDir, { recursive: true });
+      await fs.writeFile(
+        path.join(stateDir, "test-results.json"),
+        JSON.stringify({
+          passing: 42,
+          failing: 3,
+          skipped: 2,
+          lastRun: "2026-02-06T12:00:00Z",
+        }),
+      );
+
+      const mockGit = {
+        status: vi.fn().mockResolvedValue({
+          current: "main",
+          ahead: 0,
+          behind: 0,
+          modified: [],
+          staged: [],
+          not_added: [],
+        }),
+        log: vi.fn().mockResolvedValue({ latest: null }),
+      };
+      vi.mocked(simpleGit).mockReturnValue(mockGit as any);
+
+      const context = await service.getLiveContext();
+
+      expect(context.tests.passing).toBe(42);
+      expect(context.tests.failing).toBe(3);
+      expect(context.tests.skipped).toBe(2);
+      expect(context.tests.lastRun).toBe("2026-02-06T12:00:00Z");
+    });
+
+    it("should handle missing test results file", async () => {
+      const mockGit = {
+        status: vi.fn().mockResolvedValue({
+          current: "main",
+          ahead: 0,
+          behind: 0,
+          modified: [],
+          staged: [],
+          not_added: [],
+        }),
+        log: vi.fn().mockResolvedValue({ latest: null }),
+      };
+      vi.mocked(simpleGit).mockReturnValue(mockGit as any);
+
+      const context = await service.getLiveContext();
+
+      expect(context.tests.passing).toBe(0);
+      expect(context.tests.failing).toBe(0);
+      expect(context.tests.skipped).toBe(0);
+      expect(context.tests.lastRun).toBeNull();
+    });
+
+    it("should fallback to timestamp if lastRun missing", async () => {
+      const stateDir = path.join(testDir, ".claude/state");
+      await fs.mkdir(stateDir, { recursive: true });
+      await fs.writeFile(
+        path.join(stateDir, "test-results.json"),
+        JSON.stringify({
+          passing: 10,
+          failing: 0,
+          skipped: 0,
+          timestamp: "2026-02-05T10:00:00Z",
+        }),
+      );
+
+      const mockGit = {
+        status: vi.fn().mockResolvedValue({
+          current: "main",
+          ahead: 0,
+          behind: 0,
+          modified: [],
+          staged: [],
+          not_added: [],
+        }),
+        log: vi.fn().mockResolvedValue({ latest: null }),
+      };
+      vi.mocked(simpleGit).mockReturnValue(mockGit as any);
+
+      const context = await service.getLiveContext();
+
+      expect(context.tests.lastRun).toBe("2026-02-05T10:00:00Z");
+    });
+
+    it("should calculate health score", async () => {
+      const stateDir = path.join(testDir, ".claude/state");
+      await fs.mkdir(stateDir, { recursive: true });
+      await fs.writeFile(
+        path.join(stateDir, "test-results.json"),
+        JSON.stringify({
+          passing: 100,
+          failing: 0,
+          skipped: 0,
+          lastRun: "2026-02-06T12:00:00Z",
+        }),
+      );
+
+      const claudeDir = path.join(testDir, ".claude");
+      await fs.mkdir(claudeDir, { recursive: true });
+      await fs.writeFile(
+        path.join(claudeDir, "governance.json"),
+        JSON.stringify({
+          constitution: {
+            status: "ACTIVE",
+            confidence: 1.0,
+          },
+          workstreams: [],
+        }),
+      );
+
+      const mockGit = {
+        status: vi.fn().mockResolvedValue({
+          current: "main",
+          ahead: 0,
+          behind: 0,
+          modified: [],
+          staged: [],
+          not_added: [],
+        }),
+        log: vi.fn().mockResolvedValue({ latest: null }),
+      };
+      vi.mocked(simpleGit).mockReturnValue(mockGit as any);
+
+      const context = await service.getLiveContext();
+
+      expect(context.health.score).toBeGreaterThan(0);
+      expect(context.health.score).toBeLessThanOrEqual(100);
+      expect(context.health.factors).toBeDefined();
+      expect(context.health.factors.length).toBe(4);
+      expect(context.health.factors[0].label).toBe("Git hygiene");
+      expect(context.health.factors[1].label).toBe("Test health");
+      expect(context.health.factors[2].label).toBe("Governance");
+      expect(context.health.factors[3].label).toBe("Sync status");
+    });
+
+    it("should penalize health for uncommitted changes", async () => {
+      const stateDir = path.join(testDir, ".claude/state");
+      await fs.mkdir(stateDir, { recursive: true });
+      await fs.writeFile(
+        path.join(stateDir, "test-results.json"),
+        JSON.stringify({
+          passing: 100,
+          failing: 0,
+          skipped: 0,
+          lastRun: "2026-02-06T12:00:00Z",
+        }),
+      );
+
+      const mockGit = {
+        status: vi.fn().mockResolvedValue({
+          current: "main",
+          ahead: 0,
+          behind: 0,
+          modified: ["file1.ts", "file2.ts", "file3.ts", "file4.ts", "file5.ts"],
+          staged: [],
+          not_added: [],
+        }),
+        log: vi.fn().mockResolvedValue({ latest: null }),
+      };
+      vi.mocked(simpleGit).mockReturnValue(mockGit as any);
+
+      const context = await service.getLiveContext();
+
+      const gitHygieneFactor = context.health.factors.find(
+        (f) => f.label === "Git hygiene",
+      );
+      expect(gitHygieneFactor).toBeDefined();
+      expect(gitHygieneFactor!.value).toBeLessThan(30);
+    });
+
+    it("should penalize health for failing tests", async () => {
+      const stateDir = path.join(testDir, ".claude/state");
+      await fs.mkdir(stateDir, { recursive: true });
+      await fs.writeFile(
+        path.join(stateDir, "test-results.json"),
+        JSON.stringify({
+          passing: 50,
+          failing: 50,
+          skipped: 0,
+          lastRun: "2026-02-06T12:00:00Z",
+        }),
+      );
+
+      const mockGit = {
+        status: vi.fn().mockResolvedValue({
+          current: "main",
+          ahead: 0,
+          behind: 0,
+          modified: [],
+          staged: [],
+          not_added: [],
+        }),
+        log: vi.fn().mockResolvedValue({ latest: null }),
+      };
+      vi.mocked(simpleGit).mockReturnValue(mockGit as any);
+
+      const context = await service.getLiveContext();
+
+      const testHealthFactor = context.health.factors.find(
+        (f) => f.label === "Test health",
+      );
+      expect(testHealthFactor).toBeDefined();
+      expect(testHealthFactor!.value).toBe(15); // 50% pass rate = 15/30 points
+    });
+
+    it("should give default test score when no tests", async () => {
+      const mockGit = {
+        status: vi.fn().mockResolvedValue({
+          current: "main",
+          ahead: 0,
+          behind: 0,
+          modified: [],
+          staged: [],
+          not_added: [],
+        }),
+        log: vi.fn().mockResolvedValue({ latest: null }),
+      };
+      vi.mocked(simpleGit).mockReturnValue(mockGit as any);
+
+      const context = await service.getLiveContext();
+
+      const testHealthFactor = context.health.factors.find(
+        (f) => f.label === "Test health",
+      );
+      expect(testHealthFactor).toBeDefined();
+      expect(testHealthFactor!.value).toBe(15); // Default when no tests
+    });
+
+    it("should penalize health for behind remote", async () => {
+      const mockGit = {
+        status: vi.fn().mockResolvedValue({
+          current: "main",
+          ahead: 0,
+          behind: 5,
+          modified: [],
+          staged: [],
+          not_added: [],
+        }),
+        log: vi.fn().mockResolvedValue({ latest: null }),
+      };
+      vi.mocked(simpleGit).mockReturnValue(mockGit as any);
+
+      const context = await service.getLiveContext();
+
+      const syncStatusFactor = context.health.factors.find(
+        (f) => f.label === "Sync status",
+      );
+      expect(syncStatusFactor).toBeDefined();
+      expect(syncStatusFactor!.value).toBe(0); // 20 - (5 * 5) = -5, clamped to 0
+    });
+
+    it("should penalize health for blocked workstreams", async () => {
+      const claudeDir = path.join(testDir, ".claude");
+      await fs.mkdir(claudeDir, { recursive: true });
+      await fs.writeFile(
+        path.join(claudeDir, "governance.json"),
+        JSON.stringify({
+          constitution: {
+            status: "ACTIVE",
+            confidence: 0.5,
+          },
+          workstreams: [
+            { status: "blocked" },
+            { status: "blocked" },
+          ],
+        }),
+      );
+
+      const mockGit = {
+        status: vi.fn().mockResolvedValue({
+          current: "main",
+          ahead: 0,
+          behind: 0,
+          modified: [],
+          staged: [],
+          not_added: [],
+        }),
+        log: vi.fn().mockResolvedValue({ latest: null }),
+      };
+      vi.mocked(simpleGit).mockReturnValue(mockGit as any);
+
+      const context = await service.getLiveContext();
+
+      const govFactor = context.health.factors.find(
+        (f) => f.label === "Governance",
+      );
+      expect(govFactor).toBeDefined();
+      // 0.5 confidence = 10 points, minus 2 blocked * 5 = 0 points
+      expect(govFactor!.value).toBe(0);
+    });
+
+    it("should clamp health score between 0 and 100", async () => {
+      // Create worst case scenario
+      const stateDir = path.join(testDir, ".claude/state");
+      await fs.mkdir(stateDir, { recursive: true });
+      await fs.writeFile(
+        path.join(stateDir, "test-results.json"),
+        JSON.stringify({
+          passing: 0,
+          failing: 100,
+          skipped: 0,
+          lastRun: "2026-02-06T12:00:00Z",
+        }),
+      );
+
+      const mockGit = {
+        status: vi.fn().mockResolvedValue({
+          current: "main",
+          ahead: 0,
+          behind: 10,
+          modified: Array(50).fill("file.ts"),
+          staged: [],
+          not_added: [],
+        }),
+        log: vi.fn().mockResolvedValue({ latest: null }),
+      };
+      vi.mocked(simpleGit).mockReturnValue(mockGit as any);
+
+      const context = await service.getLiveContext();
+
+      expect(context.health.score).toBeGreaterThanOrEqual(0);
+      expect(context.health.score).toBeLessThanOrEqual(100);
+    });
   });
 
   describe("formatForCLI", () => {
