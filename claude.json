@@ -1,63 +1,108 @@
 {
-  "name": "NXTG-Forge v3.0",
+  "name": "Forge",
   "version": "3.0.0",
-  "description": "State-of-the-Art Development Orchestration System",
+  "description": "AI Chief of Staff for Developers — autonomous orchestration across Claude, Codex, and Gemini",
   "author": "NXTG.ai",
   "license": "MIT",
   "features": {
-    "agents": {
-      "enabled": true,
-      "count": 5,
-      "list": [
-        "orchestrator",
-        "architect",
-        "developer",
-        "qa",
-        "devops"
-      ]
-    },
     "commands": {
       "enabled": true,
-      "count": 9,
+      "count": 20,
+      "prefix": "[FRG]-",
       "list": [
         "init",
         "status",
         "status-enhanced",
+        "enable-forge",
         "feature",
         "test",
         "deploy",
         "optimize",
-        "enable-forge",
-        "report"
+        "checkpoint",
+        "restore",
+        "report",
+        "gap-analysis",
+        "spec",
+        "agent-assign",
+        "integrate",
+        "upgrade",
+        "compliance",
+        "docs-status",
+        "docs-update",
+        "docs-audit"
+      ]
+    },
+    "agents": {
+      "enabled": true,
+      "count": 22,
+      "list": [
+        "NXTG-CEO-LOOP",
+        "forge-oracle",
+        "forge-orchestrator",
+        "forge-planner",
+        "forge-builder",
+        "forge-guardian",
+        "forge-detective",
+        "forge-security",
+        "forge-testing",
+        "forge-compliance",
+        "forge-docs",
+        "forge-refactor",
+        "forge-performance",
+        "forge-analytics",
+        "forge-learning",
+        "forge-ui",
+        "forge-api",
+        "forge-database",
+        "forge-devops",
+        "forge-integration",
+        "forge-release-sentinel",
+        "forge-governance-verifier"
       ]
     },
     "skills": {
       "enabled": true,
-      "count": 4,
-      "list": [
+      "count": 20,
+      "categories": [
         "architecture",
-        "optimization",
+        "testing",
         "security",
-        "testing"
+        "optimization",
+        "coding-standards",
+        "browser-debugging",
+        "dev-environment-patterns",
+        "domain-knowledge",
+        "runtime-validation",
+        "agent-development",
+        "skill-development"
       ]
     },
     "hooks": {
       "enabled": true,
-      "count": 5,
-      "list": [
-        "session-start",
-        "error-handler",
-        "post-edit",
-        "pre-commit",
-        "quality-gate"
+      "count": 28,
+      "categories": [
+        "session-lifecycle",
+        "governance",
+        "quality-gates",
+        "ceo-loop",
+        "error-handling",
+        "file-placement"
       ]
     }
+  },
+  "engagementModes": {
+    "ceo": "Autonomous. Agents decide and execute. You see results only.",
+    "vp": "Strategic oversight. Decisions surfaced, details on demand.",
+    "engineer": "Full agent activity. Technical details and logs visible.",
+    "builder": "Hands-on. All implementation details and task queues.",
+    "founder": "Everything visible. No filters, full system transparency."
   },
   "configuration": {
     "autoInit": true,
     "qualityGates": true,
     "realTimeMetrics": true,
     "agentOrchestration": true,
+    "agentTeams": true,
     "continuousMonitoring": true,
     "errorRecovery": true
   },
@@ -67,6 +112,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/nxtg-ai/nxtg-forge"
+    "url": "https://github.com/nxtg-ai/forge"
   }
 }

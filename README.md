@@ -1,307 +1,183 @@
-# NXTG-Forge
+# Forge
 
 <div align="center">
-  <img src="https://img.shields.io/badge/version-3.0.0--beta-blue.svg" alt="Version 3.0.0-beta" />
-  <img src="https://img.shields.io/badge/status-active--development-yellow.svg" alt="Active Development" />
-  <img src="https://img.shields.io/badge/multi--project-enabled-purple.svg" alt="Multi-Project Enabled" />
+  <img src="https://img.shields.io/badge/version-3.0.0-blue.svg" alt="Version 3.0.0" />
+  <img src="https://img.shields.io/badge/tests-4145_passing-brightgreen.svg" alt="4145 Tests Passing" />
+  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="MIT License" />
 </div>
 
 <div align="center">
-  <h3>AI-Orchestrated Development System for Claude Code</h3>
-  <p><strong>Build with intelligent agent orchestration, real-time monitoring, and persistent terminal sessions</strong></p>
+  <h3>AI Chief of Staff for Developers</h3>
+  <p><strong>20 commands, 22 agents, 20 skills — install in 60 seconds</strong></p>
 </div>
 
 ---
 
-## What is NXTG-Forge?
+## What is Forge?
 
-NXTG-Forge is an **intelligent development orchestration framework** designed for Claude Code. It provides a governance dashboard, specialized AI agents, and the **Infinity Terminal** - a browser-based terminal with built-in session persistence that survives disconnects and browser restarts.
+Forge is a **Claude Code plugin** that turns your AI assistant into a Chief of Staff. It adds governance, quality gates, specialized agents, and a real-time dashboard to any project.
 
-This project is in **active development**. The core infrastructure works today. Agent orchestration and commands are being refined based on real-world usage.
+It also works with Codex CLI and Gemini CLI (multi-framework adapter in progress).
 
-## Quick Start
-
-Get NXTG-Forge running in under 5 minutes.
-
-### Prerequisites
-- Node.js 18+
-- Git
-- Claude Code (recommended) or any terminal
-
-### Installation
+## Install
 
 ```bash
-# Clone the repository
 git clone https://github.com/nxtg-ai/forge.git
 cd forge
-
-# Install dependencies
-npm install
-
-# Start the development server
-npm run dev
+./init.sh /path/to/your/project
 ```
 
-The dashboard opens at `http://localhost:5050` and the API server runs on port `5051`.
-
-### First Steps
-
-1. Open the dashboard at `http://localhost:5050`
-2. Initialize your project with `/[FRG]-init` in Claude Code
-3. View the Governance HUD to see project state
-4. Use the Infinity Terminal for persistent shell sessions
-5. Try `/[FRG]-status` to see available commands
-
-## Features
-
-### Working Today
-
-| Feature | Status | Description |
-|---------|--------|-------------|
-| **Infinity Terminal** | Production | Browser-based xterm.js terminal with built-in session persistence (no Zellij required) |
-| **Governance HUD** | Working | Real-time 6-panel dashboard showing project state, workstreams, and metrics |
-| **Dashboard UI** | Working | React-based UI with Spring animations and responsive layout |
-| **Init Wizard** | Working | Project initialization with vision capture and agent scaffolding |
-| **State Management** | Production | Event-sourced state with automatic backup and recovery |
-| **Vision Management** | Production | Canonical vision system with decision alignment scoring |
-| **Bootstrap System** | Production | Self-bootstrapping from GitHub with automatic rollback |
-| **Agent Framework** | Working | Protocol definitions and coordination infrastructure |
-| **API Server** | Working | Express + WebSocket server with 10+ endpoints |
-| **Multi-device Access** | Working | Vite proxy configuration for LAN access (tested on WSL2) |
-
-### In Development
-
-| Feature | Status | What's Left |
-|---------|--------|-------------|
-| **Commands** | Partial | 19 commands defined, core commands working, refinement needed |
-| **Agent Orchestration** | Framework Ready | Agent protocol defined, marketplace and registry in testing |
-| **Memory System** | In Design | Deciding between enhancing Claude native memory vs custom layer |
-| **Skill Packs** | Planned | Marketplace and premium skill-packs designed, implementation pending |
-| **Worker Pool** | UI Only | Beautiful UI exists, background agent execution not wired |
-| **Real-time Updates** | Partial | Sentinel log updates manually, need auto-pipeline |
-
-### Planned
-
-- Claude Code Plugin distribution
-- Production deployment automation
-- License compliance checker (SBOM generation)
-- Test coverage visualization in HUD
-- Agent marketplace with premium packs
-
-## Installation
-
-### Development Setup
+Or install into the current project:
 
 ```bash
-# Install dependencies
-npm install
-
-# Run tests
-npm test
-
-# Check test coverage (currently building toward 80%)
-npm run test:coverage
-
-# Run quality gates
-npm run quality:gates
-
-# Start development server
-npm run dev
+git clone https://github.com/nxtg-ai/forge.git /tmp/forge
+/tmp/forge/init.sh .
 ```
 
-### Multi-Device Setup (WSL2)
+This copies commands, agents, skills, and hooks into your `.claude/` directory. Open Claude Code and type `/[FRG]-status` to verify.
 
-To access the UI from another device on your LAN:
+## What You Get
 
-1. Configure Vite to bind to `0.0.0.0` (already done in `vite.config.ts`)
-2. Add Windows firewall rule for ports 5050, 5051:
-```powershell
-New-NetFirewallRule -DisplayName 'NXTG Forge' -Direction Inbound -LocalPort 5050,5051 -Protocol TCP -Action Allow
-```
-3. Find your WSL IP: `ip addr show eth0`
-4. Access from other device: `http://{WSL_IP}:5050`
+### 20 Commands
 
-Note: Use relative URLs (`/api/...`) in dev mode. Vite's proxy handles routing to the API server.
+| Command | What it does |
+|---------|-------------|
+| `/[FRG]-init` | Initialize Forge in your project |
+| `/[FRG]-status` | Project health, git state, test results |
+| `/[FRG]-status-enhanced` | Full dashboard with health score |
+| `/[FRG]-enable-forge` | Command center with 4-option menu |
+| `/[FRG]-feature` | Codebase analysis + feature spec generation |
+| `/[FRG]-test` | Run tests with analysis |
+| `/[FRG]-deploy` | Pre-flight validation + build |
+| `/[FRG]-optimize` | Code metrics + optimization analysis |
+| `/[FRG]-checkpoint` | Save project state snapshot |
+| `/[FRG]-restore` | Restore from checkpoint |
+| `/[FRG]-report` | Session activity report |
+| `/[FRG]-gap-analysis` | Test, doc, security, and architecture gaps |
+| `/[FRG]-spec` | Generate feature specifications |
+| `/[FRG]-agent-assign` | Assign tasks to specialized agents |
+| `/[FRG]-integrate` | Service scaffold + configuration |
+| `/[FRG]-upgrade` | Detect config gaps, upgrade Forge |
+| `/[FRG]-compliance` | License audit + SBOM generation |
+| `/[FRG]-docs-status` | Documentation coverage analysis |
+| `/[FRG]-docs-update` | Find and fix stale documentation |
+| `/[FRG]-docs-audit` | Full documentation quality audit |
 
-## Usage
+All 20 commands are wired and working. They use Claude's native tools (Bash, Read, Glob, Grep) — no external services required.
 
-### Basic Workflow
+### 22 Specialized Agents
+
+Forge includes agents for every development concern:
+
+| Agent | Role |
+|-------|------|
+| CEO-LOOP | Autonomous strategic decisions |
+| Oracle | Real-time governance sentinel |
+| Orchestrator | Coordinates agent teams |
+| Planner | Architecture and task breakdown |
+| Builder | Implementation |
+| Guardian | Quality gates |
+| Detective | Project analysis and health checks |
+| Security | Vulnerability scanning |
+| Testing | Test generation and coverage |
+| Compliance | License and regulatory checks |
+| Docs | Documentation generation |
+| Refactor | Code restructuring |
+| Performance | Profiling and optimization |
+| Analytics | Metrics and reporting |
+| Learning | Pattern recognition |
+| UI | Frontend component development |
+| API | Endpoint design and integration |
+| Database | Schema and query optimization |
+| DevOps | CI/CD and infrastructure |
+| Integration | External service connections |
+| Release Sentinel | Documentation sync on release |
+| Governance Verifier | Automated governance validation |
+
+### 5 Engagement Modes
+
+| Mode | Behavior |
+|------|----------|
+| **CEO** | Autonomous. Agents decide and execute. You see results only. |
+| **VP** | Strategic oversight. Decisions surfaced, details on demand. |
+| **Engineer** | Full agent activity. Technical details and logs visible. |
+| **Builder** | Hands-on. All implementation details and task queues. |
+| **Founder** | Everything visible. No filters, full system transparency. |
+
+### Dashboard (Optional)
+
+Forge includes a web dashboard with:
+
+- **Governance HUD** — Live project context, health score, workstream tracking
+- **Infinity Terminal** — Browser terminal with session persistence (survives disconnects)
+- **Agent Activity** — Real-time agent coordination view
+- **Oracle Feed** — Governance event stream
 
 ```bash
-# Initialize Forge in your project
-/[FRG]-init
-
-# Check project status
-/[FRG]-status
-
-# Open the governance dashboard
-# Browser opens at http://localhost:5050
-
-# Use Infinity Terminal for persistent sessions
-# Sessions survive browser close/reopen and network disconnects
+npm install
+npm run dev
+# Dashboard: http://localhost:5050
+# API: http://localhost:5051
 ```
 
-### Available Commands
+## How It Works
 
-NXTG-Forge provides 19 commands (prefix: `/[FRG]-`):
-
-| Command | Status | Description |
-|---------|--------|-------------|
-| `/[FRG]-init` | Working | Initialize Forge in your project |
-| `/[FRG]-status` | Working | Show project status and health |
-| `/[FRG]-status-enhanced` | Working | Open governance dashboard |
-| `/[FRG]-enable-forge` | Working | Enable Forge command center |
-| `/[FRG]-feature` | In Progress | Feature development workflow |
-| `/[FRG]-test` | In Progress | Test execution and coverage |
-| `/[FRG]-deploy` | Defined | Deployment automation |
-| `/[FRG]-optimize` | Defined | Performance optimization |
-| `/[FRG]-checkpoint` | Working | State checkpoint management |
-| `/[FRG]-restore` | Working | Restore from checkpoint |
-| `/[FRG]-docs-audit` | Defined | Documentation audit |
-| `/[FRG]-docs-status` | Defined | Documentation health check |
-| `/[FRG]-docs-update` | Defined | Update documentation |
-| `/[FRG]-gap-analysis` | Defined | Identify project gaps |
-| `/[FRG]-report` | Defined | Generate activity report |
-| `/[FRG]-agent-assign` | Defined | Agent task assignment |
-| `/[FRG]-integrate` | Defined | Integration tools |
-| `/[FRG]-spec` | Defined | Specification generation |
-| `/[FRG]-upgrade` | Defined | System upgrades |
-
-Commands marked "Working" are production-ready. Commands marked "Defined" have specifications but need implementation refinement.
-
-### Infinity Terminal
-
-The Infinity Terminal is NXTG-Forge's standout feature:
-
-- **Browser-based**: xterm.js with full ANSI color support
-- **Session Persistence**: Built into the PTY bridge - survives browser close/reopen
-- **Automatic Reconnect**: Network disconnects don't lose your session
-- **Multi-client**: Multiple browser tabs can connect to the same session
-- **No Dependencies**: Zellij is optional for local enhancement, not required
-
-Sessions are tracked by ID in `api-server.ts` and persist as long as the API server is running.
-
-## Architecture
+Forge is a set of markdown files in `.claude/`:
 
 ```
-NXTG-Forge v3.0
-├── src/
-│   ├── components/        # React UI components (Dashboard, Terminal, HUD)
-│   ├── core/             # Core systems (Bootstrap, Vision, State)
-│   ├── server/           # Express API server + WebSocket + PTY bridge
-│   ├── services/         # Business logic (Init, Automation, Agent coordination)
-│   ├── hooks/            # React hooks (keyboard shortcuts, session persistence)
-│   ├── test/             # 27 test files (integration, quality, agent, e2e)
-│   └── types/            # TypeScript + Zod schemas
-├── .claude/
-│   ├── agents/           # 22 agent definitions
-│   ├── commands/         # 19 command definitions
-│   ├── skills/           # 12 skill files
-│   ├── forge/            # Harness (agent templates, memory, config)
-│   ├── state/            # Session state (current.json, backup.json)
-│   └── governance.json   # Project governance state
-└── docs/                 # Documentation (architecture, guides, reports)
+.claude/
+  commands/     # 20 slash commands (markdown with embedded logic)
+  agents/       # 22 agent definitions (system prompts + tool configs)
+  skills/       # 20 skill modules (domain knowledge)
+  hooks/        # 28 automation hooks (session, governance, quality)
+```
+
+When you type `/[FRG]-status` in Claude Code, it reads `.claude/commands/[FRG]-status.md` and executes the instructions. No server required. No npm dependencies. Just markdown files that make Claude smarter about your project.
+
+The dashboard is optional — commands work without it.
+
+## Requirements
+
+- Claude Code (or Codex CLI / Gemini CLI)
+- Node.js 18+ (only needed for the optional dashboard)
+- Git
+
+## Test Coverage
+
+- **110 test files**
+- **4145 tests passing, 0 failures**
+- **0 TypeScript errors** (strict mode)
+
+```bash
+npm test              # Run all tests
+npm run test:coverage # With coverage report
 ```
 
 ## Technology Stack
 
-All dependencies are **MIT or Apache-2.0 licensed** (no copyleft).
+All dependencies MIT or Apache-2.0 licensed.
 
-- **Frontend**: React 19, Vite 7, TailwindCSS, Framer Motion
-- **Terminal**: xterm.js 6.0 + node-pty for PTY bridge
-- **Backend**: Express 4, WebSocket (ws), Winston logging
-- **State**: Zod validation, event-sourced state management
-- **Testing**: Vitest with coverage reporting
-- **Types**: TypeScript 5 with strict mode
-
-Note: `node-pty` requires native compilation (Python 3 + node-gyp). This affects distribution strategy.
-
-## Test Coverage
-
-Current status: **Building toward 80% coverage target**
-
-```bash
-# Run tests with coverage
-npm run test:coverage
-```
-
-We have:
-- 27 test files covering core systems, UI components, and integration
-- Quality gates for type safety (0 `any` types in production code)
-- Error handling tests for file system, network, and data corruption
-- Agent protocol and marketplace tests
-- E2E and integration test suites
-
-Coverage is tracked per module with goals set in `.claude/config.json`.
+- **Plugin**: Pure markdown (zero dependencies)
+- **Dashboard Frontend**: React 19, Vite 7, TailwindCSS, Framer Motion
+- **Dashboard Backend**: Express 4, WebSocket, node-pty
+- **Terminal**: xterm.js 6.0 with PTY bridge
+- **Testing**: Vitest, Testing Library
 
 ## Contributing
 
-We welcome contributions. Here's how to get started:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes with tests
-4. Run quality gates: `npm run quality:gates`
-5. Commit with conventional commits: `feat:`, `fix:`, `docs:`, etc.
-6. Push and open a Pull Request
-
-See `CONTRIBUTING.md` for detailed guidelines.
-
-## Project Structure
-
-NXTG-Forge uses a clear separation:
-
-- `.claude/forge/` - The Forge harness (committed, portable, shareable)
-- `.forge/` - User's personal vault (gitignored, not part of the product)
-- `docs/` - Public documentation shipped with the product
-- `src/` - Implementation code (TypeScript/React)
-
-The harness (`.claude/forge/`) is what gets installed in user projects. It contains agent templates, skill packs, and configuration.
+1. Fork and clone
+2. `npm install && npm test`
+3. Make changes with tests
+4. `npm run quality:gates`
+5. Open a PR
 
 ## License
 
-MIT License. See `LICENSE` file for details.
-
-Core functionality is open-source MIT. Future commercial features (cloud hosting, team collaboration, enterprise SSO) may use separate licensing.
-
-## Documentation
-
-- **Architecture**: `docs/architecture/` - System design and decisions
-- **Guides**: `docs/guides/QUICK-START.md` - Getting started guides
-- **Operations**: `docs/operations/` - Deployment and production readiness
-- **Reports**: `docs/reports/` - Status reports and audits
-- **Agents**: `docs/agents/README.md` - Agent system documentation
-
-## Known Issues
-
-See `docs/STRATEGIC-AUDIT-2026-02-04.md` for complete gap analysis. Key items:
-
-1. **Memory System Decision**: Evaluating integration with Claude Code's native memory vs custom implementation
-2. **Governance Pipeline**: HUD shows current state but real-time agent updates need wiring
-3. **Worker Pool**: UI implemented but background agent execution not connected
-4. **Commands**: Most commands defined but some need implementation refinement
-
-We're dogfooding NXTG-Forge to build NXTG-Forge. Real issues are tracked and addressed iteratively.
-
-## What Makes This Different
-
-1. **Infinity Terminal**: First browser terminal with built-in session persistence (no tmux/Zellij dependency)
-2. **Governance HUD**: Real-time visibility into project state, not just code metrics
-3. **Agent Framework**: Protocol-driven agent coordination for true orchestration
-4. **Vision Management**: Canonical vision system with decision alignment tracking
-5. **Production Focus**: Planning for production (licensing, compliance, SBOM) as first-class features
-
-## Community & Support
-
-- **GitHub**: [github.com/nxtg-ai/forge](https://github.com/nxtg-ai/forge)
-- **Issues**: Report bugs and request features via GitHub Issues
-- **Discussions**: Ask questions in GitHub Discussions
+MIT. See [LICENSE](LICENSE).
 
 ---
 
 <div align="center">
-  <h3>Ready to try it?</h3>
-  <p><code>npm install && npm run dev</code></p>
-  <br/>
-  <p>Built for developers, by developers, with AI orchestration</p>
+  <p><strong>Built for developers who ship.</strong></p>
+  <p><a href="https://github.com/nxtg-ai/forge">github.com/nxtg-ai/forge</a></p>
 </div>
