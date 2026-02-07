@@ -68,4 +68,45 @@ describe("detectBackend", () => {
     const backend = await detectBackend();
     expect(backend.name).toBe("node-worker");
   });
+
+  it("falls back to auto-detect for unknown FORGE_BACKEND value", async () => {
+    process.env.FORGE_BACKEND = "nonexistent-backend";
+    delete process.env.CLAUDE_CODE;
+    delete process.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS;
+    const backend = await detectBackend();
+    // Should fall through to node-worker (nothing else available)
+    expect(backend.name).toBe("node-worker");
+  });
+
+  it("detects Claude Code via CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS env", async () => {
+    delete process.env.FORGE_BACKEND;
+    delete process.env.CLAUDE_CODE;
+    process.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1";
+    const backend = await detectBackend();
+    expect(backend.name).toBe("claude-code");
+  });
+
+  it("detects Codex when codex CLI is available", async () => {
+    delete process.env.FORGE_BACKEND;
+    delete process.env.CLAUDE_CODE;
+    delete process.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS;
+    mockExecSync.mockImplementation((cmd: string) => {
+      if (cmd === "which codex") return "/usr/bin/codex\n";
+      throw new Error("not found");
+    });
+    const backend = await detectBackend();
+    expect(backend.name).toBe("codex");
+  });
+
+  it("detects Gemini when gemini CLI is available but codex is not", async () => {
+    delete process.env.FORGE_BACKEND;
+    delete process.env.CLAUDE_CODE;
+    delete process.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS;
+    mockExecSync.mockImplementation((cmd: string) => {
+      if (cmd === "which gemini") return "/usr/bin/gemini\n";
+      throw new Error("not found");
+    });
+    const backend = await detectBackend();
+    expect(backend.name).toBe("gemini");
+  });
 });

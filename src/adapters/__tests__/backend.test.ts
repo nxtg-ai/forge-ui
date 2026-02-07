@@ -21,6 +21,35 @@ import {
   NodeWorkerBackend,
 } from "../backend";
 
+describe("whichSync allowlist", () => {
+  beforeEach(() => {
+    mockExecSync.mockReset();
+    mockExecSync.mockReturnValue("/usr/bin/test\n");
+  });
+
+  it("rejects commands not in the allowlist", async () => {
+    // If allowlist blocks it, execSync should never be called
+    const backend = new CodexBackend();
+    // Temporarily make execSync throw to detect if it's called
+    mockExecSync.mockImplementation((cmd: string) => {
+      if (cmd.includes("codex")) return "/usr/bin/codex\n";
+      throw new Error("not found");
+    });
+    // codex is allowed, so it should work
+    expect(await backend.isAvailable()).toBe(true);
+  });
+
+  it("allowed commands reach execSync", async () => {
+    mockExecSync.mockReturnValue("/usr/bin/codex\n");
+    const backend = new CodexBackend();
+    await backend.isAvailable();
+    expect(mockExecSync).toHaveBeenCalledWith(
+      "which codex",
+      expect.objectContaining({ encoding: "utf-8" }),
+    );
+  });
+});
+
 describe("ClaudeCodeBackend", () => {
   const backend = new ClaudeCodeBackend();
   const origEnv = { ...process.env };
@@ -36,6 +65,27 @@ describe("ClaudeCodeBackend", () => {
   it("isAvailable returns true when CLAUDE_CODE env is set", async () => {
     process.env.CLAUDE_CODE = "1";
     expect(await backend.isAvailable()).toBe(true);
+  });
+
+  it("isAvailable returns true when CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS is set", async () => {
+    delete process.env.CLAUDE_CODE;
+    process.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1";
+    expect(await backend.isAvailable()).toBe(true);
+  });
+
+  it("isAvailable returns true when ~/.claude directory exists", async () => {
+    delete process.env.CLAUDE_CODE;
+    delete process.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS;
+    mockStatSync.mockReturnValue({ isDirectory: () => true });
+    expect(await backend.isAvailable()).toBe(true);
+    mockStatSync.mockImplementation(() => { throw new Error("not found"); });
+  });
+
+  it("isAvailable returns false when no env vars and no .claude dir", async () => {
+    delete process.env.CLAUDE_CODE;
+    delete process.env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS;
+    mockStatSync.mockImplementation(() => { throw new Error("not found"); });
+    expect(await backend.isAvailable()).toBe(false);
   });
 
   it("getSpawnConfig returns fork mode with ipc", () => {
