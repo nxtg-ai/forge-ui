@@ -501,7 +501,7 @@ describe("EngagementModeSelector", () => {
         const ceoOption = screen.getByTestId("engagement-mode-ceo");
         const label = ceoOption.getAttribute("aria-label");
         expect(label).toContain("CEO");
-        expect(label).toContain("Health");
+        expect(label).toContain("Autonomous");
       });
     });
   });

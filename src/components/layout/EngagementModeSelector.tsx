@@ -76,27 +76,27 @@ const MODE_CONFIG: Record<
   ceo: {
     label: "CEO",
     icon: <Target className="w-4 h-4" />,
-    description: "Health + Progress + Critical blockers only",
+    description: "Autonomous mode. Agents decide and execute. You see results only.",
   },
   vp: {
     label: "VP",
     icon: <BarChart3 className="w-4 h-4" />,
-    description: "Strategic oversight + Recent decisions + Top 3 blockers",
+    description: "Strategic oversight. Decisions surfaced, details on demand.",
   },
   engineer: {
     label: "Engineer",
     icon: <Code2 className="w-4 h-4" />,
-    description: "Full agent activity + Technical details",
+    description: "Full agent activity. Technical details and logs visible.",
   },
   builder: {
     label: "Builder",
     icon: <Terminal className="w-4 h-4" />,
-    description: "Implementation tasks + All details",
+    description: "Hands-on mode. All implementation details and task queues.",
   },
   founder: {
     label: "Founder",
     icon: <Brain className="w-4 h-4" />,
-    description: "Everything visible, no filters",
+    description: "Everything visible. No filters, full system transparency.",
   },
 };
 

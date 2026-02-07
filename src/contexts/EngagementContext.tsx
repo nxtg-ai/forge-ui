@@ -34,7 +34,8 @@ interface EngagementContextValue {
 
   // Computed helpers
   visibilityLevels: EngagementMode[];
-  isMinimalMode: boolean; // CEO mode - minimal details
+  isMinimalMode: boolean; // CEO mode - autonomous, results-only
+  isAutonomousMode: boolean; // CEO mode - agents decide and execute, interrupt only on critical
   isFullAccessMode: boolean; // Founder mode - full access
   canSee: (requiredMode: EngagementMode) => boolean;
 }
@@ -129,8 +130,9 @@ export const EngagementProvider: React.FC<EngagementProviderProps> = ({
       .map(([mode]) => mode as EngagementMode);
   }, [mode]);
 
-  // Computed: Check if current mode is CEO (minimal detail mode)
+  // Computed: Check if current mode is CEO (autonomous, results-only)
   const isMinimalMode = mode === "ceo";
+  const isAutonomousMode = mode === "ceo";
 
   // Computed: Check if current mode is Founder (full access mode)
   const isFullAccessMode = mode === "founder";
@@ -150,6 +152,7 @@ export const EngagementProvider: React.FC<EngagementProviderProps> = ({
     setAutomationLevel,
     visibilityLevels,
     isMinimalMode,
+    isAutonomousMode,
     isFullAccessMode,
     canSee,
   };
