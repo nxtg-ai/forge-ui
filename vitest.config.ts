@@ -46,7 +46,9 @@ export default defineConfig({
       '@core': path.resolve(__dirname, './src/core'),
       '@types': path.resolve(__dirname, './src/types'),
       '@utils': path.resolve(__dirname, './src/utils'),
-      '@test': path.resolve(__dirname, './src/test')
+      '@test': path.resolve(__dirname, './src/test'),
+      // Mock @sentry/node for tests (not installed as dependency)
+      '@sentry/node': path.resolve(__dirname, './src/test/mocks/sentry.ts')
     }
   }
 });

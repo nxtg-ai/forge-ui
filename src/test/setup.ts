@@ -32,6 +32,12 @@ vi.mock("fs", () => ({
   },
 }));
 
+// Mock Sentry monitoring
+vi.mock("../monitoring/sentry", () => ({
+  captureException: vi.fn(),
+  initSentry: vi.fn(),
+}));
+
 // Extend expect matchers
 expect.extend({
   toBeValidZodSchema(schema: any, value: any) {
