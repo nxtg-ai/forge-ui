@@ -277,7 +277,7 @@ export function useCommandExecution() {
     const response = await apiClient.executeCommand(command);
 
     if (response.success && response.data) {
-      setLastResult(response.data.result);
+      setLastResult(response.data.output);
       setHistory((prev) => [command, ...prev]);
     } else {
       setError(response.error || "Command execution failed");

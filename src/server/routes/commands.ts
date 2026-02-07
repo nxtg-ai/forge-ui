@@ -17,6 +17,15 @@ import { StatusService } from "../../services/status-service";
 
 const logger = getLogger("routes:commands");
 
+/** Extract output from execSync errors (which include stdout/stderr/message) */
+function getExecOutput(error: unknown): string {
+  if (error && typeof error === "object") {
+    const e = error as { stdout?: string; stderr?: string; message?: string };
+    return e.stdout || e.stderr || e.message || "Unknown error";
+  }
+  return String(error);
+}
+
 export function createCommandRoutes(ctx: RouteContext): express.Router {
   const router = express.Router();
 
@@ -128,8 +137,8 @@ export function createCommandRoutes(ctx: RouteContext): express.Router {
           output,
           data: { passed, failed, total: passed + failed },
         };
-      } catch (error: any) {
-        const output = error.stdout || error.stderr || error.message;
+      } catch (error: unknown) {
+        const output = getExecOutput(error);
         const failMatch = output.match(/(\d+) failed/);
         const passMatch = output.match(/(\d+) passed/);
         return {
@@ -152,10 +161,10 @@ export function createCommandRoutes(ctx: RouteContext): express.Router {
           timeout: 60000,
           encoding: "utf-8",
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         return {
           success: false,
-          output: `Pre-flight failed: TypeScript errors\n${error.stdout || error.message}`,
+          output: `Pre-flight failed: TypeScript errors\n${getExecOutput(error)}`,
         };
       }
       // Build
@@ -166,10 +175,10 @@ export function createCommandRoutes(ctx: RouteContext): express.Router {
           encoding: "utf-8",
         });
         return { success: true, output, data: { stage: "build-complete" } };
-      } catch (error: any) {
+      } catch (error: unknown) {
         return {
           success: false,
-          output: `Build failed:\n${error.stdout || error.message}`,
+          output: `Build failed:\n${getExecOutput(error)}`,
         };
       }
     },
@@ -271,8 +280,8 @@ export function createCommandRoutes(ctx: RouteContext): express.Router {
           output: lines.join("\n"),
           data: { branch, changedFiles: status.split("\n").filter(Boolean).length },
         };
-      } catch (error: any) {
-        return { success: false, output: error.message };
+      } catch (error: unknown) {
+        return { success: false, output: getExecOutput(error) };
       }
     },
 
@@ -297,8 +306,8 @@ export function createCommandRoutes(ctx: RouteContext): express.Router {
           unstaged || "(no unstaged changes)",
         ];
         return { success: true, output: lines.join("\n") };
-      } catch (error: any) {
-        return { success: false, output: error.message };
+      } catch (error: unknown) {
+        return { success: false, output: getExecOutput(error) };
       }
     },
 
@@ -311,8 +320,8 @@ export function createCommandRoutes(ctx: RouteContext): express.Router {
           encoding: "utf-8",
         });
         return { success: true, output };
-      } catch (error: any) {
-        return { success: false, output: error.message };
+      } catch (error: unknown) {
+        return { success: false, output: getExecOutput(error) };
       }
     },
 
@@ -327,8 +336,8 @@ export function createCommandRoutes(ctx: RouteContext): express.Router {
           encoding: "utf-8",
         });
         return { success: true, output: "TypeScript: 0 errors. All types check out." };
-      } catch (error: any) {
-        const output = error.stdout || error.stderr || error.message;
+      } catch (error: unknown) {
+        const output = getExecOutput(error);
         const errorCount = (output.match(/error TS/g) || []).length;
         return {
           success: false,
@@ -348,8 +357,8 @@ export function createCommandRoutes(ctx: RouteContext): express.Router {
           maxBuffer: 1024 * 1024 * 5,
         });
         return { success: true, output: output || "ESLint: No issues found." };
-      } catch (error: any) {
-        const output = error.stdout || error.stderr || error.message;
+      } catch (error: unknown) {
+        const output = getExecOutput(error);
         return { success: false, output };
       }
     },
@@ -368,16 +377,18 @@ export function createCommandRoutes(ctx: RouteContext): express.Router {
           return { success: true, output: "All dependencies are up to date." };
         }
         const lines = entries.map(
-          ([pkg, info]: [string, any]) =>
-            `${pkg}: ${info.current} → ${info.latest} (wanted: ${info.wanted})`,
+          ([pkg, info]) => {
+            const dep = info as { current?: string; latest?: string; wanted?: string };
+            return `${pkg}: ${dep.current} → ${dep.latest} (wanted: ${dep.wanted})`;
+          },
         );
         return {
           success: true,
           output: `${entries.length} outdated package(s):\n\n${lines.join("\n")}`,
           data: { outdatedCount: entries.length },
         };
-      } catch (error: any) {
-        return { success: false, output: error.message };
+      } catch (error: unknown) {
+        return { success: false, output: getExecOutput(error) };
       }
     },
 
@@ -391,8 +402,8 @@ export function createCommandRoutes(ctx: RouteContext): express.Router {
           maxBuffer: 1024 * 1024 * 5,
         });
         return { success: true, output };
-      } catch (error: any) {
-        return { success: false, output: error.stdout || error.message };
+      } catch (error: unknown) {
+        return { success: false, output: getExecOutput(error) };
       }
     },
 
@@ -411,8 +422,8 @@ export function createCommandRoutes(ctx: RouteContext): express.Router {
           },
         );
         return { success: true, output };
-      } catch (error: any) {
-        return { success: false, output: error.stdout || error.stderr || error.message };
+      } catch (error: unknown) {
+        return { success: false, output: getExecOutput(error) };
       }
     },
 
@@ -448,8 +459,8 @@ export function createCommandRoutes(ctx: RouteContext): express.Router {
           `Disk:     ${diskUsage}`,
         ];
         return { success: true, output: lines.join("\n") };
-      } catch (error: any) {
-        return { success: false, output: error.message };
+      } catch (error: unknown) {
+        return { success: false, output: getExecOutput(error) };
       }
     },
   };

@@ -52,6 +52,18 @@ export interface PaginationParams {
   sortOrder?: "asc" | "desc";
 }
 
+// Command execution response data (from POST /commands/execute)
+export interface CommandExecutionData {
+  command: string;
+  output: string;
+  data?: unknown;
+  redirect?: string;
+  branch?: string;
+  changedFiles?: number;
+  errorCount?: number;
+  outdatedCount?: number;
+}
+
 // WebSocket message types
 export type WSMessageType =
   | "agent.activity"
@@ -181,10 +193,13 @@ export class ApiClient {
   async getAgentActivities(
     params?: PaginationParams,
   ): Promise<ApiResponse<AgentActivity[]>> {
-    const queryString = new URLSearchParams(
-      params as Record<string, string>,
-    ).toString();
-    return this.request<AgentActivity[]>(`/agents/activities?${queryString}`);
+    const searchParams = new URLSearchParams();
+    if (params) {
+      for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined) searchParams.set(key, String(value));
+      }
+    }
+    return this.request<AgentActivity[]>(`/agents/activities?${searchParams}`);
   }
 
   async getActiveAgents(): Promise<ApiResponse<ProjectState["activeAgents"]>> {
@@ -193,7 +208,7 @@ export class ApiClient {
 
   async assignAgentTask(
     agentId: string,
-    task: Record<string, unknown>,
+    task: { name: string; description?: string; priority?: string; payload?: unknown },
   ): Promise<ApiResponse<{ taskId: string }>> {
     return this.request<{ taskId: string }>(`/agents/${agentId}/tasks`, {
       method: "POST",
@@ -205,9 +220,9 @@ export class ApiClient {
 
   async executeCommand(
     command: Command | string,
-  ): Promise<ApiResponse<{ command: string; output: string; [key: string]: unknown }>> {
+  ): Promise<ApiResponse<CommandExecutionData>> {
     const commandId = typeof command === "string" ? command : command.id;
-    return this.request<{ command: string; output: string; [key: string]: unknown }>("/commands/execute", {
+    return this.request<CommandExecutionData>("/commands/execute", {
       method: "POST",
       body: JSON.stringify({ command: commandId }),
     });

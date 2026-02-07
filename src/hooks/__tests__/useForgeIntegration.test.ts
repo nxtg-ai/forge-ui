@@ -342,7 +342,7 @@ describe("useCommandExecution", () => {
 
     mockApiClient.executeCommand.mockResolvedValue({
       success: true,
-      data: { result: "Success" },
+      data: { command: "test", output: "Success" },
     });
 
     const { result } = renderHook(() => useCommandExecution());
