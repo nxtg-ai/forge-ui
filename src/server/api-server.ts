@@ -91,20 +91,14 @@ const initService = new InitService(projectRoot);
 const statusService = new StatusService(projectRoot);
 const complianceService = new ComplianceService(projectRoot);
 
-// ============= Worker Pool (Lazy) =============
+// ============= Worker Pool (Disabled - pending multi-framework adapter) =============
+// The worker pool spawns Node child processes that don't exist yet.
+// Claude Code uses native Agent Teams (Task tool + TeamCreate) instead.
+// This will be re-enabled with a proper adapter layer for Codex/Gemini/generic CLIs.
+// See governance workstream: ws-agent-adapter
 
 let workerPool: AgentWorkerPool | null = null;
-function getWorkerPool(): AgentWorkerPool {
-  if (!workerPool) {
-    workerPool = new AgentWorkerPool({
-      initialWorkers: 5,
-      maxWorkers: 20,
-      minWorkers: 2,
-    });
-    workerPool.on("event", (event) => broadcast("worker.event", event));
-    workerPool.initialize();
-    logger.info("[API] Worker pool initialized");
-  }
+function getWorkerPool(): AgentWorkerPool | null {
   return workerPool;
 }
 
@@ -420,8 +414,8 @@ process.on("SIGTERM", async () => {
     await flushSentry(2000);
   }
 
-  if (workerPool) {
-    await workerPool.shutdown();
+  if (workerPool !== null) {
+    await (workerPool as AgentWorkerPool).shutdown();
     logger.info("Worker pool shutdown complete");
   }
 

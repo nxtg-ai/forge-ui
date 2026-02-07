@@ -21,6 +21,13 @@ export function createWorkerRoutes(ctx: RouteContext): express.Router {
   router.post("/init", async (req, res) => {
     try {
       const pool = ctx.getWorkerPool();
+      if (!pool) {
+        return res.status(503).json({
+          success: false,
+          error: "Worker pool disabled — use Claude Code Agent Teams instead",
+          timestamp: new Date().toISOString(),
+        });
+      }
       res.json({
         success: true,
         data: pool.getStatus(),
@@ -178,6 +185,13 @@ export function createWorkerRoutes(ctx: RouteContext): express.Router {
   router.post("/tasks", async (req, res) => {
     try {
       const pool = ctx.getWorkerPool();
+      if (!pool) {
+        return res.status(503).json({
+          success: false,
+          error: "Worker pool disabled — use Claude Code Agent Teams instead",
+          timestamp: new Date().toISOString(),
+        });
+      }
       const {
         type,
         priority,
@@ -314,6 +328,13 @@ export function createWorkerRoutes(ctx: RouteContext): express.Router {
   router.post("/scale/up", async (req, res) => {
     try {
       const pool = ctx.getWorkerPool();
+      if (!pool) {
+        return res.status(503).json({
+          success: false,
+          error: "Worker pool disabled — use Claude Code Agent Teams instead",
+          timestamp: new Date().toISOString(),
+        });
+      }
       const { count } = req.body;
       await pool.scaleUp(count || 2);
       res.json({

@@ -32,7 +32,7 @@ export interface RouteContext {
   initService: InstanceType<typeof InitService>;
   statusService: InstanceType<typeof StatusService>;
   complianceService: InstanceType<typeof ComplianceService>;
-  getWorkerPool: () => AgentWorkerPool;
+  getWorkerPool: () => AgentWorkerPool | null;
   broadcast: (type: string, payload: unknown) => void;
   getWsClientCount: () => number;
 }

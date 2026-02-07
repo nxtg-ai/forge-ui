@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "timestamp": "2026-02-07T17:05:06.451Z",
+  "timestamp": "2026-02-07T18:10:07.607Z",
   "constitution": {
     "directive": "Ship NXTG-Forge as a production-ready developer tool with proper licensing, deployment strategy, and governance visibility",
     "vision": [
@@ -334,6 +334,55 @@
           "status": "completed"
         }
       ]
+    },
+    {
+      "id": "ws-agent-adapter",
+      "name": "Multi-Framework Agent Adapter",
+      "status": "planned",
+      "priority": "high",
+      "description": "Abstract the agent orchestration layer so NXTG-Forge can drive Claude Code (native Agent Teams), OpenAI Codex CLI, and Google Gemini CLI through a unified adapter interface. Claude backend uses native Task/TeamCreate tools; Codex/Gemini backends use the existing AgentWorkerPool with framework-specific spawn commands.",
+      "tasks": [
+        {
+          "id": "aa1",
+          "name": "Define AgentBackend adapter interface (spawn, status, message, shutdown)",
+          "status": "planned"
+        },
+        {
+          "id": "aa2",
+          "name": "Implement ClaudeCodeBackend (wraps native Agent Teams)",
+          "status": "planned"
+        },
+        {
+          "id": "aa3",
+          "name": "Refactor AgentWorkerPool into GenericCLIBackend",
+          "status": "planned"
+        },
+        {
+          "id": "aa4",
+          "name": "Implement CodexBackend extending GenericCLIBackend",
+          "status": "planned"
+        },
+        {
+          "id": "aa5",
+          "name": "Implement GeminiBackend extending GenericCLIBackend",
+          "status": "planned"
+        },
+        {
+          "id": "aa6",
+          "name": "Add backend auto-detection (detect installed CLI tools)",
+          "status": "planned"
+        },
+        {
+          "id": "aa7",
+          "name": "Update worker routes to use adapter interface",
+          "status": "planned"
+        },
+        {
+          "id": "aa8",
+          "name": "Testing and documentation",
+          "status": "planned"
+        }
+      ]
     }
   ],
   "sentinelLog": [
@@ -423,13 +472,564 @@
       "severity": "low",
       "source": "api-server",
       "message": "Server started on branch main, 3 uncommitted files, health: 91/100"
+    },
+    {
+      "id": "sentinel-1770484092112-5jf8ab",
+      "timestamp": 1770484092112,
+      "type": "INFO",
+      "severity": "low",
+      "source": "api-server",
+      "message": "Server started on branch main, 2 uncommitted files, health: 94/100"
+    },
+    {
+      "id": "sentinel-1770485973622-7ukouh",
+      "timestamp": 1770485973622,
+      "type": "INFO",
+      "severity": "low",
+      "source": "api-server",
+      "message": "Server started on branch main, 17 uncommitted files, health: 70/100"
+    },
+    {
+      "id": "sentinel-1770486686389-0bvx6c",
+      "timestamp": 1770486686389,
+      "type": "INFO",
+      "severity": "low",
+      "source": "api-server",
+      "message": "Server started on branch main, 15 uncommitted files, health: 70/100"
+    },
+    {
+      "id": "sentinel-1770486721947-csr8au",
+      "timestamp": 1770486721947,
+      "type": "INFO",
+      "severity": "low",
+      "source": "api-server",
+      "message": "Server started on branch main, 11 uncommitted files, health: 70/100"
+    },
+    {
+      "id": "oracle-1770486771000-1267570",
+      "timestamp": 1770486771000,
+      "type": "SUCCESS",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session completed (0 files modified)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486771000-1267624",
+      "timestamp": 1770486771000,
+      "type": "INFO",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session started on branch main (7 uncommitted files)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486823000-1268617",
+      "timestamp": 1770486823000,
+      "type": "SUCCESS",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session completed (0 files modified)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486824000-1268671",
+      "timestamp": 1770486824000,
+      "type": "INFO",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session started on branch main (1 uncommitted files)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486831000-1268872",
+      "timestamp": 1770486831000,
+      "type": "SUCCESS",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session completed (0 files modified)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486831000-1268925",
+      "timestamp": 1770486831000,
+      "type": "INFO",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session started on branch main (1 uncommitted files)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486847000-1269291",
+      "timestamp": 1770486847000,
+      "type": "SUCCESS",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session completed (0 files modified)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486847000-1269345",
+      "timestamp": 1770486847000,
+      "type": "INFO",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session started on branch main (1 uncommitted files)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486855000-1269548",
+      "timestamp": 1770486855000,
+      "type": "SUCCESS",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session completed (0 files modified)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486855000-1269601",
+      "timestamp": 1770486855000,
+      "type": "INFO",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session started on branch main (1 uncommitted files)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486859000-1269692",
+      "timestamp": 1770486859000,
+      "type": "SUCCESS",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session completed (0 files modified)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486859000-1269748",
+      "timestamp": 1770486859000,
+      "type": "INFO",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session started on branch main (1 uncommitted files)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486864000-1269881",
+      "timestamp": 1770486864000,
+      "type": "SUCCESS",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session completed (0 files modified)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486864000-1269935",
+      "timestamp": 1770486864000,
+      "type": "INFO",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session started on branch main (1 uncommitted files)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486868000-1270033",
+      "timestamp": 1770486868000,
+      "type": "SUCCESS",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session completed (0 files modified)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486868000-1270090",
+      "timestamp": 1770486868000,
+      "type": "INFO",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session started on branch main (1 uncommitted files)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486872000-1270212",
+      "timestamp": 1770486872000,
+      "type": "SUCCESS",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session completed (0 files modified)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486872000-1270268",
+      "timestamp": 1770486872000,
+      "type": "INFO",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session started on branch main (1 uncommitted files)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486875000-1270393",
+      "timestamp": 1770486875000,
+      "type": "SUCCESS",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session completed (0 files modified)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486875000-1270447",
+      "timestamp": 1770486875000,
+      "type": "INFO",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session started on branch main (1 uncommitted files)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486879000-1270537",
+      "timestamp": 1770486879000,
+      "type": "SUCCESS",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session completed (0 files modified)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486879000-1270591",
+      "timestamp": 1770486879000,
+      "type": "INFO",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session started on branch main (1 uncommitted files)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486883000-1270695",
+      "timestamp": 1770486883000,
+      "type": "SUCCESS",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session completed (0 files modified)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486883000-1270749",
+      "timestamp": 1770486883000,
+      "type": "INFO",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session started on branch main (1 uncommitted files)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486887000-1270877",
+      "timestamp": 1770486887000,
+      "type": "SUCCESS",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session completed (0 files modified)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486888000-1270931",
+      "timestamp": 1770486888000,
+      "type": "INFO",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session started on branch main (1 uncommitted files)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486891000-1271059",
+      "timestamp": 1770486891000,
+      "type": "SUCCESS",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session completed (0 files modified)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486891000-1271112",
+      "timestamp": 1770486891000,
+      "type": "INFO",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session started on branch main (1 uncommitted files)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486895000-1271212",
+      "timestamp": 1770486895000,
+      "type": "SUCCESS",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session completed (0 files modified)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486895000-1271293",
+      "timestamp": 1770486895000,
+      "type": "INFO",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session started on branch main (1 uncommitted files)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770486898000-1271351",
+      "timestamp": 1770486898000,
+      "type": "SUCCESS",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session completed (0 files modified)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770487130000-1272614",
+      "timestamp": 1770487130000,
+      "type": "INFO",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session started on branch main (1 uncommitted files)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770487134000-1272772",
+      "timestamp": 1770487134000,
+      "type": "SUCCESS",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session completed (0 files modified)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770487134000-1272826",
+      "timestamp": 1770487134000,
+      "type": "INFO",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session started on branch main (1 uncommitted files)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770487137000-1272927",
+      "timestamp": 1770487137000,
+      "type": "SUCCESS",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session completed (0 files modified)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770487137000-1272980",
+      "timestamp": 1770487137000,
+      "type": "INFO",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session started on branch main (1 uncommitted files)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "oracle-1770487141000-1273064",
+      "timestamp": 1770487141000,
+      "type": "SUCCESS",
+      "severity": "low",
+      "category": "session",
+      "source": "forge-oracle",
+      "message": "Session completed (0 files modified)",
+      "context": {},
+      "actionRequired": false
+    },
+    {
+      "id": "sentinel-1770487145981-4kuaps",
+      "timestamp": 1770487145981,
+      "type": "INFO",
+      "severity": "low",
+      "source": "api-server",
+      "message": "Server started on branch main, 1 uncommitted files, health: 97/100"
+    },
+    {
+      "id": "sentinel-1770487174147-ahiox",
+      "timestamp": 1770487174147,
+      "type": "INFO",
+      "source": "session-hook",
+      "message": "Session started on branch main (3 uncommitted files)",
+      "severity": "low"
+    },
+    {
+      "id": "sentinel-1770487185369-4xgmjq",
+      "timestamp": 1770487185369,
+      "type": "INFO",
+      "severity": "low",
+      "source": "api-server",
+      "message": "Server started on branch main, 4 uncommitted files, health: 88/100"
+    },
+    {
+      "id": "sentinel-1770487242355-h3sbx",
+      "timestamp": 1770487242355,
+      "type": "SUCCESS",
+      "source": "session-hook",
+      "message": "Session completed (0 files modified)",
+      "severity": "low"
+    },
+    {
+      "id": "sentinel-1770487350543-s0sjpo",
+      "timestamp": 1770487350543,
+      "type": "INFO",
+      "source": "session-hook",
+      "message": "Session started on branch main (3 uncommitted files)",
+      "severity": "low"
+    },
+    {
+      "id": "sentinel-1770487388820-99829t",
+      "timestamp": 1770487388820,
+      "type": "SUCCESS",
+      "source": "session-hook",
+      "message": "Session completed (0 files modified)",
+      "severity": "low"
+    },
+    {
+      "id": "sentinel-1770487519034-k4q7wb",
+      "timestamp": 1770487519034,
+      "type": "INFO",
+      "source": "session-hook",
+      "message": "Session started on branch main (3 uncommitted files)",
+      "severity": "low"
+    },
+    {
+      "id": "sentinel-1770487541791-26bbv7",
+      "timestamp": 1770487541791,
+      "type": "SUCCESS",
+      "source": "session-hook",
+      "message": "Session completed (0 files modified)",
+      "severity": "low"
+    },
+    {
+      "id": "sentinel-1770487566442-bi2jib",
+      "timestamp": 1770487566442,
+      "type": "INFO",
+      "source": "session-hook",
+      "message": "Session started on branch main (3 uncommitted files)",
+      "severity": "low"
+    },
+    {
+      "id": "sentinel-1770487589371-w9faba",
+      "timestamp": 1770487589371,
+      "type": "SUCCESS",
+      "source": "session-hook",
+      "message": "Session completed (0 files modified)",
+      "severity": "low"
+    },
+    {
+      "id": "sentinel-1770487629666-kr71k",
+      "timestamp": 1770487629666,
+      "type": "INFO",
+      "source": "session-hook",
+      "message": "Session started on branch main (3 uncommitted files)",
+      "severity": "low"
+    },
+    {
+      "id": "sentinel-1770487672558-ymg7ea",
+      "timestamp": 1770487672558,
+      "type": "INFO",
+      "severity": "low",
+      "source": "api-server",
+      "message": "Server started on branch main, 3 uncommitted files, health: 91/100"
+    },
+    {
+      "id": "sentinel-1770487784439-1uxrz",
+      "timestamp": 1770487784439,
+      "type": "INFO",
+      "severity": "low",
+      "source": "api-server",
+      "message": "Server started on branch main, 8 uncommitted files, health: 76/100"
+    },
+    {
+      "id": "sentinel-1770487807607-wb616e",
+      "timestamp": 1770487807607,
+      "type": "INFO",
+      "severity": "low",
+      "source": "api-server",
+      "message": "Server started on branch main, 6 uncommitted files, health: 82/100"
     }
   ],
   "metadata": {
     "sessionId": "2026-02-04-strategic-audit",
     "projectPath": "/home/axw/projects/NXTG-Forge/v3",
     "forgeVersion": "3.0.0",
-    "lastSync": "2026-02-07T17:05:06.451Z",
-    "checksum": "7939c61f11aeb532"
+    "lastSync": "2026-02-07T18:10:07.607Z",
+    "checksum": "df5002b2c956ecfe"
   }
 }
