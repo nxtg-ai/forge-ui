@@ -1,6 +1,9 @@
 {
   "version": "3.0.0",
   "theme": "dark",
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
   "editor": {
     "tab_size": 2,
     "insert_spaces": true,

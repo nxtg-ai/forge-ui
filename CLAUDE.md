@@ -49,9 +49,34 @@ Remote Device → http://192.168.1.206:5050/api/* → Vite Proxy → localhost:5
 ### Core Principles (from USER-CRITICAL-INSTRUCTIONS.md)
 
 1. **Dog-Food or Die** - Use Claude Code's native capabilities, not TypeScript meta-services
-2. **Parallel Agents** - Launch up to 20 agents in parallel with multiple Task calls in ONE message
-3. **Real Logs, No Mocking** - QA sees real web logs, no simulated data
-4. **Everything to Memory** - Store all user feedback/corrections persistently
+2. **Agent Teams First** - For multi-file features, reviews, and debugging: spawn agent teams with specialized teammates, not sequential subagents. Teams talk to each other, challenge findings, and self-coordinate
+3. **Parallel Agents** - Launch up to 20 agents in parallel with multiple Task calls in ONE message
+4. **Real Logs, No Mocking** - QA sees real web logs, no simulated data
+5. **Everything to Memory** - Store all user feedback/corrections persistently
+
+### Agent Teams (Always Active)
+
+NXTG-Forge has Agent Teams permanently enabled (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in `.claude/settings.json`). This is a super-human capability — use it aggressively.
+
+**When to spawn a team (default for non-trivial work):**
+- Features touching 3+ files → builder + tester + reviewer teammates
+- Code reviews → security + performance + coverage teammates in parallel
+- Debugging unclear issues → competing hypothesis teammates that debate each other
+- `/frg-gap-analysis` → 4 teammates analyzing test/doc/security/architecture gaps simultaneously
+
+**Team patterns for NXTG-Forge:**
+| Command | Team Structure |
+|---------|---------------|
+| `/frg-feature` | Lead plans → builder implements → tester writes tests → security reviews |
+| `/frg-gap-analysis` | 4 teammates: test gaps, doc gaps, security gaps, arch gaps |
+| Health Check | 3 teammates run vitest, tsc, npm audit simultaneously |
+| Code review | 3 reviewers: security lens, performance lens, test coverage lens |
+
+**Rules for teammates:**
+- Each teammate owns **separate files** — never two teammates editing the same file
+- Use **delegate mode** (Shift+Tab) when the lead should only coordinate, not code
+- Use **plan approval** for risky changes — teammate plans, lead approves before implementation
+- CLAUDE.md is automatically loaded by all teammates — project context is shared
 
 ### Before Making Claims About This Codebase
 
