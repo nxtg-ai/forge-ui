@@ -32,11 +32,16 @@ vi.mock("fs", () => ({
   },
 }));
 
-// Mock Sentry monitoring
-vi.mock("../monitoring/sentry", () => ({
-  captureException: vi.fn(),
-  initSentry: vi.fn(),
-}));
+// Mock Sentry monitoring - use importOriginal to preserve all exports
+vi.mock("../monitoring/sentry", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    // Override only specific functions for general tests
+    captureException: vi.fn(),
+    initSentry: vi.fn(),
+  };
+});
 
 // Extend expect matchers
 expect.extend({
