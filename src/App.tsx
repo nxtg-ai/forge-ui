@@ -829,20 +829,22 @@ const DashboardWithEngagement: React.FC<{
 }> = ({ visionData, projectState, agentActivity }) => {
   const { mode, setMode } = useEngagement();
 
-  // Convert VisionData goals to string[] if needed
-  const normalizedVisionData: import('./components/types').VisionData = {
-    ...visionData,
+  // Convert VisionData goals to string[] for ChiefOfStaffDashboard
+  const normalizedVisionData = {
+    mission: visionData.mission,
     goals: Array.isArray(visionData.goals)
       ? visionData.goals.map(g => typeof g === 'string' ? g : g.title)
       : [],
+    constraints: visionData.constraints,
     successMetrics: Array.isArray(visionData.successMetrics)
       ? visionData.successMetrics.map(m => typeof m === 'string' ? m : m.name)
       : [],
+    timeframe: visionData.timeframe,
   };
 
   return (
     <ChiefOfStaffDashboard
-      visionData={normalizedVisionData as any}
+      visionData={normalizedVisionData}
       projectState={projectState}
       agentActivity={agentActivity}
       onModeChange={setMode}

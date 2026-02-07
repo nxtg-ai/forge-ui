@@ -454,7 +454,7 @@ const LiveDashboard: React.FC = () => {
             >
               <ChiefOfStaffDashboard
                 visionData={visionData}
-                projectState={projectState as any}
+                projectState={projectState as ProjectState}
                 agentActivity={[]}
                 onModeChange={setMode}
                 currentMode={engagementMode}
