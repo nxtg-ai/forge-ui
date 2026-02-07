@@ -66,6 +66,36 @@ export interface ForgeStatus {
   timestamp: string;
 }
 
+export interface LastCommit {
+  hash: string;
+  message: string;
+  date: string;
+  author: string;
+}
+
+export interface LiveTestResults {
+  passing: number;
+  failing: number;
+  skipped: number;
+  lastRun: string | null;
+}
+
+export interface LiveContext {
+  git: {
+    branch: string;
+    lastCommit: LastCommit | null;
+    uncommittedCount: number;
+    ahead: number;
+    behind: number;
+  };
+  tests: LiveTestResults;
+  health: {
+    score: number;
+    factors: { label: string; value: number; max: number }[];
+  };
+  timestamp: string;
+}
+
 export class StatusService {
   constructor(private projectRoot: string) {}
 
@@ -336,6 +366,122 @@ export class StatusService {
     } catch {
       return "0.0.0";
     }
+  }
+
+  /**
+   * Gather live operational context (ephemeral, never written to governance.json)
+   */
+  async getLiveContext(): Promise<LiveContext> {
+    const git = simpleGit(this.projectRoot);
+
+    // Git state
+    let gitState: LiveContext["git"] = {
+      branch: "unknown",
+      lastCommit: null,
+      uncommittedCount: 0,
+      ahead: 0,
+      behind: 0,
+    };
+    try {
+      const status = await git.status();
+      const log = await git.log({ maxCount: 1 });
+      const latest = log.latest;
+
+      gitState = {
+        branch: status.current || "unknown",
+        lastCommit: latest
+          ? {
+              hash: latest.hash.slice(0, 7),
+              message: latest.message,
+              date: latest.date,
+              author: latest.author_name,
+            }
+          : null,
+        uncommittedCount:
+          status.modified.length +
+          status.staged.length +
+          status.not_added.length,
+        ahead: status.ahead,
+        behind: status.behind,
+      };
+    } catch {
+      // not a git repo - defaults are fine
+    }
+
+    // Test results
+    const tests = await this.getCachedTestResults();
+
+    // Health
+    const governance = await this.getGovernanceHealth();
+    const health = this.computeHealthScore(gitState, tests, governance);
+
+    return {
+      git: gitState,
+      tests,
+      health,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Read cached test results from .claude/state/test-results.json
+   */
+  private async getCachedTestResults(): Promise<LiveTestResults> {
+    try {
+      const testPath = path.join(
+        this.projectRoot,
+        ".claude",
+        "state",
+        "test-results.json",
+      );
+      const data = await fs.readFile(testPath, "utf-8");
+      const parsed = JSON.parse(data);
+      return {
+        passing: parsed.passing ?? 0,
+        failing: parsed.failing ?? 0,
+        skipped: parsed.skipped ?? 0,
+        lastRun: parsed.lastRun ?? parsed.timestamp ?? null,
+      };
+    } catch {
+      return { passing: 0, failing: 0, skipped: 0, lastRun: null };
+    }
+  }
+
+  /**
+   * Derive a 0-100 health score from operational data
+   */
+  private computeHealthScore(
+    git: LiveContext["git"],
+    tests: LiveTestResults,
+    governance: GovernanceHealth,
+  ): LiveContext["health"] {
+    const factors: { label: string; value: number; max: number }[] = [];
+
+    // Git hygiene (30 pts): lose points for large uncommitted counts
+    const gitScore = Math.max(0, 30 - git.uncommittedCount * 3);
+    factors.push({ label: "Git hygiene", value: gitScore, max: 30 });
+
+    // Test health (30 pts): ratio of passing to total
+    const totalTests = tests.passing + tests.failing + tests.skipped;
+    const testScore =
+      totalTests > 0 ? Math.round((tests.passing / totalTests) * 30) : 15;
+    factors.push({ label: "Test health", value: testScore, max: 30 });
+
+    // Governance (20 pts): based on confidence and blocked workstreams
+    const govScore = Math.round(governance.confidence * 20) -
+      governance.workstreamsBlocked * 5;
+    factors.push({
+      label: "Governance",
+      value: Math.max(0, Math.min(20, govScore)),
+      max: 20,
+    });
+
+    // Sync status (20 pts): lose points if behind remote
+    const syncScore = Math.max(0, 20 - git.behind * 5);
+    factors.push({ label: "Sync status", value: syncScore, max: 20 });
+
+    const score = factors.reduce((sum, f) => sum + f.value, 0);
+    return { score: Math.min(100, Math.max(0, score)), factors };
   }
 
   /**

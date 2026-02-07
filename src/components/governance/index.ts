@@ -8,3 +8,4 @@ export { ConstitutionCard } from "./ConstitutionCard";
 export { ImpactMatrix } from "./ImpactMatrix";
 export { OracleFeed } from "./OracleFeed";
 export { StrategicAdvisor } from "./StrategicAdvisor";
+export { ProjectContextCard } from "./ProjectContextCard";

@@ -5,6 +5,7 @@ import { ImpactMatrix } from "./ImpactMatrix";
 import { OracleFeed } from "./OracleFeed";
 import { StrategicAdvisor } from "./StrategicAdvisor";
 import { WorkerPoolMetrics } from "./WorkerPoolMetrics";
+import { ProjectContextCard } from "./ProjectContextCard";
 import { AgentActivityFeed } from "./AgentActivityFeed";
 import { wsManager, type ConnectionStatus } from "../../services/ws-manager";
 import { logger } from "../../utils/browser-logger";
@@ -150,6 +151,7 @@ export const GovernanceHUD: React.FC<GovernanceHUDProps> = ({ className }) => {
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-2 p-2">
+        <ProjectContextCard />
         <StrategicAdvisor state={state} />
         <ConstitutionCard constitution={state.constitution} />
         <WorkerPoolMetrics />

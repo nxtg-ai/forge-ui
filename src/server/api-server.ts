@@ -1616,6 +1616,24 @@ app.post("/api/governance/sentinel", async (req, res) => {
   }
 });
 
+app.get("/api/governance/live-context", async (req, res) => {
+  try {
+    const liveContext = await statusService.getLiveContext();
+    res.json({
+      success: true,
+      data: liveContext,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: "Failed to gather live context",
+      message: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 app.get("/api/governance/validate", async (req, res) => {
   try {
     const result = await governanceStateManager.validateStateIntegrity();
@@ -2777,6 +2795,19 @@ server.listen(PORT, "0.0.0.0", async () => {
 
   // Setup governance file watcher for real-time updates
   setupGovernanceWatcher();
+
+  // Post startup sentinel log with live context
+  try {
+    const liveCtx = await statusService.getLiveContext();
+    await governanceStateManager.appendSentinelLog({
+      type: "INFO",
+      severity: "low",
+      source: "api-server",
+      message: `Server started on branch ${liveCtx.git.branch}, ${liveCtx.git.uncommittedCount} uncommitted files, health: ${liveCtx.health.score}/100`,
+    });
+  } catch (err: unknown) {
+    logger.warn("Failed to post startup sentinel log:", { error: err instanceof Error ? err.message : String(err) });
+  }
 
   logger.info("All services initialized successfully");
 });
