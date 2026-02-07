@@ -519,5 +519,300 @@ describe("TaskQueue", () => {
       expect(queue.dequeue()?.id).toBe("task1");
       expect(queue.dequeue()?.id).toBe("task3");
     });
+
+    it("should handle rapid enqueue/dequeue cycles", () => {
+      for (let i = 0; i < 100; i++) {
+        queue.enqueue(createTask(`task${i}`, "medium"));
+      }
+
+      expect(queue.size()).toBe(100);
+
+      for (let i = 0; i < 50; i++) {
+        const task = queue.dequeue();
+        expect(task?.id).toBe(`task${i}`);
+      }
+
+      expect(queue.size()).toBe(50);
+    });
+
+    it("should handle completing tasks that are not in queue", () => {
+      queue.enqueue(createTask("task1"));
+      queue.dequeue();
+
+      expect(() => queue.complete("task1", {})).not.toThrow();
+      expect(queue.getCompletedTasks()).toHaveLength(0);
+    });
+
+    it("should handle updating priority of already dequeued task", () => {
+      queue.enqueue(createTask("task1", "low"));
+      queue.dequeue();
+
+      expect(queue.updatePriority("task1", "high")).toBe(false);
+    });
+
+    it("should preserve task metadata through priority updates", () => {
+      const task = createTask("task1", "low");
+      task.metadata = { key: "value", number: 42 };
+      task.env = { VAR: "test" };
+      task.args = ["arg1", "arg2"];
+
+      queue.enqueue(task);
+      queue.updatePriority("task1", "high");
+
+      const retrieved = queue.getTask("task1");
+      expect(retrieved?.metadata).toEqual({ key: "value", number: 42 });
+      expect(retrieved?.env).toEqual({ VAR: "test" });
+      expect(retrieved?.args).toEqual(["arg1", "arg2"]);
+    });
+
+    it("should handle all tasks being of same priority", () => {
+      const priorities: TaskPriority[] = ["high", "high", "high", "high"];
+      priorities.forEach((p, i) => queue.enqueue(createTask(`task${i}`, p)));
+
+      expect(queue.sizeByPriority().high).toBe(4);
+      expect(queue.dequeue()?.id).toBe("task0");
+      expect(queue.dequeue()?.id).toBe("task1");
+      expect(queue.dequeue()?.id).toBe("task2");
+      expect(queue.dequeue()?.id).toBe("task3");
+    });
+
+    it("should handle removing last task in a priority queue", () => {
+      queue.enqueue(createTask("task1", "high"));
+
+      expect(queue.sizeByPriority().high).toBe(1);
+      queue.remove("task1");
+      expect(queue.sizeByPriority().high).toBe(0);
+      expect(queue.peek()).toBeNull();
+    });
+
+    it("should handle clearing queue with completed tasks", () => {
+      queue.enqueue(createTask("task1"));
+      queue.enqueue(createTask("task2"));
+      queue.complete("task1", { result: "done" });
+
+      queue.clear();
+
+      expect(queue.size()).toBe(0);
+      expect(queue.getCompletedTasks()).toHaveLength(1);
+    });
+
+    it("should handle workstream filtering with no matches", () => {
+      queue.enqueue(createTask("task1"));
+      queue.enqueue(createTask("task2"));
+
+      const tasks = queue.getTasksByWorkstream("nonexistent");
+      expect(tasks).toHaveLength(0);
+    });
+
+    it("should calculate wait time correctly with fake timers", () => {
+      vi.useFakeTimers();
+      const now = Date.now();
+      vi.setSystemTime(now);
+
+      queue.enqueue(createTask("task1"));
+      vi.advanceTimersByTime(1000);
+      queue.enqueue(createTask("task2"));
+      vi.advanceTimersByTime(1000);
+      queue.enqueue(createTask("task3"));
+      vi.advanceTimersByTime(1000);
+
+      const avgWait = queue.getAverageWaitTime();
+      expect(avgWait).toBeGreaterThan(0);
+
+      vi.useRealTimers();
+    });
+
+    it("should track oldest task across different priorities", () => {
+      vi.useFakeTimers();
+      const now = Date.now();
+      vi.setSystemTime(now);
+
+      queue.enqueue(createTask("task1", "low"));
+      vi.advanceTimersByTime(2000);
+      queue.enqueue(createTask("task2", "high"));
+      vi.advanceTimersByTime(1000);
+
+      const age = queue.getOldestTaskAge();
+      expect(age).toBeGreaterThanOrEqual(2000);
+
+      vi.useRealTimers();
+    });
+
+    it("should handle cleanupCompleted with no completed tasks", () => {
+      expect(() => queue.cleanupCompleted()).not.toThrow();
+      expect(queue.getCompletedTasks()).toHaveLength(0);
+    });
+
+    it("should handle cleanupCompleted with tasks without completedAt", () => {
+      queue.enqueue(createTask("task1"));
+      queue.complete("task1", { result: "done" });
+
+      expect(() => queue.cleanupCompleted(1000)).not.toThrow();
+    });
+
+    it("should handle task with custom timeout and retry values", () => {
+      const task = createTask("task1");
+      task.timeout = 5000;
+      task.retryCount = 2;
+      task.maxRetries = 5;
+
+      queue.enqueue(task);
+      const retrieved = queue.getTask("task1");
+
+      expect(retrieved?.timeout).toBe(5000);
+      expect(retrieved?.retryCount).toBe(2);
+      expect(retrieved?.maxRetries).toBe(5);
+    });
+
+    it("should handle task with cwd and payload", () => {
+      const task = createTask("task1");
+      task.cwd = "/custom/path";
+      task.payload = { custom: "data", nested: { value: 123 } };
+
+      queue.enqueue(task);
+      const retrieved = queue.getTask("task1");
+
+      expect(retrieved?.cwd).toBe("/custom/path");
+      expect(retrieved?.payload).toEqual({
+        custom: "data",
+        nested: { value: 123 },
+      });
+    });
+
+    it("should handle dequeue followed by peek correctly", () => {
+      queue.enqueue(createTask("task1", "high"));
+      queue.enqueue(createTask("task2", "high"));
+
+      queue.dequeue();
+      expect(queue.peek()?.id).toBe("task2");
+      expect(queue.size()).toBe(1);
+    });
+
+    it("should handle remove followed by peek correctly", () => {
+      queue.enqueue(createTask("task1", "high"));
+      queue.enqueue(createTask("task2", "high"));
+
+      queue.remove("task1");
+      expect(queue.peek()?.id).toBe("task2");
+      expect(queue.size()).toBe(1);
+    });
+
+    it("should handle multiple completions in order", () => {
+      queue.enqueue(createTask("task1"));
+      queue.enqueue(createTask("task2"));
+      queue.enqueue(createTask("task3"));
+
+      queue.complete("task1", { order: 1 });
+      queue.complete("task2", { order: 2 });
+      queue.complete("task3", { order: 3 });
+
+      const completed = queue.getCompletedTasks();
+      expect(completed).toHaveLength(3);
+      expect(completed[0].result).toEqual({ order: 1 });
+      expect(completed[2].result).toEqual({ order: 3 });
+    });
+
+    it("should handle priority queue with background tasks only", () => {
+      queue.enqueue(createTask("task1", "background"));
+      queue.enqueue(createTask("task2", "background"));
+
+      expect(queue.peek()?.id).toBe("task1");
+      expect(queue.dequeue()?.id).toBe("task1");
+      expect(queue.peek()?.id).toBe("task2");
+    });
+
+    it("should handle getAllTasks preserving task order", () => {
+      queue.enqueue(createTask("task1", "high"));
+      queue.enqueue(createTask("task2", "low"));
+      queue.enqueue(createTask("task3", "medium"));
+
+      const allTasks = queue.getAllTasks();
+      expect(allTasks).toHaveLength(3);
+      expect(allTasks.every((t) => t.id.startsWith("task"))).toBe(true);
+    });
+
+    it("should handle edge case of clearing and re-populating queue", () => {
+      queue.enqueue(createTask("task1", "high"));
+      queue.enqueue(createTask("task2", "medium"));
+      queue.clear();
+
+      expect(queue.isEmpty()).toBe(true);
+
+      queue.enqueue(createTask("task3", "low"));
+      expect(queue.size()).toBe(1);
+      expect(queue.peek()?.id).toBe("task3");
+    });
+
+    it("should handle stress test with many priority changes", () => {
+      const priorities: TaskPriority[] = ["high", "medium", "low", "background"];
+
+      for (let i = 0; i < 20; i++) {
+        queue.enqueue(
+          createTask(`task${i}`, priorities[i % priorities.length]),
+        );
+      }
+
+      expect(queue.size()).toBe(20);
+
+      // Change priorities randomly
+      for (let i = 0; i < 10; i++) {
+        queue.updatePriority(
+          `task${i}`,
+          priorities[(i + 1) % priorities.length],
+        );
+      }
+
+      expect(queue.size()).toBe(20);
+    });
+
+    it("should maintain consistency after multiple operations", () => {
+      // Complex workflow simulation
+      queue.enqueue(createTask("task1", "high"));
+      queue.enqueue(createTask("task2", "medium"));
+      queue.enqueue(createTask("task3", "low"));
+
+      const peeked = queue.peek();
+      expect(peeked?.id).toBe("task1");
+
+      queue.updatePriority("task3", "high");
+      queue.remove("task1");
+
+      expect(queue.peek()?.id).toBe("task3");
+      expect(queue.size()).toBe(2);
+
+      queue.complete("task2", { status: "completed" });
+      expect(queue.size()).toBe(1);
+
+      const dequeued = queue.dequeue();
+      expect(dequeued?.id).toBe("task3");
+      expect(queue.isEmpty()).toBe(true);
+    });
+
+    it("should handle getTask for task that was completed", () => {
+      queue.enqueue(createTask("task1"));
+      queue.complete("task1", {});
+
+      expect(queue.getTask("task1")).toBeNull();
+      expect(queue.getCompletedTasks()).toHaveLength(1);
+    });
+
+    it("should handle different task types", () => {
+      const types: Array<"claude-code" | "shell" | "script" | "agent"> = [
+        "claude-code",
+        "shell",
+        "script",
+        "agent",
+      ];
+
+      types.forEach((type, i) => {
+        const task = createTask(`task${i}`);
+        task.type = type;
+        queue.enqueue(task);
+      });
+
+      expect(queue.size()).toBe(4);
+      const allTasks = queue.getAllTasks();
+      expect(allTasks.map((t) => t.type)).toEqual(types);
+    });
   });
 });
