@@ -426,8 +426,8 @@ const MobileDrawer: React.FC<{
             <div className="flex items-center justify-between p-4 border-b border-gray-800">
               <div className="flex items-center gap-2">
                 <img src={logoSrc} alt="" className="w-7 h-7 rounded" aria-hidden="true" />
-                <h2 className="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                  NXTG-Forge
+                <h2 className="text-lg font-bold text-white">
+                  FORGE
                 </h2>
               </div>
               <button
@@ -561,8 +561,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               {/* Branding */}
               <div className="flex items-center gap-2">
                 <img src={logoSrc} alt="" className="w-7 h-7 rounded" aria-hidden="true" />
-                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                  NXTG-Forge
+                <h1 className="text-xl font-bold text-white">
+                  FORGE
                 </h1>
               </div>
 
