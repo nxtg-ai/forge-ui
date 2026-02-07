@@ -38,6 +38,7 @@ import {
 import swaggerRouter from "./swagger";
 import { StatusService } from "../services/status-service";
 import type { ForgeStatus } from "../services/status-service";
+import { ComplianceService } from "../services/compliance-service";
 import intelligenceRouter from "./routes/intelligence.js";
 import * as crypto from "crypto";
 import {
@@ -2876,6 +2877,64 @@ app.get("/api/feedback/stats", async (req, res) => {
       error: error instanceof Error ? error.message : "Unknown error",
       timestamp: new Date().toISOString(),
     });
+  }
+});
+
+// ============= Compliance Endpoints =============
+
+const complianceService = new ComplianceService(projectRoot);
+
+// Full compliance report
+app.get("/api/compliance/report", async (req, res) => {
+  try {
+    const result = await complianceService.getComplianceReport();
+    if (result.ok) {
+      res.json(result.value);
+    } else {
+      logger.error("[Compliance] Report generation failed:", result.error);
+      res.status(500).json({ error: "Failed to generate compliance report" });
+    }
+  } catch (error) {
+    logger.error("Compliance report failed:", error);
+    res.status(500).json({ error: "Failed to generate compliance report" });
+  }
+});
+
+// CycloneDX SBOM document
+app.get("/api/compliance/sbom", async (req, res) => {
+  try {
+    const result = await complianceService.generateSBOM();
+    if (result.ok) {
+      res.setHeader("Content-Type", "application/vnd.cyclonedx+json");
+      res.json(result.value);
+    } else {
+      logger.error("[Compliance] SBOM generation failed:", result.error);
+      res.status(500).json({ error: "Failed to generate SBOM" });
+    }
+  } catch (error) {
+    logger.error("SBOM generation failed:", error);
+    res.status(500).json({ error: "Failed to generate SBOM" });
+  }
+});
+
+// License conflicts (lightweight for dashboard badges)
+app.get("/api/compliance/conflicts", async (req, res) => {
+  try {
+    const result = await complianceService.getComplianceReport();
+    if (result.ok) {
+      res.json({
+        status: result.value.status,
+        score: result.value.score,
+        conflicts: result.value.conflicts,
+        summary: result.value.summary,
+      });
+    } else {
+      logger.error("[Compliance] Conflicts check failed:", result.error);
+      res.status(500).json({ error: "Failed to check license conflicts" });
+    }
+  } catch (error) {
+    logger.error("Compliance conflicts check failed:", error);
+    res.status(500).json({ error: "Failed to check license conflicts" });
   }
 });
 
