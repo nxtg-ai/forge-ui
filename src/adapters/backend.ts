@@ -45,7 +45,12 @@ export interface AgentBackend {
 
 // ============= Helpers =============
 
+const ALLOWED_CLI_COMMANDS = new Set(["codex", "gemini", "claude", "node"]);
+
 function whichSync(command: string): string | null {
+  if (!ALLOWED_CLI_COMMANDS.has(command)) {
+    return null;
+  }
   try {
     return execSync(`which ${command}`, { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim();
   } catch {
