@@ -21,21 +21,18 @@ import {
   StrategicGoal,
   Priority,
 } from "../types/vision";
+import {
+  parseVisionFile,
+  extractVisionFromMarkdown,
+  VisionFile,
+  VisionFileMetadata,
+} from "./vision/parser";
+import {
+  visionToMarkdown,
+  createDefaultVision as createDefaultVisionData,
+} from "./vision/serializer";
 
 const logger = new Logger("VisionManager");
-
-// Vision file metadata
-interface VisionFileMetadata {
-  version: string;
-  created: string;
-  updated: string;
-}
-
-// Vision file content
-interface VisionFile {
-  metadata: VisionFileMetadata;
-  content: string;
-}
 
 export class VisionManager {
   private visionPath: string;
@@ -72,10 +69,10 @@ export class VisionManager {
   async loadVision(): Promise<CanonicalVision> {
     try {
       const content = await fs.readFile(this.visionPath, "utf-8");
-      const visionFile = this.parseVisionFile(content);
+      const visionFile = parseVisionFile(content);
 
       // Extract vision from markdown
-      const vision = this.extractVisionFromMarkdown(visionFile);
+      const vision = extractVisionFromMarkdown(visionFile);
 
       // Validate with schema
       this.currentVision = CanonicalVisionSchema.parse(vision);
@@ -95,287 +92,12 @@ export class VisionManager {
     }
   }
 
-  /**
-   * Parse vision file with YAML frontmatter
-   */
-  private parseVisionFile(content: string): VisionFile {
-    const lines = content.split("\n");
-    let inFrontmatter = false;
-    let frontmatterLines: string[] = [];
-    let contentLines: string[] = [];
-    let frontmatterCount = 0;
-
-    for (const line of lines) {
-      if (line.trim() === "---") {
-        frontmatterCount++;
-        if (frontmatterCount === 1) {
-          inFrontmatter = true;
-        } else if (frontmatterCount === 2) {
-          inFrontmatter = false;
-        }
-        continue;
-      }
-
-      if (inFrontmatter) {
-        frontmatterLines.push(line);
-      } else if (frontmatterCount >= 2) {
-        contentLines.push(line);
-      }
-    }
-
-    // Parse YAML frontmatter manually (simplified)
-    const metadata: VisionFileMetadata = {
-      version: "1.0",
-      created: new Date().toISOString(),
-      updated: new Date().toISOString(),
-    };
-
-    for (const line of frontmatterLines) {
-      const [key, ...valueParts] = line.split(":");
-      if (key && valueParts.length > 0) {
-        const value = valueParts.join(":").trim();
-        if (key.trim() === "version") metadata.version = value;
-        if (key.trim() === "created") metadata.created = value;
-        if (key.trim() === "updated") metadata.updated = value;
-      }
-    }
-
-    return {
-      metadata,
-      content: contentLines.join("\n"),
-    };
-  }
-
-  /**
-   * Extract vision data from markdown content
-   */
-  private extractVisionFromMarkdown(visionFile: VisionFile): CanonicalVision {
-    const content = visionFile.content;
-    const sections = this.parseMarkdownSections(content);
-
-    const vision: CanonicalVision = {
-      version: visionFile.metadata.version,
-      created: new Date(visionFile.metadata.created),
-      updated: new Date(visionFile.metadata.updated),
-      mission: sections["mission"] || "",
-      principles: this.parseList(sections["principles"] || ""),
-      strategicGoals: this.parseStrategicGoals(
-        sections["strategic goals"] || "",
-      ),
-      currentFocus: sections["current focus"] || "",
-      successMetrics: this.parseMetrics(sections["success metrics"] || ""),
-      metadata: {},
-    };
-
-    return vision;
-  }
-
-  /**
-   * Parse markdown into sections
-   */
-  private parseMarkdownSections(content: string): Record<string, string> {
-    const sections: Record<string, string> = {};
-    const lines = content.split("\n");
-    let currentSection = "";
-    let sectionContent: string[] = [];
-
-    for (const line of lines) {
-      if (line.startsWith("## ")) {
-        // Save previous section
-        if (currentSection) {
-          sections[currentSection.toLowerCase()] = sectionContent
-            .join("\n")
-            .trim();
-        }
-        // Start new section
-        currentSection = line.substring(3).trim();
-        sectionContent = [];
-      } else {
-        sectionContent.push(line);
-      }
-    }
-
-    // Save last section
-    if (currentSection) {
-      sections[currentSection.toLowerCase()] = sectionContent.join("\n").trim();
-    }
-
-    return sections;
-  }
-
-  /**
-   * Parse a markdown list
-   */
-  private parseList(content: string): string[] {
-    const lines = content.split("\n");
-    const items: string[] = [];
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (
-        trimmed.startsWith("- ") ||
-        trimmed.startsWith("* ") ||
-        /^\d+\. /.test(trimmed)
-      ) {
-        const item = trimmed.replace(/^[-*]\s+/, "").replace(/^\d+\.\s+/, "");
-        if (item) items.push(item);
-      }
-    }
-
-    return items;
-  }
-
-  /**
-   * Parse strategic goals from markdown
-   */
-  private parseStrategicGoals(content: string): StrategicGoal[] {
-    const lines = content.split("\n");
-    const goals: StrategicGoal[] = [];
-    let currentGoal: Partial<StrategicGoal> | null = null;
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-
-      // Parse goal line (e.g., "1. [Goal Title] - Priority: High, Deadline: Q1 2026")
-      const goalMatch = trimmed.match(/^\d+\.\s+\[([^\]]+)\](.*)$/);
-      if (goalMatch) {
-        if (currentGoal && this.isCompleteGoal(currentGoal)) {
-          goals.push(currentGoal as StrategicGoal);
-        }
-
-        currentGoal = {
-          id: crypto.randomBytes(8).toString("hex"),
-          title: goalMatch[1],
-          description: "",
-          priority: Priority.MEDIUM,
-          status: "not-started",
-          progress: 0,
-          metrics: [],
-        };
-
-        // Parse metadata from the rest of the line
-        const metadata = goalMatch[2];
-        const priorityMatch = metadata.match(/Priority:\s*(\w+)/i);
-        const deadlineMatch = metadata.match(/Deadline:\s*([^,]+)/i);
-
-        if (priorityMatch) {
-          const priorityStr = priorityMatch[1].toLowerCase();
-          if (priorityStr in Priority) {
-            currentGoal.priority = Priority[priorityStr.toUpperCase() as keyof typeof Priority];
-          }
-        }
-        if (deadlineMatch) {
-          currentGoal.deadline = new Date(deadlineMatch[1]);
-        }
-      } else if (currentGoal && trimmed) {
-        // Add to description
-        currentGoal.description =
-          (currentGoal.description || "") + (currentGoal.description ? " " : "") + trimmed;
-      }
-    }
-
-    if (currentGoal && this.isCompleteGoal(currentGoal)) {
-      goals.push(currentGoal as StrategicGoal);
-    }
-    return goals;
-  }
-
-  /**
-   * Check if parsed goal has all required fields
-   */
-  private isCompleteGoal(goal: Partial<StrategicGoal>): goal is StrategicGoal {
-    return !!(
-      goal.id &&
-      goal.title &&
-      goal.description !== undefined &&
-      goal.priority &&
-      goal.status &&
-      goal.progress !== undefined &&
-      goal.metrics
-    );
-  }
-
-  /**
-   * Parse success metrics
-   */
-  private parseMetrics(content: string): Record<string, string | number> {
-    const lines = content.split("\n");
-    const metrics: Record<string, string | number> = {};
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      const match = trimmed.match(/^[-*]\s+([^:]+):\s*(.+)$/);
-      if (match) {
-        const key = match[1].trim();
-        const value = match[2].trim();
-
-        // Try to parse as number
-        const numValue = parseFloat(value);
-        metrics[key] = isNaN(numValue) ? value : numValue;
-      }
-    }
-
-    return metrics;
-  }
 
   /**
    * Create default vision
    */
   private async createDefaultVision(): Promise<CanonicalVision> {
-    const vision: CanonicalVision = {
-      version: "1.0",
-      created: new Date(),
-      updated: new Date(),
-      mission:
-        "Build the Ultimate Chief of Staff for Developers - an AI-orchestrated system that amplifies developer productivity 10x",
-      principles: [
-        "Developer Experience First - Every feature must delight developers",
-        "Intelligence at Scale - Smart automation that learns and adapts",
-        "Enterprise Grade - Production-ready, secure, and reliable",
-        "Open and Extensible - Plugin architecture for infinite possibilities",
-        "Speed is a Feature - Sub-second responses, instant feedback",
-      ],
-      strategicGoals: [
-        {
-          id: "goal-1",
-          title: "Launch NXTG-Forge v3.0",
-          description: "Complete core infrastructure and orchestration engine",
-          priority: Priority.CRITICAL,
-          deadline: new Date("2026-02-01"),
-          status: "in-progress",
-          progress: 30,
-          metrics: [
-            "Bootstrap time < 30s",
-            "10+ parallel agents",
-            "Zero data loss",
-          ],
-        },
-        {
-          id: "goal-2",
-          title: "Build AI Agent Ecosystem",
-          description:
-            "Create 20+ specialized agents for different development tasks",
-          priority: Priority.HIGH,
-          deadline: new Date("2026-03-01"),
-          status: "not-started",
-          progress: 0,
-          metrics: ["20+ agents", "95% task success rate", "Agent marketplace"],
-        },
-      ],
-      currentFocus:
-        "Building core infrastructure and orchestration engine for v3.0 launch",
-      successMetrics: {
-        "Bootstrap Time": "< 30 seconds",
-        "Parallel Agents": "10+",
-        "State Recovery": "< 2 seconds",
-        "User Satisfaction": "> 90%",
-        "Code Coverage": "> 80%",
-      },
-      metadata: {
-        generator: "VisionManager",
-        environment: "development",
-      },
-    };
+    const vision = createDefaultVisionData();
 
     await this.saveVision(vision);
     this.currentVision = vision;
@@ -397,65 +119,9 @@ export class VisionManager {
    * Save vision to file
    */
   private async saveVision(vision: CanonicalVision): Promise<void> {
-    const markdown = this.visionToMarkdown(vision);
+    const markdown = visionToMarkdown(vision);
     await fs.writeFile(this.visionPath, markdown, "utf-8");
     logger.info("Vision saved to file");
-  }
-
-  /**
-   * Convert vision to markdown
-   */
-  private visionToMarkdown(vision: CanonicalVision): string {
-    const lines: string[] = [];
-
-    // YAML frontmatter
-    lines.push("---");
-    lines.push(`version: ${vision.version}`);
-    lines.push(`created: ${vision.created.toISOString()}`);
-    lines.push(`updated: ${vision.updated.toISOString()}`);
-    lines.push("---");
-    lines.push("");
-
-    // Content
-    lines.push("# Canonical Vision");
-    lines.push("");
-
-    lines.push("## Mission");
-    lines.push(vision.mission);
-    lines.push("");
-
-    lines.push("## Principles");
-    for (const principle of vision.principles) {
-      lines.push(`- ${principle}`);
-    }
-    lines.push("");
-
-    lines.push("## Strategic Goals");
-    for (let i = 0; i < vision.strategicGoals.length; i++) {
-      const goal = vision.strategicGoals[i];
-      const deadline = goal.deadline
-        ? `, Deadline: ${goal.deadline.toISOString().split("T")[0]}`
-        : "";
-      lines.push(
-        `${i + 1}. [${goal.title}] - Priority: ${goal.priority}${deadline}`,
-      );
-      if (goal.description) {
-        lines.push(`   ${goal.description}`);
-      }
-    }
-    lines.push("");
-
-    lines.push("## Current Focus");
-    lines.push(vision.currentFocus);
-    lines.push("");
-
-    lines.push("## Success Metrics");
-    for (const [key, value] of Object.entries(vision.successMetrics)) {
-      lines.push(`- ${key}: ${value}`);
-    }
-    lines.push("");
-
-    return lines.join("\n");
   }
 
   /**

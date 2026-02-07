@@ -5,15 +5,14 @@
 
 import { ForgeState, Feature, Task } from "./types";
 import { StateManager } from "./state";
-import { Logger } from "./utils";
+import { getLogger } from "./utils/logger";
 
 export class Forge {
   private state: StateManager;
-  private logger: Logger;
+  private logger = getLogger("Forge");
 
   constructor() {
     this.state = new StateManager();
-    this.logger = new Logger("Forge");
   }
 
   /**
@@ -24,7 +23,7 @@ export class Forge {
 
     await this.state.initialize(projectPath);
 
-    this.logger.success("Forge initialized successfully");
+    this.logger.info("Forge initialized successfully");
   }
 
   /**
@@ -44,7 +43,7 @@ export class Forge {
 
     await this.state.addFeature(feature);
 
-    this.logger.success(`Feature "${name}" added`);
+    this.logger.info(`Feature "${name}" added`);
     return feature;
   }
 
@@ -68,7 +67,7 @@ export class Forge {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     await this.state.updateTaskStatus(taskId, "completed");
-    this.logger.success(`Task ${taskId} completed`);
+    this.logger.info(`Task ${taskId} completed`);
   }
 
   private generateId(): string {

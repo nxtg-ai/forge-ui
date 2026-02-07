@@ -7,92 +7,30 @@ import { BaseService } from "./base-service";
 import { Result, IntegrationError, ValidationError } from "../utils/result";
 import * as fs from "fs/promises";
 import * as path from "path";
-import { z } from "zod";
+import {
+  type ProjectType,
+  type ExistingSetup,
+  type ProjectDetection,
+  type InitOptions,
+  type InitResult,
+  type GovernanceConstitution,
+  InitOptionsSchema,
+  AGENT_TEMPLATES,
+  generateConfig,
+  generateCompleteClaude,
+  generateForgeSection,
+  detectProjectType as detectProjectTypeUtil,
+  checkExistingSetup as checkExistingSetupUtil,
+} from "./init";
 
-/**
- * Supported project types
- */
-export type ProjectType =
-  | "react"
-  | "node"
-  | "python"
-  | "rust"
-  | "go"
-  | "fullstack"
-  | "unknown";
-
-/**
- * Existing setup status
- */
-export interface ExistingSetup {
-  hasForge: boolean;
-  hasClaudeMd: boolean;
-  claudeMdContent: string;
-  hasGovernance: boolean;
-  hasAgents: boolean;
-  agentCount: number;
-}
-
-/**
- * Project detection result
- */
-export interface ProjectDetection {
-  projectType: ProjectType;
-  hasPackageJson: boolean;
-  hasRequirementsTxt: boolean;
-  hasCargoToml: boolean;
-  hasGoMod: boolean;
-  hasTsConfig: boolean;
-  hasViteConfig: boolean;
-  detectedFrameworks: string[];
-}
-
-/**
- * Initialization options
- */
-export interface InitOptions {
-  directive: string;
-  goals?: string[];
-  projectType?: ProjectType;
-  claudeMdOption?: "generate" | "merge" | "skip";
-  forceOverwrite?: boolean;
-}
-
-/**
- * Initialization result
- */
-export interface InitResult {
-  success: boolean;
-  created: string[];
-  projectType: ProjectType;
-  agentsCopied: string[];
-  message: string;
-}
-
-/**
- * Governance constitution structure
- */
-interface GovernanceConstitution {
-  directive: string;
-  vision: string[];
-  status: string;
-  confidence: number;
-  updatedBy: string;
-  updatedAt: string;
-}
-
-/**
- * Validation schemas
- */
-const InitOptionsSchema = z.object({
-  directive: z.string().min(5, "Directive must be at least 5 characters"),
-  goals: z.array(z.string()).optional(),
-  projectType: z
-    .enum(["react", "node", "python", "rust", "go", "fullstack", "unknown"])
-    .optional(),
-  claudeMdOption: z.enum(["generate", "merge", "skip"]).optional(),
-  forceOverwrite: z.boolean().optional(),
-});
+// Re-export types for backward compatibility
+export type {
+  ProjectType,
+  ExistingSetup,
+  ProjectDetection,
+  InitOptions,
+  InitResult,
+};
 
 /**
  * Initialization Service
@@ -128,161 +66,14 @@ export class InitService extends BaseService {
   async detectProjectType(): Promise<
     Result<ProjectDetection, IntegrationError>
   > {
-    try {
-      const files = await fs.readdir(this.projectRoot);
-      const fileSet = new Set(files);
-
-      const hasPackageJson = fileSet.has("package.json");
-      const hasRequirementsTxt = fileSet.has("requirements.txt");
-      const hasCargoToml = fileSet.has("Cargo.toml");
-      const hasGoMod = fileSet.has("go.mod");
-      const hasTsConfig = fileSet.has("tsconfig.json");
-      const hasViteConfig =
-        fileSet.has("vite.config.ts") || fileSet.has("vite.config.js");
-
-      const detectedFrameworks: string[] = [];
-      let projectType: ProjectType = "unknown";
-
-      // Detect based on files
-      if (hasPackageJson) {
-        try {
-          const packageJsonPath = path.join(this.projectRoot, "package.json");
-          const packageJson = JSON.parse(
-            await fs.readFile(packageJsonPath, "utf-8"),
-          );
-          const deps = {
-            ...packageJson.dependencies,
-            ...packageJson.devDependencies,
-          };
-
-          if (deps.react) {
-            detectedFrameworks.push("react");
-            projectType = "react";
-          }
-          if (deps.vue) {
-            detectedFrameworks.push("vue");
-          }
-          if (deps.express || deps.fastify || deps.koa) {
-            detectedFrameworks.push("node-backend");
-            if (projectType === "react") {
-              projectType = "fullstack";
-            } else {
-              projectType = "node";
-            }
-          }
-          if (deps.vite) {
-            detectedFrameworks.push("vite");
-          }
-          if (deps.next) {
-            detectedFrameworks.push("nextjs");
-            projectType = "fullstack";
-          }
-        } catch {
-          // If package.json can't be parsed, just continue
-        }
-      }
-
-      if (hasRequirementsTxt || fileSet.has("pyproject.toml")) {
-        detectedFrameworks.push("python");
-        projectType = "python";
-      }
-
-      if (hasCargoToml) {
-        detectedFrameworks.push("rust");
-        projectType = "rust";
-      }
-
-      if (hasGoMod) {
-        detectedFrameworks.push("go");
-        projectType = "go";
-      }
-
-      return Result.ok({
-        projectType,
-        hasPackageJson,
-        hasRequirementsTxt,
-        hasCargoToml,
-        hasGoMod,
-        hasTsConfig,
-        hasViteConfig,
-        detectedFrameworks,
-      });
-    } catch (error) {
-      return Result.err(
-        new IntegrationError(
-          `Failed to detect project type: ${error instanceof Error ? error.message : String(error)}`,
-          "DETECTION_ERROR",
-        ),
-      );
-    }
+    return detectProjectTypeUtil(this.projectRoot);
   }
 
   /**
    * Check for existing NXTG-Forge setup
    */
   async checkExistingSetup(): Promise<Result<ExistingSetup, IntegrationError>> {
-    try {
-      const claudePath = path.join(this.projectRoot, ".claude");
-      const forgePath = path.join(claudePath, "forge");
-      const claudeMdPath = path.join(this.projectRoot, "CLAUDE.md");
-      const governancePath = path.join(claudePath, "governance.json");
-      const agentsPath = path.join(forgePath, "agents");
-
-      let hasForge = false;
-      let hasClaudeMd = false;
-      let hasGovernance = false;
-      let hasAgents = false;
-      let agentCount = 0;
-      let claudeMdContent = "";
-
-      try {
-        await fs.access(forgePath);
-        hasForge = true;
-      } catch {
-        // Doesn't exist
-      }
-
-      try {
-        claudeMdContent = await fs.readFile(claudeMdPath, "utf-8");
-        hasClaudeMd = true;
-      } catch {
-        // Doesn't exist
-      }
-
-      try {
-        await fs.access(governancePath);
-        hasGovernance = true;
-      } catch {
-        // Doesn't exist
-      }
-
-      try {
-        const agentFiles = await fs.readdir(agentsPath);
-        const starterAgents = agentFiles.filter((f) =>
-          f.startsWith("starter-"),
-        );
-        hasAgents = starterAgents.length > 0;
-        agentCount = starterAgents.length;
-      } catch {
-        // Doesn't exist
-      }
-
-      return Result.ok({
-        hasForge,
-        hasClaudeMd,
-        claudeMdContent,
-        hasGovernance,
-        hasAgents,
-        agentCount,
-      });
-    } catch (error) {
-      return Result.err(
-        new IntegrationError(
-          `Failed to check existing setup: ${error instanceof Error ? error.message : String(error)}`,
-          "SETUP_CHECK_ERROR",
-        ),
-      );
-    }
+    return checkExistingSetupUtil(this.projectRoot);
   }
 
   /**
@@ -316,7 +107,7 @@ export class InitService extends BaseService {
         this.projectRoot,
         ".claude/forge/config.yml",
       );
-      const config = this.generateConfig(projectType);
+      const config = generateConfig(projectType);
       await fs.writeFile(configPath, config, "utf-8");
       createdPaths.push(".claude/forge/config.yml");
 
@@ -488,10 +279,10 @@ export class InitService extends BaseService {
           content += "\n\n";
         }
         content += "---\n\n";
-        content += this.generateForgeSection(vision, projectType);
+        content += generateForgeSection(vision, projectType);
       } else {
         // Generate new CLAUDE.md
-        content = this.generateCompleteClaude(vision, projectType);
+        content = generateCompleteClaude(vision, projectType);
       }
 
       await fs.writeFile(claudeMdPath, content, "utf-8");
@@ -595,271 +386,40 @@ export class InitService extends BaseService {
   }
 
   /**
-   * Generate config.yml content
-   */
-  private generateConfig(projectType: ProjectType): string {
-    return `# NXTG-Forge Configuration
-# Generated by /frg-init wizard
-
-project:
-  type: ${projectType}
-  initialized: ${new Date().toISOString()}
-
-agents:
-  enabled: true
-  auto_assign: true
-
-memory:
-  enabled: true
-  retention_days: 90
-
-quality:
-  min_coverage: 85
-  strict_types: true
-  linting: strict
-`;
-  }
-
-  /**
    * Create starter agent template files
    */
   private async createStarterAgentTemplates(): Promise<void> {
     const agentsDir = path.join(this.projectRoot, ".claude/forge/agents");
 
-    // Create starter-general.md (universal agent for all project types)
-    const generalAgent = `---
-name: starter-general
-description: Universal development assistant for any project type
-tools: ["Glob", "Grep", "Read", "Write", "Edit", "Bash"]
----
+    // Write all agent templates
+    await fs.writeFile(
+      path.join(agentsDir, "starter-general.md"),
+      AGENT_TEMPLATES.general,
+      "utf-8",
+    );
 
-# Starter Agent - General Purpose
+    await fs.writeFile(
+      path.join(agentsDir, "starter-react.md"),
+      AGENT_TEMPLATES.react,
+      "utf-8",
+    );
 
-You are a helpful development assistant. Follow project conventions and maintain code quality.
+    await fs.writeFile(
+      path.join(agentsDir, "starter-node.md"),
+      AGENT_TEMPLATES.node,
+      "utf-8",
+    );
 
-## Capabilities
-- Code review and suggestions
-- Bug fixing and debugging
-- Documentation writing
-- Test creation
-- General development tasks
+    await fs.writeFile(
+      path.join(agentsDir, "starter-python.md"),
+      AGENT_TEMPLATES.python,
+      "utf-8",
+    );
 
-## Guidelines
-- Read existing code before making changes
-- Follow the project's coding style
-- Write tests for new functionality
-- Keep changes focused and minimal
-`;
-
-    await fs.writeFile(path.join(agentsDir, "starter-general.md"), generalAgent, "utf-8");
-
-    // Create starter-react.md
-    const reactAgent = `---
-name: starter-react
-description: React 19 specialist with hooks and modern patterns
-tools: ["Glob", "Grep", "Read", "Write", "Edit", "Bash"]
----
-
-# Starter Agent - React
-
-You are a React specialist. Use modern React 19 patterns with hooks and functional components.
-
-## Capabilities
-- React component development
-- State management with hooks
-- Performance optimization
-- Testing with Vitest/React Testing Library
-
-## Guidelines
-- Prefer functional components with hooks
-- Use TypeScript for type safety
-- Follow React best practices
-- Write accessible components
-`;
-
-    await fs.writeFile(path.join(agentsDir, "starter-react.md"), reactAgent, "utf-8");
-
-    // Create starter-node.md
-    const nodeAgent = `---
-name: starter-node
-description: Node.js/Express backend specialist
-tools: ["Glob", "Grep", "Read", "Write", "Edit", "Bash"]
----
-
-# Starter Agent - Node.js
-
-You are a Node.js backend specialist. Build scalable, secure APIs.
-
-## Capabilities
-- REST API development
-- Database integration
-- Authentication/Authorization
-- Testing with Jest/Vitest
-
-## Guidelines
-- Use async/await patterns
-- Implement proper error handling
-- Follow security best practices
-- Write comprehensive tests
-`;
-
-    await fs.writeFile(path.join(agentsDir, "starter-node.md"), nodeAgent, "utf-8");
-
-    // Create starter-python.md
-    const pythonAgent = `---
-name: starter-python
-description: Python/FastAPI backend specialist
-tools: ["Glob", "Grep", "Read", "Write", "Edit", "Bash"]
----
-
-# Starter Agent - Python
-
-You are a Python specialist. Build clean, well-tested applications.
-
-## Capabilities
-- FastAPI/Flask development
-- Database integration with SQLAlchemy
-- Type hints and validation
-- Testing with pytest
-
-## Guidelines
-- Use type hints throughout
-- Follow PEP 8 style guidelines
-- Write comprehensive tests
-- Use virtual environments
-`;
-
-    await fs.writeFile(path.join(agentsDir, "starter-python.md"), pythonAgent, "utf-8");
-
-    // Create starter-fullstack.md
-    const fullstackAgent = `---
-name: starter-fullstack
-description: Full-stack development combining frontend and backend
-tools: ["Glob", "Grep", "Read", "Write", "Edit", "Bash"]
----
-
-# Starter Agent - Full Stack
-
-You are a full-stack specialist. Bridge frontend and backend seamlessly.
-
-## Capabilities
-- End-to-end feature development
-- API design and integration
-- Database modeling
-- Testing across the stack
-
-## Guidelines
-- Maintain consistency between frontend/backend
-- Design clean API contracts
-- Write integration tests
-- Consider security at all layers
-`;
-
-    await fs.writeFile(path.join(agentsDir, "starter-fullstack.md"), fullstackAgent, "utf-8");
-  }
-
-  /**
-   * Generate complete CLAUDE.md
-   */
-  private generateCompleteClaude(
-    vision: string,
-    projectType: ProjectType,
-  ): string {
-    return `# Project Knowledge Base
-
-## Vision
-
-${vision}
-
-## Project Type
-
-${projectType}
-
-## Development Guidelines
-
-### Code Quality
-- Maintain 85%+ test coverage
-- Use strict TypeScript/type checking
-- Follow SOLID principles
-- Write self-documenting code
-
-### Testing
-- Write tests before implementation (TDD)
-- Cover happy path, edge cases, and errors
-- Use meaningful test descriptions
-
-### Documentation
-- Document public APIs and interfaces
-- Keep README up to date
-- Use JSDoc/docstrings for complex logic
-
----
-
-${this.generateForgeSection(vision, projectType)}
-`;
-  }
-
-  /**
-   * Generate NXTG-Forge section for CLAUDE.md
-   */
-  private generateForgeSection(
-    vision: string,
-    projectType: ProjectType,
-  ): string {
-    return `## NXTG-Forge Integration
-
-This project is enhanced with NXTG-Forge - an AI-orchestrated development system.
-
-### What is NXTG-Forge?
-
-NXTG-Forge is your AI Chief of Staff that:
-- Plans and tracks feature development
-- Maintains code quality and architecture
-- Provides intelligent recommendations
-- Automates repetitive tasks
-- Ensures project governance
-
-### Project Vision
-
-${vision}
-
-### Available Commands
-
-- \`/frg-status\` - View project status and health
-- \`/frg-feature "name"\` - Plan and implement a new feature
-- \`/frg-test\` - Run comprehensive test suite
-- \`/frg-deploy\` - Deploy application
-- \`/frg-checkpoint\` - Create project checkpoint
-- \`/frg-report\` - Generate session report
-
-### Project Configuration
-
-- **Type**: ${projectType}
-- **Forge Version**: 3.0.0
-- **Initialized**: ${new Date().toISOString()}
-
-### Directory Structure
-
-\`\`\`
-.claude/
-  forge/
-    config.yml          # Forge configuration
-    agents/             # Starter agents for this project type
-    memory/             # Session and context memory
-  governance.json       # Project governance and tracking
-  plans/                # Feature plans and designs
-  skills/               # Project-specific knowledge
-\`\`\`
-
-### Next Steps
-
-1. Run \`/frg-status\` to see current project state
-2. Use \`/frg-feature "feature name"\` to plan your first feature
-3. Let NXTG-Forge guide you through implementation
-
----
-
-*Generated by NXTG-Forge v3.0.0*
-`;
+    await fs.writeFile(
+      path.join(agentsDir, "starter-fullstack.md"),
+      AGENT_TEMPLATES.fullstack,
+      "utf-8",
+    );
   }
 }

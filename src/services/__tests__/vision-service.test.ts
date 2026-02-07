@@ -5,6 +5,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { VisionService, VisionCaptureData } from "../vision-service";
+import { parseVisionFile } from "../vision/parsers";
 import { VisionData, EngagementMode } from "../../components/types";
 import { promises as fs } from "fs";
 
@@ -816,7 +817,7 @@ Simple mission
 ## Goals
 - Goal 1`;
 
-      const parsed = service["parseVisionFile"](content);
+      const parsed = parseVisionFile(content);
       expect(parsed.content).toContain("Mission");
     });
   });

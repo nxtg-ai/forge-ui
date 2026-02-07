@@ -157,6 +157,7 @@ describe("Frontend Health", () => {
         "governance-state-manager.ts",
         "base-service.ts",
         "init-service.ts",
+        "detection.ts",
         "intelligence-injector.ts",
         "intelligence-parser.ts",
         "command-service.ts",

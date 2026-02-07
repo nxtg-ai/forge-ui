@@ -25,6 +25,7 @@ import {
 import { CanonicalVision } from "../types/vision";
 import { CheckpointManager, TaskCheckpoint } from "./checkpoint-manager";
 import { Result, Ok, Err } from "../utils/result";
+import { buildContextGraph } from "./state/context-graph";
 
 const logger = new Logger("StateManager");
 
@@ -293,62 +294,7 @@ export class StateManager extends EventEmitter {
       throw new Error("No state available");
     }
 
-    const nodes: ContextNode[] = [];
-    const edges: ContextEdge[] = [];
-
-    // Add vision as root node
-    nodes.push({
-      id: "vision",
-      type: "vision",
-      title: "Canonical Vision",
-      data: this.currentState.vision,
-    });
-
-    // Add goals
-    for (const goal of this.currentState.vision.strategicGoals) {
-      nodes.push({
-        id: `goal-${goal.id}`,
-        type: "goal",
-        title: goal.title,
-        data: goal,
-      });
-
-      edges.push({
-        from: "vision",
-        to: `goal-${goal.id}`,
-        type: "implements",
-      });
-    }
-
-    // Add tasks
-    for (const task of this.currentState.currentTasks) {
-      nodes.push({
-        id: `task-${task.id}`,
-        type: "task",
-        title: task.title,
-        data: task,
-      });
-
-      // Link tasks to goals (simplified)
-      if (this.currentState.vision.strategicGoals.length > 0) {
-        edges.push({
-          from: `goal-${this.currentState.vision.strategicGoals[0].id}`,
-          to: `task-${task.id}`,
-          type: "implements",
-        });
-      }
-
-      // Add task dependencies
-      for (const depId of task.dependencies) {
-        edges.push({
-          from: `task-${depId}`,
-          to: `task-${task.id}`,
-          type: "depends-on",
-        });
-      }
-    }
-
-    this.contextGraph = { nodes, edges };
+    this.contextGraph = await buildContextGraph(this.currentState);
 
     // Save graph
     await fs.writeFile(
@@ -358,7 +304,7 @@ export class StateManager extends EventEmitter {
     );
 
     logger.info(
-      `Context graph built with ${nodes.length} nodes and ${edges.length} edges`,
+      `Context graph built with ${this.contextGraph.nodes.length} nodes and ${this.contextGraph.edges.length} edges`,
     );
 
     return this.contextGraph;

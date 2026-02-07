@@ -14,6 +14,20 @@ import {
 import { CommandService, CommandResult } from "./command-service";
 import { VisionService } from "./vision-service";
 
+// Import rule management utilities
+import {
+  getDefaultRules,
+  evaluateRule as evaluateRuleFromModule,
+} from "./automation/rules";
+
+// Import safety and validation utilities
+import {
+  validateAction as validateActionFromModule,
+  performSafetyChecks as performSafetyChecksFromModule,
+  createRollbackSnapshot as createRollbackSnapshotFromModule,
+  mapActionToCommand as mapActionToCommandFromModule,
+} from "./automation/safety";
+
 /**
  * Automation confidence thresholds
  */
@@ -202,9 +216,12 @@ export class AutomationService extends BaseService {
 
     try {
       // Validate action
-      const validationResult = await this.validateAction(
+      const validationResult = await validateActionFromModule(
         fullAction,
         executionContext,
+        this.actionHistory,
+        this.config as AutomationServiceConfig,
+        this.validate.bind(this),
       );
       if (validationResult.isErr()) {
         return Result.err(validationResult.error);
@@ -212,7 +229,10 @@ export class AutomationService extends BaseService {
 
       // Check safety
       if ((this.config as AutomationServiceConfig).safetyChecksEnabled) {
-        const safetyResult = await this.performSafetyChecks(fullAction);
+        const safetyResult = await performSafetyChecksFromModule(
+          fullAction,
+          this.visionService,
+        );
         if (safetyResult.isErr()) {
           return Result.err(safetyResult.error);
         }
@@ -250,7 +270,10 @@ export class AutomationService extends BaseService {
       // Create rollback snapshot if enabled
       let rollbackSnapshot: RollbackSnapshot | undefined;
       if ((this.config as AutomationServiceConfig).enableRollback) {
-        rollbackSnapshot = await this.createRollbackSnapshot(fullAction);
+        rollbackSnapshot = await createRollbackSnapshotFromModule(
+          fullAction,
+          this.generateSnapshotId.bind(this),
+        );
         this.rollbackSnapshots.set(fullAction.id, rollbackSnapshot);
       }
 
@@ -421,7 +444,11 @@ export class AutomationService extends BaseService {
 
       // Check each rule against context
       for (const rule of this.automationRules.values()) {
-        const matches = await this.evaluateRule(rule, context);
+        const matches = await evaluateRuleFromModule(
+          rule,
+          context,
+          this.executionCounts,
+        );
         if (matches) {
           const action = await rule.action(context);
           if (rule.confidenceModifier) {
@@ -452,104 +479,8 @@ export class AutomationService extends BaseService {
    * Initialize default automation rules
    */
   private initializeDefaultRules(): void {
-    // Test failure auto-fix rule
-    this.addRule({
-      id: "auto-fix-tests",
-      name: "Auto-fix failing tests",
-      description: "Automatically fix simple test failures",
-      pattern: /test.*fail|fail.*test/i,
-      action: async (context) => ({
-        id: "",
-        type: "fix",
-        title: "Fix failing tests",
-        description: "Automatically fix identified test failures",
-        impact: "low",
-        status: "pending",
-        timestamp: new Date(),
-        confidence: 0.7,
-        automated: true,
-      }),
-      confidenceModifier: 0.8,
-    });
-
-    // Performance optimization rule
-    this.addRule({
-      id: "optimize-performance",
-      name: "Optimize performance",
-      description: "Automatically optimize identified performance issues",
-      pattern: /slow|performance|optimize/i,
-      action: async (context) => ({
-        id: "",
-        type: "optimize",
-        title: "Optimize performance",
-        description: "Apply performance optimizations",
-        impact: "medium",
-        status: "pending",
-        timestamp: new Date(),
-        confidence: 0.6,
-        automated: true,
-      }),
-      requiresConfirmation: true,
-    });
-
-    // Security fix rule
-    this.addRule({
-      id: "security-fix",
-      name: "Fix security issues",
-      description: "Automatically fix security vulnerabilities",
-      pattern: /security|vulnerability|CVE/i,
-      action: async (context) => ({
-        id: "",
-        type: "fix",
-        title: "Fix security vulnerability",
-        description: "Apply security patches",
-        impact: "high",
-        status: "pending",
-        timestamp: new Date(),
-        confidence: 0.9,
-        automated: true,
-      }),
-      requiresConfirmation: true,
-    });
-
-    // Dependency update rule
-    this.addRule({
-      id: "update-deps",
-      name: "Update dependencies",
-      description: "Automatically update outdated dependencies",
-      pattern: /outdated|dependency.*update|update.*dependency/i,
-      action: async (context) => ({
-        id: "",
-        type: "update",
-        title: "Update dependencies",
-        description: "Update outdated packages to latest stable versions",
-        impact: "medium",
-        status: "pending",
-        timestamp: new Date(),
-        confidence: 0.8,
-        automated: true,
-      }),
-      maxExecutionsPerHour: 5,
-    });
-
-    // Code formatting rule
-    this.addRule({
-      id: "format-code",
-      name: "Format code",
-      description: "Automatically format code files",
-      pattern: /format|lint|style/i,
-      action: async (context) => ({
-        id: "",
-        type: "refactor",
-        title: "Format code",
-        description: "Apply code formatting and linting fixes",
-        impact: "low",
-        status: "pending",
-        timestamp: new Date(),
-        confidence: 0.95,
-        automated: true,
-      }),
-    });
+    const defaultRules = getDefaultRules();
+    defaultRules.forEach((rule) => this.addRule(rule));
   }
 
   /**
@@ -566,112 +497,6 @@ export class AutomationService extends BaseService {
     };
   }
 
-  /**
-   * Validate action
-   */
-  private async validateAction(
-    action: AutomatedAction,
-    context: AutomationContext,
-  ): Promise<Result<void, IntegrationError>> {
-    // Check rate limiting
-    const config = this.config as AutomationServiceConfig;
-    const recentActions = this.actionHistory.filter(
-      (a) => a.timestamp > new Date(Date.now() - 60000),
-    );
-
-    if (recentActions.length >= (config.maxActionsPerMinute ?? 10)) {
-      return Result.err(
-        new IntegrationError("Rate limit exceeded", "RATE_LIMIT"),
-      );
-    }
-
-    // Validate action structure
-    const ActionSchema = z.object({
-      type: z.enum(["fix", "optimize", "refactor", "update", "deploy"]),
-      title: z.string().min(1),
-      description: z.string(),
-      impact: z.enum(["low", "medium", "high"]),
-      confidence: z.number().min(0).max(1),
-    });
-
-    const result = this.validate(action, ActionSchema);
-    if (result.isErr()) {
-      return Result.err(
-        new IntegrationError(
-          `Invalid action: ${result.error.message}`,
-          "VALIDATION_ERROR",
-          result.error.details,
-        ),
-      );
-    }
-
-    return Result.ok(undefined);
-  }
-
-  /**
-   * Perform safety checks
-   */
-  private async performSafetyChecks(
-    action: AutomatedAction,
-  ): Promise<Result<void, IntegrationError>> {
-    // Check with vision service for alignment
-    if (this.visionService) {
-      const alignmentResult = this.visionService.checkAlignment(
-        `${action.title}: ${action.description}`,
-      );
-
-      if (alignmentResult.isOk() && !alignmentResult.value.aligned) {
-        return Result.err(
-          new IntegrationError(
-            "Action not aligned with vision",
-            "ALIGNMENT_ERROR",
-            alignmentResult.value,
-          ),
-        );
-      }
-    }
-
-    // Check for dangerous patterns
-    const dangerousPatterns = [
-      /delete.*production/i,
-      /drop.*database/i,
-      /rm\s+-rf/i,
-      /force.*push/i,
-    ];
-
-    const actionText = `${action.title} ${action.description}`;
-    for (const pattern of dangerousPatterns) {
-      if (pattern.test(actionText)) {
-        return Result.err(
-          new IntegrationError(
-            "Dangerous action detected",
-            "SAFETY_CHECK_FAILED",
-          ),
-        );
-      }
-    }
-
-    return Result.ok(undefined);
-  }
-
-  /**
-   * Create rollback snapshot
-   * Note: Currently captures action metadata only. File-level snapshots
-   * are handled by checkpoint-manager for granular rollback support.
-   */
-  private async createRollbackSnapshot(
-    action: AutomatedAction,
-  ): Promise<RollbackSnapshot> {
-    return {
-      id: this.generateSnapshotId(),
-      actionId: action.id,
-      timestamp: new Date(),
-      state: {
-        action: action.type,
-        target: action.title,
-      },
-    };
-  }
 
   /**
    * Perform action execution
@@ -696,7 +521,7 @@ export class AutomationService extends BaseService {
 
     // Execute via command service if available
     if (this.commandService) {
-      const command = this.mapActionToCommand(action);
+      const command = mapActionToCommandFromModule(action);
       const result = await this.commandService.execute(command);
       return result;
     }
@@ -714,43 +539,6 @@ export class AutomationService extends BaseService {
     });
   }
 
-  /**
-   * Map action to command
-   */
-  private mapActionToCommand(action: AutomatedAction): string {
-    // Map action types to commands
-    const commandMap: Record<AutomatedAction["type"], string> = {
-      fix: "npm run fix",
-      optimize: "npm run optimize",
-      refactor: "npm run format",
-      update: "npm update",
-      deploy: "npm run deploy",
-    };
-
-    return commandMap[action.type] || 'echo "No command mapping"';
-  }
-
-  /**
-   * Evaluate rule against context
-   */
-  private async evaluateRule(
-    rule: AutomationRule,
-    context: Record<string, unknown>,
-  ): Promise<boolean> {
-    // Check execution limits
-    const execCount = this.executionCounts.get(rule.id) || 0;
-    if (rule.maxExecutionsPerHour && execCount >= rule.maxExecutionsPerHour) {
-      return false;
-    }
-
-    // Check pattern match
-    const contextString = JSON.stringify(context).toLowerCase();
-    if (typeof rule.pattern === "string") {
-      return contextString.includes(rule.pattern.toLowerCase());
-    } else {
-      return rule.pattern.test(contextString);
-    }
-  }
 
   /**
    * Update statistics

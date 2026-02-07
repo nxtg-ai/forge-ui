@@ -19,13 +19,23 @@ import {
   AlignmentResult,
 } from "../types/vision";
 
-/**
- * Vision file format
- */
-interface VisionFile {
-  frontmatter: Record<string, unknown>;
-  content: string;
-}
+// Import parsing utilities
+import {
+  VisionFile,
+  parseVisionFile,
+  parseMarkdownSections,
+  extractKeywords,
+} from "./vision/parsers";
+
+// Import formatting utilities
+import {
+  formatVisionAsMarkdown,
+  parseVisionFromFile,
+  createCanonicalFromVisionData,
+  updateCanonicalFromVisionData,
+  prepareVisionFrontmatter,
+  generateAlignmentSuggestions,
+} from "./vision/formatters";
 
 /**
  * Vision update event
@@ -206,7 +216,10 @@ export class VisionService extends BaseService {
 
       // Update canonical vision
       if (this.canonicalVision) {
-        this.updateCanonicalFromVisionData(newVision);
+        this.canonicalVision = updateCanonicalFromVisionData(
+          this.canonicalVision,
+          newVision,
+        );
       }
 
       return Result.ok(newVision);
@@ -231,20 +244,13 @@ export class VisionService extends BaseService {
       const visionPath = path.resolve(config.visionPath!);
 
       // Prepare YAML frontmatter
-      const frontmatter = {
-        title: "Canonical Vision",
-        version: vision.version ?? 1,
-        created: vision.createdAt ?? new Date(),
-        updated: vision.lastUpdated ?? new Date(),
-        engagementMode: vision.engagementMode,
-        tags: ["vision", "canonical", "forge"],
-      };
+      const frontmatter = prepareVisionFrontmatter(vision);
 
       // Prepare markdown content
-      const content = this.formatVisionAsMarkdown(vision);
+      const content = formatVisionAsMarkdown(vision);
 
       // Combine frontmatter and content
-      const fileContent = `---\n${yaml.dump(frontmatter)}---\n\n${content}`;
+      const fileContent = `---\n${frontmatter}---\n\n${content}`;
 
       // Ensure directory exists
       await fs.mkdir(path.dirname(visionPath), { recursive: true });
@@ -287,15 +293,13 @@ export class VisionService extends BaseService {
       const fileContent = await fs.readFile(visionPath, "utf-8");
 
       // Parse YAML frontmatter
-      const visionFile = this.parseVisionFile(fileContent);
+      const visionFile = parseVisionFile(fileContent);
 
       // Convert to VisionData
-      this.visionData = this.parseVisionFromFile(visionFile);
+      this.visionData = parseVisionFromFile(visionFile);
 
       // Create canonical vision
-      this.canonicalVision = this.createCanonicalFromVisionData(
-        this.visionData,
-      );
+      this.canonicalVision = createCanonicalFromVisionData(this.visionData);
 
       this.emit("visionLoaded", this.visionData);
       return Result.ok(this.canonicalVision);
@@ -435,7 +439,7 @@ export class VisionService extends BaseService {
       }
 
       // Calculate alignment score
-      const keywords = this.extractKeywords(visionText);
+      const keywords = extractKeywords(visionText);
       const matches = keywords.filter((keyword) =>
         decisionText.includes(keyword),
       ).length;
@@ -450,7 +454,7 @@ export class VisionService extends BaseService {
         violations: violations.length > 0 ? violations : undefined,
         suggestions: aligned
           ? undefined
-          : this.generateAlignmentSuggestions(decision),
+          : generateAlignmentSuggestions(decision, this.visionData),
       };
 
       this.emit("alignmentChecked", result);
@@ -503,230 +507,13 @@ export class VisionService extends BaseService {
       version: 1,
     };
 
-    this.canonicalVision = this.createCanonicalFromVisionData(this.visionData);
+    this.canonicalVision = createCanonicalFromVisionData(this.visionData);
 
     // Auto-save default vision
     const config = this.config as VisionServiceConfig;
     if (config.autoSave) {
       await this.saveVision(this.visionData);
     }
-  }
-
-  /**
-   * Parse vision file with YAML frontmatter
-   */
-  private parseVisionFile(content: string): VisionFile {
-    const frontmatterRegex = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/;
-    const match = content.match(frontmatterRegex);
-
-    if (match) {
-      return {
-        frontmatter: yaml.load(match[1]) as Record<string, unknown>,
-        content: match[2].trim(),
-      };
-    }
-
-    return {
-      frontmatter: {},
-      content: content.trim(),
-    };
-  }
-
-  /**
-   * Parse VisionData from file
-   */
-  private parseVisionFromFile(file: VisionFile): VisionData {
-    const { frontmatter, content } = file;
-
-    // Parse content sections
-    const sections = this.parseMarkdownSections(content);
-
-    const mission = sections.mission || frontmatter.mission || "";
-    const goals = sections.goals || frontmatter.goals || [];
-    const constraints = sections.constraints || frontmatter.constraints || [];
-    const metrics = sections.metrics || frontmatter.successMetrics || [];
-    const timeframe = sections.timeframe || frontmatter.timeframe || "";
-
-    return {
-      mission: typeof mission === 'string' ? mission : String(mission),
-      goals: Array.isArray(goals) ? goals as string[] : [String(goals)],
-      constraints: Array.isArray(constraints) ? constraints as string[] : [String(constraints)],
-      successMetrics: Array.isArray(metrics) ? metrics as string[] : [String(metrics)],
-      timeframe: typeof timeframe === 'string' ? timeframe : String(timeframe),
-      engagementMode:
-        (frontmatter.engagementMode as EngagementMode) || "builder",
-      createdAt: frontmatter.created
-        ? new Date(frontmatter.created as string)
-        : new Date(),
-      lastUpdated: frontmatter.updated
-        ? new Date(frontmatter.updated as string)
-        : new Date(),
-      version: (frontmatter.version as number) || 1,
-    };
-  }
-
-  /**
-   * Parse markdown sections
-   */
-  private parseMarkdownSections(content: string): Record<string, string | string[]> {
-    const sections: Record<string, string | string[]> = {};
-    const lines = content.split("\n");
-
-    let currentSection = "";
-    let sectionContent: string[] = [];
-
-    for (const line of lines) {
-      if (line.startsWith("## ")) {
-        // Save previous section
-        if (currentSection && sectionContent.length > 0) {
-          sections[currentSection] = this.parseSectionContent(sectionContent);
-        }
-
-        // Start new section
-        currentSection = line.substring(3).toLowerCase().replace(/\s+/g, "");
-        sectionContent = [];
-      } else if (currentSection) {
-        sectionContent.push(line);
-      }
-    }
-
-    // Save last section
-    if (currentSection && sectionContent.length > 0) {
-      sections[currentSection] = this.parseSectionContent(sectionContent);
-    }
-
-    return sections;
-  }
-
-  /**
-   * Parse section content
-   */
-  private parseSectionContent(lines: string[]): string | string[] {
-    const content = lines.join("\n").trim();
-
-    // Check if it's a list
-    if (content.includes("\n- ") || content.startsWith("- ")) {
-      return content
-        .split("\n")
-        .filter((line) => line.startsWith("- "))
-        .map((line) => line.substring(2).trim());
-    }
-
-    // Otherwise return as string
-    return content;
-  }
-
-  /**
-   * Format vision as markdown
-   */
-  private formatVisionAsMarkdown(vision: VisionData): string {
-    const sections: string[] = [];
-
-    sections.push("## Mission");
-    sections.push(vision.mission);
-    sections.push("");
-
-    sections.push("## Goals");
-    const goals =
-      typeof vision.goals[0] === "string"
-        ? (vision.goals as string[])
-        : (vision.goals as Goal[]).map((g) => g.title);
-    goals.forEach((goal) => sections.push(`- ${goal}`));
-    sections.push("");
-
-    sections.push("## Constraints");
-    vision.constraints.forEach((constraint) =>
-      sections.push(`- ${constraint}`),
-    );
-    sections.push("");
-
-    sections.push("## Success Metrics");
-    const metrics =
-      typeof vision.successMetrics[0] === "string"
-        ? (vision.successMetrics as string[])
-        : (vision.successMetrics as Metric[]).map(
-            (m) => `${m.name}: ${m.current}/${m.target} ${m.unit}`,
-          );
-    metrics.forEach((metric) => sections.push(`- ${metric}`));
-    sections.push("");
-
-    sections.push("## Timeframe");
-    sections.push(vision.timeframe);
-
-    return sections.join("\n");
-  }
-
-  /**
-   * Create canonical vision from VisionData
-   */
-  private createCanonicalFromVisionData(vision: VisionData): CanonicalVision {
-    const goals =
-      typeof vision.goals[0] === "string"
-        ? (vision.goals as string[]).map((g, i) => ({
-            id: `goal-${i}`,
-            title: g,
-            description: g,
-            priority: "medium" as const,
-            metrics: [],
-            status: "not-started" as const,
-            progress: 0,
-          }))
-        : (vision.goals as Goal[]).map((g) => ({
-            id: g.id,
-            title: g.title,
-            description: g.description,
-            priority: "medium" as const,
-            metrics: [],
-            status:
-              g.status === "pending"
-                ? ("not-started" as const)
-                : (g.status as "not-started" | "in-progress" | "completed" | "blocked"),
-            progress: g.progress,
-          }));
-
-    return {
-      version: String(vision.version ?? 1),
-      created: vision.createdAt ?? new Date(),
-      updated: vision.lastUpdated ?? new Date(),
-      mission: vision.mission,
-      principles: vision.constraints,
-      strategicGoals: goals as StrategicGoal[],
-      currentFocus: goals[0]?.title ?? "",
-      successMetrics:
-        typeof vision.successMetrics[0] === "string"
-          ? (vision.successMetrics as string[]).reduce(
-              (acc, m, i) => {
-                acc[`metric-${i}`] = m;
-                return acc;
-              },
-              {} as Record<string, string | number>,
-            )
-          : (vision.successMetrics as Metric[]).reduce(
-              (acc, m) => {
-                acc[m.name] = `${m.current}/${m.target} ${m.unit}`;
-                return acc;
-              },
-              {} as Record<string, string | number>,
-            ),
-    };
-  }
-
-  /**
-   * Update canonical vision from VisionData
-   */
-  private updateCanonicalFromVisionData(vision: VisionData): void {
-    if (!this.canonicalVision) return;
-
-    this.canonicalVision = {
-      ...this.canonicalVision,
-      updated: vision.lastUpdated ?? new Date(),
-      mission: vision.mission,
-      principles: vision.constraints,
-      currentFocus:
-        typeof vision.goals[0] === "string"
-          ? (vision.goals[0] as string)
-          : ((vision.goals[0] as Goal)?.title ?? ""),
-    };
   }
 
   /**
@@ -763,7 +550,7 @@ export class VisionService extends BaseService {
    */
   private violatesConstraint(decision: string, constraint: string): boolean {
     // Simple keyword-based violation check
-    const constraintKeywords = this.extractKeywords(constraint.toLowerCase());
+    const constraintKeywords = extractKeywords(constraint.toLowerCase());
     const negativeWords = ["not", "no", "avoid", "prevent", "without"];
 
     for (const keyword of constraintKeywords) {
@@ -776,50 +563,5 @@ export class VisionService extends BaseService {
     }
 
     return false;
-  }
-
-  /**
-   * Extract keywords from text
-   */
-  private extractKeywords(text: string): string[] {
-    const stopWords = [
-      "the",
-      "a",
-      "an",
-      "and",
-      "or",
-      "but",
-      "in",
-      "on",
-      "at",
-      "to",
-      "for",
-    ];
-    const words = text
-      .toLowerCase()
-      .replace(/[^\w\s]/g, "")
-      .split(/\s+/)
-      .filter((word) => word.length > 3 && !stopWords.includes(word));
-
-    return [...new Set(words)];
-  }
-
-  /**
-   * Generate alignment suggestions
-   */
-  private generateAlignmentSuggestions(decision: string): string[] {
-    const suggestions: string[] = [];
-
-    if (this.visionData) {
-      suggestions.push(
-        `Consider how this aligns with the mission: ${this.visionData.mission}`,
-      );
-      suggestions.push(
-        "Review the strategic goals and ensure this decision supports them",
-      );
-      suggestions.push("Check for any constraint violations before proceeding");
-    }
-
-    return suggestions;
   }
 }
