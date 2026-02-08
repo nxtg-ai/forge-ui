@@ -1,167 +1,341 @@
-# Forge
+<p align="center">
+  <img src="assets/banner.svg" alt="NXTG-Forge" width="1200">
+</p>
 
-<div align="center">
-  <img src="https://img.shields.io/badge/version-3.0.0-blue.svg" alt="Version 3.0.0" />
-  <img src="https://img.shields.io/badge/tests-4145_passing-brightgreen.svg" alt="4145 Tests Passing" />
-  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="MIT License" />
-</div>
+<p align="center">
+  <strong>The AI Development Platform</strong><br>
+  <sub>Governance. Agents. Dashboard. Terminal. All in one.</sub>
+</p>
 
-<div align="center">
-  <h3>AI Chief of Staff for Developers</h3>
-  <p><strong>20 commands, 22 agents, 20 skills — install in 60 seconds</strong></p>
-</div>
+<p align="center">
+  <a href="#"><img src="https://img.shields.io/badge/version-3.0.0-6366f1?style=flat-square" alt="Version"></a>
+  <a href="#"><img src="https://img.shields.io/badge/tests-4085_passing-22c55e?style=flat-square" alt="Tests"></a>
+  <a href="#"><img src="https://img.shields.io/badge/TypeScript-strict-3178c6?style=flat-square" alt="TypeScript"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="License"></a>
+  <a href="#"><img src="https://img.shields.io/badge/lines-137K-06b6d4?style=flat-square" alt="Lines"></a>
+</p>
+
+<p align="center">
+  21 commands &middot; 22 agents &middot; 58 UI components &middot; Infinity Terminal &middot; MCP dashboard<br>
+  <em>Full-stack AI development platform built on Claude Code</em>
+</p>
+
+<br>
 
 ---
 
+<br>
+
 ## What is Forge?
 
-Forge is a **Claude Code plugin** that turns your AI assistant into a Chief of Staff. It adds governance, quality gates, specialized agents, and a real-time dashboard to any project.
+Forge is a **full-stack AI development platform** that turns Claude Code into a Chief of Staff for your codebase. It combines three systems:
 
-It also works with Codex CLI and Gemini CLI (multi-framework adapter in progress).
+1. **Plugin** &mdash; 21 slash commands, 22 specialized agents, 29 skills, and governance hooks that extend Claude Code natively
+2. **Dashboard** &mdash; React-based web UI with real-time governance HUD, agent activity feed, and project health monitoring
+3. **Infinity Terminal** &mdash; Browser-based terminal with PTY bridge and session persistence that survives disconnects
 
-## Install
+No lock-in. The plugin works standalone without the dashboard. The dashboard adds visual oversight for teams and power users.
+
+<br>
+
+## Quick Start
+
+### Plugin Only (Zero Dependencies)
 
 ```bash
+# Install from Claude Code
+claude plugin add nxtg-ai/forge-plugin
+
+# Initialize in your project
+/[FRG]-init
+
+# Check health
+/[FRG]-status
+```
+
+### Full Platform (Dashboard + Terminal)
+
+```bash
+# Clone the repo
 git clone https://github.com/nxtg-ai/forge.git
 cd forge
-./init.sh /path/to/your/project
+
+# Install dependencies
+npm install
+
+# Start everything
+npm run dev
+# Dashboard:  http://localhost:5050
+# API:        http://localhost:5051
+# Terminal:   http://localhost:5050/terminal
 ```
 
-Or install into the current project:
+<br>
 
-```bash
-git clone https://github.com/nxtg-ai/forge.git /tmp/forge
-/tmp/forge/init.sh .
+## The Platform
+
+### Governance Dashboard
+
+Real-time project health monitoring with a dark-themed, responsive UI:
+
+- **Health Score** &mdash; A/B/C/D/F grade computed from 8 quality checks
+- **Governance HUD** &mdash; Live project context, workstream tracking, blocker detection
+- **Agent Activity Feed** &mdash; Watch 22 agents coordinate in real-time
+- **Oracle Feed** &mdash; Governance events and strategic insights
+- **Command Center** &mdash; Execute and monitor Forge commands from the browser
+- **Vision Display** &mdash; Project vision, goals, and alignment tracking
+
+58 React components. Framer Motion animations. Tailwind CSS. Fully responsive.
+
+### Infinity Terminal
+
+A browser-based terminal that **never dies**:
+
+- Sessions persist through browser close, network disconnects, and server restarts
+- Multiple clients connect to the same session simultaneously
+- Full PTY bridge with xterm.js 6.0
+- Works over Vite proxy for multi-device access (phones, tablets, remote machines)
+
+```
+Browser (xterm.js) → WebSocket → PTY Bridge → Shell
+                          ↓
+               Session persistence via:
+               - Session ID tracking
+               - Auto-reconnect
+               - State serialization
 ```
 
-This copies commands, agents, skills, and hooks into your `.claude/` directory. Open Claude Code and type `/[FRG]-status` to verify.
+### 21 Slash Commands
 
-## What You Get
+<table>
+<tr><td colspan="2"><h4>Governance</h4></td></tr>
+<tr>
+  <td><code>/[FRG]-init</code></td>
+  <td>60-second setup wizard</td>
+</tr>
+<tr>
+  <td><code>/[FRG]-status</code></td>
+  <td>Git, tests, types, governance at a glance</td>
+</tr>
+<tr>
+  <td><code>/[FRG]-status-enhanced</code></td>
+  <td>Full dashboard with health score and trends</td>
+</tr>
+<tr>
+  <td><code>/[FRG]-gap-analysis</code></td>
+  <td>Test, doc, security, and architecture gaps</td>
+</tr>
+<tr>
+  <td><code>/[FRG]-compliance</code></td>
+  <td>License scanning and SBOM generation</td>
+</tr>
+<tr>
+  <td><code>/[FRG]-command-center</code></td>
+  <td>Central hub for all capabilities</td>
+</tr>
+<tr>
+  <td><code>/[FRG]-dashboard</code></td>
+  <td>Open visual governance dashboard (MCP-powered)</td>
+</tr>
 
-### 20 Commands
+<tr><td colspan="2"><h4>Feature Development</h4></td></tr>
+<tr>
+  <td><code>/[FRG]-feature</code></td>
+  <td>Plan and build with full agent orchestration</td>
+</tr>
+<tr>
+  <td><code>/[FRG]-spec</code></td>
+  <td>Generate detailed technical specifications</td>
+</tr>
+<tr>
+  <td><code>/[FRG]-agent-assign</code></td>
+  <td>Assign tasks to the 22-agent roster</td>
+</tr>
+<tr>
+  <td><code>/[FRG]-integrate</code></td>
+  <td>Scaffold third-party integrations</td>
+</tr>
 
-| Command | What it does |
-|---------|-------------|
-| `/[FRG]-init` | Initialize Forge in your project |
-| `/[FRG]-status` | Project health, git state, test results |
-| `/[FRG]-status-enhanced` | Full dashboard with health score |
-| `/[FRG]-enable-forge` | Command center with 4-option menu |
-| `/[FRG]-feature` | Codebase analysis + feature spec generation |
-| `/[FRG]-test` | Run tests with analysis |
-| `/[FRG]-deploy` | Pre-flight validation + build |
-| `/[FRG]-optimize` | Code metrics + optimization analysis |
-| `/[FRG]-checkpoint` | Save project state snapshot |
-| `/[FRG]-restore` | Restore from checkpoint |
-| `/[FRG]-report` | Session activity report |
-| `/[FRG]-gap-analysis` | Test, doc, security, and architecture gaps |
-| `/[FRG]-spec` | Generate feature specifications |
-| `/[FRG]-agent-assign` | Assign tasks to specialized agents |
-| `/[FRG]-integrate` | Service scaffold + configuration |
-| `/[FRG]-upgrade` | Detect config gaps, upgrade Forge |
-| `/[FRG]-compliance` | License audit + SBOM generation |
-| `/[FRG]-docs-status` | Documentation coverage analysis |
-| `/[FRG]-docs-update` | Find and fix stale documentation |
-| `/[FRG]-docs-audit` | Full documentation quality audit |
+<tr><td colspan="2"><h4>Quality</h4></td></tr>
+<tr>
+  <td><code>/[FRG]-test</code></td>
+  <td>Run tests with failure analysis</td>
+</tr>
+<tr>
+  <td><code>/[FRG]-deploy</code></td>
+  <td>Pre-flight validation before shipping</td>
+</tr>
+<tr>
+  <td><code>/[FRG]-optimize</code></td>
+  <td>Performance and maintainability analysis</td>
+</tr>
+<tr>
+  <td><code>/[FRG]-upgrade</code></td>
+  <td>Config gap detection and drift repair</td>
+</tr>
 
-All 20 commands are wired and working. They use Claude's native tools (Bash, Read, Glob, Grep) — no external services required.
+<tr><td colspan="2"><h4>State &amp; Docs</h4></td></tr>
+<tr>
+  <td><code>/[FRG]-checkpoint</code></td>
+  <td>Save a named project snapshot</td>
+</tr>
+<tr>
+  <td><code>/[FRG]-restore</code></td>
+  <td>Roll back to any checkpoint</td>
+</tr>
+<tr>
+  <td><code>/[FRG]-report</code></td>
+  <td>Session activity and progress reports</td>
+</tr>
+<tr>
+  <td><code>/[FRG]-docs-status</code></td>
+  <td>Documentation health and coverage</td>
+</tr>
+<tr>
+  <td><code>/[FRG]-docs-update</code></td>
+  <td>Detect and fix stale documentation</td>
+</tr>
+<tr>
+  <td><code>/[FRG]-docs-audit</code></td>
+  <td>Full documentation quality audit</td>
+</tr>
+</table>
 
 ### 22 Specialized Agents
 
-Forge includes agents for every development concern:
-
-| Agent | Role |
-|-------|------|
-| CEO-LOOP | Autonomous strategic decisions |
-| Oracle | Real-time governance sentinel |
-| Orchestrator | Coordinates agent teams |
-| Planner | Architecture and task breakdown |
-| Builder | Implementation |
-| Guardian | Quality gates |
-| Detective | Project analysis and health checks |
-| Security | Vulnerability scanning |
-| Testing | Test generation and coverage |
-| Compliance | License and regulatory checks |
-| Docs | Documentation generation |
-| Refactor | Code restructuring |
-| Performance | Profiling and optimization |
-| Analytics | Metrics and reporting |
-| Learning | Pattern recognition |
-| UI | Frontend component development |
-| API | Endpoint design and integration |
-| Database | Schema and query optimization |
-| DevOps | CI/CD and infrastructure |
-| Integration | External service connections |
-| Release Sentinel | Documentation sync on release |
-| Governance Verifier | Automated governance validation |
+| Agent | Specialty | Agent | Specialty |
+|:------|:----------|:------|:----------|
+| **CEO-LOOP** | Autonomous strategic decisions | **Oracle** | Real-time governance sentinel |
+| **Orchestrator** | Multi-agent coordination | **Planner** | Architecture and task breakdown |
+| **Builder** | Feature implementation | **Guardian** | Quality gates and validation |
+| **Detective** | Root cause analysis | **Security** | Vulnerability scanning |
+| **Testing** | Test generation and coverage | **Compliance** | License and regulatory checks |
+| **Docs** | Documentation generation | **Refactor** | Code restructuring |
+| **Performance** | Profiling and optimization | **Analytics** | Metrics and reporting |
+| **Learning** | Pattern recognition | **UI** | Frontend development |
+| **API** | Endpoint design | **Database** | Schema and queries |
+| **DevOps** | CI/CD and infrastructure | **Integration** | External services |
+| **Release Sentinel** | Doc sync on release | **Gov. Verifier** | Governance validation |
 
 ### 5 Engagement Modes
 
-| Mode | Behavior |
-|------|----------|
-| **CEO** | Autonomous. Agents decide and execute. You see results only. |
-| **VP** | Strategic oversight. Decisions surfaced, details on demand. |
-| **Engineer** | Full agent activity. Technical details and logs visible. |
-| **Builder** | Hands-on. All implementation details and task queues. |
-| **Founder** | Everything visible. No filters, full system transparency. |
+| Mode | You see | Best for |
+|:-----|:--------|:---------|
+| **CEO** | Results only. Agents decide and execute autonomously. | Shipping fast |
+| **VP** | Decisions surfaced. Details on demand. | Strategic oversight |
+| **Engineer** | Full agent activity and technical logs. | Hands-on development |
+| **Builder** | Implementation details and task queues. | Deep coding sessions |
+| **Founder** | Everything. No filters. Full transparency. | Debugging and learning |
 
-### Dashboard (Optional)
+### MCP Governance Tools
 
-Forge includes a web dashboard with:
+8 tools available via Model Context Protocol:
 
-- **Governance HUD** — Live project context, health score, workstream tracking
-- **Infinity Terminal** — Browser terminal with session persistence (survives disconnects)
-- **Agent Activity** — Real-time agent coordination view
-- **Oracle Feed** — Governance event stream
+| Tool | What it does |
+|:-----|:-------------|
+| `forge_get_health` | Health score with letter grade |
+| `forge_get_governance_state` | Read governance.json |
+| `forge_get_git_status` | Branch, commits, working tree |
+| `forge_get_code_metrics` | Files, tests, coverage, dependencies |
+| `forge_run_tests` | Auto-detect and run test suite |
+| `forge_list_checkpoints` | List saved snapshots |
+| `forge_security_scan` | Secrets, eval, .env, npm audit |
+| `forge_open_dashboard` | Generate + open HTML dashboard |
+
+<br>
+
+## Architecture
+
+```
+NXTG-Forge
+  ├── src/
+  │   ├── components/          # 58 React components (17K lines)
+  │   │   ├── governance/      #   Governance HUD, Oracle, Agent Activity
+  │   │   ├── dashboard/       #   Health scores, metrics, charts
+  │   │   ├── infinity-terminal/#  xterm.js terminal with PTY bridge
+  │   │   └── command/         #   Command center, output drawer
+  │   ├── server/              # Express API + WebSocket server
+  │   │   ├── api-server.ts    #   REST API, rate limiting, CORS
+  │   │   └── workers/         #   Agent worker pool infrastructure
+  │   ├── adapters/            # Multi-backend AI CLI adapters
+  │   │   ├── claude-code.ts   #   Claude Code adapter
+  │   │   └── factory.ts       #   Auto-detection factory
+  │   ├── services/            # Business logic layer
+  │   ├── hooks/               # 13 custom React hooks
+  │   ├── pages/               # 25 page components
+  │   └── contexts/            # React context providers
+  │
+  ├── .claude/
+  │   ├── commands/            # 21 slash commands (markdown)
+  │   ├── agents/              # 22 agent definitions
+  │   ├── skills/              # Knowledge modules
+  │   └── governance.json      # Project state
+  │
+  └── forge-plugin/            # Standalone Claude Code plugin
+      └── (see github.com/nxtg-ai/forge-plugin)
+```
+
+### Multi-Backend Support
+
+| Backend | Status |
+|:--------|:-------|
+| **Claude Code** | Full support &mdash; commands, agents, skills, hooks, dashboard |
+| **Codex CLI** | Framework skill + adapter (in progress) |
+| **Gemini CLI** | Framework skill + adapter (in progress) |
+
+<br>
+
+## Development
 
 ```bash
+# Install
 npm install
+
+# Start dev server (dashboard + API)
 npm run dev
-# Dashboard: http://localhost:5050
-# API: http://localhost:5051
+
+# Run tests
+npm test
+
+# Type check
+npx tsc --noEmit
+
+# Quality gates (tests + types + lint)
+npm run quality:gates
 ```
 
-## How It Works
+### Test Coverage
 
-Forge is a set of markdown files in `.claude/`:
+| Metric | Value |
+|:-------|:------|
+| Test files | 114 |
+| Tests passing | 4,085 |
+| TypeScript errors | 0 (strict mode) |
+| Source files | 235 |
+| Total lines | 137,204 |
 
-```
-.claude/
-  commands/     # 20 slash commands (markdown with embedded logic)
-  agents/       # 22 agent definitions (system prompts + tool configs)
-  skills/       # 20 skill modules (domain knowledge)
-  hooks/        # 28 automation hooks (session, governance, quality)
-```
-
-When you type `/[FRG]-status` in Claude Code, it reads `.claude/commands/[FRG]-status.md` and executes the instructions. No server required. No npm dependencies. Just markdown files that make Claude smarter about your project.
-
-The dashboard is optional — commands work without it.
-
-## Requirements
-
-- Claude Code (or Codex CLI / Gemini CLI)
-- Node.js 18+ (only needed for the optional dashboard)
-- Git
-
-## Test Coverage
-
-- **110 test files**
-- **4085 tests passing, 0 failures**
-- **0 TypeScript errors** (strict mode)
-
-```bash
-npm test              # Run all tests
-npm run test:coverage # With coverage report
-```
+<br>
 
 ## Technology Stack
 
 All dependencies MIT or Apache-2.0 licensed.
 
-- **Plugin**: Pure markdown (zero dependencies)
-- **Dashboard Frontend**: React 19, Vite 7, TailwindCSS, Framer Motion
-- **Dashboard Backend**: Express 4, WebSocket, node-pty
-- **Terminal**: xterm.js 6.0 with PTY bridge
-- **Testing**: Vitest, Testing Library
+| Layer | Technology |
+|:------|:-----------|
+| **Frontend** | React 19, Vite 7, Tailwind CSS, Framer Motion |
+| **Backend** | Express 4, WebSocket, node-pty |
+| **Terminal** | xterm.js 6.0 with PTY bridge |
+| **Testing** | Vitest, Testing Library |
+| **Plugin** | Pure markdown (zero dependencies) |
+| **MCP** | @modelcontextprotocol/sdk |
+
+<br>
+
+## Related
+
+- **[forge-plugin](https://github.com/nxtg-ai/forge-plugin)** &mdash; Standalone Claude Code plugin (commands + agents + skills only, no dashboard)
+
+<br>
 
 ## Contributing
 
@@ -171,13 +345,16 @@ All dependencies MIT or Apache-2.0 licensed.
 4. `npm run quality:gates`
 5. Open a PR
 
+<br>
+
 ## License
 
-MIT. See [LICENSE](LICENSE).
+[MIT](LICENSE) &mdash; Copyright (c) 2026 [NXTG AI](https://github.com/nxtg-ai)
+
+<br>
 
 ---
 
-<div align="center">
-  <p><strong>Built for developers who ship.</strong></p>
-  <p><a href="https://github.com/nxtg-ai/forge">github.com/nxtg-ai/forge</a></p>
-</div>
+<p align="center">
+  <sub>Built for developers who ship. Governed by Forge.</sub>
+</p>

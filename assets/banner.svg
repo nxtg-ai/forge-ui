@@ -1,0 +1,264 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400" width="1200" height="400">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#06060f"/>
+      <stop offset="50%" style="stop-color:#0c0c1a"/>
+      <stop offset="100%" style="stop-color:#0a0a18"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="50%" style="stop-color:#8b5cf6"/>
+      <stop offset="100%" style="stop-color:#a78bfa"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#6366f1;stop-opacity:0"/>
+    </linearGradient>
+    <linearGradient id="termGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16162a"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#111127"/>
+      <stop offset="100%" style="stop-color:#0f0f22"/>
+    </linearGradient>
+    <filter id="softglow">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="termShadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="12" flood-color="#6366f1" flood-opacity="0.2"/>
+    </filter>
+    <clipPath id="termClip">
+      <rect x="640" y="55" width="520" height="290" rx="12"/>
+    </clipPath>
+  </defs>
+
+  <style>
+    @keyframes pulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+    @keyframes typeCursor { 0%,50% { opacity: 1; } 51%,100% { opacity: 0; } }
+    @keyframes slideUp { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: translateY(0); } }
+    @keyframes gradientShift { 0% { stop-color: #6366f1; } 33% { stop-color: #8b5cf6; } 66% { stop-color: #a78bfa; } 100% { stop-color: #6366f1; } }
+    @keyframes nodeGlow { 0%,100% { r: 3; opacity: 0.4; } 50% { r: 5; opacity: 0.9; } }
+    @keyframes dataFlow { 0% { stroke-dashoffset: 20; } 100% { stroke-dashoffset: 0; } }
+    @keyframes scanLine { 0% { y: 55; } 100% { y: 330; } }
+    .pulse { animation: pulse 3s ease-in-out infinite; }
+    .cursor { animation: typeCursor 1s step-end infinite; }
+    .slide-up { animation: slideUp 0.8s ease-out forwards; }
+    .node-glow { animation: nodeGlow 2.5s ease-in-out infinite; }
+    .data-flow { animation: dataFlow 1.5s linear infinite; stroke-dasharray: 4 4; }
+    .gradient-shift stop { animation: gradientShift 6s ease-in-out infinite; }
+    .term-text { font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', 'Cascadia Code', monospace; }
+    .brand-text { font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; }
+  </style>
+
+  <!-- Background -->
+  <rect width="1200" height="400" fill="url(#bg)"/>
+
+  <!-- Grid pattern -->
+  <g opacity="0.04">
+    <line x1="0" y1="0" x2="0" y2="400" stroke="#6366f1" stroke-width="0.5" transform="translate(40,0)"/>
+    <line x1="0" y1="0" x2="0" y2="400" stroke="#6366f1" stroke-width="0.5" transform="translate(80,0)"/>
+    <line x1="0" y1="0" x2="0" y2="400" stroke="#6366f1" stroke-width="0.5" transform="translate(120,0)"/>
+    <line x1="0" y1="0" x2="0" y2="400" stroke="#6366f1" stroke-width="0.5" transform="translate(160,0)"/>
+    <line x1="0" y1="0" x2="0" y2="400" stroke="#6366f1" stroke-width="0.5" transform="translate(200,0)"/>
+    <line x1="0" y1="0" x2="1200" y2="0" stroke="#6366f1" stroke-width="0.5" transform="translate(0,40)"/>
+    <line x1="0" y1="0" x2="1200" y2="0" stroke="#6366f1" stroke-width="0.5" transform="translate(0,80)"/>
+    <line x1="0" y1="0" x2="1200" y2="0" stroke="#6366f1" stroke-width="0.5" transform="translate(0,120)"/>
+    <line x1="0" y1="0" x2="1200" y2="0" stroke="#6366f1" stroke-width="0.5" transform="translate(0,160)"/>
+    <line x1="0" y1="0" x2="1200" y2="0" stroke="#6366f1" stroke-width="0.5" transform="translate(0,200)"/>
+    <line x1="0" y1="0" x2="1200" y2="0" stroke="#6366f1" stroke-width="0.5" transform="translate(0,240)"/>
+    <line x1="0" y1="0" x2="1200" y2="0" stroke="#6366f1" stroke-width="0.5" transform="translate(0,280)"/>
+    <line x1="0" y1="0" x2="1200" y2="0" stroke="#6366f1" stroke-width="0.5" transform="translate(0,320)"/>
+    <line x1="0" y1="0" x2="1200" y2="0" stroke="#6366f1" stroke-width="0.5" transform="translate(0,360)"/>
+  </g>
+
+  <!-- Floating nodes (network visualization) -->
+  <g opacity="0.5">
+    <circle cx="50" cy="80" r="2" fill="#6366f1" class="node-glow"/>
+    <circle cx="180" cy="45" r="2" fill="#8b5cf6" class="node-glow" style="animation-delay:0.4s"/>
+    <circle cx="120" cy="340" r="2" fill="#a78bfa" class="node-glow" style="animation-delay:0.8s"/>
+    <circle cx="300" cy="370" r="2" fill="#6366f1" class="node-glow" style="animation-delay:1.2s"/>
+    <circle cx="550" cy="30" r="2" fill="#8b5cf6" class="node-glow" style="animation-delay:1.6s"/>
+    <circle cx="500" cy="380" r="2" fill="#a78bfa" class="node-glow" style="animation-delay:0.6s"/>
+    <line x1="50" y1="80" x2="180" y2="45" stroke="#6366f1" stroke-width="0.5" class="data-flow" opacity="0.3"/>
+    <line x1="120" y1="340" x2="300" y2="370" stroke="#8b5cf6" stroke-width="0.5" class="data-flow" opacity="0.3" style="animation-delay:0.5s"/>
+  </g>
+
+  <!-- LEFT SIDE: Brand + Info -->
+  <!-- Logo mark -->
+  <g transform="translate(60, 70)">
+    <!-- Shield shape -->
+    <path d="M28 0 L56 12 L56 36 C56 52 42 64 28 70 C14 64 0 52 0 36 L0 12 Z"
+          fill="none" stroke="url(#accent)" stroke-width="2" opacity="0.9"/>
+    <!-- Anvil inside shield -->
+    <g transform="translate(14, 18)">
+      <rect x="0" y="22" width="28" height="4" rx="1" fill="#6366f1" opacity="0.8"/>
+      <path d="M4 22 L8 8 L20 8 L24 22" fill="none" stroke="#a78bfa" stroke-width="1.5"/>
+      <rect x="11" y="0" width="6" height="8" rx="1" fill="#8b5cf6" opacity="0.7"/>
+      <line x1="14" y1="26" x2="14" y2="32" stroke="#6366f1" stroke-width="2" opacity="0.5"/>
+      <rect x="6" y="32" width="16" height="3" rx="1" fill="#6366f1" opacity="0.4"/>
+    </g>
+  </g>
+
+  <!-- Brand name -->
+  <text x="135" y="102" class="brand-text" fill="white" font-size="42" font-weight="800" letter-spacing="-1">
+    NXTG-Forge
+  </text>
+  <text x="135" y="127" class="brand-text" fill="#64748b" font-size="15" font-weight="400" letter-spacing="3">
+    AI DEVELOPMENT PLATFORM
+  </text>
+
+  <!-- Accent line -->
+  <rect x="60" y="148" width="80" height="2" rx="1" fill="url(#accent)" class="pulse"/>
+
+  <!-- Tagline -->
+  <text x="60" y="185" class="brand-text" fill="#e2e8f0" font-size="20" font-weight="600">
+    The Chief of Staff for your codebase
+  </text>
+  <text x="60" y="212" class="brand-text" fill="#64748b" font-size="14" font-weight="400">
+    Governance. Agents. Dashboard. Terminal.
+  </text>
+
+  <!-- Stats row -->
+  <g transform="translate(60, 245)">
+    <!-- Stat: Commands -->
+    <g>
+      <text class="term-text" fill="#6366f1" font-size="24" font-weight="700">21</text>
+      <text x="0" y="18" class="brand-text" fill="#475569" font-size="11" font-weight="500">COMMANDS</text>
+    </g>
+    <!-- Stat: Agents -->
+    <g transform="translate(95, 0)">
+      <text class="term-text" fill="#8b5cf6" font-size="24" font-weight="700">22</text>
+      <text x="0" y="18" class="brand-text" fill="#475569" font-size="11" font-weight="500">AGENTS</text>
+    </g>
+    <!-- Stat: Components -->
+    <g transform="translate(185, 0)">
+      <text class="term-text" fill="#a78bfa" font-size="24" font-weight="700">58</text>
+      <text x="0" y="18" class="brand-text" fill="#475569" font-size="11" font-weight="500">UI COMPONENTS</text>
+    </g>
+    <!-- Stat: Tests -->
+    <g transform="translate(315, 0)">
+      <text class="term-text" fill="#22c55e" font-size="24" font-weight="700">4K+</text>
+      <text x="0" y="18" class="brand-text" fill="#475569" font-size="11" font-weight="500">TESTS</text>
+    </g>
+    <!-- Stat: Lines -->
+    <g transform="translate(400, 0)">
+      <text class="term-text" fill="#06b6d4" font-size="24" font-weight="700">137K</text>
+      <text x="0" y="18" class="brand-text" fill="#475569" font-size="11" font-weight="500">LINES</text>
+    </g>
+  </g>
+
+  <!-- Tech badges -->
+  <g transform="translate(60, 300)">
+    <rect width="65" height="24" rx="6" fill="#1e1e3a" stroke="#6366f1" stroke-width="0.5"/>
+    <text x="33" y="16" class="term-text" fill="#818cf8" font-size="10" text-anchor="middle">React</text>
+
+    <rect x="72" width="80" height="24" rx="6" fill="#1e1e3a" stroke="#6366f1" stroke-width="0.5"/>
+    <text x="112" y="16" class="term-text" fill="#818cf8" font-size="10" text-anchor="middle">TypeScript</text>
+
+    <rect x="160" width="55" height="24" rx="6" fill="#1e1e3a" stroke="#6366f1" stroke-width="0.5"/>
+    <text x="188" y="16" class="term-text" fill="#818cf8" font-size="10" text-anchor="middle">Vite</text>
+
+    <rect x="222" width="70" height="24" rx="6" fill="#1e1e3a" stroke="#6366f1" stroke-width="0.5"/>
+    <text x="257" y="16" class="term-text" fill="#818cf8" font-size="10" text-anchor="middle">Express</text>
+
+    <rect x="300" width="60" height="24" rx="6" fill="#1e1e3a" stroke="#6366f1" stroke-width="0.5"/>
+    <text x="330" y="16" class="term-text" fill="#818cf8" font-size="10" text-anchor="middle">xterm</text>
+
+    <rect x="368" width="62" height="24" rx="6" fill="#1e1e3a" stroke="#6366f1" stroke-width="0.5"/>
+    <text x="399" y="16" class="term-text" fill="#818cf8" font-size="10" text-anchor="middle">Vitest</text>
+
+    <rect x="438" width="55" height="24" rx="6" fill="#1e1e3a" stroke="#22c55e" stroke-width="0.5"/>
+    <text x="466" y="16" class="term-text" fill="#4ade80" font-size="10" text-anchor="middle">MIT</text>
+  </g>
+
+  <!-- Divider line -->
+  <line x1="610" y1="55" x2="610" y2="345" stroke="#1e293b" stroke-width="1" opacity="0.5"/>
+
+  <!-- RIGHT SIDE: Terminal / Dashboard Preview -->
+  <g filter="url(#termShadow)">
+    <!-- Terminal window -->
+    <rect x="640" y="55" width="520" height="290" rx="12" fill="url(#termGrad)" stroke="#2d2d4a" stroke-width="1"/>
+
+    <!-- Terminal title bar -->
+    <rect x="640" y="55" width="520" height="32" rx="12" fill="#111127"/>
+    <rect x="640" y="75" width="520" height="12" fill="#111127"/>
+    <!-- Window dots -->
+    <circle cx="660" cy="71" r="5" fill="#f87171" opacity="0.8"/>
+    <circle cx="678" cy="71" r="5" fill="#fbbf24" opacity="0.8"/>
+    <circle cx="696" cy="71" r="5" fill="#4ade80" opacity="0.8"/>
+    <!-- Title -->
+    <text x="900" y="75" class="term-text" fill="#475569" font-size="11" text-anchor="middle">Forge Governance Dashboard</text>
+
+    <!-- Dashboard content area -->
+    <g clip-path="url(#termClip)">
+      <!-- Health score card -->
+      <rect x="655" y="100" width="160" height="90" rx="8" fill="url(#cardGrad)" stroke="#2d2d4a" stroke-width="0.5"/>
+      <text x="670" y="118" class="term-text" fill="#64748b" font-size="9">HEALTH SCORE</text>
+      <!-- Score ring -->
+      <circle cx="735" cy="157" r="22" fill="none" stroke="#1e293b" stroke-width="5"/>
+      <circle cx="735" cy="157" r="22" fill="none" stroke="#22c55e" stroke-width="5"
+              stroke-dasharray="110 138" stroke-linecap="round" transform="rotate(-90, 735, 157)"/>
+      <text x="735" y="160" class="term-text" fill="#22c55e" font-size="16" font-weight="700" text-anchor="middle">A</text>
+      <text x="735" y="172" class="term-text" fill="#475569" font-size="8" text-anchor="middle">85/100</text>
+
+      <!-- Git status card -->
+      <rect x="825" y="100" width="160" height="90" rx="8" fill="url(#cardGrad)" stroke="#2d2d4a" stroke-width="0.5"/>
+      <text x="840" y="118" class="term-text" fill="#64748b" font-size="9">GIT STATUS</text>
+      <text x="840" y="138" class="term-text" fill="#e2e8f0" font-size="11">main</text>
+      <circle cx="890" cy="133" r="4" fill="#22c55e" opacity="0.7" class="pulse"/>
+      <text x="840" y="156" class="term-text" fill="#64748b" font-size="9">177 commits</text>
+      <text x="840" y="172" class="term-text" fill="#475569" font-size="9">0 modified  0 staged</text>
+
+      <!-- Metrics card -->
+      <rect x="995" y="100" width="150" height="90" rx="8" fill="url(#cardGrad)" stroke="#2d2d4a" stroke-width="0.5"/>
+      <text x="1010" y="118" class="term-text" fill="#64748b" font-size="9">CODE METRICS</text>
+      <text x="1010" y="140" class="term-text" fill="#06b6d4" font-size="13" font-weight="600">235</text>
+      <text x="1048" y="140" class="term-text" fill="#475569" font-size="10">files</text>
+      <text x="1010" y="158" class="term-text" fill="#a78bfa" font-size="13" font-weight="600">114</text>
+      <text x="1048" y="158" class="term-text" fill="#475569" font-size="10">tests</text>
+      <text x="1010" y="176" class="term-text" fill="#22c55e" font-size="13" font-weight="600">49%</text>
+      <text x="1048" y="176" class="term-text" fill="#475569" font-size="10">coverage</text>
+
+      <!-- Agent activity feed -->
+      <rect x="655" y="200" width="240" height="130" rx="8" fill="url(#cardGrad)" stroke="#2d2d4a" stroke-width="0.5"/>
+      <text x="670" y="218" class="term-text" fill="#64748b" font-size="9">AGENT ACTIVITY</text>
+      <!-- Agent rows -->
+      <circle cx="670" cy="237" r="4" fill="#6366f1"/>
+      <text x="680" y="240" class="term-text" fill="#e2e8f0" font-size="9">Planner</text>
+      <text x="740" y="240" class="term-text" fill="#4ade80" font-size="8">architecture review</text>
+      <circle cx="670" cy="257" r="4" fill="#8b5cf6"/>
+      <text x="680" y="260" class="term-text" fill="#e2e8f0" font-size="9">Builder</text>
+      <text x="740" y="260" class="term-text" fill="#06b6d4" font-size="8">implementing feature</text>
+      <circle cx="670" cy="277" r="4" fill="#22c55e"/>
+      <text x="680" y="280" class="term-text" fill="#e2e8f0" font-size="9">Testing</text>
+      <text x="740" y="280" class="term-text" fill="#fbbf24" font-size="8">writing unit tests</text>
+      <circle cx="670" cy="297" r="4" fill="#f97316"/>
+      <text x="680" y="300" class="term-text" fill="#e2e8f0" font-size="9">Guardian</text>
+      <text x="740" y="300" class="term-text" fill="#4ade80" font-size="8">quality gate passed</text>
+      <circle cx="670" cy="317" r="4" fill="#ef4444"/>
+      <text x="680" y="320" class="term-text" fill="#e2e8f0" font-size="9">Security</text>
+      <text x="740" y="320" class="term-text" fill="#4ade80" font-size="8">0 vulnerabilities</text>
+
+      <!-- Terminal mini -->
+      <rect x="905" y="200" width="240" height="130" rx="8" fill="#0a0a14" stroke="#2d2d4a" stroke-width="0.5"/>
+      <text x="920" y="218" class="term-text" fill="#64748b" font-size="9">INFINITY TERMINAL</text>
+      <text x="920" y="238" class="term-text" fill="#4ade80" font-size="9">$ /[FRG]-status</text>
+      <text x="920" y="254" class="term-text" fill="#64748b" font-size="8">Branch: main</text>
+      <text x="920" y="267" class="term-text" fill="#64748b" font-size="8">Tests: 4085 passing</text>
+      <text x="920" y="280" class="term-text" fill="#64748b" font-size="8">Types: 0 errors</text>
+      <text x="920" y="293" class="term-text" fill="#22c55e" font-size="8">Health: A (85/100)</text>
+      <text x="920" y="310" class="term-text" fill="#4ade80" font-size="9">$<rect x="930" y="301" width="7" height="12" fill="#4ade80" class="cursor" opacity="0.8"/></text>
+    </g>
+  </g>
+
+  <!-- Bottom accent line -->
+  <rect x="0" y="396" width="1200" height="4" fill="url(#accent)" opacity="0.4"/>
+
+  <!-- Version badge -->
+  <g transform="translate(60, 350)">
+    <rect width="52" height="20" rx="4" fill="#1e1e3a" stroke="#22c55e" stroke-width="0.5"/>
+    <text x="26" y="14" class="term-text" fill="#4ade80" font-size="9" text-anchor="middle">v3.0.0</text>
+  </g>
+</svg>
