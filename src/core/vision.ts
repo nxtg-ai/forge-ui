@@ -46,6 +46,14 @@ export class VisionManager {
     this.eventsPath = path.join(projectPath, ".claude", "vision-events.json");
   }
 
+  /** Switch to a different project root (for multi-project support) */
+  setProjectRoot(newRoot: string): void {
+    this.visionPath = path.join(newRoot, ".claude", "VISION.md");
+    this.eventsPath = path.join(newRoot, ".claude", "vision-events.json");
+    this.currentVision = null;
+    this.events = [];
+  }
+
   /**
    * Initialize the vision system
    */

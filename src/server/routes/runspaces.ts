@@ -133,7 +133,18 @@ export function createRunspaceRoutes(ctx: RouteContext): express.Router {
       const { id } = req.params;
       await ctx.runspaceManager.switchRunspace(id);
       const runspace = ctx.runspaceManager.getActiveRunspace();
-      ctx.broadcast("runspace.activated", { runspaceId: id });
+
+      // Update services to use the new project root
+      if (runspace?.path) {
+        ctx.governanceStateManager.setProjectRoot(runspace.path);
+        ctx.visionSystem.setProjectRoot(runspace.path);
+        // Re-initialize vision for the new project
+        await ctx.visionSystem.initialize().catch(() => {
+          // New project may not have vision files yet — that's fine
+        });
+      }
+
+      ctx.broadcast("runspace.activated", { runspaceId: id, runspace });
       res.json({
         success: true,
         data: runspace,

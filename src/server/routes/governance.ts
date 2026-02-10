@@ -160,7 +160,15 @@ export function createGovernanceRoutes(ctx: RouteContext): express.Router {
       const os = await import("os");
       const homeDir = os.default.homedir();
 
-      // Find native Claude memory file
+      // Derive Claude memory path from active project root
+      // Claude Code stores memory at ~/.claude/projects/-{path-with-dashes}/memory/MEMORY.md
+      const projectSlug = ctx.projectRoot.replace(/\//g, "-");
+      const projectMemoryPath = path.join(
+        homeDir,
+        `.claude/projects/${projectSlug}/memory/MEMORY.md`,
+      );
+
+      // Also search all memory files as fallback
       const memoryGlob = path.join(
         homeDir,
         ".claude/projects/*/memory/MEMORY.md",
@@ -168,15 +176,13 @@ export function createGovernanceRoutes(ctx: RouteContext): express.Router {
       const { glob } = await import("glob");
       const memoryFiles = await glob(memoryGlob);
 
-      // Also check project-specific memory path
-      const projectMemoryPath = path.join(
-        homeDir,
-        ".claude/projects/-home-axw-projects-NXTG-Forge-v3/memory/MEMORY.md",
-      );
-
+      // Prefer project-specific path, then search by project directory name
+      const projectDirName = path.basename(ctx.projectRoot);
       let memoryContent = "";
       const targetPath =
-        memoryFiles.find((f) => f.includes("NXTG-Forge")) || projectMemoryPath;
+        memoryFiles.find((f) => f.includes(projectSlug)) ||
+        memoryFiles.find((f) => f.includes(projectDirName)) ||
+        projectMemoryPath;
 
       try {
         memoryContent = await fs.readFile(targetPath, "utf-8");

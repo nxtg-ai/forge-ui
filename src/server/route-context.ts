@@ -20,7 +20,8 @@ import { ComplianceService } from "../services/compliance-service";
 import type { AgentWorkerPool } from "./workers";
 
 export interface RouteContext {
-  projectRoot: string;
+  /** Resolves to active runspace path, or falls back to process.cwd() */
+  readonly projectRoot: string;
   orchestrator: InstanceType<typeof ForgeOrchestrator>;
   visionSystem: InstanceType<typeof VisionSystem>;
   stateManager: InstanceType<typeof StateManager>;

@@ -28,6 +28,14 @@ export class GovernanceStateManager {
     this.backupDir = path.join(projectRoot, ".claude/governance/backups");
   }
 
+  /** Switch to a different project root (for multi-project support) */
+  setProjectRoot(newRoot: string): void {
+    this.projectRoot = newRoot;
+    this.statePath = path.join(newRoot, ".claude/governance.json");
+    this.configPath = path.join(newRoot, ".claude/governance/config.json");
+    this.backupDir = path.join(newRoot, ".claude/governance/backups");
+  }
+
   /**
    * Read governance state with validation
    */

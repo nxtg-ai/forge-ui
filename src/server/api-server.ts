@@ -37,7 +37,7 @@ import {
   flushSentry,
 } from "../monitoring/sentry";
 import swaggerRouter from "./swagger";
-import intelligenceRouter from "./routes/intelligence.js";
+import { createIntelligenceRoutes } from "./routes/intelligence.js";
 import { getLogger } from "../utils/logger";
 import { generalLimiter, writeLimiter, authLimiter, rateLimit } from "./middleware";
 import type { RouteContext } from "./route-context";
@@ -264,12 +264,15 @@ app.use(rateLimit(generalLimiter));
 // ============= Pre-existing Route Modules =============
 
 app.use(swaggerRouter);
-app.use("/api/memory", intelligenceRouter);
 
 // ============= Route Context =============
 
 const ctx: RouteContext = {
-  projectRoot,
+  // Dynamic projectRoot: resolves to active runspace path, falls back to startup cwd
+  get projectRoot() {
+    const active = runspaceManager.getActiveRunspace();
+    return active?.path ?? projectRoot;
+  },
   orchestrator,
   visionSystem,
   stateManager,
@@ -293,6 +296,7 @@ const forgeCtx = Object.create(ctx, {
 
 // ============= Mount Route Modules =============
 
+app.use("/api/memory", createIntelligenceRoutes(ctx));
 app.use("/api/governance", createGovernanceRoutes(ctx));
 app.use("/api/commands", createCommandRoutes(ctx));
 app.use("/api/workers", createWorkerRoutes(ctx));
