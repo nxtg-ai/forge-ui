@@ -380,7 +380,7 @@ describe("Global rate limiters", () => {
   });
 
   it("generalLimiter has correct limits for test environment", () => {
-    expect(generalLimiter.maxRequests).toBe(1000);
+    expect(generalLimiter.maxRequests).toBe(5000);
   });
 
   it("writeLimiter has correct limits for test environment", () => {
@@ -396,7 +396,7 @@ describe("Global rate limiters", () => {
     const result2 = writeLimiter.check("test-ip");
     const result3 = authLimiter.check("test-ip");
 
-    expect(result1.remaining).toBe(999);
+    expect(result1.remaining).toBe(4999);
     expect(result2.remaining).toBe(99);
     expect(result3.remaining).toBe(49);
   });

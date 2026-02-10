@@ -43,14 +43,23 @@ describe("Runspace Routes", () => {
       } as any,
       broadcast: vi.fn(),
       orchestrator: {} as any,
-      visionSystem: {} as any,
+      visionSystem: {
+        setProjectRoot: vi.fn(),
+        initialize: vi.fn().mockResolvedValue(undefined),
+        getCurrentVision: vi.fn().mockReturnValue(null),
+      } as any,
       stateManager: {} as any,
       coordinationService: {} as any,
       bootstrapService: {} as any,
       mcpSuggestionEngine: {} as any,
-      governanceStateManager: {} as any,
+      governanceStateManager: {
+        setProjectRoot: vi.fn(),
+        readState: vi.fn().mockRejectedValue(new Error("no state")),
+      } as any,
       initService: {} as any,
-      statusService: {} as any,
+      statusService: {
+        setProjectRoot: vi.fn(),
+      } as any,
       complianceService: {} as any,
       getWorkerPool: vi.fn(),
       getWsClientCount: vi.fn(),
@@ -375,6 +384,7 @@ describe("Runspace Routes", () => {
         id: "rs-123",
         name: "Target Runspace",
         status: "running",
+        path: "/test/target",
       };
       vi.mocked(mockCtx.runspaceManager.switchRunspace).mockResolvedValue(undefined);
       vi.mocked(mockCtx.runspaceManager.getActiveRunspace).mockReturnValue(mockRunspace);
@@ -387,7 +397,9 @@ describe("Runspace Routes", () => {
       expect(res.body.data).toEqual(mockRunspace);
       expect(res.body.timestamp).toBeDefined();
       expect(mockCtx.runspaceManager.switchRunspace).toHaveBeenCalledWith("rs-123");
-      expect(mockCtx.broadcast).toHaveBeenCalledWith("runspace.activated", { runspaceId: "rs-123" });
+      expect(mockCtx.broadcast).toHaveBeenCalledWith("runspace.activated", { runspaceId: "rs-123", runspace: mockRunspace });
+      // Should also broadcast governance.update (null since readState rejects by default)
+      expect(mockCtx.broadcast).toHaveBeenCalledWith("governance.update", null);
     });
 
     it("handles switch errors", async () => {
@@ -413,6 +425,8 @@ describe("Runspace Routes", () => {
 
       expect(res.body.success).toBe(true);
       expect(res.body.data).toBeNull();
+      // Even with null runspace, activated event should still be broadcast
+      expect(mockCtx.broadcast).toHaveBeenCalledWith("runspace.activated", { runspaceId: "rs-123", runspace: null });
     });
   });
 
@@ -767,7 +781,7 @@ describe("Runspace Routes", () => {
       await request(app)
         .post("/api/runspaces/rs-789/switch");
 
-      expect(mockCtx.broadcast).toHaveBeenCalledWith("runspace.activated", { runspaceId: "rs-789" });
+      expect(mockCtx.broadcast).toHaveBeenCalledWith("runspace.activated", { runspaceId: "rs-789", runspace: null });
     });
 
     it("broadcasts suspended event on suspend", async () => {

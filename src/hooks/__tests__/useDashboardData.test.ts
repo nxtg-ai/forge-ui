@@ -203,8 +203,9 @@ describe("useDashboardData", () => {
     expect(wsManager.subscribe).toHaveBeenCalledWith("state.update", expect.any(Function));
     expect(wsManager.subscribe).toHaveBeenCalledWith("agent.activity", expect.any(Function));
     expect(wsManager.subscribe).toHaveBeenCalledWith("vision.change", expect.any(Function));
+    expect(wsManager.subscribe).toHaveBeenCalledWith("runspace.activated", expect.any(Function));
 
-    // Verify it was called exactly 3 times (once per event type)
-    expect(wsManager.subscribe).toHaveBeenCalledTimes(3);
+    // Verify it was called exactly 4 times (once per event type)
+    expect(wsManager.subscribe).toHaveBeenCalledTimes(4);
   });
 });

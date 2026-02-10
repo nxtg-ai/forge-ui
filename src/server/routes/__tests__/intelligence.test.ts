@@ -18,7 +18,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import express from "express";
 import request from "supertest";
-import intelligenceRouter from "../intelligence";
+import { createIntelligenceRoutes } from "../intelligence";
+import type { RouteContext } from "../../route-context";
 import * as intelligenceParser from "../../../utils/intelligence-parser";
 
 // Mock the intelligence parser module
@@ -127,13 +128,31 @@ describe("Intelligence Routes", () => {
     },
   };
 
+  const mockCtx = {
+    projectRoot: "/test/project",
+    runspaceManager: {} as any,
+    broadcast: vi.fn(),
+    orchestrator: {} as any,
+    visionSystem: {} as any,
+    stateManager: {} as any,
+    coordinationService: {} as any,
+    bootstrapService: {} as any,
+    mcpSuggestionEngine: {} as any,
+    governanceStateManager: {} as any,
+    initService: {} as any,
+    statusService: {} as any,
+    complianceService: {} as any,
+    getWorkerPool: vi.fn(),
+    getWsClientCount: vi.fn(),
+  } as unknown as RouteContext;
+
   beforeEach(() => {
     vi.clearAllMocks();
 
     // Create express app with intelligence routes
     app = express();
     app.use(express.json());
-    app.use("/api/memory", intelligenceRouter);
+    app.use("/api/memory", createIntelligenceRoutes(mockCtx));
 
     // Set up default mocks
     vi.mocked(intelligenceParser.getAllIntelligenceCards).mockResolvedValue(mockFullBudget);
@@ -305,7 +324,7 @@ describe("Intelligence Routes", () => {
         .get("/api/memory/intelligence")
         .expect(200);
 
-      expect(intelligenceParser.getAllIntelligenceCards).toHaveBeenCalledWith(process.cwd());
+      expect(intelligenceParser.getAllIntelligenceCards).toHaveBeenCalledWith("/test/project");
     });
 
     it("handles parser errors gracefully", async () => {
@@ -410,7 +429,7 @@ describe("Intelligence Routes", () => {
         .get("/api/memory/intelligence/compact")
         .expect(200);
 
-      expect(intelligenceParser.getCompactIntelligenceCards).toHaveBeenCalledWith(process.cwd());
+      expect(intelligenceParser.getCompactIntelligenceCards).toHaveBeenCalledWith("/test/project");
     });
 
     it("handles parser errors gracefully", async () => {
