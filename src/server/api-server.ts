@@ -306,11 +306,22 @@ app.use("/api", createForgeRoutes(forgeCtx));
 
 // ============= Safeguard: Duplicate Route Detector =============
 
+/** Express internal router layer — not part of the public API but stable across v4/v5. */
+interface ExpressLayer {
+  name?: string;
+  route?: { path: string; methods: Record<string, boolean> };
+  handle?: { stack?: ExpressLayer[] };
+  regexp?: { source?: string };
+}
+
 function detectDuplicateRoutes(expressApp: express.Application): void {
   const seen = new Map<string, number>();
   const duplicates: string[] = [];
 
-  const stack = (expressApp as any)._router?.stack || [];
+  const appWithRouter = expressApp as express.Application & {
+    _router?: { stack?: ExpressLayer[] };
+  };
+  const stack: ExpressLayer[] = appWithRouter._router?.stack || [];
   for (const layer of stack) {
     if (layer.route) {
       const route = layer.route;
