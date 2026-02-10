@@ -98,9 +98,9 @@ if [ -f "$STATE_FILE" ] && command -v jq &> /dev/null; then
        "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
 
     echo -e "${GREEN}[Updated]${NC} Synced project statistics"
-    echo "  " Python files: $PY_FILES"
-    echo "  " Test files: $TEST_FILES"
-    echo "  " Total lines: $TOTAL_LINES"
+    echo "  Python files: $PY_FILES"
+    echo "  Test files: $TEST_FILES"
+    echo "  Total lines: $TOTAL_LINES"
 fi
 
 # 5. Check Git status and update state
