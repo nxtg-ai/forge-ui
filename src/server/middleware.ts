@@ -57,7 +57,7 @@ export class InMemoryRateLimiter {
 }
 
 const isProd = process.env.NODE_ENV === "production";
-export const generalLimiter = new InMemoryRateLimiter(60000, isProd ? 300 : 1000);
+export const generalLimiter = new InMemoryRateLimiter(60000, isProd ? 300 : 5000);
 export const writeLimiter = new InMemoryRateLimiter(60000, isProd ? 30 : 100);
 export const authLimiter = new InMemoryRateLimiter(60000, isProd ? 10 : 50);
 
