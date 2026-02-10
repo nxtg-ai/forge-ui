@@ -1,7 +1,213 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
+/*
+ * Tailwind CSS 4 theme configuration
+ * Migrated from tailwind.config.js (189 lines of custom config)
+ */
+
+@theme {
+  /* ============================================
+   * Brand Colors (Purple/Blue gradient)
+   * ============================================ */
+  --color-brand-primary: #8b5cf6;
+  --color-brand-secondary: #3b82f6;
+  --color-brand-accent: #ec4899;
+
+  /* ============================================
+   * Semantic Colors
+   * ============================================ */
+  --color-semantic-success: #10b981;
+  --color-semantic-warning: #f59e0b;
+  --color-semantic-error: #ef4444;
+  --color-semantic-info: #3b82f6;
+
+  /* ============================================
+   * Surface Colors (Dark theme)
+   * ============================================ */
+  --color-surface-background: #09090b;
+  --color-surface-card: rgba(17, 24, 39, 0.5);
+  --color-surface-border: #27272a;
+  --color-surface-1: #09090b;
+  --color-surface-2: rgba(17, 24, 39, 0.5);
+  --color-surface-3: rgba(31, 41, 55, 0.5);
+  --color-surface-4: rgba(55, 65, 81, 0.5);
+
+  /* ============================================
+   * Legacy NXTG colors (backward compatibility)
+   * ============================================ */
+  --color-nxtg-purple-500: #a855f7;
+  --color-nxtg-purple-600: #9333ea;
+  --color-nxtg-blue-500: #3b82f6;
+  --color-nxtg-blue-600: #2563eb;
+
+  /* ============================================
+   * Typography Scale (fontSize with line heights)
+   * ============================================ */
+  --font-size-heading-1: 3rem;
+  --font-size-heading-1--line-height: 1.2;
+  --font-size-heading-1--font-weight: 700;
+  --font-size-heading-2: 1.875rem;
+  --font-size-heading-2--line-height: 1.3;
+  --font-size-heading-2--font-weight: 600;
+  --font-size-heading-3: 1.25rem;
+  --font-size-heading-3--line-height: 1.4;
+  --font-size-heading-3--font-weight: 500;
+  --font-size-body-large: 1.125rem;
+  --font-size-body-large--line-height: 1.6;
+  --font-size-body-base: 1rem;
+  --font-size-body-base--line-height: 1.6;
+  --font-size-body-small: 0.875rem;
+  --font-size-body-small--line-height: 1.5;
+  --font-size-caption: 0.75rem;
+  --font-size-caption--line-height: 1.4;
+
+  /* ============================================
+   * Custom Spacing (extending defaults)
+   * ============================================ */
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 0.75rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-2xl: 3rem;
+  --spacing-100: 25rem;
+  --spacing-120: 30rem;
+  --spacing-140: 35rem;
+
+  /* ============================================
+   * Elevation/Shadow System
+   * ============================================ */
+  --shadow-elevation-1: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-elevation-2: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-elevation-3: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-elevation-4: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-elevation-5: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --shadow-glow: 0 0 20px rgba(139, 92, 246, 0.3);
+  --shadow-glow-brand: 0 0 20px rgba(139, 92, 246, 0.5);
+  --shadow-glow-success: 0 0 20px rgba(16, 185, 129, 0.3);
+  --shadow-glow-error: 0 0 20px rgba(239, 68, 68, 0.3);
+
+  /* ============================================
+   * Width utilities (fractional)
+   * ============================================ */
+  --width-1/10: 10%;
+  --width-2/10: 20%;
+  --width-3/10: 30%;
+  --width-4/10: 40%;
+  --width-5/10: 50%;
+  --width-6/10: 60%;
+  --width-7/10: 70%;
+  --width-8/10: 80%;
+  --width-9/10: 90%;
+
+  /* ============================================
+   * Inset & Translate custom values
+   * ============================================ */
+  --inset-30: 7.5rem;
+  --inset-34: 8.5rem;
+  --inset-38: 9.5rem;
+  --translate-30: 7.5rem;
+  --translate-34: 8.5rem;
+  --translate-38: 9.5rem;
+
+  /* ============================================
+   * Border Radius System
+   * ============================================ */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+
+  /* ============================================
+   * Backdrop Blur
+   * ============================================ */
+  --backdrop-blur-xs: 2px;
+  --backdrop-blur-sm: 4px;
+  --backdrop-blur-md: 8px;
+  --backdrop-blur-lg: 12px;
+  --backdrop-blur-xl: 16px;
+
+  /* ============================================
+   * Animation System
+   * ============================================ */
+  --animate-spring-in: spring-in 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-spring-bounce: spring-bounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --animate-smooth: smooth 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --animate-fade-up: fade-up 0.4s ease-out;
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-marquee: marquee 30s linear infinite;
+  --animate-shimmer: shimmer 2s linear infinite;
+  --animate-glow: glow 2s ease-in-out infinite;
+  --animate-scale-in: scale-in 0.2s ease-out;
+
+  /* ============================================
+   * Transition Timing Functions
+   * ============================================ */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================
+ * Keyframe Animations
+ * ============================================ */
+@keyframes spring-in {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes spring-bounce {
+  0% { transform: scale(0.9); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes smooth {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes fade-up {
+  0% { transform: translateY(10px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.3); }
+  50% { box-shadow: 0 0 30px rgba(139, 92, 246, 0.6); }
+}
+
+@keyframes scale-in {
+  0% { transform: scale(0.95); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ============================================
+ * Tailwind 4: dark mode via class strategy
+ * (default in TW4 is media query; we use class)
+ * ============================================ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================
+ * Base Layer
+ * ============================================ */
 @layer base {
   :root {
     /* Dynamic progress bar widths */
@@ -27,6 +233,9 @@
   }
 }
 
+/* ============================================
+ * Components Layer
+ * ============================================ */
 @layer components {
   /* Force xterm.js to fill its container */
   .xterm {
@@ -41,6 +250,9 @@
   }
 }
 
+/* ============================================
+ * Utilities Layer
+ * ============================================ */
 @layer utilities {
   .text-balance {
     text-wrap: balance;

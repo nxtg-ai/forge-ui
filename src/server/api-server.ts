@@ -296,13 +296,21 @@ const forgeCtx = Object.create(ctx, {
 
 // ============= Mount Route Modules =============
 
-app.use("/api/memory", createIntelligenceRoutes(ctx));
-app.use("/api/governance", createGovernanceRoutes(ctx));
-app.use("/api/commands", createCommandRoutes(ctx));
-app.use("/api/workers", createWorkerRoutes(ctx));
-app.use("/api/runspaces", createRunspaceRoutes(ctx));
-app.use("/api", createFeatureRoutes(ctx));
-app.use("/api", createForgeRoutes(forgeCtx));
+/** Maps Router instances to their mount prefix for the duplicate route detector. */
+const routerMountPaths = new WeakMap<express.Router, string>();
+
+function mountRouter(prefix: string, router: express.Router): void {
+  routerMountPaths.set(router, prefix);
+  app.use(prefix, router);
+}
+
+mountRouter("/api/memory", createIntelligenceRoutes(ctx));
+mountRouter("/api/governance", createGovernanceRoutes(ctx));
+mountRouter("/api/commands", createCommandRoutes(ctx));
+mountRouter("/api/workers", createWorkerRoutes(ctx));
+mountRouter("/api/runspaces", createRunspaceRoutes(ctx));
+mountRouter("/api", createFeatureRoutes(ctx));
+mountRouter("/api", createForgeRoutes(forgeCtx));
 
 // ============= Safeguard: Duplicate Route Detector =============
 
@@ -310,19 +318,23 @@ app.use("/api", createForgeRoutes(forgeCtx));
 interface ExpressLayer {
   name?: string;
   route?: { path: string; methods: Record<string, boolean> };
-  handle?: { stack?: ExpressLayer[] };
-  regexp?: { source?: string };
+  handle?: express.Router & { stack?: ExpressLayer[] };
 }
 
-function detectDuplicateRoutes(expressApp: express.Application): void {
+function detectDuplicateRoutes(
+  expressApp: express.Application,
+  mounts: WeakMap<express.Router, string>,
+): void {
   const seen = new Map<string, number>();
   const duplicates: string[] = [];
 
+  // Express 5 exposes `app.router`; Express 4 used `app._router`.
   const appWithRouter = expressApp as express.Application & {
-    _router?: { stack?: ExpressLayer[] };
+    router?: { stack?: ExpressLayer[] };
   };
-  const stack: ExpressLayer[] = appWithRouter._router?.stack || [];
+  const stack: ExpressLayer[] = appWithRouter.router?.stack || [];
   for (const layer of stack) {
+    // Top-level route directly on `app`
     if (layer.route) {
       const route = layer.route;
       for (const method of Object.keys(route.methods)) {
@@ -332,12 +344,13 @@ function detectDuplicateRoutes(expressApp: express.Application): void {
         if (count > 1) duplicates.push(key);
       }
     }
+    // Mounted router — only inspect one level deep (direct child routes)
     if (layer.name === "router" && layer.handle?.stack) {
-      const prefix = layer.regexp?.source?.replace?.(/[\\\/?^$]/g, "") || "";
+      const prefix = (layer.handle && mounts.get(layer.handle)) || "";
       for (const subLayer of layer.handle.stack) {
         if (subLayer.route) {
           for (const method of Object.keys(subLayer.route.methods)) {
-            const key = `${method.toUpperCase()} /${prefix}${subLayer.route.path}`;
+            const key = `${method.toUpperCase()} ${prefix}${subLayer.route.path}`;
             const count = (seen.get(key) || 0) + 1;
             seen.set(key, count);
             if (count > 1) duplicates.push(key);
@@ -356,7 +369,7 @@ function detectDuplicateRoutes(expressApp: express.Application): void {
   logger.info(`Route integrity check passed: ${seen.size} unique routes, 0 duplicates`);
 }
 
-detectDuplicateRoutes(app);
+detectDuplicateRoutes(app, routerMountPaths);
 
 // ============= WebSocket Upgrade Handler =============
 

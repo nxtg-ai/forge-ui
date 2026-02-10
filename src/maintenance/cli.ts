@@ -87,10 +87,10 @@ async function runHealthCheck(): Promise<void> {
   console.log(`Summary: ${healthyCount} healthy, ${degradedCount} degraded, ${criticalCount} critical`);
 
   if (criticalCount > 0) {
-    console.log('\n\x1b[31mCritical issues detected. Immediate attention required.\x1b[0m');
+    console.warn('\n\x1b[31mCritical issues detected. Immediate attention required.\x1b[0m');
     process.exit(1);
   } else if (degradedCount > 0) {
-    console.log('\n\x1b[33mSome issues detected. Review recommended.\x1b[0m');
+    console.warn('\n\x1b[33mSome issues detected. Review recommended.\x1b[0m');
     process.exit(0);
   } else {
     console.log('\n\x1b[32mAll systems healthy.\x1b[0m');
