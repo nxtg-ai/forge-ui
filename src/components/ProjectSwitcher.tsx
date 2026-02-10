@@ -53,7 +53,7 @@ export const ProjectSwitcher: React.FC<ProjectSwitcherProps> = ({
   const sortedRunspaces = [...runspaces].sort((a, b) => {
     if (a.status === "active" && b.status !== "active") return -1;
     if (b.status === "active" && a.status !== "active") return 1;
-    return b.lastActive.getTime() - a.lastActive.getTime();
+    return new Date(b.lastActive).getTime() - new Date(a.lastActive).getTime();
   });
 
   const handleSwitch = (runspaceId: string) => {

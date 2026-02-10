@@ -440,12 +440,12 @@ const MobileDrawer: React.FC<{
             </div>
 
             {/* Project Switcher */}
-            {showProjectSwitcher && currentRunspace && runspaces && onRunspaceSwitch && onNewProject && onManageProjects && (
+            {showProjectSwitcher && onNewProject && onManageProjects && (
               <div className="p-4 border-b border-gray-800">
                 <ProjectSwitcher
-                  currentRunspace={currentRunspace}
-                  runspaces={runspaces}
-                  onSwitch={onRunspaceSwitch}
+                  currentRunspace={currentRunspace ?? null}
+                  runspaces={runspaces ?? []}
+                  onSwitch={onRunspaceSwitch ?? (() => {})}
                   onNew={onNewProject}
                   onManage={onManageProjects}
                 />
@@ -567,12 +567,12 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               </div>
 
               {/* Project Switcher - Desktop */}
-              {showProjectSwitcher && currentRunspace && runspaces && onRunspaceSwitch && onNewProject && onManageProjects && (
+              {showProjectSwitcher && onNewProject && onManageProjects && (
                 <div className="hidden md:block">
                   <ProjectSwitcher
-                    currentRunspace={currentRunspace}
-                    runspaces={runspaces}
-                    onSwitch={onRunspaceSwitch}
+                    currentRunspace={currentRunspace ?? null}
+                    runspaces={runspaces ?? []}
+                    onSwitch={onRunspaceSwitch ?? (() => {})}
                     onNew={onNewProject}
                     onManage={onManageProjects}
                   />
