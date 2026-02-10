@@ -134,10 +134,11 @@ export function createRunspaceRoutes(ctx: RouteContext): express.Router {
       await ctx.runspaceManager.switchRunspace(id);
       const runspace = ctx.runspaceManager.getActiveRunspace();
 
-      // Update services to use the new project root
+      // Update all services to use the new project root
       if (runspace?.path) {
         ctx.governanceStateManager.setProjectRoot(runspace.path);
         ctx.visionSystem.setProjectRoot(runspace.path);
+        ctx.statusService.setProjectRoot(runspace.path);
         // Re-initialize vision for the new project
         await ctx.visionSystem.initialize().catch(() => {
           // New project may not have vision files yet — that's fine
@@ -145,6 +146,22 @@ export function createRunspaceRoutes(ctx: RouteContext): express.Router {
       }
 
       ctx.broadcast("runspace.activated", { runspaceId: id, runspace });
+
+      // Broadcast updates so dashboard re-renders with new project data
+      try {
+        const govState = await ctx.governanceStateManager.readState();
+        ctx.broadcast("governance.update", govState);
+      } catch {
+        // New project may not have governance state — broadcast null to clear HUD
+        ctx.broadcast("governance.update", null);
+      }
+
+      // Broadcast vision change
+      const vision = ctx.visionSystem.getCurrentVision();
+      if (vision) {
+        ctx.broadcast("vision.change", vision);
+      }
+
       res.json({
         success: true,
         data: runspace,

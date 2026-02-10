@@ -32,6 +32,9 @@ export const StrategicAdvisor: React.FC<StrategicAdvisorProps> = ({
   state,
   className,
 }) => {
+  if (!state?.workstreams || !state?.sentinelLog) {
+    return null;
+  }
   const recommendation = analyzeStateAndRecommend(state);
 
   const priorityConfig = {

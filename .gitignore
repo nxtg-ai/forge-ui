@@ -155,3 +155,6 @@ data/
 
 # Zone Identifier files (Windows)
 *.Zone.Identifier
+
+# Screenshots (UAT artifacts, debug captures)
+*.png

@@ -68,6 +68,10 @@ export const GovernanceHUD: React.FC<GovernanceHUDProps> = ({ className }) => {
         if (data) {
           setState(data);
           setError(null);
+        } else {
+          // Project has no governance state (e.g. after runspace switch)
+          setState(null);
+          setError(null);
         }
       },
     );
@@ -155,14 +159,22 @@ export const GovernanceHUD: React.FC<GovernanceHUDProps> = ({ className }) => {
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden space-y-2 p-2">
         <ProjectContextCard />
-        <StrategicAdvisor state={state} />
-        <ConstitutionCard constitution={state.constitution} />
+        {state.workstreams && state.sentinelLog && (
+          <StrategicAdvisor state={state} />
+        )}
+        {state.constitution && (
+          <ConstitutionCard constitution={state.constitution} />
+        )}
         <WorkerPoolMetrics />
-        <ImpactMatrix workstreams={state.workstreams} />
+        {state.workstreams && (
+          <ImpactMatrix workstreams={state.workstreams} />
+        )}
         <BlockingDecisionsCard />
         <MemoryInsightsCard />
         <AgentActivityFeed maxEntries={15} />
-        <OracleFeed logs={state.sentinelLog} />
+        {state.sentinelLog && (
+          <OracleFeed logs={state.sentinelLog} />
+        )}
       </div>
     </div>
   );

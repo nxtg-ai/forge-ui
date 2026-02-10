@@ -99,6 +99,11 @@ export interface LiveContext {
 export class StatusService {
   constructor(private projectRoot: string) {}
 
+  /** Switch to a different project root (for multi-project support) */
+  setProjectRoot(newRoot: string): void {
+    this.projectRoot = newRoot;
+  }
+
   /**
    * Gather complete project status
    */
