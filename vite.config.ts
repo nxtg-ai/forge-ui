@@ -39,5 +39,13 @@ export default defineConfig({
   build: {
     outDir: 'dist-ui',
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-motion': ['framer-motion'],
+          'vendor-ui': ['lucide-react', 'class-variance-authority', 'tailwind-merge', 'clsx'],
+        },
+      },
+    },
   },
 });

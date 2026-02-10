@@ -1,14 +1,4 @@
 import React, { Suspense, lazy } from "react";
-import {
-  VisionCapture,
-  ChiefOfStaffDashboard,
-  ArchitectDiscussion,
-  CommandCenter,
-  VisionDisplay,
-  YoloMode,
-  ProjectSwitcher,
-  ProjectsManagement,
-} from "./index";
 import { MCPSelectionView } from "./onboarding/MCPSelectionView";
 import { BetaFeedback, BetaBanner, Changelog } from "./feedback";
 import TerminalView from "../pages/terminal-view";
@@ -37,6 +27,8 @@ const ArchitectPage = lazy(() => import("../pages/architect-view"));
 const ArchitectDemo = lazy(() => import("../pages/architect-demo"));
 const CommandPage = lazy(() => import("../pages/command-view"));
 const LandingPage = lazy(() => import("../pages/marketing/LandingPage"));
+const VisionCapture = lazy(() => import("./VisionCapture").then(m => ({ default: m.VisionCapture })));
+const ProjectsManagement = lazy(() => import("./ProjectsManagement").then(m => ({ default: m.ProjectsManagement })));
 
 // Lazy load fallback component
 const LazyLoadFallback: React.FC = () => (
@@ -183,7 +175,9 @@ export const AppContent: React.FC<AppContentProps> = (props) => {
       }`}>
         {/* Vision Capture View */}
         {currentView === "vision-capture" && (
-          <VisionCapture onVisionSubmit={handleVisionCapture} mode="initial" />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <VisionCapture onVisionSubmit={handleVisionCapture} mode="initial" />
+          </Suspense>
         )}
 
         {/* MCP Selection View */}
@@ -259,17 +253,19 @@ export const AppContent: React.FC<AppContentProps> = (props) => {
       )}
 
       {/* Projects Management Modal */}
-      <ProjectsManagement
-        isOpen={showProjectsManagement}
-        onClose={() => props.setShowProjectsManagement(false)}
-        runspaces={runspaces}
-        activeRunspaceId={activeRunspace?.id || null}
-        onRefresh={loadRunspaces}
-        onSwitch={handleRunspaceSwitch}
-        onStart={handleRunspaceStart}
-        onStop={handleRunspaceStop}
-        onDelete={handleRunspaceDelete}
-      />
+      <Suspense fallback={null}>
+        <ProjectsManagement
+          isOpen={showProjectsManagement}
+          onClose={() => props.setShowProjectsManagement(false)}
+          runspaces={runspaces}
+          activeRunspaceId={activeRunspace?.id || null}
+          onRefresh={loadRunspaces}
+          onSwitch={handleRunspaceSwitch}
+          onStart={handleRunspaceStart}
+          onStop={handleRunspaceStop}
+          onDelete={handleRunspaceDelete}
+        />
+      </Suspense>
 
       {/* Error Display */}
       <ErrorDisplay errors={forge.errors.filter((e): e is string => typeof e === 'string')} />
