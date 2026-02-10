@@ -9,6 +9,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { SafeAnimatePresence as AnimatePresence } from "../ui/SafeAnimatePresence";
 import { apiFetch } from "../../utils/api-fetch";
+import { wsManager } from "../../services/ws-manager";
 import {
   Brain,
   ChevronDown,
@@ -82,9 +83,15 @@ export const MemoryInsightsCard: React.FC<{ className?: string }> = ({
     fetchInsights();
     const interval = setInterval(fetchInsights, POLL_INTERVAL);
 
+    // Re-fetch when runspace changes
+    const unsubRunspace = wsManager.subscribe("runspace.activated", () => {
+      fetchInsights();
+    });
+
     return () => {
       isMountedRef.current = false;
       clearInterval(interval);
+      unsubRunspace();
     };
   }, []);
 

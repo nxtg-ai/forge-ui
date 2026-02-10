@@ -76,6 +76,13 @@ export const GovernanceHUD: React.FC<GovernanceHUDProps> = ({ className }) => {
       },
     );
 
+    // Re-fetch when runspace changes (backup for WS broadcast)
+    const unsubRunspace = wsManager.subscribe("runspace.activated", () => {
+      if (!isMountedRef.current) return;
+      setIsLoading(true);
+      fetchState();
+    });
+
     // Track connection status from wsManager
     const unsubState = wsManager.onStateChange((wsState) => {
       if (!isMountedRef.current) return;
@@ -97,6 +104,7 @@ export const GovernanceHUD: React.FC<GovernanceHUDProps> = ({ className }) => {
     return () => {
       isMountedRef.current = false;
       unsubMessage();
+      unsubRunspace();
       unsubState();
     };
   }, []);

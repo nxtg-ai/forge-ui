@@ -9,6 +9,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { SafeAnimatePresence as AnimatePresence } from "../ui/SafeAnimatePresence";
 import { apiFetch } from "../../utils/api-fetch";
+import { wsManager } from "../../services/ws-manager";
 import {
   ShieldAlert,
   ChevronDown,
@@ -95,9 +96,15 @@ export const BlockingDecisionsCard: React.FC<{ className?: string }> = ({
     fetchBlockers();
     const interval = setInterval(fetchBlockers, POLL_INTERVAL);
 
+    // Re-fetch when runspace changes
+    const unsubRunspace = wsManager.subscribe("runspace.activated", () => {
+      fetchBlockers();
+    });
+
     return () => {
       isMountedRef.current = false;
       clearInterval(interval);
+      unsubRunspace();
     };
   }, []);
 

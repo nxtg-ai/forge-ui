@@ -256,6 +256,11 @@ export function useDashboardData(): DashboardData {
           }));
         }
       }),
+
+      // Re-fetch all data when runspace changes
+      wsManager.subscribe("runspace.activated", () => {
+        fetchData();
+      }),
     ];
 
     // Auto-refresh every 30 seconds as fallback
