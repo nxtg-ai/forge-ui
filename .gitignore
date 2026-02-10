@@ -158,3 +158,5 @@ data/
 
 # Screenshots (UAT artifacts, debug captures)
 *.png
+# But allow README screenshots
+!docs/images/*.png

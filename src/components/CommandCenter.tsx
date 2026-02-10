@@ -96,15 +96,11 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
         setIsOpen(true);
       }
 
-      // Escape to close or clear search
-      if (e.key === "Escape") {
-        if (searchQuery) {
-          // If there's a search query, clear it first
-          setSearchQuery("");
-        } else {
-          // If search is empty, close the modal
-          setIsOpen(false);
-        }
+      // Escape to close
+      if (e.key === "Escape" && isOpen) {
+        e.preventDefault();
+        setIsOpen(false);
+        setSearchQuery("");
       }
 
       // Enter to execute selected command

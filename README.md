@@ -74,6 +74,12 @@ npm run dev
 
 ## The Platform
 
+<p align="center">
+  <img src="docs/images/dashboard.png" alt="Forge Dashboard" width="900">
+  <br>
+  <sub>Dashboard with real-time Governance HUD, health scoring, and strategic recommendations</sub>
+</p>
+
 ### Governance Dashboard
 
 Real-time project health monitoring with a dark-themed, responsive UI:
@@ -87,6 +93,14 @@ Real-time project health monitoring with a dark-themed, responsive UI:
 
 58 React components. Framer Motion animations. Tailwind CSS. Fully responsive.
 
+### Command Palette
+
+<p align="center">
+  <img src="docs/images/command-palette.png" alt="Command Palette" width="700">
+  <br>
+  <sub>Ctrl+K command palette with search, categories, and keyboard navigation</sub>
+</p>
+
 ### Infinity Terminal
 
 A browser-based terminal that **never dies**:
@@ -95,6 +109,12 @@ A browser-based terminal that **never dies**:
 - Multiple clients connect to the same session simultaneously
 - Full PTY bridge with xterm.js 6.0
 - Works over Vite proxy for multi-device access (phones, tablets, remote machines)
+
+<p align="center">
+  <img src="docs/images/terminal.png" alt="Infinity Terminal" width="700">
+  <br>
+  <sub>Browser-based terminal with xterm.js — sessions survive disconnects and restarts</sub>
+</p>
 
 ```
 Browser (xterm.js) → WebSocket → PTY Bridge → Shell
@@ -331,9 +351,17 @@ All dependencies MIT or Apache-2.0 licensed.
 
 <br>
 
-## Related
+## Ecosystem
 
-- **[forge-plugin](https://github.com/nxtg-ai/forge-plugin)** &mdash; Standalone Claude Code plugin (commands + agents + skills only, no dashboard)
+Forge is three repos that work together:
+
+| Repo | What it is | Install |
+|:-----|:-----------|:--------|
+| **[forge](https://github.com/nxtg-ai/forge)** (this repo) | Full platform &mdash; dashboard, terminal, API server | `git clone` + `npm install` |
+| **[forge-plugin](https://github.com/nxtg-ai/forge-plugin)** | Claude Code plugin &mdash; commands, agents, skills, hooks | `claude plugin add nxtg-ai/forge-plugin` |
+| **[forge-orchestrator](https://github.com/nxtg-ai/forge-orchestrator)** | Rust CLI &mdash; multi-agent task planning and coordination | `curl -sSL https://raw.githubusercontent.com/nxtg-ai/forge-orchestrator/main/install.sh \| sh` |
+
+The **plugin** works standalone with zero dependencies. The **dashboard** adds visual oversight. The **orchestrator** adds multi-agent task decomposition with OpenAI-powered planning.
 
 <br>
 
