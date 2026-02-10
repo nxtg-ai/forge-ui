@@ -8,6 +8,7 @@
 import React, { useState } from "react";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { AlertCircle, Zap } from "lucide-react";
+import { logger } from "../utils/browser-logger";
 
 // Component that throws an error on demand
 function ErrorThrower({ shouldThrow }: { shouldThrow: boolean }) {
@@ -44,7 +45,7 @@ function FullPageExample() {
         showReportButton={true}
         showHomeButton={true}
         onError={(error, errorInfo) => {
-          console.log("Full-page error caught:", error.message);
+          logger.debug("Full-page error caught:", error.message);
         }}
       >
         <ErrorThrower shouldThrow={shouldThrow} />
@@ -79,7 +80,7 @@ function PanelExample() {
           maxRetries={5}
           showReportButton={true}
           onError={(error, errorInfo) => {
-            console.log("Panel error caught:", error.message);
+            logger.debug("Panel error caught:", error.message);
           }}
         >
           <ErrorThrower shouldThrow={shouldThrow} />
@@ -114,7 +115,7 @@ function CardExample() {
         maxRetries={3}
         showReportButton={true}
         onError={(error, errorInfo) => {
-          console.log("Card error caught:", error.message);
+          logger.debug("Card error caught:", error.message);
         }}
       >
         <ErrorThrower shouldThrow={shouldThrow} />

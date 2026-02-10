@@ -15,6 +15,8 @@ describe("Sentry Monitoring Module", () => {
   let sentryModule: any;
   let originalEnv: NodeJS.ProcessEnv;
   let consoleLogSpy: any;
+  let consoleInfoSpy: any;
+  let consoleDebugSpy: any;
   let consoleWarnSpy: any;
   let consoleErrorSpy: any;
 
@@ -24,6 +26,8 @@ describe("Sentry Monitoring Module", () => {
 
     // Mock console methods
     consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    consoleInfoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    consoleDebugSpy = vi.spyOn(console, "debug").mockImplementation(() => {});
     consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -38,6 +42,8 @@ describe("Sentry Monitoring Module", () => {
 
     // Restore console
     consoleLogSpy.mockRestore();
+    consoleInfoSpy.mockRestore();
+    consoleDebugSpy.mockRestore();
     consoleWarnSpy.mockRestore();
     consoleErrorSpy.mockRestore();
 
@@ -52,7 +58,7 @@ describe("Sentry Monitoring Module", () => {
       const result = await sentryModule.initSentryServer();
 
       expect(result).toBe(false);
-      expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect(consoleDebugSpy).toHaveBeenCalledWith(
         "[Sentry] No SENTRY_DSN configured, error tracking disabled"
       );
     });
@@ -111,7 +117,7 @@ describe("Sentry Monitoring Module", () => {
       const result = sentryModule.captureMessage("Test message");
 
       expect(result).toBeNull();
-      expect(consoleLogSpy).toHaveBeenCalledWith("[INFO]", "Test message");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[INFO]", "Test message");
     });
 
     it("logs to console with warning level", () => {
@@ -120,7 +126,7 @@ describe("Sentry Monitoring Module", () => {
       const result = sentryModule.captureMessage("Test warning", "warning");
 
       expect(result).toBeNull();
-      expect(consoleLogSpy).toHaveBeenCalledWith("[WARNING]", "Test warning");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[WARNING]", "Test warning");
     });
 
     it("logs to console with error level", () => {
@@ -129,7 +135,7 @@ describe("Sentry Monitoring Module", () => {
       const result = sentryModule.captureMessage("Test error", "error");
 
       expect(result).toBeNull();
-      expect(consoleLogSpy).toHaveBeenCalledWith("[ERROR]", "Test error");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[ERROR]", "Test error");
     });
 
     it("logs to console with fatal level", () => {
@@ -138,7 +144,7 @@ describe("Sentry Monitoring Module", () => {
       const result = sentryModule.captureMessage("Test fatal", "fatal");
 
       expect(result).toBeNull();
-      expect(consoleLogSpy).toHaveBeenCalledWith("[FATAL]", "Test fatal");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[FATAL]", "Test fatal");
     });
 
     it("logs to console with debug level", () => {
@@ -147,7 +153,7 @@ describe("Sentry Monitoring Module", () => {
       const result = sentryModule.captureMessage("Test debug", "debug");
 
       expect(result).toBeNull();
-      expect(consoleLogSpy).toHaveBeenCalledWith("[DEBUG]", "Test debug");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[DEBUG]", "Test debug");
     });
 
     it("ignores context parameter when Sentry is not initialized", () => {
@@ -157,7 +163,7 @@ describe("Sentry Monitoring Module", () => {
       const result = sentryModule.captureMessage("API call failed", "error", context);
 
       expect(result).toBeNull();
-      expect(consoleLogSpy).toHaveBeenCalledWith("[ERROR]", "API call failed");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[ERROR]", "API call failed");
     });
   });
 
@@ -426,7 +432,7 @@ describe("Sentry Monitoring Module", () => {
       const result = await sentryModule.initSentryServer();
 
       expect(result).toBe(false);
-      expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect(consoleDebugSpy).toHaveBeenCalledWith(
         "[Sentry] No SENTRY_DSN configured, error tracking disabled"
       );
     });
@@ -437,7 +443,7 @@ describe("Sentry Monitoring Module", () => {
       const result = await sentryModule.initSentryServer();
 
       expect(result).toBe(false);
-      expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect(consoleDebugSpy).toHaveBeenCalledWith(
         "[Sentry] No SENTRY_DSN configured, error tracking disabled"
       );
     });
@@ -460,7 +466,7 @@ describe("Sentry Monitoring Module", () => {
 
       sentryModule.captureMessage("test", "error");
 
-      expect(consoleLogSpy).toHaveBeenCalledWith("[ERROR]", "test");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[ERROR]", "test");
     });
 
     it("formats warning level correctly in uppercase", () => {
@@ -468,7 +474,7 @@ describe("Sentry Monitoring Module", () => {
 
       sentryModule.captureMessage("test", "warning");
 
-      expect(consoleLogSpy).toHaveBeenCalledWith("[WARNING]", "test");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[WARNING]", "test");
     });
 
     it("formats info level correctly in uppercase", () => {
@@ -476,7 +482,7 @@ describe("Sentry Monitoring Module", () => {
 
       sentryModule.captureMessage("test", "info");
 
-      expect(consoleLogSpy).toHaveBeenCalledWith("[INFO]", "test");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[INFO]", "test");
     });
 
     it("formats debug level correctly in uppercase", () => {
@@ -484,7 +490,7 @@ describe("Sentry Monitoring Module", () => {
 
       sentryModule.captureMessage("test", "debug");
 
-      expect(consoleLogSpy).toHaveBeenCalledWith("[DEBUG]", "test");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[DEBUG]", "test");
     });
 
     it("formats fatal level correctly in uppercase", () => {
@@ -492,7 +498,7 @@ describe("Sentry Monitoring Module", () => {
 
       sentryModule.captureMessage("test", "fatal");
 
-      expect(consoleLogSpy).toHaveBeenCalledWith("[FATAL]", "test");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[FATAL]", "test");
     });
   });
 });

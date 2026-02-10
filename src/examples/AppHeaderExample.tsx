@@ -10,6 +10,7 @@ import { AppHeader } from "../components/layout";
 import { EngagementProvider } from "../contexts/EngagementContext";
 import type { Runspace } from "../core/runspace";
 import { BarChart3, Download } from "lucide-react";
+import { logger } from "../utils/browser-logger";
 
 /**
  * Example 1: App-Level Integration
@@ -39,17 +40,17 @@ export function AppLevelExample() {
   const [activeRunspace] = useState<Runspace | null>(runspaces[0]);
 
   const handleRunspaceSwitch = (runspaceId: string) => {
-    console.log("Switching to runspace:", runspaceId);
+    logger.debug("Switching to runspace:", runspaceId);
     // Implement runspace switching logic
   };
 
   const handleNewProject = () => {
-    console.log("Creating new project");
+    logger.debug("Creating new project");
     // Implement new project creation
   };
 
   const handleManageProjects = () => {
-    console.log("Managing projects");
+    logger.debug("Managing projects");
     // Implement project management
   };
 
@@ -92,7 +93,7 @@ export function DashboardPageExample() {
   const [governancePanelVisible, setGovernancePanelVisible] = useState(true);
 
   const handleExportReport = () => {
-    console.log("Exporting dashboard report");
+    logger.debug("Exporting dashboard report");
     // Implement export logic
   };
 
@@ -151,7 +152,7 @@ export function MinimalHeaderExample() {
   const [currentView] = useState("infinity-terminal");
 
   const handleNewSession = () => {
-    console.log("Creating new terminal session");
+    logger.debug("Creating new terminal session");
     // Implement new session logic
   };
 

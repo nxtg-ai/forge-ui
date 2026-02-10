@@ -35,7 +35,7 @@ export async function initSentryServer(): Promise<boolean> {
   const dsn = process.env.SENTRY_DSN;
 
   if (!dsn) {
-    console.log("[Sentry] No SENTRY_DSN configured, error tracking disabled");
+    console.debug("[Sentry] No SENTRY_DSN configured, error tracking disabled");
     return false;
   }
 
@@ -74,7 +74,7 @@ export async function initSentryServer(): Promise<boolean> {
       },
     });
 
-    console.log("[Sentry] Server-side error tracking initialized");
+    console.info("[Sentry] Server-side error tracking initialized");
     return true;
   } catch (error) {
     console.warn("[Sentry] Failed to initialize:", error);
@@ -111,7 +111,7 @@ export function captureMessage(
   context?: SentryContext
 ): string | null {
   if (!Sentry) {
-    console.log(`[${level.toUpperCase()}]`, message);
+    console.info(`[${level.toUpperCase()}]`, message);
     return null;
   }
 

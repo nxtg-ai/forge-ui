@@ -10,6 +10,7 @@ import React from "react";
 import { EngagementModeSelector } from "../components/layout";
 import { EngagementProvider } from "../contexts/EngagementContext";
 import { BarChart3 } from "lucide-react";
+import { logger } from "../utils/browser-logger";
 
 /**
  * Example 1: Basic Usage in Header
@@ -51,20 +52,20 @@ export const HeaderWithModeSelector: React.FC = () => {
  */
 export const HeaderWithCallbacks: React.FC = () => {
   const handleModeChange = (mode: string) => {
-    console.log(`Mode changed to: ${mode}`);
+    logger.debug(`Mode changed to: ${mode}`);
 
     // Apply mode-specific logic
     switch (mode) {
       case "ceo":
         // Show minimal details
-        console.log("Switching to minimal view");
+        logger.debug("Switching to minimal view");
         break;
       case "founder":
         // Show everything
-        console.log("Switching to full details view");
+        logger.debug("Switching to full details view");
         break;
       default:
-        console.log("Default view");
+        logger.debug("Default view");
     }
   };
 

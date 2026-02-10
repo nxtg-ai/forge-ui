@@ -31,7 +31,7 @@ export async function initSentryBrowser(): Promise<boolean> {
       : undefined;
 
   if (!dsn) {
-    console.log(
+    console.debug(
       "[Sentry] No VITE_SENTRY_DSN configured, browser error tracking disabled"
     );
     return false;
@@ -92,7 +92,7 @@ export async function initSentryBrowser(): Promise<boolean> {
     });
 
     initialized = true;
-    console.log("[Sentry] Browser error tracking initialized");
+    console.info("[Sentry] Browser error tracking initialized");
     return true;
   } catch (error) {
     console.warn("[Sentry] Failed to initialize browser tracking:", error);
@@ -127,7 +127,7 @@ export function captureMessage(
   context?: SentryContext
 ): string | null {
   if (!SentryBrowser || !initialized) {
-    console.log(`[${level.toUpperCase()}]`, message);
+    console.info(`[${level.toUpperCase()}]`, message);
     return null;
   }
 

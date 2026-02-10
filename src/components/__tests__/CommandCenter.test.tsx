@@ -549,7 +549,7 @@ describe("CommandCenter", () => {
       });
     });
 
-    test("clears search query on Escape", async () => {
+    test("Escape always closes modal even with search query", async () => {
       render(
         <CommandCenter
           onCommandExecute={mockOnCommandExecute}
@@ -572,15 +572,10 @@ describe("CommandCenter", () => {
 
       fireEvent.keyDown(window, { key: "Escape" });
 
-      // After pressing Escape with a search query, the query should clear but modal should remain open
+      // Escape always closes the modal and clears search
       await waitFor(() => {
-        const input = screen.queryByTestId("command-center-search-input") as HTMLInputElement;
-        expect(input).toBeInTheDocument();
-        expect(input.value).toBe("");
+        expect(screen.queryByTestId("command-center-modal")).not.toBeInTheDocument();
       });
-
-      // Modal should still be visible
-      expect(screen.getByTestId("command-center-modal")).toBeInTheDocument();
     });
   });
 

@@ -15,12 +15,16 @@ vi.unmock("../sentry-browser");
 describe("Sentry Browser Monitoring Module", () => {
   let sentryBrowserModule: any;
   let consoleLogSpy: any;
+  let consoleInfoSpy: any;
+  let consoleDebugSpy: any;
   let consoleWarnSpy: any;
   let consoleErrorSpy: any;
 
   beforeEach(async () => {
     // Mock console methods
     consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    consoleInfoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+    consoleDebugSpy = vi.spyOn(console, "debug").mockImplementation(() => {});
     consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -39,6 +43,8 @@ describe("Sentry Browser Monitoring Module", () => {
   afterEach(() => {
     // Restore console
     consoleLogSpy.mockRestore();
+    consoleInfoSpy.mockRestore();
+    consoleDebugSpy.mockRestore();
     consoleWarnSpy.mockRestore();
     consoleErrorSpy.mockRestore();
 
@@ -52,7 +58,7 @@ describe("Sentry Browser Monitoring Module", () => {
       const result = await sentryBrowserModule.initSentryBrowser();
 
       expect(result).toBe(false);
-      expect(consoleLogSpy).toHaveBeenCalledWith(
+      expect(consoleDebugSpy).toHaveBeenCalledWith(
         "[Sentry] No VITE_SENTRY_DSN configured, browser error tracking disabled"
       );
     });
@@ -114,35 +120,35 @@ describe("Sentry Browser Monitoring Module", () => {
       const result = sentryBrowserModule.captureMessage("Test message");
 
       expect(result).toBeNull();
-      expect(consoleLogSpy).toHaveBeenCalledWith("[INFO]", "Test message");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[INFO]", "Test message");
     });
 
     it("logs to console with warning level", () => {
       const result = sentryBrowserModule.captureMessage("Test warning", "warning");
 
       expect(result).toBeNull();
-      expect(consoleLogSpy).toHaveBeenCalledWith("[WARNING]", "Test warning");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[WARNING]", "Test warning");
     });
 
     it("logs to console with error level", () => {
       const result = sentryBrowserModule.captureMessage("Test error", "error");
 
       expect(result).toBeNull();
-      expect(consoleLogSpy).toHaveBeenCalledWith("[ERROR]", "Test error");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[ERROR]", "Test error");
     });
 
     it("logs to console with fatal level", () => {
       const result = sentryBrowserModule.captureMessage("Test fatal", "fatal");
 
       expect(result).toBeNull();
-      expect(consoleLogSpy).toHaveBeenCalledWith("[FATAL]", "Test fatal");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[FATAL]", "Test fatal");
     });
 
     it("logs to console with debug level", () => {
       const result = sentryBrowserModule.captureMessage("Test debug", "debug");
 
       expect(result).toBeNull();
-      expect(consoleLogSpy).toHaveBeenCalledWith("[DEBUG]", "Test debug");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[DEBUG]", "Test debug");
     });
 
     it("ignores context parameter when Sentry is not initialized", () => {
@@ -154,7 +160,7 @@ describe("Sentry Browser Monitoring Module", () => {
       );
 
       expect(result).toBeNull();
-      expect(consoleLogSpy).toHaveBeenCalledWith("[ERROR]", "API call failed");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[ERROR]", "API call failed");
     });
   });
 
@@ -427,31 +433,31 @@ describe("Sentry Browser Monitoring Module", () => {
     it("formats error level correctly in uppercase", () => {
       sentryBrowserModule.captureMessage("test", "error");
 
-      expect(consoleLogSpy).toHaveBeenCalledWith("[ERROR]", "test");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[ERROR]", "test");
     });
 
     it("formats warning level correctly in uppercase", () => {
       sentryBrowserModule.captureMessage("test", "warning");
 
-      expect(consoleLogSpy).toHaveBeenCalledWith("[WARNING]", "test");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[WARNING]", "test");
     });
 
     it("formats info level correctly in uppercase", () => {
       sentryBrowserModule.captureMessage("test", "info");
 
-      expect(consoleLogSpy).toHaveBeenCalledWith("[INFO]", "test");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[INFO]", "test");
     });
 
     it("formats debug level correctly in uppercase", () => {
       sentryBrowserModule.captureMessage("test", "debug");
 
-      expect(consoleLogSpy).toHaveBeenCalledWith("[DEBUG]", "test");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[DEBUG]", "test");
     });
 
     it("formats fatal level correctly in uppercase", () => {
       sentryBrowserModule.captureMessage("test", "fatal");
 
-      expect(consoleLogSpy).toHaveBeenCalledWith("[FATAL]", "test");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[FATAL]", "test");
     });
   });
 
@@ -511,9 +517,9 @@ describe("Sentry Browser Monitoring Module", () => {
       sentryBrowserModule.captureMessage("warn message", "warning");
       sentryBrowserModule.captureMessage("error message", "error");
 
-      expect(consoleLogSpy).toHaveBeenCalledWith("[INFO]", "info message");
-      expect(consoleLogSpy).toHaveBeenCalledWith("[WARNING]", "warn message");
-      expect(consoleLogSpy).toHaveBeenCalledWith("[ERROR]", "error message");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[INFO]", "info message");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[WARNING]", "warn message");
+      expect(consoleInfoSpy).toHaveBeenCalledWith("[ERROR]", "error message");
     });
   });
 

@@ -23,6 +23,7 @@ import type {
   AutomatedAction,
   YoloStatistics,
 } from "./components/types";
+import { logger } from "./utils/browser-logger";
 
 // Mock data for demonstration
 const mockVisionData: VisionData = {
@@ -311,7 +312,7 @@ export default function App() {
 
   const handleCommandExecute = (command: string, args?: any) => {
     setIsExecuting(true);
-    console.log(`Executing command: ${command}`, args);
+    logger.debug(`Executing command: ${command}`, args);
 
     // Simulate command execution
     setTimeout(() => {
@@ -325,7 +326,7 @@ export default function App() {
   };
 
   const handleArchitectDecision = (decision: ArchitectureDecision) => {
-    console.log("Architecture decision made:", decision);
+    logger.debug("Architecture decision made:", decision);
     setCurrentView("dashboard");
   };
 
