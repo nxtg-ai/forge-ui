@@ -1,3 +1,7 @@
+---
+description: "Testing strategies — unit, integration, E2E patterns with Vitest and React Testing Library"
+---
+
 # Testing Excellence Skill
 
 Comprehensive testing strategies and implementation.

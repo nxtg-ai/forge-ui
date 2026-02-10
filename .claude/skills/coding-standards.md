@@ -1,3 +1,7 @@
+---
+description: "Coding standards for consistency, maintainability, and quality across the NXTG-Forge codebase"
+---
+
 # NXTG-Forge Coding Standards
 
 ## Overview

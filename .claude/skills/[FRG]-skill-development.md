@@ -1,3 +1,7 @@
+---
+description: "Anthropic's guide to Agent Skills — building specialized agents with files and folders"
+---
+
 # Equipping agents for the real world with Agent Skills
 https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills
 

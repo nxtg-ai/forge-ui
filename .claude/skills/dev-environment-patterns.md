@@ -1,3 +1,7 @@
+---
+description: "Dev environment patterns — WSL2, port configs, debugging setups, and common pitfalls"
+---
+
 # Development Environment Patterns
 
 ## Purpose

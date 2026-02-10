@@ -1,3 +1,7 @@
+---
+description: "Guide to creating NXTG-Forge agents — frontmatter, system prompts, tools, and best practices"
+---
+
 # Agent Development Guide
 
 ## Creating NXTG-Forge Agents

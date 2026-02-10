@@ -1,3 +1,7 @@
+---
+description: "Security best practices — OWASP, dependency scanning, secrets detection, and hardening"
+---
+
 # Security Best Practices Skill
 
 Comprehensive security guidance for modern applications.

@@ -1,3 +1,7 @@
+---
+description: "Comprehensive guide to NXTG-Forge Clean Architecture, design patterns, and component interactions"
+---
+
 # NXTG-Forge System Architecture
 
 **Purpose**: Comprehensive understanding of NXTG-Forge's Clean Architecture implementation, design patterns, and component interactions.

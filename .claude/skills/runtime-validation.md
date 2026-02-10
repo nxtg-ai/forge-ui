@@ -1,3 +1,7 @@
+---
+description: "Runtime validation layer — monitoring application behavior to catch errors static tests miss"
+---
+
 # NXTG-Forge Runtime Validation Layer
 
 ## Overview

@@ -1,3 +1,7 @@
+---
+description: "Domain knowledge for NXTG-Forge — vision, architecture concepts, agent orchestration patterns"
+---
+
 # NXTG-Forge Domain Knowledge
 
 ## Purpose and Vision

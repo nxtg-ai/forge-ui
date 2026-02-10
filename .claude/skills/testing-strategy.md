@@ -1,3 +1,7 @@
+---
+description: "NXTG-Forge testing strategy — test pyramid, coverage targets, and quality gates"
+---
+
 # NXTG-Forge Testing Strategy
 
 ## Overview
