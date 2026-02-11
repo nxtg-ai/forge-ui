@@ -329,4 +329,91 @@ That's the Lego moment. Each product enhances the other. The governance.json is 
 
 ---
 
+---
+
+## 6. Orchestrator Dogfood Log (voice-jib-jab project)
+
+### Setup
+- Project: `~/projects/voice-jib-jab` (real-time voice agent, Python/conda)
+- Binary: `forge-orca` (Rust orchestrator installed to `~/.local/bin/forge-orca`)
+- Old Python `forge` still at `~/.local/bin/forge` — no conflict
+
+### DX Journal
+
+**`forge-orca init` — First Run**
+- Reaction: "Super fast.. very cool"
+- Context discovery: found README.md, package.json, .git. Missed SPEC.md, CLAUDE.md, AGENTS.md, GEMINI.md (expected — fresh project)
+- Tool detection: picked up claude (2.1.39), codex (0.98.0), gemini (0.27.3) automatically
+- Scaffolded `.forge/` with state.json, plan.md template, events.jsonl
+- Next steps suggestion was clear and actionable
+- DX verdict: Clean, fast, no friction
+
+### DX Issues / Friction Points
+
+**DX-001: Init only scans 4 hardcoded .md files**
+- Currently checks: SPEC.md, CLAUDE.md, AGENTS.md, GEMINI.md
+- Should also glob for `*.md` in root and `docs/` — any markdown has useful project context
+- Example: a project might have CONTRIBUTING.md, ARCHITECTURE.md, API.md, docs/setup.md
+- Suggestion: scan for all `*.md`, show them as discovered context, optionally ingest into `.forge/knowledge/`
+- Priority: Low effort, high value — makes init smarter on any project
+
+**DX-002: Init doesn't scaffold governance.json**
+- Step 3 creates: state.json, plan.md, events.jsonl
+- Missing: governance.json — the shared state bus between all 3 products
+- This is one of the 5 core NXTG Protocols. If init doesn't create it, the Lego snap can't happen
+- Should scaffold a minimal governance.json with: version, timestamp, constitution stub, empty workstreams
+- Priority: High — this is the integration glue
+
+**DX-003: `forge-orca plan` outputs a static template, doesn't analyze the project**
+- Shows "Describe the project vision here" placeholder and a single "Example task"
+- Should read README.md, package.json, and any discovered .md files to generate a real plan
+- With the OpenAI brain enabled (`forge-orca config --brain openai`), it could auto-generate tasks from project context
+- Even rule-based brain could extract: project name, detected tech stack, suggest common tasks (setup, test, lint, deploy)
+- This is where the "intelligence" should shine — first plan should feel like magic
+- Priority: Critical for DX — this is the first "wow" moment or "meh" moment
+
+**DX-004: Status shows 0 tasks but plan shows T-001**
+- `forge-orca plan` renders T-001 "Example task" in the plan.md
+- `forge-orca status` says Total: 0, progress bar empty
+- The template task in plan.md isn't being parsed into the task board in state.json
+- These two views are out of sync — confusing for a new user
+- Priority: Medium — status should reflect what plan shows
+
+**DX-005: `forge-orca run --task T-001 --agent claude` fails — "Task T-001 not found"**
+- plan.md has T-001 listed but `.forge/tasks/` directory doesn't have it as a task file
+- `plan` is just a markdown template, `run` looks in `.forge/tasks/` for actual task definitions
+- The plan → task pipeline is broken: plan doesn't create runnable tasks, run can't find plan tasks
+- This is the critical workflow gap: init → plan → run should be seamless
+- User expectation: "I see a task in the plan, I should be able to run it"
+- Priority: Critical — this breaks the core loop
+
+**DX-006: Config output is clean but missing actionable options**
+- Shows current config but no hint on how to change things
+- Should show: `forge-orca config --brain openai` or `forge-orca config --set brain=openai`
+- A `forge-orca config --help` or inline hints would help discoverability
+
+**DX-007: Config syntax is `key value`, not `--flag` — not obvious**
+- User tried: `forge-orca config --brain openai` (natural CLI expectation)
+- Actual syntax: `forge-orca config brain openai` (positional args)
+- The error message says "use '-- --brain'" which is confusing
+- The bare `config` output should show usage hint: `Usage: forge-orca config brain openai`
+- Priority: Medium — bad first impression when trying to change settings
+
+**DX-008: Switching to OpenAI brain doesn't change plan output**
+- `config brain openai` succeeded, confirmed API key found
+- `plan` still shows the exact same static template — "Describe the project vision here"
+- The plan command is just `cat .forge/plan.md`, not actually invoking the brain
+- The brain should: read project context → call OpenAI → generate real tasks → write plan.md
+- This is THE feature that justifies the "pluggable AI brains" architecture
+- Without this working, the brain selection is cosmetic
+- Priority: CRITICAL — this is the orchestrator's reason for existing
+
+### DX Wins
+- Init is instant (Rust speed)
+- Auto-detects all 3 AI tools in PATH
+- Clear output formatting with checkmarks
+- Sensible next-steps guidance
+
+---
+
 *This is a living [breathing] document. Edit, annotate, push back on anything.*
