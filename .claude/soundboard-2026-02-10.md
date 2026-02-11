@@ -481,6 +481,30 @@ From a 607-line spec, the orchestrator:
 - This is the foundation for DX-009 (spinner), DX-011 (autonomous loop), and DX-014 (agent panes)
 - Priority: HIGH — prerequisite for the TUI dashboard vision
 
+### DX-015: Agents need write permissions — FIXED (yolo mode)
+- `claude -p` runs read-only by default, can't create files
+- Fix: `forge-orca config claude.permissions yolo` adds `--dangerously-skip-permissions`
+- Works for all 3 agents: claude, codex, gemini
+
+### DX-016: Orchestrator must ENHANCE Claude Code capabilities, not strip them (NEW)
+- **[Asif's Insight]:** "The DX must elevate and enhance the existing capabilities of Claude... not entirely strip them out... it's not logical or inherently better DX"
+- Current `claude -p` is a one-shot, no-tools, no-plan invocation — WASTES Claude's power
+- Claude Code has: Plan mode, Agent Teams, MCP tools, CLAUDE.md, interactive review, resume
+- The orchestrator's Claude adapter should be SMART about invocation based on task type:
+
+| Task Type | Examples | Claude Invocation |
+|-----------|----------|-------------------|
+| Simple (fix/tweak) | "Fix typo in README" | `claude -p` (current, fine) |
+| Design (architecture) | T-001, T-003, T-005 | Plan mode — let it think first |
+| Multi-file (feature) | T-002, T-004 | Agent Teams — spawn teammates |
+| Review (analysis) | T-016, T-017 | Read-only tools, no write |
+| Complex (full feature) | "Build auth system" | Plan + Teams + scoped tools |
+
+- The brain (gpt-4.1) already classifies task types during `plan --generate` — it knows design vs implement
+- The adapter should read task metadata to choose the right Claude invocation strategy
+- This is the "Lego snap" between orchestrator intelligence and Claude Code capabilities
+- **Priority: CRITICAL — this is what makes forge-orca the BEST way to use Claude Code**
+
 ### DX-014: Agent Pane TUI — THE KILLER FEATURE (NEW)
 - **[Asif's Vision]:** "imagine spinning up tiny little terminals for every agent working"
 - `forge-orca run` (no args) opens a ratatui TUI with:
