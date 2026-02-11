@@ -414,6 +414,87 @@ That's the Lego moment. Each product enhances the other. The governance.json is 
 - Clear output formatting with checkmarks
 - Sensible next-steps guidance
 
+### Post-Fix Dogfood #2 — ALL DX ISSUES FIXED
+
+Second Claude fixed all 8 DX issues (59 tests, 0 clippy warnings). Second dogfood confirmed:
+- `forge-orca init` discovers ALL .md files (IMPLEMENTATION.md, QUICKSTART.md, README.md, TESTING.md, spec-jib-jab.md + docs/)
+- Scaffolds governance.json
+- Correct next-steps text
+
+### THE MOMENT: AI-Powered Plan Generation
+
+```
+forge-orca config brain openai   → ✓ Brain provider set to: openai
+forge-orca plan --generate       → ✓ Generated 17 tasks via OpenAI (gpt-4.1)
+```
+
+From a 607-line spec, the orchestrator:
+- Read the full spec automatically
+- Called OpenAI gpt-4.1 for decomposition
+- Generated 17 tasks with intelligent agent assignment:
+  - **claude** → design tasks (T-001, T-003, T-005, T-007, T-009, T-011, T-013)
+  - **codex** → implementation tasks (T-002, T-004, T-006, T-008, T-010, T-012, T-014, T-015)
+  - **gemini** → testing + documentation (T-016, T-017)
+- Design→Implement pairing pattern (odd=design, even=implement)
+- Tasks written to `.forge/tasks/` and `.forge/plan.md`
+
+**[Asif]** "oh my god, this looks amazing!!!!" / "I was blown away"
+
+### DX-009: Add progress indicator during LLM calls (NEW)
+- Currently: silent wait while OpenAI thinks (~3-5 seconds)
+- Want: animated spinner during API call (e.g., `⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏` or `|/-\`)
+- Stretch: skeleton/streaming — render table frame first, fill rows as they arrive
+- "Illusion of speed" trick: show phased progress (`Analyzing spec... → Decomposing into tasks... → Assigning agents...`) even if LLM does it in one shot
+- Priority: Medium — pure DX polish, but makes the "wow" moment even better
+
+### DX-010: Status should show full task table with dependencies (NEW)
+- Current status shows summary only (Total: 17, Pending: 17, progress bar)
+- Should show the same table as `plan --generate` output but with live statuses
+- Critical: show task dependencies — which tasks are blocked, which can run in parallel
+- This is huge for the autonomous loop — you need to know what's parallelizable
+- Priority: High — the task board IS the orchestrator's value prop
+
+### DX-011: `forge-orca run` autonomous loop mode (NEW)
+- Current: `run --task T-001 --agent claude` runs a single task then exits
+- Expected: `forge-orca run` (no args) = autonomous loop that:
+  1. Reads the task board
+  2. Finds all unblocked pending tasks
+  3. Runs them in parallel (respecting dependencies)
+  4. Updates statuses in real-time
+  5. Keeps going until all tasks are done or a failure blocks progress
+- This is the "CEO mode" — press one button, walk away, come back to results
+- Could have `--dry-run` to show what WOULD run without executing
+- Priority: CRITICAL — this is what makes the orchestrator an orchestrator
+
+### DX-012: Claude adapter passes ANTHROPIC_API_KEY to subprocess — FIXED
+- Root cause: `~/.forge/.env` contains `ANTHROPIC_API_KEY` which CLI inherits
+- Fix: Added per-agent auth config (`forge-orca config claude.auth subscription`)
+- Default is now `subscription` — strips API keys, forces CLI subscription auth
+- Can flip to `api` mode when needed: `forge-orca config claude.auth api`
+- Works for all 3 agents: claude, codex, gemini
+- 59/59 tests passing after fix
+
+### DX-013: "Headless" blocks terminal — should be truly detached (NEW)
+- `forge-orca run --task T-001 --agent claude` blocks the terminal waiting for completion
+- "Headless" implies background/detached, but currently uses `Command.output()` (blocking)
+- Should use `Command.spawn()` with async I/O for non-blocking execution
+- This is the foundation for DX-009 (spinner), DX-011 (autonomous loop), and DX-014 (agent panes)
+- Priority: HIGH — prerequisite for the TUI dashboard vision
+
+### DX-014: Agent Pane TUI — THE KILLER FEATURE (NEW)
+- **[Asif's Vision]:** "imagine spinning up tiny little terminals for every agent working"
+- `forge-orca run` (no args) opens a ratatui TUI with:
+  - Top: Live task board with statuses and dependencies
+  - Bottom: Split panes — one per concurrent agent showing live streaming output
+  - Tasks auto-advance as dependencies complete
+  - Parallel execution respecting the dependency graph
+- This IS the `forge dashboard` from the soundboard, refined
+- Combines: TUI (ratatui + crossterm) + autonomous loop + live agent output
+- The "CEO mode" — press one button, watch the orchestra play
+- Connects to sidecar pattern (github.com/marcus/sidecar) that Asif bookmarked
+- Technical path: `.spawn()` + `tokio` async + ratatui render loop + crossterm raw mode
+- Priority: THIS IS THE PRODUCT — Priority 1
+
 ---
 
 *This is a living [breathing] document. Edit, annotate, push back on anything.*

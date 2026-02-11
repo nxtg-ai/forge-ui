@@ -71,7 +71,7 @@
   "quality": {
     "tests": {
       "unit": {
-        "total": 0,
+        "total": 654,
         "passing": 0,
         "coverage": 0
       },
