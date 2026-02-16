@@ -1,25 +1,6 @@
 ---
 name: forge-integration
-description: |
-  Use this agent when connecting to external services, APIs, or third-party tools. This includes: GitHub API integration, Sentry setup, webhook handling, OAuth flows, MCP server connections, and service-to-service communication.
-
-  <example>
-  Context: User wants GitHub integration.
-  user: "Connect to GitHub to show PR status in the dashboard"
-  assistant: "I'll use the forge-integration agent to implement the GitHub API integration."
-  <commentary>
-  External service integration is a forge-integration task.
-  </commentary>
-  </example>
-
-  <example>
-  Context: User needs webhook handling.
-  user: "Set up a webhook endpoint for GitHub push events"
-  assistant: "I'll use the forge-integration agent to create the webhook handler with signature verification."
-  <commentary>
-  Webhook implementation with security is a forge-integration specialty.
-  </commentary>
-  </example>
+description: "External service integration. Use for GitHub API, Sentry, webhooks, OAuth flows, MCP servers, and service-to-service communication."
 model: sonnet
 color: indigo
 tools: Glob, Grep, Read, Write, Edit, Bash, TodoWrite

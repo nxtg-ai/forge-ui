@@ -1,43 +1,6 @@
 ---
 name: forge-builder
-description: |
-  Use this agent when you need to implement features, write production-ready code, refactor existing code, or generate comprehensive tests. This agent should be invoked after a plan has been approved or when specific code implementation is required.
-
-  <example>
-  Context: The Forge Orchestrator has approved an implementation plan for a new authentication system.
-  user: "The authentication plan looks good, let's implement it."
-  assistant: "I'll use the Task tool to launch the forge-builder agent to implement the authentication system according to the approved plan."
-  <commentary>
-  Since the user has approved an implementation plan, use the forge-builder agent to transform the plan into production-ready code with tests and documentation.
-  </commentary>
-  </example>
-
-  <example>
-  Context: User needs to refactor a service class that has grown too large.
-  user: "The UserService class is 500 lines and needs to be refactored into smaller pieces."
-  assistant: "I'll use the Task tool to launch the forge-builder agent to analyze and refactor the UserService class following SOLID principles."
-  <commentary>
-  Since refactoring work is needed, use the forge-builder agent which specializes in code quality improvements and applying design patterns.
-  </commentary>
-  </example>
-
-  <example>
-  Context: User requests implementation of a specific feature with tests.
-  user: "Implement a password reset flow with email verification."
-  assistant: "I'll use the Task tool to launch the forge-builder agent to implement the password reset flow with comprehensive tests and documentation."
-  <commentary>
-  Since specific code implementation is requested, use the forge-builder agent to generate clean, maintainable, well-documented code with tests.
-  </commentary>
-  </example>
-
-  <example>
-  Context: Code review identified quality issues that need fixing.
-  user: "The repository layer needs better error handling and type hints."
-  assistant: "I'll use the Task tool to launch the forge-builder agent to improve the repository layer with Result types and proper type annotations."
-  <commentary>
-  Since code quality improvements are needed, use the forge-builder agent which applies best practices like Result types and strict type safety.
-  </commentary>
-  </example>
+description: "Feature implementation and production-ready code. Use after plan approval for code implementation, refactoring, or test generation."
 model: sonnet
 color: green
 tools: Glob, Grep, Read, Write, Edit, Bash, TodoWrite

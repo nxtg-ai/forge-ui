@@ -1,25 +1,6 @@
 ---
 name: forge-analytics
-description: |
-  Use this agent when metrics tracking, data analysis, or reporting is needed. This includes: implementing analytics events, building dashboards, analyzing usage patterns, creating reports, tracking KPIs, and measuring feature adoption.
-
-  <example>
-  Context: User wants to understand usage patterns.
-  user: "Which features are used most?"
-  assistant: "I'll use the forge-analytics agent to analyze usage data and create a report."
-  <commentary>
-  Usage analysis and reporting is a forge-analytics task.
-  </commentary>
-  </example>
-
-  <example>
-  Context: User needs to track a new metric.
-  user: "Track how long each agent takes to complete tasks"
-  assistant: "I'll use the forge-analytics agent to implement timing instrumentation for agent tasks."
-  <commentary>
-  Metrics instrumentation is a forge-analytics specialty.
-  </commentary>
-  </example>
+description: "Metrics tracking, data analysis, and reporting. Use for analytics events, dashboards, usage patterns, KPIs, and feature adoption."
 model: haiku
 color: teal
 tools: Glob, Grep, Read, Write, Edit, Bash, TodoWrite

@@ -1,34 +1,6 @@
 ---
 name: forge-planner
-description: |
-  Use this agent when the user needs strategic feature planning, architecture design, or task breakdown for NXTG-Forge 2.0 projects. This includes scenarios where: (1) the user wants to design a new feature from concept to implementation plan, (2) complex work needs to be decomposed into manageable tasks with dependencies and estimates, (3) architecture decisions need to be made with explicit trade-offs, (4) the user needs refactoring plans with rollback strategies, or (5) the Forge Orchestrator routes the user to planning mode (Option 2: Review & Plan Features).
-
-  <example>
-  Context: User wants to plan a new authentication feature for their application.
-  user: "I need to add OAuth2 authentication to my API"
-  assistant: "This requires strategic feature planning and architecture design. Let me use the Task tool to launch the forge-planner agent to help design this feature comprehensively."
-  <commentary>
-  Since the user is requesting a new feature that needs architecture design, task breakdown, and implementation strategy, use the forge-planner agent to create a complete feature plan.
-  </commentary>
-  </example>
-
-  <example>
-  Context: User has a complex feature that needs to be broken down into tasks.
-  user: "I have this idea for a real-time notification system but I'm not sure where to start"
-  assistant: "A real-time notification system involves multiple components and decisions. Let me use the Task tool to launch the forge-planner agent to help architect this and create an actionable implementation plan."
-  <commentary>
-  The user is expressing uncertainty about how to approach a complex feature. The forge-planner agent will guide them through requirements gathering, architecture design, and task breakdown.
-  </commentary>
-  </example>
-
-  <example>
-  Context: User needs to refactor existing code with a clear strategy.
-  user: "Our current database layer is a mess, we need to restructure it"
-  assistant: "Refactoring requires careful planning to avoid breaking changes. Let me use the Task tool to launch the forge-planner agent to create a refactoring plan with current state analysis, target state, and rollback strategy."
-  <commentary>
-  Refactoring plans require the forge-planner agent's structured approach to analyze current state, define target state, and provide safe transformation steps.
-  </commentary>
-  </example>
+description: "Strategic feature planning and architecture design. Use for feature design, task breakdown, architecture decisions, and refactoring plans."
 model: sonnet
 color: sky
 tools: Glob, Grep, Read, Bash, TodoWrite

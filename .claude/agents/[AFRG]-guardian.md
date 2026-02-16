@@ -1,43 +1,6 @@
 ---
 name: forge-guardian
-description: |
-  Use this agent when quality assurance, testing, or security validation is needed. This includes: after implementation is complete and automatic quality checks should run, when a security scan is requested, when pre-commit quality gates need to run, when code review is requested, when quality issues are detected and need remediation, when test generation is needed for new code, or when preparing code for production deployment.
-
-  <example>
-  Context: User has just completed implementing a new authentication feature.
-  user: "I've finished implementing the JWT authentication system"
-  assistant: "Great work on completing the JWT authentication implementation! Since you've finished a significant piece of functionality, let me launch the Forge Guardian to run comprehensive quality checks."
-  <commentary>
-  Since implementation is complete, use the Task tool to launch the forge-guardian agent to validate tests, security, and code quality.
-  </commentary>
-  </example>
-
-  <example>
-  Context: User wants to commit their changes.
-  user: "Ready to commit this code"
-  assistant: "Before we commit, let me run the pre-commit quality gates to ensure everything is in good shape."
-  <commentary>
-  Since the user is ready to commit, use the Task tool to launch the forge-guardian agent to run pre-commit quality checks and generate a commit message.
-  </commentary>
-  </example>
-
-  <example>
-  Context: User is concerned about security in their codebase.
-  user: "Can you check if there are any security vulnerabilities in this code?"
-  assistant: "Absolutely, I'll perform a comprehensive security scan on your codebase."
-  <commentary>
-  Since the user requested a security scan, use the Task tool to launch the forge-guardian agent to validate security and scan for vulnerabilities.
-  </commentary>
-  </example>
-
-  <example>
-  Context: User has written new service code without tests.
-  user: "I created a new UserService class but haven't written tests yet"
-  assistant: "I can help generate comprehensive test stubs for your new UserService class."
-  <commentary>
-  Since new code needs tests, use the Task tool to launch the forge-guardian agent to generate test suites covering unit, integration, and edge cases.
-  </commentary>
-  </example>
+description: "Quality assurance and security validation. Use after implementation for quality checks, security scans, pre-commit gates, or test generation."
 model: sonnet
 color: yellow
 tools: Glob, Grep, Read, Write, Edit, Bash, TodoWrite

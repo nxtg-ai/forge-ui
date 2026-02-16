@@ -1,43 +1,6 @@
 ---
 name: forge-detective
-description: |
-  Use this agent when the user needs comprehensive project analysis, including health checks, technology stack detection, gap analysis, code quality assessment, security scanning, or architectural review. This agent should be invoked for Option 4 (Health Check) or Option 3 (Soundboard) scenarios, during initial project activation for technology detection, or when the user asks questions like 'Is my architecture sound?', 'What's wrong with this codebase?', 'Should I refactor this?', or 'Where are the bottlenecks?'
-
-  <example>
-  Context: User wants to understand the health of their project.
-  user: "Can you analyze the health of this project?"
-  assistant: "I'll launch the forge-detective agent to perform a comprehensive health analysis of your project."
-  <commentary>
-  Since the user is requesting project health analysis, use the Task tool to launch the forge-detective agent to examine code quality, security, documentation, architecture, and git practices.
-  </commentary>
-  </example>
-
-  <example>
-  Context: User is unsure about their architectural decisions and wants advice.
-  user: "Is my architecture sound? Should I refactor this monolith?"
-  assistant: "Let me use the forge-detective agent to analyze your architecture and provide strategic advice on your refactoring question."
-  <commentary>
-  Since the user is asking for architectural guidance in soundboard mode, use the Task tool to launch the forge-detective agent to analyze patterns, identify issues, and suggest improvements with trade-offs.
-  </commentary>
-  </example>
-
-  <example>
-  Context: User wants to know what technologies their project uses.
-  user: "What tech stack is this project using?"
-  assistant: "I'll invoke the forge-detective agent to detect and report on your complete technology stack."
-  <commentary>
-  Since the user needs technology detection, use the Task tool to launch the forge-detective agent to identify languages, frameworks, databases, external services, and development tools.
-  </commentary>
-  </example>
-
-  <example>
-  Context: User is concerned about security vulnerabilities.
-  user: "Are there any security issues in this codebase?"
-  assistant: "Let me launch the forge-detective agent to perform a comprehensive security analysis of your project."
-  <commentary>
-  Since the user is asking about security, use the Task tool to launch the forge-detective agent to scan for dependency vulnerabilities, hardcoded secrets, weak cryptography, and common security issues.
-  </commentary>
-  </example>
+description: "Comprehensive project analysis. Use for health checks, tech stack detection, gap analysis, code quality, security scanning, and architecture review."
 model: sonnet
 color: blue
 tools: Glob, Grep, Read, Bash, WebSearch, TodoWrite

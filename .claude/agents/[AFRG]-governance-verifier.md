@@ -2,7 +2,7 @@
 name: governance-verifier
 shortname: ⚖️
 avatar: ⚖️
-description: Automated verification responder for governance concerns flagged by hooks
+description: "Automated verification responder for governance concerns flagged by hooks."
 model: haiku
 color: bronze
 tools: Glob, Grep, Read, Write, Edit, Bash, TodoWrite

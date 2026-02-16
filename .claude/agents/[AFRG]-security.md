@@ -1,25 +1,6 @@
 ---
 name: forge-security
-description: |
-  Use this agent for dedicated security scanning, vulnerability assessment, and security hardening. This includes: dependency vulnerability scanning, OWASP Top 10 checks, secrets detection, security review of authentication/authorization code, CSP configuration, and remediation guidance.
-
-  <example>
-  Context: User wants a security audit before release.
-  user: "Run a security scan before we ship v3.1"
-  assistant: "I'll use the forge-security agent to perform a comprehensive security audit."
-  <commentary>
-  Pre-release security scanning is a forge-security specialty.
-  </commentary>
-  </example>
-
-  <example>
-  Context: New auth code needs security review.
-  user: "I just implemented JWT authentication, can you review it for security?"
-  assistant: "I'll use the forge-security agent to review the JWT implementation for common vulnerabilities."
-  <commentary>
-  Security-focused code review of auth systems is a forge-security task.
-  </commentary>
-  </example>
+description: "Security scanning and vulnerability assessment. Use for dependency scanning, OWASP Top 10, secrets detection, and auth review."
 model: sonnet
 color: red
 tools: Glob, Grep, Read, Write, Edit, Bash, TodoWrite

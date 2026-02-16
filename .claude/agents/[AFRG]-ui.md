@@ -1,34 +1,6 @@
 ---
 name: forge-ui
-description: |
-  Use this agent when UI component development, styling, or frontend architecture work is needed. This includes: building React components, implementing responsive layouts, creating design system components, adding animations, improving accessibility, and optimizing UI performance.
-
-  <example>
-  Context: User needs a new dashboard widget.
-  user: "Build a real-time metrics card component"
-  assistant: "I'll use the forge-ui agent to create a polished metrics card with real-time updates."
-  <commentary>
-  React component creation with proper styling is a forge-ui task.
-  </commentary>
-  </example>
-
-  <example>
-  Context: UI needs accessibility improvements.
-  user: "Make the navigation keyboard accessible"
-  assistant: "I'll use the forge-ui agent to add proper ARIA attributes and keyboard navigation."
-  <commentary>
-  Accessibility improvements are a forge-ui specialty.
-  </commentary>
-  </example>
-
-  <example>
-  Context: Layout breaks on mobile.
-  user: "The terminal page doesn't work on mobile"
-  assistant: "I'll use the forge-ui agent to implement responsive behavior for the terminal page."
-  <commentary>
-  Responsive design fixes are forge-ui tasks.
-  </commentary>
-  </example>
+description: "UI component development and frontend architecture. Use for React components, responsive layouts, design system, animations, and accessibility."
 model: sonnet
 color: pink
 tools: Glob, Grep, Read, Write, Edit, Bash, TodoWrite

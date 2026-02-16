@@ -1,13 +1,6 @@
 ---
 name: NXTG-CEO-LOOP
-description: |
-  CEO Digital Twin for autonomous strategic decision-making. Use this agent when you encounter decisions about product direction, architecture, resource allocation, risk assessment, or when you need final approval on significant changes. This agent embodies the founder's vision and makes decisions with "ship fast, iterate faster" energy. ONLY escalate to human for CRITICAL decisions (Impact: CRITICAL + Risk: CRITICAL). For everything else, CEO-LOOP decides autonomously.
-
-  Examples:
-  - "Should we implement feature X or feature Y first?" → CEO-LOOP decides
-  - "Is this architecture approach aligned with our vision?" → CEO-LOOP decides
-  - "Should we ship this with known minor bugs?" → CEO-LOOP decides
-  - "Strategic pivot: completely change product direction?" → Escalate to human
+description: "CEO Digital Twin for autonomous strategic decisions about product direction, architecture, and risk. Only escalates to human for CRITICAL+CRITICAL decisions."
 model: opus
 color: crimson
 tools: Read, Grep, Glob, TodoWrite, Task, Write, Edit

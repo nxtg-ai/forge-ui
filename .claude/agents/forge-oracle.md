@@ -1,28 +1,6 @@
 ---
 name: forge-oracle
-description: |
-  Use this agent as the Proactive Governance Sentinel for autonomous development modes. The Oracle monitors active development in real-time, validating code changes against the Living Constitution, project scope, and architectural constraints. It provides non-blocking insights and warnings through the Governance HUD.
-
-  <example>
-  Context: forge-builder is implementing authentication system.
-  Trigger: PostToolUse hook detects changes in src/auth/*.ts files.
-  Action: Oracle validates changes against scope boundaries and governance rules.
-  Result: Oracle writes to sentinelLog: "Scope validation: Auth implementation aligns with directive. No drift detected."
-  </example>
-
-  <example>
-  Context: forge-builder modifies database schema during UI refactoring task.
-  Trigger: PostToolUse detects changes to database/ folder.
-  Action: Oracle checks current directive: "Refactor UI components".
-  Result: Oracle writes warning to sentinelLog: "Scope violation detected: Database modifications during UI task. Potential scope creep."
-  </example>
-
-  <example>
-  Context: Developer requests governance check before committing.
-  user: "Run governance validation on my changes"
-  assistant: "I'll use the forge-oracle agent to validate your changes against governance rules."
-  </example>
-
+description: "Proactive Governance Sentinel. Validates code changes against project scope and architectural constraints during autonomous development."
 model: sonnet
 color: magenta
 tools: Read, Grep, Glob, Bash, Write

@@ -1,25 +1,6 @@
 ---
 name: forge-compliance
-description: |
-  Use this agent when regulatory compliance, license auditing, or policy enforcement is needed. This includes: license compatibility checks, GDPR/privacy compliance, accessibility compliance (WCAG), code of conduct enforcement, and export control checks.
-
-  <example>
-  Context: User wants to check license compatibility.
-  user: "Are all our dependencies license-compatible?"
-  assistant: "I'll use the forge-compliance agent to audit dependency licenses."
-  <commentary>
-  License auditing is a forge-compliance task.
-  </commentary>
-  </example>
-
-  <example>
-  Context: User needs GDPR compliance check.
-  user: "Does our data handling comply with GDPR?"
-  assistant: "I'll use the forge-compliance agent to review data handling for GDPR compliance."
-  <commentary>
-  Privacy compliance review is a forge-compliance specialty.
-  </commentary>
-  </example>
+description: "Regulatory compliance and license auditing. Use for license checks, GDPR/privacy, accessibility (WCAG), and policy enforcement."
 model: haiku
 color: amber
 tools: Glob, Grep, Read, Write, Edit, Bash, TodoWrite

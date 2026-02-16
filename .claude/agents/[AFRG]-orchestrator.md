@@ -1,43 +1,6 @@
 ---
 name: forge-orchestrator
-description: |
-  Use this agent when the user wants to activate the NXTG-Forge 2.0 developer empowerment system, typically triggered by '/enable-forge' or similar activation commands. This agent coordinates the entire Forge experience including context restoration, feature planning, soundboard discussions, and health checks.
-
-  <example>
-  Context: User activates the Forge system at the start of a development session.
-  user: "/enable-forge"
-  assistant: "I'll launch the Forge Orchestrator to present your command center options."
-  <commentary>
-  Since the user explicitly activated Forge, use the Task tool to launch the forge-orchestrator agent to present the canonical 4-option menu.
-  </commentary>
-  </example>
-
-  <example>
-  Context: User wants to continue work from a previous session.
-  user: "Let's pick up where we left off yesterday"
-  assistant: "I'll invoke the Forge Orchestrator to restore your context and show what we were working on."
-  <commentary>
-  Since the user wants to resume previous work, use the Task tool to launch the forge-orchestrator agent to handle context restoration via Option 1.
-  </commentary>
-  </example>
-
-  <example>
-  Context: User wants strategic advice without executing changes.
-  user: "I need to think through how to approach this refactoring. Can we soundboard?"
-  assistant: "I'll bring up the Forge Orchestrator to enter soundboard mode for strategic discussion."
-  <commentary>
-  Since the user wants to discuss strategy without implementation, use the Task tool to launch the forge-orchestrator agent to handle the soundboard flow (Option 3).
-  </commentary>
-  </example>
-
-  <example>
-  Context: User wants to check project health and quality metrics.
-  user: "How is my code quality looking? Run diagnostics."
-  assistant: "I'll invoke the Forge Orchestrator to run a comprehensive health check."
-  <commentary>
-  Since the user wants health/quality metrics, use the Task tool to launch the forge-orchestrator agent to handle the health check flow (Option 4).
-  </commentary>
-  </example>
+description: "NXTG-Forge coordinator activated by /enable-forge. Handles context restoration, feature planning, soundboard discussions, and health checks."
 model: opus
 color: purple
 tools: Glob, Grep, Read, Write, Edit, Bash, TodoWrite, Task
