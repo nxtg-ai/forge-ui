@@ -1,8 +1,5 @@
 import React, { Suspense, lazy } from "react";
-import { MCPSelectionView } from "./onboarding/MCPSelectionView";
 import { BetaFeedback, BetaBanner, Changelog } from "./feedback";
-import TerminalView from "../pages/terminal-view";
-import InfinityTerminalView from "../pages/infinity-terminal-view";
 import { useEngagement } from "../contexts/EngagementContext";
 import { AppHeader } from "./layout";
 import type {
@@ -18,17 +15,20 @@ import type {
 } from "./types";
 import type { Runspace } from "../core/runspace";
 import type { useForgeIntegration } from "../hooks/useForgeIntegration";
-import { YoloModeWithEngagement } from "./AppWizard";
 
-// Lazy load heavy pages for better initial load performance
+// Lazy load view-specific components for better initial load performance
 const DashboardLive = lazy(() => import("../pages/dashboard-live"));
 const VisionPage = lazy(() => import("../pages/vision-view"));
 const ArchitectPage = lazy(() => import("../pages/architect-view"));
 const ArchitectDemo = lazy(() => import("../pages/architect-demo"));
 const CommandPage = lazy(() => import("../pages/command-view"));
 const LandingPage = lazy(() => import("../pages/marketing/LandingPage"));
+const TerminalView = lazy(() => import("../pages/terminal-view"));
+const InfinityTerminalView = lazy(() => import("../pages/infinity-terminal-view"));
 const VisionCapture = lazy(() => import("./VisionCapture").then(m => ({ default: m.VisionCapture })));
 const ProjectsManagement = lazy(() => import("./ProjectsManagement").then(m => ({ default: m.ProjectsManagement })));
+const MCPSelectionView = lazy(() => import("./onboarding/MCPSelectionView").then(m => ({ default: m.MCPSelectionView })));
+const YoloModeWithEngagement = lazy(() => import("./AppWizard").then(m => ({ default: m.YoloModeWithEngagement })));
 
 // Lazy load fallback component
 const LazyLoadFallback: React.FC = () => (
@@ -182,11 +182,13 @@ export const AppContent: React.FC<AppContentProps> = (props) => {
 
         {/* MCP Selection View */}
         {currentView === "mcp-selection" && mcpSuggestions && 'essential' in mcpSuggestions && (
-          <MCPSelectionView
-            suggestions={mcpSuggestions as unknown as import('../orchestration/mcp-suggestion-engine').MCPSuggestion}
-            onSelectionComplete={handleMcpSelectionComplete}
-            onSkip={handleMcpSkip}
-          />
+          <Suspense fallback={<LazyLoadFallback />}>
+            <MCPSelectionView
+              suggestions={mcpSuggestions as unknown as import('../orchestration/mcp-suggestion-engine').MCPSuggestion}
+              onSelectionComplete={handleMcpSelectionComplete}
+              onSkip={handleMcpSkip}
+            />
+          </Suspense>
         )}
 
         {/* Loading MCP Suggestions */}
@@ -229,7 +231,11 @@ export const AppContent: React.FC<AppContentProps> = (props) => {
         </Suspense>
 
         {/* Terminal View (Legacy) */}
-        {currentView === "terminal" && <TerminalView />}
+        {currentView === "terminal" && (
+          <Suspense fallback={<LazyLoadFallback />}>
+            <TerminalView />
+          </Suspense>
+        )}
       </main>
 
       {/* Full-width AppShell views - rendered outside constrained main */}
@@ -242,7 +248,9 @@ export const AppContent: React.FC<AppContentProps> = (props) => {
 
       {/* Infinity Terminal View - full-width with own AppShell */}
       {currentView === "infinity-terminal" && (
-        <InfinityTerminalView onNavigate={(viewId) => setCurrentView(viewId)} />
+        <Suspense fallback={<LazyLoadFallback />}>
+          <InfinityTerminalView onNavigate={(viewId) => setCurrentView(viewId)} />
+        </Suspense>
       )}
 
       {/* Marketing Landing Page - full-width standalone layout */}
