@@ -93,5 +93,16 @@ NXTG-Forge has Agent Teams permanently enabled (`CLAUDE_CODE_EXPERIMENTAL_AGENT_
 - ❌ Asking permission after decisions are made
 - ❌ Making claims about features without reading the implementation
 
+## ASIF Governance
+
+This project is part of NXTG-Forge (P-03) in the ASIF portfolio (Developer Tools vertical).
+
+On every session:
+1. Read `../.asif/NEXUS.md` — check for `## CoS Directives` section
+2. Execute any PENDING directives before other work (unless Asif overrides)
+3. Write your response inline under each directive
+4. Update initiative statuses in NEXUS if your work changes them
+5. If you have questions for the CoS, add them under `## Team Questions` in NEXUS
+
 ---
-*Last updated: 2026-01-31 - Multi-device access fix session*
+*Last updated: 2026-02-18 - ASIF governance + multi-device access*
