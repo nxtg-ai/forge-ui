@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ProjectState, Agent } from "../components/types";
+import { ProjectState, Agent, Blocker, Decision } from "../components/types";
 import type { ForgeStatus } from "../services/status-service";
 import { wsManager } from "../services/ws-manager";
 import { logger } from "../utils/browser-logger";
@@ -36,9 +36,9 @@ export interface DashboardData {
   projectState: {
     phase: string;
     progress: number;
-    blockers: any[];
-    recentDecisions: any[];
-    activeAgents: any[];
+    blockers: Blocker[];
+    recentDecisions: Decision[];
+    activeAgents: Agent[];
     healthScore: number;
   };
   visionData: {
@@ -49,7 +49,7 @@ export interface DashboardData {
     timeframe: string;
   };
   forgeStatus: ForgeStatus | null;
-  agents: any[];
+  agents: Agent[];
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
@@ -157,8 +157,8 @@ export function useDashboardData(): DashboardData {
         await Promise.all([
           fetchEndpoint<ForgeStatus | null>("/api/forge/status", null),
           fetchEndpoint<VisionData>("/api/vision", DEFAULT_VISION),
-          fetchEndpoint<any>("/api/state", null),
-          fetchEndpoint<any[]>("/api/agents/active", []),
+          fetchEndpoint<Partial<ProjectState> | null>("/api/state", null),
+          fetchEndpoint<Agent[]>("/api/agents/active", []),
         ]);
 
       setForgeStatus(forgeStatusData);
@@ -166,7 +166,7 @@ export function useDashboardData(): DashboardData {
       setVisionData({
         mission: visionDataRaw.mission || DEFAULT_VISION.mission,
         goals: Array.isArray(visionDataRaw.goals)
-          ? visionDataRaw.goals.map((g: any) =>
+          ? visionDataRaw.goals.map((g: string | { title?: string; description?: string }) =>
               typeof g === "string" ? g : g.title || g.description || "",
             )
           : [],
@@ -174,7 +174,7 @@ export function useDashboardData(): DashboardData {
           ? visionDataRaw.constraints
           : [],
         successMetrics: Array.isArray(visionDataRaw.successMetrics)
-          ? visionDataRaw.successMetrics.map((m: any) =>
+          ? visionDataRaw.successMetrics.map((m: string | { name?: string }) =>
               typeof m === "string" ? m : m.name || "",
             )
           : [],
@@ -225,7 +225,7 @@ export function useDashboardData(): DashboardData {
 
     // Subscribe to real-time updates via shared wsManager
     const unsubs = [
-      wsManager.subscribe("state.update", (data: any) => {
+      wsManager.subscribe("state.update", (data: Partial<ProjectState> | null) => {
         if (data) {
           setProjectState((prev) => ({
             ...prev,
@@ -239,13 +239,13 @@ export function useDashboardData(): DashboardData {
 
       wsManager.subscribe("agent.activity", () => {
         // Refresh agents from API on activity events
-        fetchEndpoint<any[]>("/api/agents/active", []).then((data) => {
+        fetchEndpoint<Agent[]>("/api/agents/active", []).then((data) => {
           setAgents(data);
           setProjectState((prev) => ({ ...prev, activeAgents: data }));
         });
       }),
 
-      wsManager.subscribe("vision.change", (data: any) => {
+      wsManager.subscribe("vision.change", (data: Partial<VisionData> | null) => {
         if (data) {
           setVisionData((prev) => ({
             mission: data.mission || prev.mission,

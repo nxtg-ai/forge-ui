@@ -63,7 +63,7 @@ export const GovernanceHUD: React.FC<GovernanceHUDProps> = ({ className }) => {
     // Subscribe to governance updates via shared wsManager
     const unsubMessage = wsManager.subscribe(
       "governance.update",
-      (data: any) => {
+      (data: GovernanceState | null) => {
         if (!isMountedRef.current) return;
         if (data) {
           setState(data);

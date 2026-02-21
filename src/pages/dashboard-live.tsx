@@ -51,6 +51,30 @@ import {
   BarChart3,
 } from "lucide-react";
 
+/** Worker data from /api/workers endpoint */
+interface WorkerApiData {
+  id: string;
+  assignedWorkstream?: string;
+  status?: string;
+  currentTask?: { command?: string };
+  metrics?: { successRate?: number; tasksCompleted?: number; avgTaskDuration?: number };
+  lastActivity?: string | Date;
+}
+
+/** Transformed worker for AgentCollaborationView */
+interface WorkerAgent {
+  id: string;
+  name: string;
+  role: "architect" | "developer" | "qa" | "devops" | "orchestrator";
+  status: "idle" | "thinking" | "working" | "blocked" | "discussing";
+  currentTask?: string;
+  confidence: number;
+  collaboratingWith: string[];
+  messagesInQueue: number;
+  lastActivity: Date;
+  performance: { tasksCompleted: number; successRate: number; avgResponseTime: number };
+}
+
 // Dashboard keyboard shortcuts
 const DASHBOARD_SHORTCUTS: KeyboardShortcut[] = [
   { key: "[", description: "Toggle Context panel", category: "navigation" },
@@ -126,12 +150,12 @@ const LiveDashboard: React.FC = () => {
   // Subscribe to specific event types for toasts (no blanket refresh)
   useEffect(() => {
     const unsubs = [
-      wsManager.subscribe("task_completed", (data: any) => {
+      wsManager.subscribe("task_completed", (data: { name?: string } | null) => {
         toast.success(`Task completed: ${data?.name || "unknown"}`, {
           duration: 3000,
         });
       }),
-      wsManager.subscribe("blocker_detected", (data: any) => {
+      wsManager.subscribe("blocker_detected", (data: { title?: string } | null) => {
         toast.warning("New blocker detected", {
           message: data?.title || "Unknown blocker",
         });
@@ -253,7 +277,7 @@ const LiveDashboard: React.FC = () => {
 
   // Commands are now fetched via useForgeCommands hook
   // Agents data fetched from worker pool API
-  const [workerAgents, setWorkerAgents] = useState<any[]>([]);
+  const [workerAgents, setWorkerAgents] = useState<WorkerAgent[]>([]);
   const [workerEdges, setWorkerEdges] = useState<any[]>([]);
 
   // Fetch real worker data for agent collaboration view
@@ -266,7 +290,7 @@ const LiveDashboard: React.FC = () => {
         if (result.success && result.data?.workers) {
           const workers = result.data.workers;
           // Transform workers to agent format for AgentCollaborationView
-          const agents = workers.map((w: any) => ({
+          const agents = workers.map((w: WorkerApiData) => ({
             id: w.id,
             name: w.assignedWorkstream || `Worker ${w.id.slice(0, 6)}`,
             role: w.assignedWorkstream === "architect" ? "architect" as const
@@ -291,7 +315,7 @@ const LiveDashboard: React.FC = () => {
           setWorkerAgents(agents);
 
           // Build edges from consecutive workers
-          const edges = agents.slice(0, -1).map((a: any, i: number) => ({
+          const edges = agents.slice(0, -1).map((a, i) => ({
             from: a.id,
             to: agents[i + 1].id,
             type: "handoff" as const,
@@ -514,7 +538,7 @@ const LiveDashboard: React.FC = () => {
         projectContext={{
           name: "NXTG-Forge",
           phase: projectState.phase,
-          activeAgents: workerAgents.filter((a: any) => a.status !== "idle").length,
+          activeAgents: workerAgents.filter((a) => a.status !== "idle").length,
           pendingTasks: projectState.blockers.length,
           healthScore: projectState.healthScore,
           lastActivity: new Date(),

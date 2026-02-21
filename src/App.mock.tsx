@@ -310,7 +310,7 @@ export default function App() {
     setCurrentView("dashboard");
   };
 
-  const handleCommandExecute = (command: string, args?: any) => {
+  const handleCommandExecute = (command: string, args?: Record<string, unknown>) => {
     setIsExecuting(true);
     logger.debug(`Executing command: ${command}`, args);
 

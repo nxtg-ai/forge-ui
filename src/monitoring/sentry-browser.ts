@@ -67,7 +67,7 @@ export async function initSentryBrowser(): Promise<boolean> {
       ],
 
       // Filter out expected errors
-      beforeSend(event: any, hint: any) {
+      beforeSend(event: Record<string, unknown>, hint: { originalException?: unknown }) {
         const error = hint?.originalException;
 
         if (error instanceof Error) {

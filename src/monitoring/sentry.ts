@@ -53,7 +53,7 @@ export async function initSentryServer(): Promise<boolean> {
       debug: process.env.NODE_ENV === "development",
 
       // Filter out known non-errors
-      beforeSend(event: any, hint: any) {
+      beforeSend(event: Record<string, unknown>, hint: { originalException?: unknown }) {
         const error = hint?.originalException;
 
         // Don't send expected/handled errors

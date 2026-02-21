@@ -15,7 +15,24 @@ export interface ActivityItem {
   relatedAgents?: string[];
 }
 
-function transformApiActivity(item: any): ActivityItem {
+/** Raw activity data from API or WebSocket before transformation */
+interface RawActivityData {
+  id?: string;
+  agentId?: string;
+  agent?: string;
+  agentName?: string;
+  type?: string;
+  status?: string;
+  action?: string;
+  message?: string;
+  details?: string;
+  description?: string;
+  confidence?: number;
+  timestamp?: string | number | Date;
+  relatedAgents?: string[];
+}
+
+function transformApiActivity(item: RawActivityData): ActivityItem {
   return {
     id:
       item.id ||
@@ -132,7 +149,7 @@ export function useActivityData(maxItems: number, autoScroll: boolean, scrollRef
   useEffect(() => {
     const unsubMessage = wsManager.subscribe(
       "agent.activity",
-      (payload: any) => {
+      (payload: RawActivityData | null) => {
         if (!payload) return;
         const activity: ActivityItem = {
           id:
