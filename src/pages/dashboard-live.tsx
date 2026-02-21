@@ -393,6 +393,14 @@ const LiveDashboard: React.FC = () => {
               </AnimatePresence>
             </div>
 
+          {/* Dashboard error banner */}
+          {dashboardError && (
+            <div className="mx-6 mt-2 px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center justify-between" role="alert">
+              <span className="text-sm text-red-400">Failed to load dashboard data: {dashboardError}</span>
+              <button onClick={refreshDashboard} className="text-xs text-red-300 hover:text-white px-2 py-1 rounded bg-red-500/20 hover:bg-red-500/30 transition-colors">Retry</button>
+            </div>
+          )}
+
           {/* Page-specific view mode tabs */}
           <div className="border-b border-gray-800 bg-gray-900/30">
             <div className="max-w-7xl mx-auto px-6">

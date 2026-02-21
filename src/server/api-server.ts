@@ -421,9 +421,7 @@ server.listen(PORT, "0.0.0.0", async () => {
   createPTYBridge(server, runspaceManager);
   logger.info(`PTY Bridge initialized at ws://localhost:${PORT}/terminal`);
 
-  setupGovernanceWatcher();
-
-  // Seed governance state if empty or missing
+  // Seed governance state if empty or missing (BEFORE watcher so file exists)
   try {
     await governanceStateManager.readState();
     logger.info("[Governance] Existing state loaded successfully");
@@ -433,6 +431,15 @@ server.listen(PORT, "0.0.0.0", async () => {
     await governanceStateManager.writeState(seedState);
     broadcast("governance.update", seedState);
     logger.info("[Governance] Initial state seeded and broadcast");
+  }
+
+  // Start watching governance file AFTER seed ensures it exists
+  try {
+    setupGovernanceWatcher();
+  } catch (err: unknown) {
+    logger.warn("[Governance] File watcher failed (non-fatal):", {
+      error: err instanceof Error ? err.message : String(err),
+    });
   }
 
   // Initialize worker pool with auto-detected backend
