@@ -141,7 +141,23 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
     return positions;
   }, [agents]);
 
-  const renderNetworkView = () => (
+  const renderNetworkView = () => {
+    if (agents.length === 0) {
+      return (
+        <div
+          data-testid="agent-collab-network-view"
+          className="relative w-full h-[500px] bg-gray-900/30 rounded-2xl border border-gray-800 flex items-center justify-center"
+        >
+          <div className="text-center">
+            <Network className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+            <p className="text-gray-400 text-sm mb-1">No agents connected</p>
+            <p className="text-gray-600 text-xs">Agents will appear here when the worker pool is running</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
     <div
       data-testid="agent-collab-network-view"
       className="relative w-full h-[500px] bg-gray-900/30 rounded-2xl border border-gray-800 overflow-hidden"
@@ -417,9 +433,21 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
-  const renderListView = () => (
+  const renderListView = () => {
+    if (agents.length === 0) {
+      return (
+        <div data-testid="agent-collab-list-view" className="text-center py-12">
+          <Users className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+          <p className="text-gray-400 text-sm mb-1">No agents available</p>
+          <p className="text-gray-600 text-xs">Initialize the worker pool to see agent activity</p>
+        </div>
+      );
+    }
+
+    return (
     <div data-testid="agent-collab-list-view" className="space-y-2">
       {agents.map((agent, index) => (
         <motion.div
@@ -533,7 +561,8 @@ export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
         </motion.div>
       ))}
     </div>
-  );
+    );
+  };
 
   return (
     <div data-testid="agent-collab-container" className="space-y-4">
