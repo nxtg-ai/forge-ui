@@ -88,6 +88,12 @@ describe("WSManager", () => {
     vi.clearAllTimers();
     vi.useFakeTimers();
 
+    // Make token fetch synchronous so tests don't need async flushes.
+    // Returns a sync thenable so .then() executes immediately in connect().
+    (wsManager as any).fetchAuthToken = () => ({
+      then: (cb: (token: string | null) => void) => { cb("mock-token"); },
+    });
+
     // Intercept WebSocket constructor
     const OriginalWebSocket = (globalThis as any).WebSocket;
     (globalThis as any).WebSocket = function (url: string) {
@@ -212,8 +218,7 @@ describe("WSManager", () => {
       mockWs.simulateClose();
       expect(wsManager.getState().reconnectAttempt).toBe(3);
 
-      // Third retry after 4s — timer fires, connect() is called but
-      // reconnectAttempt only increments on next scheduleReconnect (triggered by close)
+      // Third retry after 4s
       vi.advanceTimersByTime(4000);
       mockWs.simulateClose();
       expect(wsManager.getState().reconnectAttempt).toBe(4);

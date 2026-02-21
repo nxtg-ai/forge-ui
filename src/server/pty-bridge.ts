@@ -11,6 +11,7 @@ import * as crypto from "crypto";
 import type { RunspaceManager } from "../core/runspace-manager";
 import type { Runspace } from "../core/runspace";
 import { WSLBackend } from "../core/backends/wsl-backend";
+import { validateWSAuthToken } from "./routes/features";
 import { getLogger } from "../utils/logger";
 
 const logger = getLogger('pty-bridge');
@@ -300,6 +301,14 @@ export function createPTYBridge(
       }
 
       // --- NEW session ---
+      // Security: Require a valid auth token to create new PTY sessions
+      if (!authToken || !validateWSAuthToken(authToken)) {
+        logger.error("[PTY Bridge] New session rejected: missing or invalid auth token");
+        ws.send(JSON.stringify({ type: "error", data: "Authentication required. Obtain a token via POST /api/ws-token" }));
+        ws.close();
+        return;
+      }
+
       let runspace: Runspace | null | undefined = null;
       let useDefaultShell = false;
 

@@ -11,6 +11,11 @@ import { createPTYBridge, cleanupPTYBridge } from "../pty-bridge";
 import { RunspaceManager } from "../../core/runspace-manager";
 import type { Runspace } from "../../core/runspace";
 
+// Mock auth validation — always approve for PTY functionality tests
+vi.mock("../routes/features", () => ({
+  validateWSAuthToken: () => true,
+}));
+
 // Mock node-pty
 vi.mock("node-pty", () => ({
   spawn: vi.fn(() => {
@@ -190,7 +195,7 @@ describe("PTY Bridge", () => {
         const finish = () => { if (!resolved) { resolved = true; resolve(); } };
 
         const client = createClient(
-          `ws://localhost:${port}/terminal?runspace=non-existent`
+          `ws://localhost:${port}/terminal?runspace=non-existent&token=mock-token`
         );
 
         client.on("message", (data) => {

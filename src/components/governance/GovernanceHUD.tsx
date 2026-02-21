@@ -94,7 +94,10 @@ export const GovernanceHUD: React.FC<GovernanceHUDProps> = ({ className }) => {
         wsState.reconnectAttempt >= 5
       ) {
         setConnectionStatus("fallback");
-      } else if (wsState.status === "reconnecting") {
+      } else if (
+        wsState.status === "reconnecting" ||
+        wsState.status === "connecting"
+      ) {
         setConnectionStatus("connecting");
       } else {
         setConnectionStatus("disconnected");

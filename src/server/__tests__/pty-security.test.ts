@@ -13,6 +13,12 @@ import { RunspaceManager } from "../../core/runspace-manager";
 import type { Runspace } from "../../core/runspace";
 import * as crypto from "crypto";
 
+// Mock auth validation — always approve for security tests focused on
+// command filtering and token generation (not WS auth)
+vi.mock("../routes/features", () => ({
+  validateWSAuthToken: () => true,
+}));
+
 // Mock node-pty
 vi.mock("node-pty", () => ({
   spawn: vi.fn(() => {
@@ -725,8 +731,8 @@ describe("PTY Bridge Security", () => {
       runspaceManager.addMockRunspace(mockRunspace);
       runspaceManager.setActiveRunspace(mockRunspace.id);
 
-      // Create a session and get a token
-      const client1 = createClient(`ws://localhost:${port}/terminal`);
+      // Create a session and get a token (include mock-token to pass auth gate)
+      const client1 = createClient(`ws://localhost:${port}/terminal?token=mock-token`);
 
       const { sessionId, token } = await new Promise<{ sessionId: string; token: string }>((resolve) => {
         client1.on("message", (data) => {

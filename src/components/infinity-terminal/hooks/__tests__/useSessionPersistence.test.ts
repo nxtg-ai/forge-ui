@@ -49,6 +49,12 @@ describe("useSessionPersistence", () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
 
+    // Mock fetch for auth token acquisition (fetchBootstrapToken)
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ data: { token: "mock-token" } }),
+    }) as any;
+
     // Mock WebSocket
     originalWebSocket = global.WebSocket;
     global.WebSocket = MockWebSocket as any;
@@ -82,7 +88,7 @@ describe("useSessionPersistence", () => {
       expect(result.current.state.reconnectAttempts).toBe(0);
     });
 
-    it("should generate session name from project name", () => {
+    it("should generate session name from project name", async () => {
       const { result } = renderHook(() =>
         useSessionPersistence({ projectName: "My Test Project!" })
       );
@@ -91,8 +97,8 @@ describe("useSessionPersistence", () => {
         result.current.connect();
       });
 
-      act(() => {
-        vi.runAllTimers();
+      await act(async () => {
+        await vi.runAllTimersAsync();
       });
 
       expect(result.current.state.sessionName).toBe("forge-my-test-project");
@@ -108,7 +114,7 @@ describe("useSessionPersistence", () => {
       });
 
       await act(async () => {
-        vi.runAllTimers();
+        await vi.runAllTimersAsync();
       });
 
       expect(result1.current.state.sessionId).toBeTruthy();
@@ -147,7 +153,7 @@ describe("useSessionPersistence", () => {
       expect(result.current.state.connecting).toBe(true);
 
       await act(async () => {
-        vi.runAllTimers();
+        await vi.runAllTimersAsync();
       });
 
       expect(result.current.state.connected).toBe(true);
@@ -164,7 +170,7 @@ describe("useSessionPersistence", () => {
       });
 
       await act(async () => {
-        vi.runAllTimers();
+        await vi.runAllTimersAsync();
       });
 
       expect(result.current.state.connected).toBe(true);
@@ -181,7 +187,7 @@ describe("useSessionPersistence", () => {
       });
 
       await act(async () => {
-        vi.runAllTimers();
+        await vi.runAllTimersAsync();
       });
 
       expect(result.current.state.connected).toBe(true);
@@ -237,7 +243,7 @@ describe("useSessionPersistence", () => {
       });
 
       await act(async () => {
-        vi.runAllTimers();
+        await vi.runAllTimersAsync();
       });
 
       expect(result.current.state.connected).toBe(true);
@@ -257,7 +263,7 @@ describe("useSessionPersistence", () => {
       });
 
       await act(async () => {
-        vi.runAllTimers();
+        await vi.runAllTimersAsync();
       });
 
       expect(result.current.state.connected).toBe(true);
@@ -275,7 +281,7 @@ describe("useSessionPersistence", () => {
       });
 
       await act(async () => {
-        vi.runAllTimers();
+        await vi.runAllTimersAsync();
       });
 
       act(() => {
@@ -322,13 +328,13 @@ describe("useSessionPersistence", () => {
 
       // First attempt fails
       await act(async () => {
-        vi.runAllTimers();
+        await vi.runAllTimersAsync();
       });
 
       // Wait for first reconnect
       await act(async () => {
         vi.advanceTimersByTime(100);
-        vi.runAllTimers();
+        await vi.runAllTimersAsync();
       });
 
       // Should have attempted reconnect once (total 2 connections)
@@ -360,19 +366,19 @@ describe("useSessionPersistence", () => {
       });
 
       await act(async () => {
-        vi.runAllTimers();
+        await vi.runAllTimersAsync();
       });
 
       // First reconnect: 100ms * 2^0 = 100ms
       await act(async () => {
         vi.advanceTimersByTime(100);
-        vi.runAllTimers();
+        await vi.runAllTimersAsync();
       });
 
       // Second reconnect: 100ms * 2^1 = 200ms
       await act(async () => {
         vi.advanceTimersByTime(200);
-        vi.runAllTimers();
+        await vi.runAllTimersAsync();
       });
 
       expect(result.current.state.reconnectAttempts).toBe(3);
@@ -386,7 +392,7 @@ describe("useSessionPersistence", () => {
       });
 
       await act(async () => {
-        vi.runAllTimers();
+        await vi.runAllTimersAsync();
       });
 
       // Simulate connection loss
@@ -400,7 +406,7 @@ describe("useSessionPersistence", () => {
       // Wait for stability timer (3 seconds)
       await act(async () => {
         vi.advanceTimersByTime(100);
-        vi.runAllTimers();
+        await vi.runAllTimersAsync();
         vi.advanceTimersByTime(3000);
       });
 
@@ -435,7 +441,7 @@ describe("useSessionPersistence", () => {
       });
 
       await act(async () => {
-        vi.runAllTimers();
+        await vi.runAllTimersAsync();
       });
 
       // Note: The hook doesn't automatically save to localStorage on connect.
@@ -473,7 +479,7 @@ describe("useSessionPersistence", () => {
       });
 
       await act(async () => {
-        vi.runAllTimers();
+        await vi.runAllTimersAsync();
       });
 
       expect(result.current.state.sessionId).toBe("existing-session-id");
@@ -557,7 +563,7 @@ describe("useSessionPersistence", () => {
         });
 
         await act(async () => {
-          vi.runAllTimers();
+          await vi.runAllTimersAsync();
         });
 
         act(() => {
@@ -603,7 +609,7 @@ describe("useSessionPersistence", () => {
       });
 
       await act(async () => {
-        vi.runAllTimers();
+        await vi.runAllTimersAsync();
       });
 
       expect(result.current.state.error).toBeTruthy();
@@ -642,7 +648,7 @@ describe("useSessionPersistence", () => {
       });
 
       await act(async () => {
-        vi.runAllTimers();
+        await vi.runAllTimersAsync();
       });
 
       const ws = result.current.getWebSocket();
@@ -668,7 +674,7 @@ describe("useSessionPersistence", () => {
       });
 
       await act(async () => {
-        vi.runAllTimers();
+        await vi.runAllTimersAsync();
       });
 
       expect(onConnectionChange).toHaveBeenCalled();
@@ -682,7 +688,7 @@ describe("useSessionPersistence", () => {
       });
 
       await act(async () => {
-        vi.runAllTimers();
+        await vi.runAllTimersAsync();
       });
 
       const ws = result.current.getWebSocket();

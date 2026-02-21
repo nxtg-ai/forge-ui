@@ -73,6 +73,19 @@ class WSManager {
     return WSManager.instance;
   }
 
+  /** Fetch a WebSocket auth token from the API server. */
+  private async fetchAuthToken(): Promise<string | null> {
+    try {
+      const res = await fetch("/api/ws-token", { method: "POST" });
+      if (!res.ok) return null;
+      const body = await res.json();
+      return body?.data?.token ?? null;
+    } catch {
+      logger.debug("[WS] Failed to fetch auth token, connecting without");
+      return null;
+    }
+  }
+
   /** Connect to the WebSocket server. Safe to call multiple times. */
   connect(): void {
     if (this.ws?.readyState === WebSocket.OPEN || this.isConnecting) return;
@@ -82,9 +95,22 @@ class WSManager {
       status: this.state.reconnectAttempt > 0 ? "reconnecting" : "connecting",
     });
 
+    // Fetch auth token then connect
+    this.fetchAuthToken().then((token) => {
+      // Check again in case disconnect was called during token fetch
+      if (!this.isConnecting) return;
+      this.connectWithToken(token);
+    });
+  }
+
+  private connectWithToken(token: string | null): void {
     try {
-      const url = getWsUrl();
-      logger.debug("[WS] Connecting to", url);
+      let url = getWsUrl();
+      if (token) {
+        const separator = url.includes("?") ? "&" : "?";
+        url = `${url}${separator}token=${encodeURIComponent(token)}`;
+      }
+      logger.debug("[WS] Connecting to", url.replace(/token=[^&]+/, "token=***"));
       this.ws = new WebSocket(url);
 
       this.ws.onopen = () => {

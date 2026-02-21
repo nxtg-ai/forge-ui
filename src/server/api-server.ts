@@ -136,25 +136,23 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   : ["http://localhost:5050", "http://127.0.0.1:5050", "http://localhost:5173"];
 
 wss.on("connection", (ws, req) => {
-  // Validate origin in production
+  // Validate origin in all modes
   const origin = req.headers.origin;
-  if (isProduction && origin && !allowedOrigins.includes(origin)) {
+  if (origin && !allowedOrigins.includes(origin)) {
     logger.error(`[Security] Blocked WebSocket from unauthorized origin: ${origin}`);
     ws.send(JSON.stringify({ type: "error", error: "Unauthorized origin" }));
     ws.close();
     return;
   }
 
-  // Require auth token in production
-  if (isProduction) {
-    const url = new URL(req.url!, `http://${req.headers.host}`);
-    const token = url.searchParams.get("token");
-    if (!validateWSAuthToken(token ?? undefined)) {
-      logger.error("[Security] WebSocket connection rejected: invalid or missing token");
-      ws.send(JSON.stringify({ type: "error", error: "Authentication required" }));
-      ws.close();
-      return;
-    }
+  // Require auth token in all modes
+  const url = new URL(req.url!, `http://${req.headers.host}`);
+  const token = url.searchParams.get("token");
+  if (!validateWSAuthToken(token ?? undefined)) {
+    logger.error("[Security] WebSocket connection rejected: invalid or missing token");
+    ws.send(JSON.stringify({ type: "error", error: "Authentication required" }));
+    ws.close();
+    return;
   }
 
   clients.add(ws);
@@ -245,9 +243,9 @@ app.use((req, res, next) => {
 app.use(
   cors({
     origin: (origin, callback) => {
+      // Allow same-origin requests (no origin header)
       if (!origin) return callback(null, true);
-      if (!isProduction) return callback(null, true);
-      if (allowedOrigins.includes(origin) || allowedOrigins.includes("*")) {
+      if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
       logger.warn(`[Security] Blocked CORS request from unauthorized origin: ${origin}`);

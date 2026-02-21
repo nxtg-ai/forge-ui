@@ -192,6 +192,19 @@ export function useSessionPersistence(
   // Alias for backward compatibility
   const getTtydUrl = getWsUrl;
 
+  // Fetch a bootstrap auth token for new terminal sessions
+  const fetchBootstrapToken = useCallback(async (): Promise<string | null> => {
+    try {
+      const res = await fetch("/api/ws-token", { method: "POST" });
+      if (!res.ok) return null;
+      const body = await res.json();
+      return body?.data?.token ?? null;
+    } catch {
+      logger.debug("[InfinityTerminal] Failed to fetch auth token");
+      return null;
+    }
+  }, []);
+
   // Connect to terminal - reuses existing session if available
   const connect = useCallback(() => {
     if (
@@ -222,103 +235,112 @@ export function useSessionPersistence(
       (s) => s.sessionName === sessionName,
     );
     const sessionId = existingSession?.sessionId || generateSessionId();
-    const authToken = existingSession?.authToken;
+    const storedAuthToken = existingSession?.authToken;
 
-    // Pass sessionId and token to backend so it can reattach to existing PTY
-    const url = getWsUrl(sessionId, authToken);
+    // For new sessions (no stored token), fetch a bootstrap token first
+    const tokenPromise = storedAuthToken
+      ? Promise.resolve(storedAuthToken)
+      : fetchBootstrapToken();
 
-    if (reconnectAttemptsRef.current > 0) {
-      logger.debug(
-        `[InfinityTerminal] Reconnecting (attempt ${reconnectAttemptsRef.current + 1}/${config.maxReconnectAttempts})`,
-      );
-    }
+    tokenPromise.then((authToken) => {
+      // Abort if disconnect was called during token fetch
+      if (isManualDisconnectRef.current) return;
 
-    try {
-      const ws = new WebSocket(url);
+      // Pass sessionId and token to backend so it can reattach to existing PTY
+      const url = getWsUrl(sessionId, authToken ?? undefined);
 
-      ws.binaryType = "arraybuffer";
+      if (reconnectAttemptsRef.current > 0) {
+        logger.debug(
+          `[InfinityTerminal] Reconnecting (attempt ${reconnectAttemptsRef.current + 1}/${config.maxReconnectAttempts})`,
+        );
+      }
 
-      ws.onopen = () => {
-        // Don't reset reconnect counter immediately — wait for connection to be stable.
-        // If server rejects us (e.g. origin check), the connection opens then closes instantly.
-        // Resetting on open would create an infinite reconnect loop.
-        if (stabilityTimerRef.current) clearTimeout(stabilityTimerRef.current);
-        stabilityTimerRef.current = setTimeout(() => {
-          reconnectAttemptsRef.current = 0;
-          setState((prev) => ({ ...prev, reconnectAttempts: 0 }));
-        }, 3000);
+      try {
+        const ws = new WebSocket(url);
 
-        setState((prev) => ({
-          ...prev,
-          sessionId,
-          sessionName,
-          connected: true,
-          connecting: false,
-          error: null,
-        }));
+        ws.binaryType = "arraybuffer";
 
-        onConnectionChangeRef.current?.(true);
-      };
+        ws.onopen = () => {
+          // Don't reset reconnect counter immediately — wait for connection to be stable.
+          // If server rejects us (e.g. origin check), the connection opens then closes instantly.
+          // Resetting on open would create an infinite reconnect loop.
+          if (stabilityTimerRef.current) clearTimeout(stabilityTimerRef.current);
+          stabilityTimerRef.current = setTimeout(() => {
+            reconnectAttemptsRef.current = 0;
+            setState((prev) => ({ ...prev, reconnectAttempts: 0 }));
+          }, 3000);
 
-      ws.onclose = (event) => {
-        // Cancel stability timer — connection wasn't stable
-        if (stabilityTimerRef.current) {
-          clearTimeout(stabilityTimerRef.current);
-          stabilityTimerRef.current = null;
-        }
+          setState((prev) => ({
+            ...prev,
+            sessionId,
+            sessionName,
+            connected: true,
+            connecting: false,
+            error: null,
+          }));
 
-        setState((prev) => ({ ...prev, connected: false, connecting: false }));
-        onConnectionChangeRef.current?.(false);
+          onConnectionChangeRef.current?.(true);
+        };
 
-        // Don't auto-reconnect if manually disconnected
-        if (isManualDisconnectRef.current) {
-          return;
-        }
+        ws.onclose = (event) => {
+          // Cancel stability timer — connection wasn't stable
+          if (stabilityTimerRef.current) {
+            clearTimeout(stabilityTimerRef.current);
+            stabilityTimerRef.current = null;
+          }
 
-        // Increment attempts BEFORE the check (not inside setTimeout)
-        reconnectAttemptsRef.current += 1;
-        setState((prev) => ({
-          ...prev,
-          reconnectAttempts: reconnectAttemptsRef.current,
-        }));
+          setState((prev) => ({ ...prev, connected: false, connecting: false }));
+          onConnectionChangeRef.current?.(false);
 
-        // Auto-reconnect if enabled and under max attempts
-        if (
-          config.autoReconnect &&
-          reconnectAttemptsRef.current < config.maxReconnectAttempts
-        ) {
-          const delay =
-            config.reconnectDelay * Math.pow(2, reconnectAttemptsRef.current - 1);
+          // Don't auto-reconnect if manually disconnected
+          if (isManualDisconnectRef.current) {
+            return;
+          }
 
-          reconnectTimeoutRef.current = setTimeout(() => {
-            connect();
-          }, delay);
-        } else {
-          const errorMsg = event.code === 1005
-            ? "Terminal connection rejected. Restart the API server."
-            : "Terminal service unavailable. Is the API server running? (npm run dev)";
-          setState((prev) => ({ ...prev, error: errorMsg }));
-        }
-      };
+          // Increment attempts BEFORE the check (not inside setTimeout)
+          reconnectAttemptsRef.current += 1;
+          setState((prev) => ({
+            ...prev,
+            reconnectAttempts: reconnectAttemptsRef.current,
+          }));
 
-      ws.onerror = () => {
-        // Don't log or set error here — onclose handles state and reconnection.
-        // Logging WebSocket errors just adds noise since the error object is opaque.
-      };
+          // Auto-reconnect if enabled and under max attempts
+          if (
+            config.autoReconnect &&
+            reconnectAttemptsRef.current < config.maxReconnectAttempts
+          ) {
+            const delay =
+              config.reconnectDelay * Math.pow(2, reconnectAttemptsRef.current - 1);
 
-      wsRef.current = ws;
-    } catch (error) {
-      const errorMsg = `Failed to connect: ${error}`;
-      setState((prev) => ({ ...prev, error: errorMsg, connecting: false }));
-      onErrorRef.current?.(errorMsg);
-    }
+            reconnectTimeoutRef.current = setTimeout(() => {
+              connect();
+            }, delay);
+          } else {
+            const errorMsg = event.code === 1005
+              ? "Terminal connection rejected. Restart the API server."
+              : "Terminal service unavailable. Is the API server running? (npm run dev)";
+            setState((prev) => ({ ...prev, error: errorMsg }));
+          }
+        };
+
+        ws.onerror = () => {
+          // Don't log or set error here — onclose handles state and reconnection.
+          // Logging WebSocket errors just adds noise since the error object is opaque.
+        };
+
+        wsRef.current = ws;
+      } catch (error) {
+        const errorMsg = `Failed to connect: ${error}`;
+        setState((prev) => ({ ...prev, error: errorMsg, connecting: false }));
+        onErrorRef.current?.(errorMsg);
+      }
+    }); // close tokenPromise.then()
   }, [
     generateSessionName,
     generateSessionId,
     getStoredSessions,
     getWsUrl,
-    saveSession,
-    layout,
+    fetchBootstrapToken,
     config.autoReconnect,
     config.maxReconnectAttempts,
     config.reconnectDelay,
