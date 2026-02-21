@@ -82,26 +82,46 @@ function generateSessionId(): string {
 }
 
 /**
- * Validate origin header
+ * Validate origin header — exact match only (no prefix matching)
  */
 function validateOrigin(origin: string | undefined): boolean {
-  if (!origin) {
-    // Allow requests without origin (same-origin or native clients)
+  if (origin === undefined) {
+    // Allow requests without origin header (same-origin or native clients)
     return true;
   }
 
-  // Check if origin is in allowed list
-  return ALLOWED_ORIGINS.some(allowed => {
-    if (allowed === "*") return true;
-    return origin === allowed || origin.startsWith(allowed);
-  });
+  // Exact match against allowed origins — no startsWith, no wildcards
+  return ALLOWED_ORIGINS.includes(origin);
 }
 
 /**
- * Check if command contains dangerous patterns
+ * Normalize command string for security checking.
+ * Strips control characters, collapses whitespace, and decodes
+ * common evasion techniques before pattern matching.
+ */
+function normalizeCommand(command: string): string {
+  // Strip control characters (tabs, backspace, etc.) except \r and \n
+  // Using char code checks to avoid no-control-regex lint rule
+  let cleaned = "";
+  for (const ch of command) {
+    const code = ch.charCodeAt(0);
+    if ((code >= 0 && code <= 8) || code === 11 || code === 12 || (code >= 14 && code <= 31) || code === 127) {
+      cleaned += " ";
+    } else {
+      cleaned += ch;
+    }
+  }
+  // Collapse multiple whitespace into single space
+  return cleaned.replace(/\s+/g, " ").trim();
+}
+
+/**
+ * Check if command contains dangerous patterns.
+ * Normalizes the input to defeat whitespace/control-char evasion.
  */
 function isDangerousCommand(command: string): boolean {
-  return DANGEROUS_COMMANDS.some(pattern => pattern.test(command));
+  const normalized = normalizeCommand(command);
+  return DANGEROUS_COMMANDS.some(pattern => pattern.test(normalized));
 }
 
 /**
@@ -150,10 +170,27 @@ export function createPTYBridge(
       try {
         const data = JSON.parse(message.toString());
         switch (data.type) {
-          case "input":
-            session.pty.pty.write(data.data);
-            session.commandBuffer += data.data;
+          case "input": {
+            const input: string = data.data;
+            session.commandBuffer += input;
+
+            // On carriage return / newline, check accumulated command buffer
+            if (input.includes("\r") || input.includes("\n")) {
+              if (isDangerousCommand(session.commandBuffer)) {
+                logger.error(`[PTY Bridge] Blocked dangerous command via input path: ${normalizeCommand(session.commandBuffer)}`);
+                const errorMsg = "\r\n\x1b[31m[SECURITY] Dangerous command blocked\x1b[0m\r\n";
+                if (session.ws && session.ws.readyState === WebSocket.OPEN) {
+                  session.ws.send(JSON.stringify({ type: "output", data: errorMsg }));
+                }
+                session.commandBuffer = "";
+                break;
+              }
+              session.commandBuffer = "";
+            }
+
+            session.pty.pty.write(input);
             break;
+          }
           case "resize":
             session.pty.pty.resize(data.cols, data.rows);
             break;
@@ -546,3 +583,6 @@ export function cleanupPTYBridge() {
   sessions.clear();
   authTokens.clear();
 }
+
+// Exported for unit testing
+export { validateOrigin, isDangerousCommand, normalizeCommand };

