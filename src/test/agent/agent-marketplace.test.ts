@@ -22,7 +22,7 @@ describe('AgentMarketplace', () => {
       expect(orchestrator).toBeDefined();
       expect(orchestrator?.name).toBe('forge-orchestrator');
       expect(orchestrator?.model).toBe('opus');
-      expect(orchestrator?.description).toContain('NXTG-Forge 2.0');
+      expect(orchestrator?.description).toContain('NXTG-Forge');
     });
 
     it('should identify built-in agents correctly', () => {

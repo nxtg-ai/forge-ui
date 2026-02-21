@@ -27,36 +27,29 @@ export function createGovernanceRoutes(ctx: RouteContext): express.Router {
   // GET /state - Read current governance state
   router.get("/state", async (req, res) => {
     try {
-      const governancePath = path.join(ctx.projectRoot, ".claude/governance.json");
-
-      try {
-        const data = await fs.readFile(governancePath, "utf-8");
-        const state: GovernanceState = JSON.parse(data);
-
-        res.json({
-          success: true,
-          data: state,
-          timestamp: new Date().toISOString(),
-        });
-      } catch (error: unknown) {
-        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-          res.status(404).json({
-            success: false,
-            error: "Governance state not found",
-            message: "Initialize governance with seed data first",
-            timestamp: new Date().toISOString(),
-          });
-        } else {
-          throw error; // Re-throw to be caught by outer catch
-        }
-      }
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: "Failed to read governance state",
-        message: error instanceof Error ? error.message : "Unknown error",
+      const state = await ctx.governanceStateManager.readState();
+      res.json({
+        success: true,
+        data: state,
         timestamp: new Date().toISOString(),
       });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      if (message === "Governance state not found") {
+        res.status(404).json({
+          success: false,
+          error: "Governance state not found",
+          message: "Initialize governance with seed data first",
+          timestamp: new Date().toISOString(),
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: "Failed to read governance state",
+          message,
+          timestamp: new Date().toISOString(),
+        });
+      }
     }
   });
 

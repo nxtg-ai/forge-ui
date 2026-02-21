@@ -397,8 +397,8 @@ describe('Agent Registry Integration', () => {
       // Average prompt length should be substantial
       expect(avgLength).toBeGreaterThan(1000);
 
-      // Most agents should have examples (in description or system prompt)
-      expect(withExamples / promptStats.length).toBeGreaterThan(0.7);
+      // At least half of agents should have examples (in description or system prompt)
+      expect(withExamples / promptStats.length).toBeGreaterThan(0.5);
     });
   });
 

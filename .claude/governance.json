@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "timestamp": "2026-02-21T01:56:25.756Z",
+  "constitution": {
+    "directive": "Build and ship NXTG-Forge — AI-powered development governance",
+    "vision": [
+      "Multi-agent orchestration via MCP",
+      "Real-time governance dashboard",
+      "Quality gates that guide, not block"
+    ],
+    "status": "EXECUTION",
+    "confidence": 75
+  },
+  "workstreams": [],
+  "sentinelLog": [
+    {
+      "id": "sentinel-1771638813832-apa1w",
+      "timestamp": 1771638813832,
+      "type": "INFO",
+      "severity": "low",
+      "source": "api-server",
+      "message": "Server started on branch main, 29 uncommitted files, health: 70/100"
+    },
+    {
+      "id": "sentinel-1771638875205-b7nlhw",
+      "timestamp": 1771638875205,
+      "type": "INFO",
+      "severity": "low",
+      "source": "api-server",
+      "message": "Server started on branch main, 30 uncommitted files, health: 70/100"
+    },
+    {
+      "id": "sentinel-1771638887901-lf62hn",
+      "timestamp": 1771638887901,
+      "type": "INFO",
+      "severity": "low",
+      "source": "api-server",
+      "message": "Server started on branch main, 30 uncommitted files, health: 70/100"
+    },
+    {
+      "id": "sentinel-1771638985755-qlxtdq",
+      "timestamp": 1771638985755,
+      "type": "INFO",
+      "severity": "low",
+      "source": "api-server",
+      "message": "Server started on branch main, 33 uncommitted files, health: 70/100"
+    }
+  ],
+  "metadata": {
+    "sessionId": "session-1771638813809",
+    "projectPath": "/home/axw/projects/NXTG-Forge/v3",
+    "forgeVersion": "3.0.0",
+    "lastSync": "2026-02-21T01:56:25.756Z",
+    "checksum": "4aa9131de12d79c9"
+  }
+}

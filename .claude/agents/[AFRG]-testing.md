@@ -1,6 +1,6 @@
 ---
 name: forge-testing
-description: "Test generation and coverage analysis. Use for unit/integration/e2e tests, coverage gaps, test fixtures, and flaky test fixes."
+description: "Testing, test generation, and coverage analysis. Use for unit/integration/e2e tests, coverage gaps, test fixtures, and flaky test fixes."
 model: sonnet
 color: lime
 tools: Glob, Grep, Read, Write, Edit, Bash, TodoWrite

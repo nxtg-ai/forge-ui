@@ -263,8 +263,8 @@ describe("Governance Routes", () => {
     });
 
     it("returns 404 when governance state file not found", async () => {
-      mockReadFile.mockRejectedValue(
-        Object.assign(new Error("ENOENT"), { code: "ENOENT" })
+      vi.mocked(mockCtx.governanceStateManager.readState).mockRejectedValue(
+        new Error("Governance state not found")
       );
 
       const res = await request(app).get("/api/governance/state").expect(404);
@@ -278,7 +278,9 @@ describe("Governance Routes", () => {
     });
 
     it("handles JSON parse errors gracefully", async () => {
-      mockReadFile.mockResolvedValue("invalid json {");
+      vi.mocked(mockCtx.governanceStateManager.readState).mockRejectedValue(
+        new SyntaxError("Unexpected token i in JSON at position 0")
+      );
 
       const res = await request(app).get("/api/governance/state").expect(500);
 
@@ -289,7 +291,9 @@ describe("Governance Routes", () => {
     });
 
     it("handles unknown errors", async () => {
-      mockReadFile.mockRejectedValue(new Error("Disk I/O error"));
+      vi.mocked(mockCtx.governanceStateManager.readState).mockRejectedValue(
+        new Error("Disk I/O error")
+      );
 
       const res = await request(app).get("/api/governance/state").expect(500);
 
@@ -1135,7 +1139,9 @@ Found native memory system`;
     });
 
     it("handles malformed JSON in state file", async () => {
-      mockReadFile.mockResolvedValue("{ malformed json");
+      vi.mocked(mockCtx.governanceStateManager.readState).mockRejectedValue(
+        new SyntaxError("Unexpected token m in JSON at position 2")
+      );
 
       const res = await request(app).get("/api/governance/state").expect(500);
 

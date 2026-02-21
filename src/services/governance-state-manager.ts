@@ -28,6 +28,36 @@ export class GovernanceStateManager {
     this.backupDir = path.join(projectRoot, ".claude/governance/backups");
   }
 
+  /**
+   * Create a valid initial governance state with sensible defaults.
+   * Used to seed governance.json when it's missing or empty.
+   */
+  createInitialState(): GovernanceState {
+    const now = new Date().toISOString();
+    return {
+      version: 1,
+      timestamp: now,
+      constitution: {
+        directive: "Build and ship NXTG-Forge — AI-powered development governance",
+        vision: [
+          "Multi-agent orchestration via MCP",
+          "Real-time governance dashboard",
+          "Quality gates that guide, not block",
+        ],
+        status: "EXECUTION",
+        confidence: 75,
+      },
+      workstreams: [],
+      sentinelLog: [],
+      metadata: {
+        sessionId: `session-${Date.now()}`,
+        projectPath: this.projectRoot,
+        forgeVersion: "3.0.0",
+        lastSync: now,
+      },
+    };
+  }
+
   /** Switch to a different project root (for multi-project support) */
   setProjectRoot(newRoot: string): void {
     this.projectRoot = newRoot;
@@ -42,6 +72,12 @@ export class GovernanceStateManager {
   async readState(): Promise<GovernanceState> {
     try {
       const data = await fs.readFile(this.statePath, "utf-8");
+
+      // Treat empty file same as missing
+      if (!data.trim()) {
+        throw new Error("Governance state not found");
+      }
+
       const state: GovernanceState = JSON.parse(data);
 
       // Validate state integrity
@@ -51,7 +87,10 @@ export class GovernanceStateManager {
         throw new Error("Invalid state structure");
       }
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      if (
+        (error as NodeJS.ErrnoException).code === "ENOENT" ||
+        (error instanceof Error && error.message === "Governance state not found")
+      ) {
         throw new Error("Governance state not found");
       }
       throw error;
@@ -247,7 +286,14 @@ export class GovernanceStateManager {
   async appendSentinelLog(
     entry: Omit<SentinelEntry, "id" | "timestamp">,
   ): Promise<void> {
-    const state = await this.readState();
+    let state: GovernanceState;
+    try {
+      state = await this.readState();
+    } catch {
+      // State missing or corrupt — seed it first
+      logger.info("Governance state not found during appendSentinelLog, seeding initial state");
+      state = this.createInitialState();
+    }
 
     const newEntry: SentinelEntry = {
       id: `sentinel-${Date.now()}-${Math.random().toString(36).substring(7)}`,

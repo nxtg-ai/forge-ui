@@ -423,6 +423,18 @@ server.listen(PORT, "0.0.0.0", async () => {
 
   setupGovernanceWatcher();
 
+  // Seed governance state if empty or missing
+  try {
+    await governanceStateManager.readState();
+    logger.info("[Governance] Existing state loaded successfully");
+  } catch {
+    logger.info("[Governance] No valid state found, seeding initial state...");
+    const seedState = governanceStateManager.createInitialState();
+    await governanceStateManager.writeState(seedState);
+    broadcast("governance.update", seedState);
+    logger.info("[Governance] Initial state seeded and broadcast");
+  }
+
   // Initialize worker pool with auto-detected backend
   try {
     await initializeWorkerPool();
