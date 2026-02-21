@@ -669,7 +669,7 @@ describe("AlertingSystem", () => {
 
       alertingSystem!.resolveAlert(alert1.id);
 
-      let activeAlerts = alertingSystem!.getActiveAlerts();
+      const activeAlerts = alertingSystem!.getActiveAlerts();
       expect(activeAlerts.length).toBe(1);
 
       alertingSystem!.clearResolvedAlerts();

@@ -335,7 +335,7 @@ describe("API Server Components", () => {
 
   describe("Worker Pool Lazy Initialization", () => {
     it("returns null before first call", () => {
-      let workerPool: any = null;
+      const workerPool: any = null;
 
       expect(workerPool).toBeNull();
     });

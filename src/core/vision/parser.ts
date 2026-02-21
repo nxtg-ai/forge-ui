@@ -25,8 +25,8 @@ export interface VisionFile {
 export function parseVisionFile(content: string): VisionFile {
   const lines = content.split("\n");
   let inFrontmatter = false;
-  let frontmatterLines: string[] = [];
-  let contentLines: string[] = [];
+  const frontmatterLines: string[] = [];
+  const contentLines: string[] = [];
   let frontmatterCount = 0;
 
   for (const line of lines) {
