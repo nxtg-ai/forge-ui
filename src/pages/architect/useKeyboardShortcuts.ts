@@ -82,7 +82,7 @@ export function useKeyboardShortcuts({
             setAnnouncement("Proposal form closed");
           }
           break;
-        case "/":
+        case "/": {
           e.preventDefault();
           // Focus search input
           const searchInput = document.querySelector('[data-testid="decision-search-input"]') as HTMLInputElement;
@@ -90,6 +90,7 @@ export function useKeyboardShortcuts({
             searchInput.focus();
           }
           break;
+        }
       }
     };
 

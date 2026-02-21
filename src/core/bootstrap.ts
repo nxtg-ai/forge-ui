@@ -158,21 +158,27 @@ export class BootstrapOrchestrator {
       try {
         await fs.access(gitPath);
         state.hasGit = true;
-      } catch {}
+      } catch {
+        // .git not found — hasGit remains false
+      }
 
       // Check for node_modules
       const nodeModulesPath = path.join(projectPath, "node_modules");
       try {
         await fs.access(nodeModulesPath);
         state.hasNodeModules = true;
-      } catch {}
+      } catch {
+        // node_modules not found — hasNodeModules remains false
+      }
 
       // Check for .claude directory
       const claudePath = path.join(projectPath, ".claude");
       try {
         await fs.access(claudePath);
         state.hasClaudeDir = true;
-      } catch {}
+      } catch {
+        // .claude dir not found — hasClaudeDir remains false
+      }
 
       // Check for configuration
       const configPath = path.join(projectPath, ".claude", "forge.config.json");
@@ -182,7 +188,9 @@ export class BootstrapOrchestrator {
         state.hasConfig = true;
         state.config = config;
         state.version = config.version ?? null;
-      } catch {}
+      } catch {
+        // Config not found or invalid — hasConfig remains false
+      }
     } catch {
       // Directory doesn't exist
     }

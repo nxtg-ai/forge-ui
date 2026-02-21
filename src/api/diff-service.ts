@@ -5,7 +5,7 @@
 
 // In dev mode, use empty string (relative URL) - Vite proxies /api to localhost:5051
 const getApiBase = () => {
-  // @ts-ignore - import.meta.env exists in Vite
+  // @ts-expect-error import.meta.env exists in Vite
   if (import.meta.env?.DEV) return '';
   return `http://${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:5051`;
 };

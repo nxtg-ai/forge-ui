@@ -464,7 +464,7 @@ export class AgentWorker extends EventEmitter {
         }
         break;
 
-      case "result":
+      case "result": {
         const pending = this.pendingResponses.get(msg.id);
         if (pending) {
           clearTimeout(pending.timeout);
@@ -472,6 +472,7 @@ export class AgentWorker extends EventEmitter {
           this.pendingResponses.delete(msg.id);
         }
         break;
+      }
 
       case "log":
         this.emit("log", msg.payload);

@@ -190,7 +190,7 @@ function handleAbort(taskId: string): void {
  */
 process.on("message", async (msg: IPCMessage) => {
   switch (msg.type) {
-    case "task":
+    case "task": {
       currentTask = msg.payload as AgentTask;
       const result = await executeTask(currentTask);
       currentTask = null;
@@ -202,6 +202,7 @@ process.on("message", async (msg: IPCMessage) => {
         payload: result,
       });
       break;
+    }
 
     case "heartbeat":
       send({
@@ -212,7 +213,7 @@ process.on("message", async (msg: IPCMessage) => {
       });
       break;
 
-    case "control":
+    case "control": {
       const payload = msg.payload as
         | { action?: string; taskId?: string }
         | string;
@@ -227,6 +228,7 @@ process.on("message", async (msg: IPCMessage) => {
         handleAbort(payload.taskId);
       }
       break;
+    }
   }
 });
 

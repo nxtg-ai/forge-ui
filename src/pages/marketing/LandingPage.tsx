@@ -15,7 +15,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, useInView } from "framer-motion";
 import {
-  Infinity,
+  Infinity as InfinityIcon,
   Users,
   Activity,
   Zap,
@@ -271,7 +271,7 @@ export const LandingPage: React.FC = () => {
             className="grid md:grid-cols-2 lg:grid-cols-4 gap-6"
           >
             <FeatureCard
-              icon={<Infinity className="w-6 h-6 text-white" />}
+              icon={<InfinityIcon className="w-6 h-6 text-white" />}
               title="Infinity Terminal"
               description="Persistent terminal sessions that survive browser close. Multi-device access with seamless reconnection."
               color="from-blue-600 to-cyan-600"

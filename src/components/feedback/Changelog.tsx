@@ -188,7 +188,7 @@ export const Changelog: React.FC<ChangelogProps> = ({ isOpen, onClose }) => {
                             className={`text-lg font-medium mt-6 mb-3 flex items-center gap-2 px-3 py-2 rounded-lg border ${colorClass}`}
                           >
                             {icon}
-                            {text.replace(/[✨🔄🔧🗑️🚨🎉🏆]/g, "")}
+                            {text.replace(/✨|🔄|🔧|🗑️|🚨|🎉|🏆/g, "")}
                           </h3>
                         );
                       }

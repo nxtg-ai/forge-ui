@@ -129,7 +129,7 @@ export class SecurityAuditor {
       { pattern: /token\s*=\s*['"][a-zA-Z0-9]{20,}['"]/i, name: "Token" },
       { pattern: /sk-[a-zA-Z0-9]{48}/, name: "OpenAI API Key" },
       { pattern: /github_pat_[a-zA-Z0-9]{82}/, name: "GitHub PAT" },
-      { pattern: /AIza[a-zA-Z0-9_\-]{35}/, name: "Google API Key" },
+      { pattern: /AIza[a-zA-Z0-9_-]{35}/, name: "Google API Key" },
     ];
 
     // Skip comments

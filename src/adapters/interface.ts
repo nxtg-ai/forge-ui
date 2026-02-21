@@ -483,7 +483,7 @@ export const AdapterValidation = {
       /;\s*rm\s+-rf/i,
       /\|\s*rm\s+-rf/i,
       /&&\s*rm\s+-rf/i,
-      /;\s*:()\s*{\s*:\|\:&\s*}/,  // Fork bomb
+      /;\s*:()\s*{\s*:\|:&\s*}/,  // Fork bomb
     ];
 
     for (const pattern of dangerousPatterns) {

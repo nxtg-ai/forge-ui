@@ -17,7 +17,7 @@ import {
   Terminal,
   X,
   Keyboard,
-  Infinity,
+  Infinity as InfinityIcon,
   RefreshCw,
   Maximize2,
   Minimize2,
@@ -218,7 +218,7 @@ const InfinityTerminalView: React.FC<InfinityTerminalViewProps> = ({ onNavigate 
         icon={
           <div className="relative">
             <Terminal className="w-6 h-6" />
-            <Infinity className="w-3 h-3 text-cyan-400 absolute -bottom-1 -right-1" />
+            <InfinityIcon className="w-3 h-3 text-cyan-400 absolute -bottom-1 -right-1" />
           </div>
         }
         badge="Persistent"

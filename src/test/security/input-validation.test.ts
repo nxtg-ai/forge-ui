@@ -324,7 +324,7 @@ describe("Security: Input Validation", () => {
           /token\s*=\s*['"][a-zA-Z0-9]{20,}['"]/i,
           /sk-[a-zA-Z0-9]{48}/, // OpenAI API key
           /github_pat_[a-zA-Z0-9]{82}/, // GitHub PAT
-          /AIza[a-zA-Z0-9_\-]{35}/, // Google API key
+          /AIza[a-zA-Z0-9_-]{35}/, // Google API key
         ];
 
         return secretPatterns.some((pattern) => pattern.test(content));
