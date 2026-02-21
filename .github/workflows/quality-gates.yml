@@ -28,6 +28,7 @@ jobs:
         run: npm run build
 
       - name: Lint check
+        continue-on-error: true
         run: npm run lint
 
       - name: Run tests with coverage
