@@ -315,7 +315,7 @@ const LiveDashboard: React.FC = () => {
           setWorkerAgents(agents);
 
           // Build edges from consecutive workers
-          const edges = agents.slice(0, -1).map((a, i) => ({
+          const edges = agents.slice(0, -1).map((a: (typeof agents)[number], i: number) => ({
             from: a.id,
             to: agents[i + 1].id,
             type: "handoff" as const,

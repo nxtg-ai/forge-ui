@@ -13,7 +13,6 @@ import { apiFetch } from "../utils/api-fetch";
 
 // API base URL helper
 const getApiBase = () => {
-  // @ts-expect-error import.meta.env exists in Vite
   if (import.meta.env?.DEV) return "";
   return `http://${typeof window !== "undefined" ? window.location.hostname : "localhost"}:5051`;
 };

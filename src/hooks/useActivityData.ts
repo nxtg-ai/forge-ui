@@ -40,7 +40,7 @@ function transformApiActivity(item: RawActivityData): ActivityItem {
     agentId: item.agentId || item.agent || "unknown",
     agentName: item.agentName || item.agent || "Agent",
     type:
-      item.type ||
+      (item.type as ActivityItem["type"]) ||
       (item.status === "completed"
         ? "completed"
         : item.status === "blocked"
