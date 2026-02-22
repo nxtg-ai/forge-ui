@@ -9,7 +9,7 @@
 
 <p align="center">
   <a href="#"><img src="https://img.shields.io/badge/version-3.0.0-6366f1?style=flat-square" alt="Version"></a>
-  <a href="#"><img src="https://img.shields.io/badge/tests-4085_passing-22c55e?style=flat-square" alt="Tests"></a>
+  <a href="#"><img src="https://img.shields.io/badge/tests-4141_passing-22c55e?style=flat-square" alt="Tests"></a>
   <a href="#"><img src="https://img.shields.io/badge/TypeScript-strict-3178c6?style=flat-square" alt="TypeScript"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="License"></a>
   <a href="#"><img src="https://img.shields.io/badge/lines-137K-06b6d4?style=flat-square" alt="Lines"></a>
@@ -328,8 +328,8 @@ npm run quality:gates
 
 | Metric | Value |
 |:-------|:------|
-| Test files | 114 |
-| Tests passing | 4,085 |
+| Test files | 112 |
+| Tests passing | 4,141 |
 | TypeScript errors | 0 (strict mode) |
 | Source files | 235 |
 | Total lines | 137,204 |
