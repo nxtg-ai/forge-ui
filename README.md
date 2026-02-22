@@ -57,8 +57,8 @@ claude plugin add nxtg-ai/forge-plugin
 
 ```bash
 # Clone the repo
-git clone https://github.com/nxtg-ai/forge.git
-cd forge
+git clone https://github.com/nxtg-ai/forge-ui.git
+cd forge-ui
 
 # Install dependencies
 npm install
@@ -357,11 +357,13 @@ Forge is three repos that work together:
 
 | Repo | What it is | Install |
 |:-----|:-----------|:--------|
-| **[forge](https://github.com/nxtg-ai/forge)** (this repo) | Full platform &mdash; dashboard, terminal, API server | `git clone` + `npm install` |
+| **[forge-ui](https://github.com/nxtg-ai/forge-ui)** (this repo) | Full platform &mdash; dashboard, terminal, API server | `git clone` + `npm install` |
 | **[forge-plugin](https://github.com/nxtg-ai/forge-plugin)** | Claude Code plugin &mdash; commands, agents, skills, hooks | `claude plugin add nxtg-ai/forge-plugin` |
 | **[forge-orchestrator](https://github.com/nxtg-ai/forge-orchestrator)** | Rust CLI &mdash; multi-agent task planning and coordination | `curl -sSL https://raw.githubusercontent.com/nxtg-ai/forge-orchestrator/main/install.sh \| sh` |
 
 The **plugin** works standalone with zero dependencies. The **dashboard** adds visual oversight. The **orchestrator** adds multi-agent task decomposition with OpenAI-powered planning.
+
+> **Evaluating Forge?** See the [UAT Guide](https://github.com/nxtg-ai/forge-ui/blob/main/UAT-Guide.md) for a guided walkthrough.
 
 <br>
 
@@ -384,5 +386,5 @@ The **plugin** works standalone with zero dependencies. The **dashboard** adds v
 ---
 
 <p align="center">
-  <sub>Built for developers who ship. Governed by Forge.</sub>
+  <sub>Built by <a href="https://nxtg.ai">NXTG.AI</a> &mdash; for developers who ship.</sub>
 </p>
