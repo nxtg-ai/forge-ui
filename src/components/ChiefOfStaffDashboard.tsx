@@ -37,7 +37,7 @@ interface DashboardProps {
   currentMode: EngagementMode;
 }
 
-interface VisionData {
+export interface VisionData {
   mission: string;
   goals: string[];
   constraints: string[];
@@ -45,7 +45,7 @@ interface VisionData {
   timeframe: string;
 }
 
-interface ProjectState {
+export interface ProjectState {
   phase: "planning" | "architecting" | "building" | "testing" | "deploying";
   progress: number;
   blockers: Blocker[];
@@ -80,14 +80,14 @@ interface Agent {
   confidence: number;
 }
 
-interface AgentActivity {
+export interface AgentActivity {
   agentId: string;
   action: string;
   timestamp: Date;
   visibility: "ceo" | "vp" | "engineer" | "builder" | "founder";
 }
 
-type EngagementMode = "ceo" | "vp" | "engineer" | "builder" | "founder";
+export type EngagementMode = "ceo" | "vp" | "engineer" | "builder" | "founder";
 
 export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
   visionData,
@@ -99,6 +99,14 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
   const [showDetails, setShowDetails] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [autoMode, setAutoMode] = useState(true);
+  const [gettingStartedDismissed, setGettingStartedDismissed] = useState(false);
+
+  // Show Getting Started card when no governance data exists (first run)
+  const isFirstRun =
+    !gettingStartedDismissed &&
+    projectState.progress === 0 &&
+    (projectState.activeAgents || []).length === 0 &&
+    (projectState.recentDecisions || []).length === 0;
 
   // Filter activities based on current engagement mode
   const visibleActivities = agentActivity.filter((activity) => {
@@ -231,6 +239,75 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
         </motion.div>
+
+        {/* Getting Started Card — first-run only */}
+        {isFirstRun && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-emerald-900/20 to-cyan-900/20 border border-emerald-500/20"
+            data-testid="dashboard-getting-started"
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-6 h-6 text-emerald-400" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-lg font-semibold text-emerald-100">
+                    Getting Started
+                  </h2>
+                  <button
+                    onClick={() => setGettingStartedDismissed(true)}
+                    className="text-gray-500 hover:text-gray-300 text-sm"
+                    data-testid="dashboard-getting-started-dismiss"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+                <p className="text-gray-400 text-sm mb-4">
+                  Welcome to Forge. Follow these steps to get your project orchestrated:
+                </p>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-900/50 border border-gray-800">
+                    <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-emerald-400">1</span>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-200">Generate a plan</div>
+                      <code className="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded mt-1 inline-block">
+                        forge plan --generate
+                      </code>
+                      <p className="text-xs text-gray-500 mt-1">Decomposes your SPEC.md into tasks with dependencies</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-900/50 border border-gray-800">
+                    <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-emerald-400">2</span>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-200">Sync configurations</div>
+                      <code className="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded mt-1 inline-block">
+                        forge sync
+                      </code>
+                      <p className="text-xs text-gray-500 mt-1">Renders CLAUDE.md, AGENTS.md, and GEMINI.md for your AI tools</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-900/50 border border-gray-800">
+                    <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-bold text-emerald-400">3</span>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-200">Open Infinity Terminal</div>
+                      <p className="text-xs text-gray-500 mt-1">Launch AI agents and start building from the browser-based terminal</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Main Status Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">

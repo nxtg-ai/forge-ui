@@ -158,6 +158,126 @@ describe("ChiefOfStaffDashboard", () => {
     mockOnModeChange = vi.fn();
   });
 
+  describe("Getting Started Card", () => {
+    test("shows getting started card when project is in first-run state", () => {
+      const firstRunState: ProjectState = {
+        phase: "planning",
+        progress: 0,
+        blockers: [],
+        recentDecisions: [],
+        activeAgents: [],
+        healthScore: 0,
+      };
+
+      render(
+        <ChiefOfStaffDashboard
+          visionData={mockVisionData}
+          projectState={firstRunState}
+          agentActivity={[]}
+          onModeChange={mockOnModeChange}
+          currentMode="engineer"
+        />
+      );
+
+      expect(screen.getByTestId("dashboard-getting-started")).toBeInTheDocument();
+      expect(screen.getByText("Getting Started")).toBeInTheDocument();
+      expect(screen.getByText("forge plan --generate")).toBeInTheDocument();
+      expect(screen.getByText("forge sync")).toBeInTheDocument();
+      expect(screen.getByText("Open Infinity Terminal")).toBeInTheDocument();
+    });
+
+    test("hides getting started card when governance data exists", () => {
+      render(
+        <ChiefOfStaffDashboard
+          visionData={mockVisionData}
+          projectState={mockProjectState}
+          agentActivity={mockAgentActivity}
+          onModeChange={mockOnModeChange}
+          currentMode="engineer"
+        />
+      );
+
+      expect(screen.queryByTestId("dashboard-getting-started")).not.toBeInTheDocument();
+    });
+
+    test("hides getting started card when progress > 0", () => {
+      const partialState: ProjectState = {
+        phase: "building",
+        progress: 10,
+        blockers: [],
+        recentDecisions: [],
+        activeAgents: [],
+        healthScore: 50,
+      };
+
+      render(
+        <ChiefOfStaffDashboard
+          visionData={mockVisionData}
+          projectState={partialState}
+          agentActivity={[]}
+          onModeChange={mockOnModeChange}
+          currentMode="engineer"
+        />
+      );
+
+      expect(screen.queryByTestId("dashboard-getting-started")).not.toBeInTheDocument();
+    });
+
+    test("dismiss button hides getting started card", async () => {
+      const firstRunState: ProjectState = {
+        phase: "planning",
+        progress: 0,
+        blockers: [],
+        recentDecisions: [],
+        activeAgents: [],
+        healthScore: 0,
+      };
+
+      render(
+        <ChiefOfStaffDashboard
+          visionData={mockVisionData}
+          projectState={firstRunState}
+          agentActivity={[]}
+          onModeChange={mockOnModeChange}
+          currentMode="engineer"
+        />
+      );
+
+      expect(screen.getByTestId("dashboard-getting-started")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId("dashboard-getting-started-dismiss"));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("dashboard-getting-started")).not.toBeInTheDocument();
+      });
+    });
+
+    test("displays three setup steps", () => {
+      const firstRunState: ProjectState = {
+        phase: "planning",
+        progress: 0,
+        blockers: [],
+        recentDecisions: [],
+        activeAgents: [],
+        healthScore: 0,
+      };
+
+      render(
+        <ChiefOfStaffDashboard
+          visionData={mockVisionData}
+          projectState={firstRunState}
+          agentActivity={[]}
+          onModeChange={mockOnModeChange}
+          currentMode="engineer"
+        />
+      );
+
+      expect(screen.getByText("Generate a plan")).toBeInTheDocument();
+      expect(screen.getByText("Sync configurations")).toBeInTheDocument();
+      expect(screen.getByText("Open Infinity Terminal")).toBeInTheDocument();
+    });
+  });
+
   describe("Rendering", () => {
     test("renders dashboard container", () => {
       render(
