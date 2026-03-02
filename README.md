@@ -4,7 +4,7 @@
 
 # forge-ui
 
-**Full visual platform for multi-tool AI coordination.**
+**Full visual platform for multi-tool AI orchestration.**
 
 This is L3: Ship Lord.
 
@@ -33,7 +33,7 @@ There is no socket connection to maintain. No server process that needs to stay 
 
 The dashboard shows your project's health at a glance. Health score from A through F, computed across 8 quality dimensions: test coverage, documentation, security, code style, dependency health, API consistency, error handling, and type safety.
 
-Trend monitoring tracks score changes over time and fires regression alerts. Tool coordination shows which tools are active, which files are locked, and which tasks are in progress.
+Trend monitoring tracks score changes over time and fires regression alerts. Tool orchestration shows which tools are active, which files are locked, and which tasks are in progress.
 
 Governance state comes from the Rust orchestrator. The UI reads and displays it. Policy decisions are made in the core, not in the frontend.
 
