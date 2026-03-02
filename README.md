@@ -6,7 +6,7 @@
 
 **Full visual platform for multi-tool AI coordination.**
 
-This is L3: Mission Control.
+This is L3: Ship Lord.
 
 Sessions survive everything. Start a long-running task on your desktop. Close the browser tab. Open it on your phone during lunch. The session is still there, still running. Close your phone. Open your laptop at a coffee shop. Same session. Same progress. The Infinity Terminal is built on top of the orchestrator's file-based state layer. Session state is files. Files persist. Sessions persist.
 
@@ -21,7 +21,7 @@ npm install
 npm run dev
 ```
 
-Requires the Forge Orchestrator (L2: The Delivery Engine) running in your project.
+Requires the Forge Orchestrator (L2: Pro Builder) running in your project.
 
 ## The Infinity Terminal
 
@@ -58,8 +58,8 @@ The feed shows tool assignments, task progress, file lock acquisitions and relea
 ## Links
 
 - [Forge Product Page](https://forge.nxtg.ai)
-- [Forge Plugin](https://github.com/nxtg-ai/forge-plugin) (L1: The Safety Net)
-- [Forge Orchestrator](https://github.com/nxtg-ai/forge-orchestrator) (L2: The Delivery Engine)
+- [Forge Plugin](https://github.com/nxtg-ai/forge-plugin) (L1: Vibe Coder)
+- [Forge Orchestrator](https://github.com/nxtg-ai/forge-orchestrator) (L2: Pro Builder)
 - [Documentation](https://forge.nxtg.ai/docs)
 
 ## License

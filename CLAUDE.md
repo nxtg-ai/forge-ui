@@ -62,13 +62,13 @@ NXTG-Forge has Agent Teams permanently enabled (`CLAUDE_CODE_EXPERIMENTAL_AGENT_
 - Features touching 3+ files → builder + tester + reviewer teammates
 - Code reviews → security + performance + coverage teammates in parallel
 - Debugging unclear issues → competing hypothesis teammates that debate each other
-- `/frg-gap-analysis` → 4 teammates analyzing test/doc/security/architecture gaps simultaneously
+- `/forge:gap-analysis` → 4 teammates analyzing test/doc/security/architecture gaps simultaneously
 
 **Team patterns for NXTG-Forge:**
 | Command | Team Structure |
 |---------|---------------|
-| `/frg-feature` | Lead plans → builder implements → tester writes tests → security reviews |
-| `/frg-gap-analysis` | 4 teammates: test gaps, doc gaps, security gaps, arch gaps |
+| `/forge:feature` | Lead plans → builder implements → tester writes tests → security reviews |
+| `/forge:gap-analysis` | 4 teammates: test gaps, doc gaps, security gaps, arch gaps |
 | Health Check | 3 teammates run vitest, tsc, npm audit simultaneously |
 | Code review | 3 reviewers: security lens, performance lens, test coverage lens |
 
