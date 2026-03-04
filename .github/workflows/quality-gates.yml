@@ -66,3 +66,9 @@ jobs:
         with:
           name: quality-reports
           path: coverage/
+
+      - name: Create issue on CI failure
+        uses: jayqi/failed-build-issue-action@v1
+        if: failure() && github.event.pull_request == null
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
