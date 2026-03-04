@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions:
+  issues: write
+  contents: read
+
 jobs:
   quality-gates:
     runs-on: ubuntu-latest
