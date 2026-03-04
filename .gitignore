@@ -105,7 +105,7 @@ session-*.log
 # ============================================================
 
 # Personal workspace and design explorations
-.asif/
+# .asif/ — removed: ASIF NEXUS files are now tracked (FPL governance requirement)
 
 # Personal knowledge base and references
 .forge/
