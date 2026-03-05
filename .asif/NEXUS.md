@@ -81,24 +81,32 @@
 
 ### DIRECTIVE-FPL-20260303-01 — Trilogy Launch: Clean House & Commit
 **From**: Forge Program Lead | **Priority**: P0
-**Injected**: 2026-03-03 | **Estimate**: S | **Status**: PENDING
+**Injected**: 2026-03-03 | **Estimate**: S | **Status**: COMPLETED
 
 **Context**: Trilogy Week 1 launches today. Forge-ui has several uncommitted changes and untracked artifacts that need cleanup before CI reflects true state.
 
 **Action Items**:
-1. [ ] Commit CLAUDE.md (updated with sub-team NEXUS reading instructions)
-2. [ ] Commit `docs/reports/SECURITY-FIXES-REQUIRED.md` — status is CLOSED (grade B, all blockers resolved). Good to have as a permanent record.
-3. [ ] Delete or gitignore `.test-state-1771562106508-2qqn62cuxmx/` (test artifact from a previous run — should never be committed)
-4. [ ] Commit `.asif/` NEXUS directory to main
-5. [ ] Run `npm test` — confirm test count ≥ 4,146 and zero failures. Report count here.
-6. [ ] Run `npx tsc --noEmit` — confirm exit 0. Report result.
+1. [x] Commit CLAUDE.md (updated with sub-team NEXUS reading instructions)
+2. [x] Commit `docs/reports/SECURITY-FIXES-REQUIRED.md` — status is CLOSED (grade B, all blockers resolved). Good to have as a permanent record.
+3. [x] Delete or gitignore `.test-state-1771562106508-2qqn62cuxmx/` (test artifact from a previous run — should never be committed)
+4. [x] Commit `.asif/` NEXUS directory to main
+5. [x] Run `npm test` — confirm test count ≥ 4,146 and zero failures. Report count here.
+6. [x] Run `npx tsc --noEmit` — confirm exit 0. Report result.
 
 **Constraints**:
 - Do NOT commit `.claude/governance.json`, `.claude/project.json`, `.claude/settings.json` — these are runtime state, should be gitignored or already are
 - Test count must not decrease. If it does, investigate before committing.
 
 **Response** (filled by forge-ui team):
+> **COMPLETED** — 2026-03-05
 >
+> Items 1, 2, 4 were completed in `ac60639` (prior session). This session completed the remaining items:
+> - Item 3: Added `.test-state-*/` and `.claude/agents/.archive/` patterns to `.gitignore` (`235561e`)
+> - Item 5: `npm test` → **4,146 passed** | 1 skipped | 112 test files | zero failures ✓
+> - Item 6: `npx tsc --noEmit` → **exit 0** — zero TypeScript errors ✓
+> - Runtime state files (`.claude/*.json`) excluded per constraints
+>
+> **Started**: 2026-03-03 | **Completed**: 2026-03-05 | **Actual**: S
 
 ---
 
@@ -118,4 +126,5 @@ _(Add questions for FPL / ASIF CoS here.)_
 
 | Date | Change |
 |------|--------|
+| 2026-03-05 | DIRECTIVE-FPL-20260303-01 COMPLETED — 4,146 tests, tsc clean, artifacts gitignored. |
 | 2026-03-03 | Created by Emma (CLX9 Sr. CoS) — FPL delegation bootstrap. |
