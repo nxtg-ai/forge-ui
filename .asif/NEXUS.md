@@ -79,6 +79,28 @@
 
 ## CoS Directives
 
+### DIRECTIVE-NXTG-20260306-01 — CRUCIBLE Protocol Phase 1: Gates 3, 4 (Standard Tier)
+**From**: NXTG-AI CoS (via Emma, CLX9 Sr. CoS) | **Priority**: P2
+**Injected**: 2026-03-06 13:20 | **Estimate**: S | **Status**: PENDING
+
+**Context**: New portfolio-wide test quality standard (`~/ASIF/standards/crucible-protocol.md`). forge-ui gets Gates 3 (mock drift) and 4 (delta gate) at Standard tier.
+
+**Action Items**:
+1. [ ] Add CRUCIBLE Protocol section to CLAUDE.md:
+   ```
+   ## CRUCIBLE Protocol (Test Quality)
+   This project follows the CRUCIBLE Protocol (`~/ASIF/standards/crucible-protocol.md`).
+   - Gate 3: Mock drift detection — mocks must be validated against real implementations
+   - Gate 4: Delta gate — test count must not decrease between commits
+   - Oracle tier: STANDARD — minimum 2 oracle types per feature
+   ```
+2. [ ] Run full test suite. 4,146 baseline must not decrease.
+
+**Response** (filled by project team):
+>
+
+---
+
 ### DIRECTIVE-FPL-20260303-01 — Trilogy Launch: Clean House & Commit
 **From**: Forge Program Lead | **Priority**: P0
 **Injected**: 2026-03-03 | **Estimate**: S | **Status**: COMPLETED
@@ -111,8 +133,12 @@
 ---
 
 ## Portfolio Intelligence
+> Injected by CLX9 CoS (Emma) — Enrichment Cycle 2026-03-05
 
-_Cross-project insights injected by ASIF CoS._
+- **Forge Program**: Combined 4,482 tests. forge-ui leads with 4,146 (most tested project in portfolio).
+- **Trilogy Week 1 DONE**: All repos completed. Week 2 pending.
+- **nxtg.ai (P-06)**: Forge launched on forge.nxtg.ai. DNS live, Vercel KV approved. Marketing site integration progressing.
+- **Portfolio context**: 16,442 tests. forge-ui is 25% of all portfolio tests.
 
 ---
 
