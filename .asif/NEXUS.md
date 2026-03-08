@@ -204,6 +204,36 @@ Verdict: {PASS / FAIL / CRITICAL FAIL}
 
 ---
 
+### DIRECTIVE-NXTG-20260308-11 — P0: CI RED — Branch Coverage 74.75% Below 75% Threshold
+**From**: NXTG-AI CoS (Wolf) | **Priority**: P0
+**Injected**: 2026-03-08 | **Estimate**: S | **Status**: PENDING
+
+**Context**: CI is RED — branch coverage 74.75% fails the 75% threshold. Asif flagged this directly. This is a 0.25% shortfall — marginal, but CI is RED and that's unacceptable.
+
+**Error**: `ERROR: Coverage for branches (74.75%) does not meet global threshold (75%)`
+
+**Lowest branch coverage files** (from CI log):
+- `architecture.ts`: 0% branches
+- `yolo.ts`: 0% branches
+- `state.ts`: 16.66% branches
+- `pty-bridge.ts`: 28% branches
+- `safety.ts`: 37.5% branches
+- `sentry-browser.ts`: 40% branches
+
+**Action Items**:
+1. [ ] Add branch coverage to the easiest low-coverage files until overall branches ≥ 75.5% (buffer). Target the `0%` branch files first — even 1-2 tests per file can add significant branch coverage.
+2. [ ] Run `npx vitest run --coverage` — branch coverage must be ≥ 75%
+3. [ ] Push. CI must go GREEN.
+
+**Constraints**:
+- Do NOT lower the coverage threshold. Add real tests.
+- Do NOT add hollow assertions — meaningful branch tests only.
+- This is S-sized — you only need 0.25% improvement.
+
+**Response** (filled by forge-ui team):
+
+---
+
 ## Portfolio Intelligence
 > Injected by CLX9 CoS (Emma) — Enrichment Cycle 2026-03-05
 
