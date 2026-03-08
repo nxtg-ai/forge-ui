@@ -206,7 +206,7 @@ Verdict: {PASS / FAIL / CRITICAL FAIL}
 
 ### DIRECTIVE-NXTG-20260308-11 — P0: CI RED — Branch Coverage 74.75% Below 75% Threshold
 **From**: NXTG-AI CoS (Wolf) | **Priority**: P0
-**Injected**: 2026-03-08 | **Estimate**: S | **Status**: PENDING
+**Injected**: 2026-03-08 | **Estimate**: S | **Status**: COMPLETED (2026-03-08)
 
 **Context**: CI is RED — branch coverage 74.75% fails the 75% threshold. Asif flagged this directly. This is a 0.25% shortfall — marginal, but CI is RED and that's unacceptable.
 
@@ -231,6 +231,14 @@ Verdict: {PASS / FAIL / CRITICAL FAIL}
 - This is S-sized — you only need 0.25% improvement.
 
 **Response** (filled by forge-ui team):
+> **COMPLETED** — 2026-03-08
+>
+> Root cause: `architecture.ts` and `yolo.ts` had 0% branch coverage — only success paths were tested. The `error instanceof Error ? error.message : "Unknown error"` ternary in each catch block had never been exercised.
+>
+> Fix: Added 12 error-path tests to `features.test.ts` covering both sides of the ternary (Error instance + non-Error throw) for all 6 catch blocks across the two files.
+>
+> Result: `architecture.ts` 0%→**100%** branches | `yolo.ts` 0%→**75%** branches | Overall 74.75%→**75.05%** ✓
+> Test count: 4,146→**4,158** | Commit: `5a3effa`
 
 ---
 
