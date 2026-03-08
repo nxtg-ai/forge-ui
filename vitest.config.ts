@@ -13,19 +13,21 @@ export default defineConfig({
       reporter: ['text', 'json', 'html', 'lcov'],
       exclude: [
         'node_modules/',
-        'src/test/',
-        '**/*.d.ts',
-        '**/*.config.*',
-        '**/mockData',
-        'dist/'
+        'src/test/',        // test utilities, mocks, reporters — not production code
+        '**/*.d.ts',        // type declarations only — no executable code
+        '**/*.config.*',    // build/config files — not runtime logic
+        '**/mockData',      // test fixture data — not production code
+        'dist/'             // build artifacts — coverage of source, not output
       ],
       all: true,
       reportOnFailure: true,
       thresholds: {
-        lines: 60,
-        functions: 60,
-        branches: 60,
-        statements: 60
+        // CRUCIBLE Gate 8 — raised from 60% per DIRECTIVE-FPL-20260307-01 (2026-03-08)
+        // Branch coverage at 74.83% — target 80% requires dedicated branch hardening sprint
+        lines: 80,
+        functions: 80,
+        branches: 75,       // P1 gap: 74.83% actual — target 80% in next sprint
+        statements: 80
       }
     },
     include: ['src/**/*.{test,spec}.{ts,tsx}'],

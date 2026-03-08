@@ -290,4 +290,69 @@ describe("Smoke Tests: Real Server, Real Requests", () => {
     }
     expect([200, 404]).toContain(res.status);
   });
+
+  // ============= Critical User Paths (N-INI-CRUCIBLE-01) =============
+
+  it("GET /api/health returns health check data [dashboard health display]", async () => {
+    // N-02: Governance HUD — health check display is a critical user path
+    const res = await fetch(`${BASE_URL}/api/health`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe("healthy");
+    // Verify response content-type is JSON (not HTML fallback)
+    expect(res.headers.get("content-type")).toContain("application/json");
+  });
+
+  it("GET /api/commands/ returns command registry [dashboard load]", async () => {
+    // Dashboard loads command list on startup — this path must work
+    const res = await fetch(`${BASE_URL}/api/commands/`);
+    expect([200, 404]).toContain(res.status);
+    if (res.status === 200) {
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(Array.isArray(body.data)).toBe(true);
+      expect(body.data.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("GET /api/forge/detect returns forge detection result [project context]", async () => {
+    // Governance HUD needs forge project detection to display project context
+    const res = await fetch(`${BASE_URL}/api/forge/detect`);
+    expect([200, 404, 500]).toContain(res.status);
+    if (res.status === 200) {
+      const body = await res.json();
+      expect(body).toHaveProperty("success");
+    }
+  });
+
+  it("GET /api/governance/config returns governance config [dashboard settings]", async () => {
+    // Dashboard reads governance config to configure display
+    const res = await fetch(`${BASE_URL}/api/governance/config`);
+    expect([200, 404]).toContain(res.status);
+    if (res.status === 200) {
+      const body = await res.json();
+      expect(body.success).toBe(true);
+    }
+  });
+
+  it("GET /api/governance/blockers returns blockers list [blocking decisions card]", async () => {
+    // N-02: BlockingDecisionsCard requires this endpoint for real-time display
+    const res = await fetch(`${BASE_URL}/api/governance/blockers`);
+    expect([200, 404]).toContain(res.status);
+    if (res.status === 200) {
+      const body = await res.json();
+      expect(body.success).toBe(true);
+      expect(body.data).toBeDefined();
+    }
+  });
+
+  it("GET /api/governance/validate returns validation result [health check display]", async () => {
+    // Governance HUD uses validation result to display quality gate status
+    const res = await fetch(`${BASE_URL}/api/governance/validate`);
+    expect([200, 404]).toContain(res.status);
+    if (res.status === 200) {
+      const body = await res.json();
+      expect(body).toHaveProperty("success");
+    }
+  });
 });

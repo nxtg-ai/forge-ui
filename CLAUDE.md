@@ -93,6 +93,37 @@ NXTG-Forge has Agent Teams permanently enabled (`CLAUDE_CODE_EXPERIMENTAL_AGENT_
 - ❌ Asking permission after decisions are made
 - ❌ Making claims about features without reading the implementation
 
+## CRUCIBLE Protocol (Test Quality — Mandatory)
+
+CRUCIBLE = Code Review Under Conditions Inducing Bug Latency Exposure. All ASIF projects must pass all 8 gates before any release. Reference: `~/ASIF/standards/crucible-protocol.md`.
+
+### The 8 Gates
+
+| Gate | Name | Threshold | Current Status |
+|------|------|-----------|----------------|
+| 1 | xfail governance | 0 unexplained skips | 1 skip (`AgentWorker.test.ts:377`) |
+| 2 | Hollow assertions | < 10% | 7.35% (612/8,322) — CLEAN |
+| 3 | Mock drift | Justified mocks only | 1,037 mocks — flag heavy internal mocking |
+| 4 | Delta gate | Count never decreases | 4,146 baseline — maintain or grow |
+| 5 | Silent exceptions | No swallowed errors | 252 found — remediate in bootstrap.ts |
+| 6 | Mutation testing | ≥ 40% score | 36.27% on useForgeIntegration — FAIL |
+| 7 | Spec-test trace | New tests cite NEXUS ID | N/A for existing; required for new tests |
+| 8 | Coverage integrity | Lines/Funcs/Stmts ≥ 80%, Branches ≥ 75% | 86.8%/87.1%/87.3%/74.8% |
+
+### Key Rules
+- **Do NOT delete tests** — fix or flag them. Test count is a ratchet.
+- **Hollow assertions** (`toBeDefined`, `toBeTruthy`) count against Gate 2. Use specific matchers.
+- **Every mock must be justified** — external API/filesystem = fine; mocking your own service = suspicious.
+- **Silent catch blocks** = P1 violation. Always log or rethrow.
+- **New integration tests** must cite a NEXUS initiative ID in a comment.
+- **Mutation score target**: 40% minimum per module. Run: `npx stryker run /tmp/stryker.config.json`
+
+### Last CRUCIBLE Audit
+Completed: 2026-03-08 | Directive: DIRECTIVE-FPL-20260307-01 | Verdict: FAIL
+Remediations due: Gate 6 (mutation score), Gate 5 (bootstrap.ts silent catches), Gate 4 (restore 6 tests)
+
+---
+
 ## ASIF Governance
 
 This project is part of NXTG-Forge (P-03) in the ASIF portfolio (Developer Tools vertical).
