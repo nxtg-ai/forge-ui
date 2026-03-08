@@ -79,24 +79,61 @@
 
 ## CoS Directives
 
-### DIRECTIVE-NXTG-20260306-01 — CRUCIBLE Protocol Phase 1: Gates 3, 4 (Standard Tier)
-**From**: NXTG-AI CoS (via Emma, CLX9 Sr. CoS) | **Priority**: P2
-**Injected**: 2026-03-06 13:20 | **Estimate**: S | **Status**: PENDING
+### DIRECTIVE-FPL-20260307-01 — P0: Full CRUCIBLE Gates 1-8 Audit (forge-ui)
+**From**: Forge Program Lead, per DIRECTIVE-NXTG-20260307-04 (Asif direct order) | **Priority**: P0
+**Injected**: 2026-03-07 | **Estimate**: M | **Status**: PENDING
+**Supersedes**: DIRECTIVE-NXTG-20260306-01 (Gates 3, 4 only — now expanded to full audit)
 
-**Context**: New portfolio-wide test quality standard (`~/ASIF/standards/crucible-protocol.md`). forge-ui gets Gates 3 (mock drift) and 4 (delta gate) at Standard tier.
+**Context**: Asif's direct order — Forge is the flagship, it must be diamond-quality. forge-ui has 4,146 tests but the prior Gate 8 audit found: **515 hollow assertions (12.4%)**, **1,598 mocks**, and **zero integration tests**. This is a full CRUCIBLE Gates 1-8 forensic audit per `~/ASIF/standards/crucible-protocol.md`.
 
-**Action Items**:
-1. [ ] Add CRUCIBLE Protocol section to CLAUDE.md:
-   ```
-   ## CRUCIBLE Protocol (Test Quality)
-   This project follows the CRUCIBLE Protocol (`~/ASIF/standards/crucible-protocol.md`).
-   - Gate 3: Mock drift detection — mocks must be validated against real implementations
-   - Gate 4: Delta gate — test count must not decrease between commits
-   - Oracle tier: STANDARD — minimum 2 oracle types per feature
-   ```
-2. [ ] Run full test suite. 4,146 baseline must not decrease.
+**Action Items — run ALL 8 gates and report metrics per gate:**
 
-**Response** (filled by project team):
+1. [ ] **Gate 1 (xfail governance)**: Grep for `@xfail`, `.skip()`, `.todo()`, `it.skip`, `describe.skip` in test files. Count. Report any that should be removed or re-enabled.
+
+2. [ ] **Gate 2 (Non-empty/hollow assertions)**: PRIORITY. Grep for hollow assertion patterns: `toBeTruthy()`, `toBeDefined()`, `toBeFalsy()`, `toBeInstanceOf()`, `typeof` assertions, `expect(...).not.toBeNull()`, `expect(...).not.toBeUndefined()`, `toHaveLength(expect.any(Number))`. **Target: reduce hollow assertions below 10% of total** (currently 515/~4146 = 12.4%). Report: total assertions, hollow count, hollow %, and 5 worst-offending test files with line numbers.
+
+3. [ ] **Gate 3 (Mock drift)**: PRIORITY. Audit the 1,598 mocks. Categorize: (a) external API mocks (justified), (b) internal module mocks (suspicious), (c) tautological mocks (mocking what you're testing). Report: mock count by category, top 10 most-mocked modules, and any mock-heavy files (>20 mocks in a single test file).
+
+4. [ ] **Gate 4 (Delta gate)**: Baseline is 4,146 tests. Confirm current count. If different, explain. No test count decrease allowed without justification.
+
+5. [ ] **Gate 5 (Silent exception audit)**: Grep for `catch` blocks in source code that swallow errors (catch without logging, re-throwing, or returning error). Report count and file:line for each.
+
+6. [ ] **Gate 6 (Mutation testing)**: Install `@stryker-mutator/core` and run on ONE critical module (pick the most important: `src/services/` or `src/hooks/useForgeIntegration.ts`). Report mutation score. **Threshold: 40% minimum.**
+
+7. [ ] **Gate 7 (Spec-test traceability)**: For any NEW integration tests you add, include spec references (NEXUS initiative ID or acceptance criteria). No retrofit required for existing tests.
+
+8. [ ] **Gate 8 (Coverage integrity)**: Audit `vitest.config` for `coveragePathIgnorePatterns`, `collectCoverageFrom`, and any exclusion patterns. Every exclusion must have an inline comment justifying it. Check: are `src/server/`, `src/services/`, or `src/hooks/` excluded? If so, flag as P0 violation. **Raise coverage threshold from 60% to 80%.**
+
+**Additional requirements from parent directive:**
+- [ ] Add integration tests for critical user paths (dashboard load, health check display, terminal connection)
+- [ ] Add CRUCIBLE Protocol section to CLAUDE.md (see appendix in `~/ASIF/standards/crucible-protocol.md`)
+
+**Deliverables**: Fill in this structured report:
+
+```
+## CRUCIBLE AUDIT REPORT — forge-ui (P-03a)
+
+| Gate | Status | Metric | Severity |
+|------|--------|--------|----------|
+| 1. xfail governance | {CLEAN/FOUND} | {N skipped tests} | |
+| 2. Hollow assertions | {CLEAN/FOUND} | {N}/{total} = {%} | |
+| 3. Mock drift | {CLEAN/FOUND} | {N mocks}: {a} external, {b} internal, {c} tautological | |
+| 4. Delta gate | {PASS/FAIL} | {current} vs 4,146 baseline | |
+| 5. Silent exceptions | {CLEAN/FOUND} | {N catch blocks} | |
+| 6. Mutation testing | {PASS/FAIL} | {score}% on {module} | |
+| 7. Spec-test trace | N/A (new tests only) | | |
+| 8. Coverage integrity | {CLEAN/FOUND} | {real coverage}% after omit audit | |
+
+Verdict: {PASS / FAIL / CRITICAL FAIL}
+```
+
+**Constraints**:
+- This is Asif's priority. Execute before any other work.
+- Report back within 48 hours.
+- Do NOT delete tests to improve ratios — fix them or flag them.
+- Reference: `~/ASIF/standards/crucible-protocol.md`
+
+**Response** (filled by forge-ui team):
 >
 
 ---

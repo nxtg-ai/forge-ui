@@ -9,8 +9,9 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib.sh"
+require_git
 
 # Check if test files were modified in this session
 MODIFIED_TEST_FILES=$(git diff --name-only 2>/dev/null | grep -c '\.test\.' || true)

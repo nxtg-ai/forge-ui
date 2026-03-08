@@ -395,6 +395,15 @@ check_python_tools() {
 # Git Functions
 # ===================================================================
 
+# Guard: exit 0 (success) if not in a git repo.
+# Call this early in any hook that uses git commands with set -euo pipefail,
+# so the hook silently skips instead of failing in non-git directories.
+require_git() {
+  if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+    exit 0
+  fi
+}
+
 # Check if in git repository
 is_git_repo() {
     git rev-parse --git-dir > /dev/null 2>&1
@@ -585,6 +594,7 @@ export -f is_test_file
 export -f get_file_extension
 export -f has_command
 export -f check_python_tools
+export -f require_git
 export -f is_git_repo
 export -f get_current_branch
 export -f has_uncommitted_changes

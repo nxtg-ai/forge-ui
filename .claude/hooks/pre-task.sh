@@ -14,6 +14,7 @@ set -e
 # Load shared library
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib.sh"
+require_git
 
 # Check if hooks are enabled
 if ! hooks_enabled; then

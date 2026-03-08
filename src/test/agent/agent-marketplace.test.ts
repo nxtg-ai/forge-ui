@@ -1,10 +1,341 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import path from 'path';
-import { AgentMarketplace, MarketplaceAgent, AgentCategory } from '../../server/agent-marketplace';
+import * as fs from 'fs/promises';
+import * as os from 'os';
+import { AgentMarketplace, type AgentCategory } from '../../server/agent-marketplace';
+
+/**
+ * Agent Marketplace Integration Tests
+ *
+ * These tests validate the AgentMarketplace class using inline mock agent
+ * files written to a temp directory. Local agent files were removed in the
+ * v3 duplicate cleanup (agents live in forge-plugin only).
+ */
+
+const MOCK_AGENT_FILES = [
+  {
+    filename: '[AFRG]-orchestrator.md',
+    content: `---
+name: forge-orchestrator
+description: Plans and coordinates multi-agent workflows for NXTG-Forge feature delivery
+model: opus
+color: purple
+tools: Read, Glob, Grep, Bash, Task
+---
+# Forge Orchestrator
+
+You coordinate multi-agent workflows and manage complex feature delivery.
+`
+  },
+  {
+    filename: '[AFRG]-planner.md',
+    content: `---
+name: forge-planner
+description: Analyzes requirements and creates execution plans with architecture and planning focus
+model: opus
+color: blue
+tools: Read, Glob, Grep, Bash, Task
+---
+# Forge Planner
+
+You analyze requirements and design execution plans for feature delivery.
+`
+  },
+  {
+    filename: '[AFRG]-builder.md',
+    content: `---
+name: forge-builder
+description: Implements features and writes production-quality code with comprehensive tests
+model: sonnet
+color: green
+tools: Read, Write, Edit, Bash, Glob, Grep, Task
+---
+# Forge Builder
+
+You implement features following SOLID principles.
+`
+  },
+  {
+    filename: '[AFRG]-guardian.md',
+    content: `---
+name: forge-guardian
+description: Validates code quality through comprehensive testing, security audits, and quality assurance
+model: sonnet
+color: red
+tools: Read, Bash, Glob, Grep
+---
+# Forge Guardian
+
+You enforce quality standards and run security checks.
+`
+  },
+  {
+    filename: '[AFRG]-detective.md',
+    content: `---
+name: forge-detective
+description: Investigates bugs and performs root cause analysis with learning capabilities
+model: sonnet
+color: amber
+tools: Read, Glob, Grep, Bash
+---
+# Forge Detective
+
+You investigate bugs and perform root cause analysis.
+`
+  },
+  {
+    filename: '[AFRG]-refactor.md',
+    content: `---
+name: forge-refactor
+description: Refactors code for improved maintainability and design patterns
+model: sonnet
+color: teal
+tools: Read, Write, Edit, Glob, Grep
+---
+# Forge Refactor
+
+You improve code quality through systematic refactoring.
+`
+  },
+  {
+    filename: '[AFRG]-api.md',
+    content: `---
+name: forge-api
+description: Designs and implements REST and GraphQL API endpoints
+model: sonnet
+color: indigo
+tools: Read, Write, Edit, Bash, Glob, Grep
+---
+# Forge API
+
+You design and implement API endpoints with proper error handling.
+`
+  },
+  {
+    filename: '[AFRG]-devops.md',
+    content: `---
+name: forge-devops
+description: Manages CI/CD pipelines, deployment automation, and infrastructure
+model: haiku
+color: orange
+tools: Read, Bash, Glob, Grep
+---
+# Forge DevOps
+
+You manage deployment pipelines and infrastructure.
+`
+  },
+  {
+    filename: '[AFRG]-analytics.md',
+    content: `---
+name: forge-analytics
+description: Analyzes metrics, generates reports, and provides analytics insights
+model: haiku
+color: cyan
+tools: Read, Glob, Grep, Bash
+---
+# Forge Analytics
+
+You analyze project metrics and generate insight reports.
+`
+  },
+  {
+    filename: 'forge-oracle.md',
+    content: `---
+name: forge-oracle
+description: Governance oracle that tracks compliance, health metrics, and quality governance
+model: sonnet
+color: magenta
+tools: Read, Glob, Grep, Bash
+---
+# Forge Oracle
+
+You track project governance and compliance metrics.
+`
+  },
+  {
+    filename: '[AFRG]-docs.md',
+    content: `---
+name: forge-docs
+description: Generates and maintains documentation with release management
+model: haiku
+color: lime
+tools: Read, Write, Edit, Glob, Grep
+---
+# Forge Docs
+
+You generate and maintain project documentation.
+`
+  },
+  {
+    filename: '[AFRG]-integration.md',
+    content: `---
+name: forge-integration
+description: Manages system integration testing and cross-service compatibility
+model: sonnet
+color: pink
+tools: Read, Bash, Glob, Grep
+---
+# Forge Integration
+
+You manage integration testing across services.
+`
+  },
+  {
+    filename: '[AFRG]-security.md',
+    content: `---
+name: forge-security
+description: Performs security scanning and vulnerability analysis
+model: sonnet
+color: red
+tools: Read, Bash, Glob, Grep
+---
+# Forge Security
+
+You perform security audits and vulnerability scanning.
+`
+  },
+  {
+    filename: '[AFRG]-testing.md',
+    content: `---
+name: forge-testing
+description: Creates and runs comprehensive test suites for quality assurance and testing
+model: sonnet
+color: yellow
+tools: Read, Write, Edit, Bash, Glob, Grep
+---
+# Forge Testing
+
+You write and run comprehensive test suites.
+`
+  },
+  {
+    filename: '[AFRG]-ui.md',
+    content: `---
+name: forge-ui
+description: Designs and implements user interface components with responsive design
+model: sonnet
+color: blue
+tools: Read, Write, Edit, Glob, Grep
+---
+# Forge UI
+
+You design and implement UI components.
+`
+  },
+  {
+    filename: '[AFRG]-database.md',
+    content: `---
+name: forge-database
+description: Designs database schemas and manages data persistence
+model: sonnet
+color: green
+tools: Read, Write, Edit, Bash, Glob, Grep
+---
+# Forge Database
+
+You design database schemas and manage persistence.
+`
+  },
+  {
+    filename: '[AFRG]-performance.md',
+    content: `---
+name: forge-performance
+description: Analyzes and optimizes application performance metrics
+model: haiku
+color: orange
+tools: Read, Bash, Glob, Grep
+---
+# Forge Performance
+
+You analyze and optimize performance.
+`
+  },
+  {
+    filename: '[AFRG]-compliance.md',
+    content: `---
+name: forge-compliance
+description: Ensures compliance with regulations and governance standards
+model: sonnet
+color: magenta
+tools: Read, Glob, Grep, Bash
+---
+# Forge Compliance
+
+You enforce compliance standards.
+`
+  },
+  {
+    filename: '[AFRG]-governance-verifier.md',
+    content: `---
+name: forge-governance-verifier
+description: Verifies governance state and policy adherence
+model: sonnet
+tools: Read, Glob, Grep
+---
+# Forge Governance Verifier
+
+You verify governance policies are followed.
+`
+  },
+  {
+    filename: '[AFRG]-learning.md',
+    content: `---
+name: forge-learning
+description: Captures lessons learned and improves knowledge base with learning analytics
+model: haiku
+color: cyan
+tools: Read, Write, Edit, Glob, Grep
+---
+# Forge Learning
+
+You capture and organize project knowledge.
+`
+  },
+  {
+    filename: '[AFRG]-release-sentinel.md',
+    content: `---
+name: forge-release-sentinel
+description: Monitors release readiness and manages release documentation
+model: haiku
+color: lime
+tools: Read, Glob, Grep, Bash
+---
+# Forge Release Sentinel
+
+You monitor release readiness and track release artifacts.
+`
+  },
+  {
+    filename: '[NXTG-CEO]-LOOP.md',
+    content: `---
+name: NXTG-CEO-LOOP
+description: Executive decision loop agent for strategic decisions and project coordination
+model: opus
+color: purple
+tools: Read, Glob, Grep, Bash, Task
+---
+# NXTG CEO Loop
+
+You handle strategic decisions and executive coordination.
+`
+  },
+];
 
 describe('AgentMarketplace', () => {
   let marketplace: AgentMarketplace;
-  const agentsDir = path.join(process.cwd(), '.claude', 'agents');
+  let agentsDir: string;
+
+  beforeAll(async () => {
+    agentsDir = await fs.mkdtemp(path.join(os.tmpdir(), 'marketplace-test-'));
+    for (const agent of MOCK_AGENT_FILES) {
+      await fs.writeFile(path.join(agentsDir, agent.filename), agent.content, 'utf-8');
+    }
+  });
+
+  afterAll(async () => {
+    await fs.rm(agentsDir, { recursive: true, force: true });
+  });
 
   beforeEach(async () => {
     marketplace = new AgentMarketplace(agentsDir);
@@ -29,10 +360,8 @@ describe('AgentMarketplace', () => {
       const agents = marketplace.getAll();
       const builtInAgents = agents.filter(a => a.builtIn);
 
-      // All agents should be built-in for this test
       expect(builtInAgents.length).toBeGreaterThan(0);
 
-      // Check specific built-in agents
       const orchestrator = marketplace.getAgent('forge-orchestrator');
       const guardian = marketplace.getAgent('forge-guardian');
       const oracle = marketplace.getAgent('forge-oracle');
@@ -54,7 +383,6 @@ describe('AgentMarketplace', () => {
       agents.forEach(agent => {
         expect(agent.metadata.createdAt).toBeTruthy();
         expect(agent.metadata.updatedAt).toBeTruthy();
-        // Timestamps should be valid ISO strings
         expect(() => new Date(agent.metadata.createdAt)).not.toThrow();
         expect(() => new Date(agent.metadata.updatedAt)).not.toThrow();
       });
@@ -85,7 +413,6 @@ describe('AgentMarketplace', () => {
       expect(devAgents.length).toBeGreaterThan(0);
 
       const agentNames = devAgents.map(a => a.name);
-      // Should include refactor, api, ui, database agents
       const hasDevAgents = agentNames.some(name =>
         name.includes('refactor') ||
         name.includes('api') ||
@@ -100,7 +427,6 @@ describe('AgentMarketplace', () => {
       expect(opsAgents.length).toBeGreaterThan(0);
 
       const agentNames = opsAgents.map(a => a.name);
-      // Should include devops, performance, analytics
       const hasOpsAgents = agentNames.some(name =>
         name.includes('devops') ||
         name.includes('performance') ||
@@ -114,7 +440,6 @@ describe('AgentMarketplace', () => {
       expect(govAgents.length).toBeGreaterThan(0);
 
       const agentNames = govAgents.map(a => a.name);
-      // Should include oracle, compliance, governance-verifier
       const hasGovAgents = agentNames.some(name =>
         name.includes('oracle') ||
         name.includes('compliance') ||
@@ -136,7 +461,6 @@ describe('AgentMarketplace', () => {
       expect(docAgents.length).toBeGreaterThan(0);
 
       const agentNames = docAgents.map(a => a.name);
-      // Should include docs, release-sentinel
       const hasDocAgents = agentNames.some(name =>
         name.includes('docs') ||
         name.includes('release')
@@ -170,7 +494,6 @@ describe('AgentMarketplace', () => {
       expect(securityAgents.length).toBeGreaterThan(0);
 
       const agentNames = securityAgents.map(a => a.name);
-      // Should find guardian and/or security agent
       const hasSecurityAgents = agentNames.some(name =>
         name.includes('security') ||
         name.includes('guardian')
@@ -210,7 +533,6 @@ describe('AgentMarketplace', () => {
       const testAgents = marketplace.getByCapability('test');
       expect(testAgents.length).toBeGreaterThan(0);
 
-      // Should match 'testing' capability
       const hasTestingCapability = testAgents.some(agent =>
         agent.capabilities.some(cap => cap.includes('test'))
       );
@@ -312,7 +634,6 @@ describe('AgentMarketplace', () => {
     it('should have at least one agent in each major category', () => {
       const stats = marketplace.getStats();
 
-      // Core categories should have agents
       expect(stats.categoryCounts.core).toBeGreaterThan(0);
       expect(stats.categoryCounts.quality).toBeGreaterThan(0);
       expect(stats.categoryCounts.development).toBeGreaterThan(0);
@@ -321,7 +642,6 @@ describe('AgentMarketplace', () => {
     it('should have agents using different models', () => {
       const stats = marketplace.getStats();
 
-      // Should have at least one agent using each model
       expect(stats.modelCounts.sonnet).toBeGreaterThan(0);
       expect(stats.modelCounts.opus).toBeGreaterThan(0);
       expect(stats.modelCounts.haiku).toBeGreaterThan(0);
