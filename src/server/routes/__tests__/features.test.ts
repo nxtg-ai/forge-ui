@@ -1232,4 +1232,108 @@ describe("Feature Routes", () => {
       expect([200, 404]).toContain(res.status);
     });
   });
+
+  // ============= Architecture Error Paths (branch coverage) =============
+
+  describe("Architecture Routes \u2014 error branches", () => {
+    it("GET /api/architecture/decisions returns 500 with Error message", async () => {
+      vi.mocked(mockCtx.coordinationService.getArchitectureDecisions)
+        .mockRejectedValue(new Error("DB unavailable"));
+      const res = await request(app).get("/api/architecture/decisions").expect(500);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBe("DB unavailable");
+    });
+
+    it("GET /api/architecture/decisions returns 500 with fallback for non-Error throw", async () => {
+      vi.mocked(mockCtx.coordinationService.getArchitectureDecisions)
+        .mockRejectedValue("raw string error");
+      const res = await request(app).get("/api/architecture/decisions").expect(500);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBe("Unknown error");
+    });
+
+    it("POST /api/architecture/propose returns 500 with Error message", async () => {
+      vi.mocked(mockCtx.coordinationService.proposeArchitectureDecision)
+        .mockRejectedValue(new Error("Validation failed"));
+      const res = await request(app).post("/api/architecture/propose").send({ title: "test" }).expect(500);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBe("Validation failed");
+    });
+
+    it("POST /api/architecture/propose returns 500 with fallback for non-Error throw", async () => {
+      vi.mocked(mockCtx.coordinationService.proposeArchitectureDecision)
+        .mockRejectedValue({ code: 500 });
+      const res = await request(app).post("/api/architecture/propose").send({ title: "test" }).expect(500);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBe("Unknown error");
+    });
+
+    it("POST /api/architecture/decisions/:id/approve returns 500 with Error message", async () => {
+      vi.mocked(mockCtx.coordinationService.approveArchitectureDecision)
+        .mockRejectedValue(new Error("Decision not found"));
+      const res = await request(app).post("/api/architecture/decisions/missing-id/approve").expect(500);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBe("Decision not found");
+    });
+
+    it("POST /api/architecture/decisions/:id/approve returns 500 with fallback for non-Error throw", async () => {
+      vi.mocked(mockCtx.coordinationService.approveArchitectureDecision)
+        .mockRejectedValue(null);
+      const res = await request(app).post("/api/architecture/decisions/bad-id/approve").expect(500);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBe("Unknown error");
+    });
+  });
+
+  // ============= YOLO Error Paths (branch coverage) =============
+
+  describe("YOLO Routes \u2014 error branches", () => {
+    it("GET /api/yolo/statistics returns 500 with Error message", async () => {
+      vi.mocked(mockCtx.orchestrator.getYoloStatistics)
+        .mockRejectedValue(new Error("Stats unavailable"));
+      const res = await request(app).get("/api/yolo/statistics").expect(500);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBe("Stats unavailable");
+    });
+
+    it("GET /api/yolo/statistics returns 500 with fallback for non-Error throw", async () => {
+      vi.mocked(mockCtx.orchestrator.getYoloStatistics)
+        .mockRejectedValue("quota exceeded");
+      const res = await request(app).get("/api/yolo/statistics").expect(500);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBe("Unknown error");
+    });
+
+    it("POST /api/yolo/execute returns 500 with Error message", async () => {
+      vi.mocked(mockCtx.orchestrator.executeYoloAction)
+        .mockRejectedValue(new Error("Action blocked"));
+      const res = await request(app).post("/api/yolo/execute").send({ type: "auto-fix" }).expect(500);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBe("Action blocked");
+    });
+
+    it("POST /api/yolo/execute returns 500 with fallback for non-Error throw", async () => {
+      vi.mocked(mockCtx.orchestrator.executeYoloAction)
+        .mockRejectedValue(42);
+      const res = await request(app).post("/api/yolo/execute").send({ type: "auto-fix" }).expect(500);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBe("Unknown error");
+    });
+
+    it("GET /api/yolo/history returns 500 with Error message", async () => {
+      vi.mocked(mockCtx.orchestrator.getYoloHistory)
+        .mockRejectedValue(new Error("History fetch failed"));
+      const res = await request(app).get("/api/yolo/history").expect(500);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBe("History fetch failed");
+    });
+
+    it("GET /api/yolo/history returns 500 with fallback for non-Error throw", async () => {
+      vi.mocked(mockCtx.orchestrator.getYoloHistory)
+        .mockRejectedValue(undefined);
+      const res = await request(app).get("/api/yolo/history").expect(500);
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBe("Unknown error");
+    });
+  });
 });
