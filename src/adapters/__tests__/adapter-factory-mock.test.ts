@@ -8,23 +8,23 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 // Hoist all mocks before vi.mock calls - create actual vi.fn() objects
 const mocks = vi.hoisted(() => {
   // Create a callback-style exec mock with promisify.custom to avoid hangs
-  const execCallback = vi.fn((cmd: string, opts: any, callback: any) => {
+  const execCallback = vi.fn((_cmd: string, opts: unknown, callback: unknown) => {
     if (typeof opts === 'function') {
       callback = opts;
       opts = {};
     }
     setImmediate(() => {
-      callback(null, { stdout: 'output', stderr: '' });
+      (callback as (err: null, result: { stdout: string; stderr: string }) => void)(null, { stdout: 'output', stderr: '' });
     });
-    return undefined as any;
+    return undefined as unknown;
   });
 
   // CRITICAL: Set promisify.custom so promisify(exec) doesn't hang (Rule 0.4)
   const customSymbol = Symbol.for('nodejs.util.promisify.custom');
   const execPromisified = vi.fn(
-    (cmd: string, opts?: any) => Promise.resolve({ stdout: 'output', stderr: '' })
+    (_cmd: string, _opts?: Record<string, unknown>) => Promise.resolve({ stdout: 'output', stderr: '' })
   );
-  (execCallback as any)[customSymbol] = execPromisified;
+  (execCallback as Record<symbol, unknown>)[customSymbol] = execPromisified;
 
   return {
     fsReadFile: vi.fn(),

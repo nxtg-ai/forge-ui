@@ -179,7 +179,7 @@ function IntegratedApp() {
   );
 
   // YOLO mode will be managed via EngagementContext now
-  const handleYoloModeToggle = useCallback((active: boolean) => {
+  const handleYoloModeToggle = useCallback((_active: boolean) => {
     logger.warn("handleYoloModeToggle is deprecated. Use EngagementContext instead.");
   }, []);
 
@@ -296,7 +296,7 @@ function IntegratedApp() {
 
   // Engagement mode changes now handled by EngagementContext
   const handleModeChange = useCallback(
-    (mode: EngagementMode) => {
+    (_mode: EngagementMode) => {
       logger.warn("handleModeChange called - consider using EngagementContext.setMode directly");
     },
     [],
