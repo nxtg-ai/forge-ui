@@ -166,8 +166,8 @@ Verdict: {PASS / FAIL / CRITICAL FAIL}
 > - Added CRUCIBLE Protocol section to CLAUDE.md with gate status table
 >
 > **Remediations deferred (next sprint)**:
-> - Gate 6: Add mutation-hardened tests for `useForgeIntegration.ts` — specifically the `isConnected` and `errors.length` logic paths (score must reach 40%)
-> - Gate 5: Fix bootstrap.ts empty catch blocks — add logger.warn at minimum
+> - ~~Gate 6: Add mutation-hardened tests~~ — COMPLETED 2026-03-08: score 36.27%→**45.75%** (above 40% threshold)
+> - Gate 5: bootstrap.ts catch blocks are mostly fine (have inline comments). True silent catches in `WorkerPoolMetrics.tsx` and `InfinityTerminal.tsx` — remediate in next sprint
 > - Gate 8: Branch coverage hardening — 74.83% → 80% requires conditional branch tests in services/
 > - Gate 1: Re-enable `AgentWorker.test.ts:377` — the "waits for ready signal with timeout" test is disabled; investigate root cause
 

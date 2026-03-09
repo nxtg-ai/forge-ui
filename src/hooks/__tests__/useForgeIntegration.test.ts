@@ -147,6 +147,34 @@ describe("useVision", () => {
     expect(mockApiClient.captureVision).toHaveBeenCalledWith("New vision text");
   });
 
+  it("should use fallback error when updateVision fails without message", async () => {
+    mockApiClient.getVision.mockResolvedValue({ success: true, data: mockVisionData });
+    mockApiClient.updateVision.mockResolvedValue({ success: false }); // no error field
+
+    const { result } = renderHook(() => useVision());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.updateVision({ mission: "Changed" });
+    });
+
+    expect(result.current.error).toBe("Failed to update vision");
+  });
+
+  it("should use fallback error when captureVision fails without message", async () => {
+    mockApiClient.getVision.mockResolvedValue({ success: true, data: mockVisionData });
+    mockApiClient.captureVision.mockResolvedValue({ success: false }); // no error field
+
+    const { result } = renderHook(() => useVision());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.captureVision("New vision text");
+    });
+
+    expect(result.current.error).toBe("Failed to capture vision");
+  });
+
   it("should subscribe to vision changes", async () => {
     mockApiClient.getVision.mockResolvedValue({
       success: true,
@@ -218,6 +246,16 @@ describe("useProjectState", () => {
 
     expect(mockApiClient.getProjectState).toHaveBeenCalled();
     expect(result.current.projectState).toEqual(mockStateData);
+  });
+
+  it("should set fallback error when fetch fails without message", async () => {
+    mockApiClient.getProjectState.mockResolvedValue({ success: false }); // no error field
+
+    const { result } = renderHook(() => useProjectState());
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.error).toBe("Failed to fetch project state");
   });
 
   it("should setup polling", async () => {
@@ -299,6 +337,16 @@ describe("useAgentActivities", () => {
 
     expect(mockApiClient.getAgentActivities).toHaveBeenCalledWith({ limit: 50 });
     expect(result.current.activities).toEqual(mockActivities);
+  });
+
+  it("should set fallback error when fetch fails without message", async () => {
+    mockApiClient.getAgentActivities.mockResolvedValue({ success: false }); // no error field
+
+    const { result } = renderHook(() => useAgentActivities());
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.error).toBe("Failed to fetch activities");
   });
 
   it("should subscribe to activity updates", async () => {
@@ -608,5 +656,49 @@ describe("useForgeIntegration", () => {
     await waitFor(() => {
       expect(result.current.isConnected).toBe(true);
     });
+  });
+
+  // Mutation-hardening tests for isConnected: !isLoading && errors.length === 0
+  // These kill the surviving mutants from Gate 6 Stryker run (score 36.27%).
+
+  it("isConnected is false while any hook is loading", () => {
+    // Keep all promises pending — never resolve
+    mockApiClient.getVision.mockImplementation(() => new Promise(() => {}));
+
+    const { result } = renderHook(() => useForgeIntegration());
+
+    // isLoading must be true immediately and isConnected must be false
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.isConnected).toBe(false);
+  });
+
+  it("isConnected is false when errors exist even after loading completes", async () => {
+    // Vision fails — error is injected
+    mockApiClient.getVision.mockResolvedValue({
+      success: false,
+      error: "Vision fetch failed",
+    });
+
+    const { result } = renderHook(() => useForgeIntegration());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    // isLoading is false but there is an error — isConnected must be false
+    expect(result.current.errors).toContain("Vision fetch failed");
+    expect(result.current.isConnected).toBe(false);
+  });
+
+  it("isConnected is true only when !isLoading AND errors.length === 0", async () => {
+    // All hooks succeed with no errors
+    const { result } = renderHook(() => useForgeIntegration());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.errors).toHaveLength(0);
+    expect(result.current.isConnected).toBe(true);
   });
 });

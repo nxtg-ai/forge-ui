@@ -53,7 +53,7 @@ The feed shows tool assignments, task progress, file lock acquisitions and relea
 | Command center | Execute Forge commands (`forge plan`, `forge status`) from the browser |
 | Multi-device access | Phone, tablet, remote machine. All see the same state. |
 
-58 React components. 4,146 tests. 87% coverage.
+58 React components. 4,165 tests. 87% coverage.
 
 ## Links
 
