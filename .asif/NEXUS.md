@@ -196,7 +196,7 @@ Previous commit `80fb36d` was GREEN. Something in the Node 22 upgrade or the com
 
 ### DIRECTIVE-NXTG-20260313-01 — P0: Node 18→22 Upgrade (EOL Since April 2025)
 **From**: NXTG-AI CoS (Wolf), relaying Emma (CLX9 Sr. CoS) finding | **Priority**: P0
-**Injected**: 2026-03-13 | **Estimate**: S | **Status**: DONE
+**Injected**: 2026-03-13 | **Estimate**: S | **Status**: DONE | **CoS ACK**: 2026-03-13
 
 **Context**: Emma's Node.js EOL audit found forge-ui's `deploy.yml` and `staging.yml` still use Node 18, which went EOL in **April 2025** — nearly a year ago. `quality-gates.yml` already uses Node 22. `@types/node` is `^22.19.11`. The codebase is ready for Node 22, but deploy/staging workflows are pinned to the dead version.
 
