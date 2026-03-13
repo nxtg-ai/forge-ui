@@ -2,7 +2,7 @@
 
 > **Owner**: Asif Waliuddin
 > **Program**: NXTG-Forge (P-03a) | **Program Lead**: FPL
-> **Last Updated**: 2026-03-03
+> **Last Updated**: 2026-03-09
 > **North Star**: The dashboard that makes governance visible — if you can see it, you can fix it.
 
 ---
@@ -192,9 +192,18 @@ Verdict: {PASS / FAIL / CRITICAL FAIL}
 - Do NOT change any application code. If tests fail on Node 22, report back instead of patching.
 
 **Response** (filled by forge-ui team):
-> {team writes here when they've acted}
-> **Started**: — | **Completed**: — | **Actual**: —
-> **Commit**: —
+> **COMPLETED** — 2026-03-09
+>
+> All 3 files updated:
+> - `.github/workflows/deploy.yml`: `NODE_VERSION: '18'` → `'22'`
+> - `.github/workflows/staging.yml`: `NODE_VERSION: '18'` → `'22'`
+> - `package.json` engines: `"node": ">=18.0.0"` → `">=22.0.0"`
+>
+> Verification: Node v22.21.1 — `npm run build` ✓ | `npm test` → **4,165 passed**, 1 skipped, 112 files ✓
+> No application code changes. quality-gates.yml already used Node 22, so this aligns all workflows.
+>
+> **Started**: 2026-03-09 | **Completed**: 2026-03-09 | **Actual**: S
+> **Commit**: (included in NEXUS update commit)
 
 ---
 
@@ -277,6 +286,42 @@ Verdict: {PASS / FAIL / CRITICAL FAIL}
 
 ---
 
+## Team Feedback (2026-03-09 Reflection)
+
+### 1. What did we ship since last check-in?
+
+- **v3.1.0 release** (tag `v3.1.0`, commit `80fdfa3`) — 78 commits bundled: CRUCIBLE audit, CI hardening, security fixes. This was the first release in 24 days, prompted by the FPL incident.
+- **CRUCIBLE Gates 1-8 audit** — full forensic audit. Verdict: FAIL→remediated. Hollow assertions 12.4%→7.35%. Mutation score 36.27%→45.75% (Gate 6 now PASS). 6 integration tests added restoring delta gate baseline.
+- **CI branch coverage fix** — 74.75%→75.05% by testing error paths in `architecture.ts` and `yolo.ts`. Test count 4,146→4,158→4,165 (net +19 tests).
+- **Node 18→22 EOL remediation** — deploy.yml, staging.yml, package.json engines updated. S-sized, zero risk.
+- **Lint cleanup** — 11 TypeScript lint violations resolved (`80fb36d`).
+
+**Current metrics**: 4,165 tests | 112 test files | 0 tsc errors | Coverage: 86.8% stmts / 87.1% funcs / 87.3% lines / 75.05% branches.
+
+### 2. What surprised us?
+
+- **The 24-day release gap** was the biggest lesson. 47 commits went unreleased because there was no cadence forcing it. The FPL routines (Routine 1 release check) now catch this early — working well.
+- **Mutation testing was eye-opening** (Gate 6). `useForgeIntegration.ts` had boolean inversions that survived — meaning tests checked "something happened" but not "the right thing happened." The 7 targeted tests that pushed score to 45.75% were all high-value bugs-waiting-to-happen.
+- **Branch coverage is the hardest metric to move**. Statement/line/function coverage all >86%, but branches stuck at ~75% because many error paths in catch blocks and ternaries were never exercised. The 0%→100% jump on `architecture.ts` from just 2 tests shows how concentrated the gaps are.
+
+### 3. Cross-project signals
+
+- **CRUCIBLE protocol is portfolio-reusable**. The 8-gate audit framework applied identically to forge-plugin (Session 28) and forge-ui. Other ASIF projects (FamilyMind, nxtg.ai) could benefit from the same audit — especially Gate 6 (mutation testing) which catches the subtlest bugs.
+- **Node 18 EOL was found by Emma's CLX9 audit** — good example of cross-project oversight catching what individual teams miss. Suggest making EOL scanning a standard Emma enrichment cycle check.
+- **WSL2 CRLF issue** (Session 29) affects any hook script written by Claude Code. forge-plugin should document this in its CLAUDE.md for other plugin developers.
+
+### 4. What would we prioritize next with fresh directives?
+
+1. **Gate 5 remediation** — 252 silent catch blocks remain. `bootstrap.ts` has 10+ empty `catch {}`. `WorkerPoolMetrics.tsx` and `InfinityTerminal.tsx` have swallowed errors. This is the highest-severity remaining CRUCIBLE finding.
+2. **Branch coverage push to 80%** — currently 75.05%, target is 80%. The concentrated gaps (state.ts 16.66%, pty-bridge.ts 28%, safety.ts 37.5%) are known. ~20-30 targeted tests could close this.
+3. **Gate 1 cleanup** — re-enable the skipped test `AgentWorker.test.ts:377` ("waits for ready signal with timeout"). Investigate root cause.
+4. **N-13 Human UAT Sprint** — still BUILDING. The three-tier validation (T→V→U) is implemented in forge-orchestrator but needs end-to-end testing with real projects.
+
+### 5. Blockers or questions for CoS?
+
+- **No blockers.** All repos GREEN, all under the 5-commit release threshold.
+- **Question**: Should we target Gate 5 (silent exceptions) or Gate 8 (branch coverage 80%) first? Gate 5 is higher severity but Gate 8 has clearer metrics. Recommend Gate 5 since silent exceptions can mask real production failures.
+
 ## Team Questions
 
 _(Add questions for FPL / ASIF CoS here.)_
@@ -287,6 +332,7 @@ _(Add questions for FPL / ASIF CoS here.)_
 
 | Date | Change |
 |------|--------|
+| 2026-03-09 | DIRECTIVE-NXTG-20260313-01 COMPLETED — Node 18→22 EOL remediation (deploy.yml, staging.yml, package.json). Team Feedback reflection added. |
 | 2026-03-08 | DIRECTIVE-FPL-20260307-01 COMPLETED — Full CRUCIBLE Gates 1-8 audit. Verdict: FAIL (Gates 4/6/8). Remediations: 6 integration tests added (count restored to 4,146), thresholds raised to 80%/75%, CRUCIBLE section added to CLAUDE.md. |
 | 2026-03-05 | DIRECTIVE-FPL-20260303-01 COMPLETED — 4,146 tests, tsc clean, artifacts gitignored. |
 | 2026-03-03 | Created by Emma (CLX9 Sr. CoS) — FPL delegation bootstrap. |

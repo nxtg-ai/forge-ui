@@ -74,7 +74,7 @@
     "vitest": "^4.0.18"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.0.0"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",
