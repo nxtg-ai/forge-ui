@@ -173,6 +173,31 @@ Verdict: {PASS / FAIL / CRITICAL FAIL}
 
 ---
 
+### DIRECTIVE-NXTG-20260313-01 — P0: Node 18→22 Upgrade (EOL Since April 2025)
+**From**: NXTG-AI CoS (Wolf), relaying Emma (CLX9 Sr. CoS) finding | **Priority**: P0
+**Injected**: 2026-03-13 | **Estimate**: S | **Status**: PENDING
+
+**Context**: Emma's Node.js EOL audit found forge-ui's `deploy.yml` and `staging.yml` still use Node 18, which went EOL in **April 2025** — nearly a year ago. `quality-gates.yml` already uses Node 22. `@types/node` is `^22.19.11`. The codebase is ready for Node 22, but deploy/staging workflows are pinned to the dead version.
+
+**Action Items**:
+1. [ ] Update `.github/workflows/deploy.yml`: change `NODE_VERSION: '18'` to `NODE_VERSION: '22'`
+2. [ ] Update `.github/workflows/staging.yml`: change `NODE_VERSION: '18'` to `NODE_VERSION: '22'`
+3. [ ] Update `package.json` engines: change `"node": ">=18.0.0"` to `"node": ">=22.0.0"`
+4. [ ] Run `npm test` — confirm all tests pass on Node 22 (quality-gates already runs on 22, so this should be clean)
+5. [ ] Run `npm run build` — confirm build succeeds
+6. [ ] Commit with message: `ci: upgrade Node 18→22 (EOL remediation)`
+
+**Constraints**:
+- S-sized — 3 files, version number changes only
+- Do NOT change any application code. If tests fail on Node 22, report back instead of patching.
+
+**Response** (filled by forge-ui team):
+> {team writes here when they've acted}
+> **Started**: — | **Completed**: — | **Actual**: —
+> **Commit**: —
+
+---
+
 ### DIRECTIVE-FPL-20260303-01 — Trilogy Launch: Clean House & Commit
 **From**: Forge Program Lead | **Priority**: P0
 **Injected**: 2026-03-03 | **Estimate**: S | **Status**: COMPLETED
