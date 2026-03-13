@@ -173,9 +173,30 @@ Verdict: {PASS / FAIL / CRITICAL FAIL}
 
 ---
 
+### DIRECTIVE-NXTG-20260313-04 — P0: CI RED — Coverage Report Missing in Quality Gates
+**From**: NXTG-AI CoS (Wolf) | **Priority**: P0
+**Injected**: 2026-03-13 | **Estimate**: S | **Status**: PENDING
+
+**Context**: Quality Gates CI is RED on `daee81a` (the Node 18→22 commit). The failure is NOT a test failure — it's that `coverage/coverage-summary.json` is not being generated. The CI log shows `::warning::No coverage report found` which causes the coverage threshold check to fail with exit code 1.
+
+Previous commit `80fb36d` was GREEN. Something in the Node 22 upgrade or the commit `daee81a` broke coverage report generation.
+
+**Action Items**:
+1. [ ] Compare CI config between `80fb36d` (GREEN) and `daee81a` (RED) — identify what changed
+2. [ ] Ensure vitest is configured to produce `coverage-summary.json` (check `vitest.config.ts` reporter settings — likely needs `json-summary` reporter)
+3. [ ] Run `npm test -- --coverage` locally and verify `coverage/coverage-summary.json` exists
+4. [ ] Push fix. Verify Quality Gates CI goes GREEN.
+5. [ ] Close the GitHub issue "Failed build: Quality Gates" once CI is GREEN.
+
+**Constraints**:
+- S-sized — config fix only. Do NOT lower the 60% coverage threshold.
+- The test suite itself passes (4,165 tests). This is a reporting/config issue.
+
+---
+
 ### DIRECTIVE-NXTG-20260313-01 — P0: Node 18→22 Upgrade (EOL Since April 2025)
 **From**: NXTG-AI CoS (Wolf), relaying Emma (CLX9 Sr. CoS) finding | **Priority**: P0
-**Injected**: 2026-03-13 | **Estimate**: S | **Status**: PENDING
+**Injected**: 2026-03-13 | **Estimate**: S | **Status**: DONE
 
 **Context**: Emma's Node.js EOL audit found forge-ui's `deploy.yml` and `staging.yml` still use Node 18, which went EOL in **April 2025** — nearly a year ago. `quality-gates.yml` already uses Node 22. `@types/node` is `^22.19.11`. The codebase is ready for Node 22, but deploy/staging workflows are pinned to the dead version.
 
