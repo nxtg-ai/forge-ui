@@ -194,6 +194,24 @@ Previous commit `80fb36d` was GREEN. Something in the Node 22 upgrade or the com
 
 ---
 
+### DIRECTIVE-NXTG-20260314-01 — P0: CRITICAL — simple-git RCE Vulnerability (Dependabot)
+**From**: NXTG-AI CoS (Wolf) | **Priority**: P0
+**Injected**: 2026-03-14 | **Estimate**: S | **Status**: PENDING
+
+**Context**: GitHub Enterprise security scan found CRITICAL RCE vulnerability in `simple-git` dependency (GHSA-r275-fr43-pm7q). This is a Remote Code Execution — an attacker can execute arbitrary commands on the server via crafted git URLs. Dependabot has already created a fix PR.
+
+**Action Items**:
+1. [ ] Check for Dependabot PR updating simple-git — review and merge if tests pass
+2. [ ] If no PR exists: `npm update simple-git` or update to the patched version manually
+3. [ ] Run full test suite — confirm 4,165+ tests pass
+4. [ ] Push and verify CI GREEN
+
+**Constraints**:
+- S-sized. This is a dependency update, not new code.
+- Do NOT ignore or defer — RCE is the highest severity vulnerability class.
+
+---
+
 ### DIRECTIVE-NXTG-20260313-01 — P0: Node 18→22 Upgrade (EOL Since April 2025)
 **From**: NXTG-AI CoS (Wolf), relaying Emma (CLX9 Sr. CoS) finding | **Priority**: P0
 **Injected**: 2026-03-13 | **Estimate**: S | **Status**: DONE | **CoS ACK**: 2026-03-13
