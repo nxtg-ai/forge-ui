@@ -12,6 +12,9 @@ interface ProgressBarProps {
   testIdPrefix?: string; // Prefix for unique data-testid values
 }
 
+/** Animated horizontal progress bar with configurable colours and optional percentage label.
+ * @param props - {@link ProgressBarProps}
+ */
 export const ProgressBar: React.FC<ProgressBarProps> = ({
   value,
   max = 100,

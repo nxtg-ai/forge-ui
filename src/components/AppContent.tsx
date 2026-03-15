@@ -40,7 +40,9 @@ const LazyLoadFallback: React.FC = () => (
   </div>
 );
 
-// Error boundary component
+/** Floating overlay that renders connection error messages from the forge integration.
+ * @param props - `{ errors: string[] }`
+ */
 export const ErrorDisplay: React.FC<{ errors: string[] }> = ({ errors }) => {
   if (errors.length === 0) return null;
 
@@ -100,7 +102,9 @@ export interface AppContentProps {
   setFeedbackModalOpen: (open: boolean) => void;
 }
 
-// Separate component to use EngagementContext
+/** Root shell that renders the correct page view and all persistent overlays based on the active route.
+ * @param props - {@link AppContentProps}
+ */
 export const AppContent: React.FC<AppContentProps> = (props) => {
   const {
     currentView,

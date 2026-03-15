@@ -54,6 +54,9 @@ interface AgentCollaborationViewProps {
   viewMode?: "network" | "list" | "metrics";
 }
 
+/** Visualises the active agent pool as an interactive network graph, list, or metrics view.
+ * @param props - {@link AgentCollaborationViewProps}
+ */
 export const AgentCollaborationView: React.FC<AgentCollaborationViewProps> = ({
   agents,
   edges,

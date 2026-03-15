@@ -55,6 +55,9 @@ export const formatTimestamp = (date: Date | string) => {
   return dateObj.toLocaleDateString();
 };
 
+/** Renders the body of a single activity feed entry including agent name, action, details, and confidence bar.
+ * @param props - {@link ActivityItemContentProps}
+ */
 export const ActivityItemContent: React.FC<ActivityItemContentProps> = ({
   activity,
   formatTimestamp: formatTs,

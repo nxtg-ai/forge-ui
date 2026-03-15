@@ -7,7 +7,10 @@ import {
   Building2,
 } from "lucide-react";
 
-// Navigation route configuration - icons must match page AppShell icons
+/** Ordered list of top-level navigation routes used by the AppHeader.
+ * Each entry carries the view id, display label, lucide icon, and test id.
+ * Icons must match the icon used in each page's AppShell header.
+ */
 export const NAVIGATION_ROUTES = [
   { id: "dashboard", label: "Dashboard", icon: <BarChart3 className="w-4 h-4" />, testId: "dashboard" },
   { id: "vision-display", label: "Vision", icon: <Mountain className="w-4 h-4" />, testId: "vision-display" },

@@ -63,6 +63,9 @@ interface ArchitectureDecision {
   signedOffBy: string[];
 }
 
+/** Simulates a multi-architect discussion that moves through analysis, deliberation, consensus, and sign-off phases.
+ * @param props - {@link ArchitectDiscussionProps}
+ */
 export const ArchitectDiscussion: React.FC<ArchitectDiscussionProps> = ({
   topic,
   participants,

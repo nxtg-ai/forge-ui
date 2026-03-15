@@ -59,6 +59,9 @@ interface ProjectContext {
   lastActivity: Date;
 }
 
+/** Floating command palette (Cmd+K) for executing forge commands, with quick-action bar and command history.
+ * @param props - {@link CommandCenterProps}
+ */
 export const CommandCenter: React.FC<CommandCenterProps> = ({
   onCommandExecute,
   availableCommands,

@@ -16,6 +16,9 @@ interface ActivityFeedHeaderProps {
   onRefresh: () => void;
 }
 
+/** Header bar for the live activity feed showing connection status, filters, and refresh control.
+ * @param props - {@link ActivityFeedHeaderProps}
+ */
 export const ActivityFeedHeader: React.FC<ActivityFeedHeaderProps> = ({
   isConnected,
   isReconnecting,

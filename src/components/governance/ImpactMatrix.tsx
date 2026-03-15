@@ -14,6 +14,9 @@ interface ImpactMatrixProps {
   workstreams: Workstream[];
 }
 
+/** Governance panel card listing workstreams with risk level, status badge, progress bar, and active task indicators.
+ * @param props - {@link ImpactMatrixProps}
+ */
 export const ImpactMatrix: React.FC<ImpactMatrixProps> = ({ workstreams }) => {
   const getRiskColor = (risk: string) => {
     switch (risk) {

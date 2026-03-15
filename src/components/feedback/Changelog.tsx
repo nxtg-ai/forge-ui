@@ -18,6 +18,9 @@ interface ChangelogProps {
   onClose: () => void;
 }
 
+/** Modal dialog that fetches and renders CHANGELOG.md with styled headings, sections, and inline code.
+ * @param props - {@link ChangelogProps}
+ */
 export const Changelog: React.FC<ChangelogProps> = ({ isOpen, onClose }) => {
   const [changelog, setChangelog] = useState<string>("");
   const [loading, setLoading] = useState(true);

@@ -57,6 +57,9 @@ interface YoloStatistics {
   costSaved: number; // in dollars
 }
 
+/** Control panel for enabling autonomous AI operations, selecting an automation level, and reviewing recent automated actions.
+ * @param props - {@link YoloModeProps}
+ */
 export const YoloMode: React.FC<YoloModeProps> = ({
   enabled,
   onToggle,

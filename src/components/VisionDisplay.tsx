@@ -66,6 +66,9 @@ interface ProgressData {
   blockers: number;
 }
 
+/** Read-only (or editable) display of the project's north-star vision, goal progress, success metrics, constraints, and timeline.
+ * @param props - {@link VisionDisplayProps}
+ */
 export const VisionDisplay: React.FC<VisionDisplayProps> = ({
   vision,
   progress,

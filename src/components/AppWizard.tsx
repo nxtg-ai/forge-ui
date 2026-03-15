@@ -11,7 +11,9 @@ import type {
   AgentActivity,
 } from "./types";
 
-// Dashboard wrapper that uses engagement context
+/** Wraps {@link ChiefOfStaffDashboard} and injects the current engagement mode from context.
+ * @param props - `{ visionData, projectState, agentActivity }`
+ */
 export const DashboardWithEngagement: React.FC<{
   visionData: import('./types').VisionData;
   projectState: ProjectState;
@@ -43,7 +45,9 @@ export const DashboardWithEngagement: React.FC<{
   );
 };
 
-// YOLO Mode wrapper that uses engagement context
+/** Wraps {@link YoloMode} and derives enabled/level state from the engagement context, mapping founder+aggressive to active.
+ * @param props - `{ onToggle, statistics, recentActions }`
+ */
 export const YoloModeWithEngagement: React.FC<{
   onToggle: (active: boolean) => void;
   statistics: YoloStatistics;

@@ -7,6 +7,9 @@ interface ConstitutionCardProps {
   constitution: Constitution;
 }
 
+/** Governance panel card displaying the active constitution directive, strategic vision points, and confidence score.
+ * @param props - {@link ConstitutionCardProps}
+ */
 export const ConstitutionCard: React.FC<ConstitutionCardProps> = ({
   constitution,
 }) => {
