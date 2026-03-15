@@ -486,7 +486,7 @@ src/
 Questions? Refer to:
 - `TESTING-AUDIT-SUMMARY.md` - Quick overview
 - `TEST-GENERATION-ROADMAP.md` - Detailed plan
-- `docs/reports/TEST-COVERAGE-AUDIT-2026-02-05.md` - Technical analysis
+- `docs/archive/reports-2026-02/TEST-COVERAGE-AUDIT-2026-02-05.md` - Technical analysis
 - `src/server/__tests__/pty-bridge.test.example.ts` - Code patterns
 
 ---

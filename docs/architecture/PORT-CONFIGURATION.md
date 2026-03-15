@@ -224,4 +224,4 @@ Benefits:
 
 ---
 
-**Questions?** Check the [QUICK-START.md](./QUICK-START.md) or [INTEGRATION-COMPLETE.md](./docs/INTEGRATION-COMPLETE.md)
+**Questions?** Check the [QUICK-START.md](./QUICK-START.md) or [INTEGRATION-COMPLETE.md](../archive/architecture-v3-early/INTEGRATION-COMPLETE.md)

@@ -271,7 +271,7 @@ This is the system that was always intended - powerful, professional, and produc
    - Node.js 18+ required
    - TypeScript 5.0+ recommended
 
-See [Migration Guide](./docs/migration/v2-to-v3.md) for detailed instructions.
+See the Migration Guide above for detailed instructions.
 
 ---
 
