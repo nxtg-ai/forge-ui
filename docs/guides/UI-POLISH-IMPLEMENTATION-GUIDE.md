@@ -789,4 +789,4 @@ This is achievable in a single day with focused effort.
 4. Merge to main when approved
 5. Monitor production for issues
 
-Questions? Review the full UI/UX Audit at: `/docs/reports/UI-UX-AUDIT-2026-02-05.md`
+Questions? Review the full UI/UX Audit at: `/docs/archive/reports-2026-02/UI-UX-AUDIT-2026-02-05.md`
