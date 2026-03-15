@@ -25,6 +25,9 @@ interface VisionData {
   engagementMode: "ceo" | "vp" | "engineer" | "builder" | "founder";
 }
 
+/** Multi-step wizard that collects mission, goals, constraints, success metrics, timeframe, and engagement mode to define project vision.
+ * @param props - {@link VisionCaptureProps}
+ */
 export const VisionCapture: React.FC<VisionCaptureProps> = ({
   onVisionSubmit,
   existingVision,

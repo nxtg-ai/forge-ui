@@ -33,6 +33,9 @@ interface BetaFeedbackProps {
   onClose?: () => void;
 }
 
+/** Floating button and modal form for collecting star ratings, categorized feedback, and optional screenshots during beta.
+ * @param props - {@link BetaFeedbackProps}
+ */
 export const BetaFeedback: React.FC<BetaFeedbackProps> = ({ onClose }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [rating, setRating] = useState(0);

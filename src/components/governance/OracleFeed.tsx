@@ -14,6 +14,9 @@ interface OracleFeedProps {
   logs: SentinelEntry[];
 }
 
+/** Auto-scrolling terminal-style log viewer for sentinel entries, pausing on hover.
+ * @param props - {@link OracleFeedProps}
+ */
 export const OracleFeed: React.FC<OracleFeedProps> = ({ logs }) => {
   const [isPaused, setIsPaused] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);

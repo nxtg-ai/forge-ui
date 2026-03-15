@@ -17,6 +17,9 @@ interface GovernanceHUDProps {
   className?: string;
 }
 
+/** Full governance heads-up display that streams live project state via WebSocket and composes all governance sub-cards.
+ * @param props - {@link GovernanceHUDProps}
+ */
 export const GovernanceHUD: React.FC<GovernanceHUDProps> = ({ className }) => {
   const [state, setState] = useState<GovernanceState | null>(null);
   const [error, setError] = useState<string | null>(null);

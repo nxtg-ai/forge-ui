@@ -89,6 +89,9 @@ export interface AgentActivity {
 
 export type EngagementMode = "ceo" | "vp" | "engineer" | "builder" | "founder";
 
+/** Executive-level project dashboard showing mission, progress, active agents, blockers, and activity stream filtered by engagement mode.
+ * @param props - {@link DashboardProps}
+ */
 export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
   visionData,
   projectState,

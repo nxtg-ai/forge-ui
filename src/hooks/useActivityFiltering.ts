@@ -3,6 +3,11 @@ import type { ActivityItem } from "./useActivityData";
 
 export type ActivityFilter = "all" | "important" | "errors";
 
+/** Filters an activity list by agent IDs and a severity category.
+ * @param activities - Full list of {@link ActivityItem} records to filter.
+ * @param filterByAgent - Optional allowlist of agent IDs; empty array disables agent filtering.
+ * @returns `filter` — active {@link ActivityFilter} value; `setFilter` — setter; `filteredActivities` — filtered subset.
+ */
 export function useActivityFiltering(
   activities: ActivityItem[],
   filterByAgent: string[] = [],

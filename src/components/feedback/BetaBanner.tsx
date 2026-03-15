@@ -10,6 +10,9 @@ interface BetaBannerProps {
 const BANNER_DISMISSED_KEY = "nxtg-beta-banner-dismissed";
 const BANNER_SESSION_KEY = "nxtg-beta-banner-session";
 
+/** Dismissible top-of-page banner announcing the beta program and prompting users for feedback.
+ * @param props - {@link BetaBannerProps}
+ */
 export const BetaBanner: React.FC<BetaBannerProps> = ({ onFeedbackClick }) => {
   const [isVisible, setIsVisible] = useState(false);
 

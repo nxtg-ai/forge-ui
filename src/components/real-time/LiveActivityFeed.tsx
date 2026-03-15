@@ -24,6 +24,9 @@ interface LiveActivityFeedProps {
   onActivityClick?: (activity: ActivityItem) => void;
 }
 
+/** Scrollable, virtualised feed of real-time agent activity events with filter and auto-scroll support.
+ * @param props - {@link LiveActivityFeedProps}
+ */
 export const LiveActivityFeed: React.FC<LiveActivityFeedProps> = ({
   maxItems = 50,
   autoScroll = true,

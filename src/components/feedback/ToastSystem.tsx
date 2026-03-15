@@ -55,6 +55,8 @@ export const useToast = () => {
   return context;
 };
 
+/** Context provider that manages the toast queue and exposes typed helper methods (success, error, warning, info).
+ */
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
