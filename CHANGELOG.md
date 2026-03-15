@@ -5,6 +5,33 @@ All notable changes to NXTG-Forge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.1] - 2026-03-14
+
+### Security
+
+- **flatted DoS fix** — Upgraded flatted 3.3.3 → 3.4.1 to resolve GHSA-25h7-pfq9-p65f (unbounded recursion DoS in parse() revive phase).
+- **simple-git CVE-2026-28292** — Verified v3.33.0 already patched (fix was in v3.32.3). No action required.
+
+### Fixed
+
+- **Node 18 → 22 upgrade** — Migrated from EOL Node 18 (EOL April 2025) to Node 22 LTS. Updated CI, Dockerfile, and engine constraints.
+- **11 TypeScript lint violations** — Resolved ESLint warnings blocking CI (unused vars, argsIgnorePattern).
+- **CI coverage report** — Fixed missing coverage report in Quality Gates workflow.
+
+## [3.1.0] - 2026-02-22
+
+### Added
+
+- **CRUCIBLE Protocol integration** — 8-gate test quality system enforced in CI.
+- **Getting Started card** — ChiefOfStaffDashboard shows guided onboarding for new users.
+- **Launch readiness gates** — 31/31 gates passing.
+
+### Fixed
+
+- **GovernanceHUD test failures** — All 27 tests green.
+- **npm audit** — 0 production vulnerabilities.
+- **tsc errors** — 0 TypeScript compilation errors.
+
 ## [3.0.0] - 2026-01-24
 
 ### 🎉 Major Release: Production-Ready Architecture Restoration
