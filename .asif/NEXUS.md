@@ -196,9 +196,9 @@ Previous commit `80fb36d` was GREEN. Something in the Node 22 upgrade or the com
 
 ### DIRECTIVE-NXTG-20260314-01 — P0: CRITICAL — simple-git RCE Vulnerability (Dependabot)
 **From**: NXTG-AI CoS (Wolf) | **Priority**: P0
-**Injected**: 2026-03-14 | **Estimate**: S | **Status**: PENDING
+**Injected**: 2026-03-14 | **Estimate**: S | **Status**: DONE | **CoS ACK**: 2026-03-14
 
-**Context**: GitHub Enterprise security scan found CRITICAL RCE vulnerability in `simple-git` dependency (GHSA-r275-fr43-pm7q). This is a Remote Code Execution — an attacker can execute arbitrary commands on the server via crafted git URLs. Dependabot has already created a fix PR.
+**Context**: GitHub Enterprise security scan found CRITICAL RCE vulnerability in `simple-git` dependency (GHSA-r275-fr43-pm7q). Team already patched in commit `999a62e` (npm audit fix → simple-git v3.33.0) before directive was formally issued. Follow-up `a93aa82` confirmed patch + fixed flatted DoS.
 
 **Action Items**:
 1. [ ] Check for Dependabot PR updating simple-git — review and merge if tests pass
