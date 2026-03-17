@@ -87,6 +87,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/react": "^19.2.9",
     "@types/react-dom": "^19.2.3",
+    "@vercel/analytics": "^2.0.1",
     "@vitejs/plugin-react": "^5.1.2",
     "@xterm/addon-attach": "^0.12.0",
     "@xterm/addon-fit": "^0.11.0",
