@@ -1,7 +1,6 @@
 import React from "react";
 import { inject } from "@vercel/analytics";
 import ReactDOM from "react-dom/client";
-import { Analytics } from "@vercel/analytics/react";
 import App from "./App"; // REAL INTEGRATION - NO MOCK DATA
 import { ToastProvider } from "./components/feedback/ToastSystem";
 import { ErrorBoundary } from "./components/ErrorBoundary";
