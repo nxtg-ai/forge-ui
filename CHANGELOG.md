@@ -5,6 +5,27 @@ All notable changes to NXTG-Forge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.3] - 2026-03-18
+
+### Changed
+
+- **License** — Transitioned from MIT to FSL-1.1-ALv2 (Functional Source License 1.1). Converts automatically to Apache License 2.0 on 2028-03-18. See `LICENSE.md`.
+- **README** — License section updated to describe FSL terms and the Apache 2.0 conversion date.
+- **package.json** — `license` field updated to `"FSL-1.1-ALv2"`.
+
+### Added
+
+- **LICENSE.md** — Full FSL-1.1-ALv2 license text (copyright 2026 NXTG AI Pty Ltd).
+- **CLA enforcement** — `contributor-assistant/github-action@v2` workflow in `.github/workflows/cla.yml`. All PR contributors must sign before merge. Bots and Dependabot auto-allowlisted.
+- **CLA.md** — Contributor License Agreement document (Apache ICLA terms). Signatures stored in `.github/cla-signatures.json`.
+- **CONTRIBUTING.md** — Updated with CLA signing instructions and requirement notice.
+
+### Notes
+
+- `CLA_PERSONAL_ACCESS_TOKEN` repository secret must be set for the CLA bot to commit signatures back to the repo.
+
+---
+
 ## [3.1.2] - 2026-03-16
 
 ### Documentation

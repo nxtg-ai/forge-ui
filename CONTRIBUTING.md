@@ -106,9 +106,26 @@ refactor(services): Apply SOLID principles to UserService
 test(auth): Increase coverage for authentication module
 ```
 
+### Contributor License Agreement (CLA)
+
+All contributors must sign the CLA before a pull request can be merged.
+
+When you open a PR, the CLA bot will post a comment. Reply with:
+
+```
+I have read the CLA Document and I hereby sign the CLA
+```
+
+This records your agreement in `.github/cla-signatures.json`. You only need to sign once — subsequent PRs will be recognized automatically.
+
+The CLA document is in [`CLA.md`](./CLA.md) (based on Apache ICLA terms). Bots and `dependabot[bot]` are automatically allowlisted.
+
+> **Note:** The `CLA_PERSONAL_ACCESS_TOKEN` repository secret must be set for the bot to commit signatures. Contact a maintainer if the bot fails to record your signature.
+
 ### Pull Request Process
 
-1. **Create a feature branch** from `main`
+1. **Sign the CLA** (first-time contributors — see above)
+2. **Create a feature branch** from `main`
 2. **Make your changes** following code standards (see below)
 3. **Write tests** - Minimum 85% coverage required
 4. **Run quality checks** - `npm run quality:gates`
