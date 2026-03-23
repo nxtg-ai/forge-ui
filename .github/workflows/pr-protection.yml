@@ -1,0 +1,110 @@
+name: PR Protection
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+      - name: CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+      - name: Check suspicious patterns
+        id: patterns
+        run: |
+          ISSUES=""
+          for p in 'eval\s*\(' 'innerHTML\s*=' 'document\.write\s*\(' 'dangerouslySetInnerHTML' \
+                   'atob\s*\(' 'btoa\s*\(' 'Function\s*\(' '\\x[0-9a-fA-F]{2}'; do
+            HITS=$(grep -rn --include='*.ts' --include='*.tsx' "$p" src/ || true)
+            [ -n "$HITS" ] && ISSUES+="### Pattern: \`$p\`\n$HITS\n\n"
+          done
+          echo "found=${ISSUES:+true}" >> "$GITHUB_OUTPUT"
+          { echo "details<<EOFPATTERNS"; echo -e "$ISSUES"; echo "EOFPATTERNS"; } >> "$GITHUB_OUTPUT"
+
+  quality-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npx eslint src
+      - name: Run tests
+        id: tests
+        run: |
+          npx vitest run --reporter=verbose 2>&1 | tee test-output.txt
+          COUNT=$(grep -oP 'Tests\s+\K[0-9]+(?=\s+passed)' test-output.txt || echo 0)
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "Test count: $COUNT (baseline: 4165)"
+          [ "$COUNT" -ge 4165 ] || { echo "::error::Test count decreased: $COUNT < 4165"; exit 1; }
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - name: Audit dependencies
+        id: audit
+        run: |
+          npm audit --json > audit.json 2>/dev/null || true
+          HIGH=$(jq '[.vulnerabilities[] | select(.severity=="high" or .severity=="critical")] | length' audit.json 2>/dev/null || echo 0)
+          echo "high_crit=$HIGH" >> "$GITHUB_OUTPUT"
+          [ "$HIGH" -eq 0 ] || echo "::warning::Found $HIGH high/critical vulnerabilities"
+      - name: Check new dependencies
+        id: deps
+        run: |
+          NEW=$(diff <(git show origin/main:package.json | jq -r '.dependencies // {} | keys[]' 2>/dev/null) \
+                     <(jq -r '.dependencies // {} | keys[]' package.json) | grep '^>' | sed 's/^> //' || true)
+          echo "new_deps=${NEW//$'\n'/, }" >> "$GITHUB_OUTPUT"
+
+  build-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - name: Build
+        run: npm run build
+
+  pr-summary:
+    if: always()
+    needs: [security-scan, quality-gate, dependency-audit, build-check]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post PR comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.NXTG_SENTINEL_TOKEN }}
+          script: |
+            const jobs = {
+              'Security Scan': '${{ needs.security-scan.result }}',
+              'Quality Gate': '${{ needs.quality-gate.result }}',
+              'Dependency Audit': '${{ needs.dependency-audit.result }}',
+              'Build Check': '${{ needs.build-check.result }}'
+            };
+            const icon = s => s === 'success' ? ':white_check_mark:' : ':x:';
+            const rows = Object.entries(jobs).map(([k,v]) => `| ${icon(v)} | ${k} | ${v} |`).join('\n');
+            const body = `## PR Protection Summary\n| | Check | Result |\n|---|---|---|\n${rows}\n`;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: context.issue.number, body
+            });
