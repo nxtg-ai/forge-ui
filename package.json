@@ -9,7 +9,7 @@
     "dev:raw": "concurrently \"npm run server:dev\" \"npm run ui:dev\"",
     "server:dev": "tsx watch src/server/api-server.ts",
     "ui:dev": "vite",
-    "build": "vite build",
+    "build": "tsc --noEmit && vite build",
     "build:all": "tsc && vite build",
     "build:server": "tsc -p tsconfig.server.json",
     "start": "node dist/server/api-server.js",
