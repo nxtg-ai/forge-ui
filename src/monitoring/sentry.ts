@@ -3,6 +3,8 @@
  * Provides error tracking, performance monitoring, and session replay
  */
 
+import type { ErrorEvent, EventHint } from "@sentry/core";
+
 // Type definitions for Sentry (avoids import errors when Sentry not installed)
 interface SentryConfig {
   dsn: string;
@@ -53,7 +55,7 @@ export async function initSentryServer(): Promise<boolean> {
       debug: process.env.NODE_ENV === "development",
 
       // Filter out known non-errors
-      beforeSend(event, hint) {
+      beforeSend(event: ErrorEvent, hint: EventHint) {
         const error = hint?.originalException;
 
         // Don't send expected/handled errors
