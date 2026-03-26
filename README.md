@@ -55,10 +55,15 @@ The feed shows tool assignments, task progress, file lock acquisitions and relea
 
 58 React components. 4,165 tests. 87% coverage.
 
+## Prerequisites
+
+- [Forge Orchestrator](https://github.com/nxtg-ai/forge-orchestrator) running in your project (`forge init && forge status`)
+- Node.js 18+
+
 ## Links
 
 - [Forge Product Page](https://forge.nxtg.ai)
-- [Forge Plugin](https://github.com/nxtg-ai/forge-plugin) (L1: Vibe Coder)
+- [Forge Plugin](https://github.com/nxtg-ai/forge-plugin) (L1: Vibe Coder — start here if you're new)
 - [Forge Orchestrator](https://github.com/nxtg-ai/forge-orchestrator) (L2: Pro Builder)
 - [Documentation](https://forge.nxtg.ai/docs)
 
