@@ -367,6 +367,75 @@ _(Add questions for FPL / ASIF CoS here.)_
 
 ---
 
+### DIRECTIVE-NXTG-20260327-02 — P0: FULL END-TO-END UAT — Forge Ecosystem Human Walkthrough
+**From**: NXTG-AI CoS (Wolf), per Asif direct order | **Priority**: P0
+**Injected**: 2026-03-27 | **Estimate**: L | **Status**: PENDING
+
+**Context**: Forge has 3 repos (forge-ui, forge-orchestrator, forge-plugin) built by 3 separate Claude sessions. **Nobody has verified they work as ONE product.** No human has walked the full install-to-governance journey. No visual UAT. No UX/DX review. We're about to position Forge publicly — it MUST work end-to-end before that happens.
+
+**This is a HUMAN ORACLE UAT. The team must USE the product, not just run tests.**
+
+**Action Items — FULL JOURNEY WALKTHROUGH:**
+
+**Phase 1: Fresh Install (Founder Mode)**
+1. [ ] On a CLEAN machine (or clean directory), install forge-plugin: `claude plugin install nxtg-forge` or equivalent
+2. [ ] Open a Claude Code session in a REAL project (not a toy — use an actual codebase)
+3. [ ] Screenshot: What does the user see on first activation? Is it clear? Confusing? Broken?
+4. [ ] Test: Do the SessionStart hooks fire? Does the pre-task hook work?
+5. [ ] Test: Can you run `/forge:health`? Does it return meaningful output?
+6. [ ] Test: Can you run `/forge:plan`? Does it produce a real plan?
+7. [ ] **REPORT**: First-time user experience score (1-10) with specific friction points
+
+**Phase 2: Orchestrator Connection (Team Mode)**
+8. [ ] Install forge-orchestrator: `cargo build --release` (or use pre-built binary)
+9. [ ] Start the MCP server: verify it starts without errors
+10. [ ] Connect forge-plugin to forge-orchestrator via MCP: does the handshake work?
+11. [ ] Test all 11 MCP tools: `forge_get_state`, `forge_get_tasks`, `forge_claim_task`, `forge_complete_task`, `forge_get_plan`, `forge_capture_knowledge`, `forge_get_knowledge`, `forge_check_drift`, `forge_get_health`, `forge_get_events`, `forge_set_project`
+12. [ ] **For each tool**: Does it return real data? Does it error? Is the response useful?
+13. [ ] **REPORT**: MCP integration score (1-10) with broken/missing tools listed
+
+**Phase 3: Dashboard (Visual UAT)**
+14. [ ] Start forge-ui: `npm run dev`
+15. [ ] Open in browser: does the dashboard load?
+16. [ ] Screenshot EVERY page: Dashboard, Projects, Terminal, Governance HUD, Vision, Commands, Settings
+17. [ ] **For each page**: Does it show real data from the orchestrator? Is it connected? Or is it showing empty/mock states?
+18. [ ] Test: Create a project via UI → does it sync to orchestrator state?
+19. [ ] Test: Run a command from the Command Center → does it execute?
+20. [ ] Test: Open terminal → does PTY work?
+21. [ ] **REPORT**: Dashboard experience score (1-10) with screenshots of every page
+
+**Phase 4: Cross-Repo Integration**
+22. [ ] Verify the FULL loop: forge-plugin skill → triggers orchestrator MCP → state updates → forge-ui dashboard reflects change
+23. [ ] Verify knowledge capture: capture a knowledge entry via plugin → retrieve it in dashboard
+24. [ ] Verify drift detection: make a change that drifts from spec → does the system catch it?
+25. [ ] **REPORT**: Integration score (1-10) — does the ecosystem feel like ONE product or three disconnected repos?
+
+**Phase 5: DX Journey Review**
+26. [ ] Review ALL 21 slash commands: Which ones work? Which ones error? Which ones are confusing?
+27. [ ] Review ALL 22 agents: Trigger each one. Does it activate correctly? Does the description match behavior?
+28. [ ] Review ALL 29 skills: Are they discoverable? Do they auto-activate (1% rule)? Or are they invisible?
+29. [ ] **REPORT**: DX quality score (1-10) with list of broken/confusing commands
+
+**Deliverables**:
+- Screenshots of EVERY dashboard page (attached to response or committed to `.asif/uat/`)
+- Scores for all 5 phases (install, MCP, dashboard, integration, DX)
+- **Overall product readiness score (1-10)**
+- List of SHIP-STOPPERS (anything that would embarrass us if a user hit it)
+- List of QUICK-WINS (easy fixes that dramatically improve the experience)
+
+**Constraints**:
+- This is NOT a test suite run. This is HUMAN EYES on the product.
+- Do NOT skip phases. Do NOT mark phases complete without screenshots.
+- If something is broken, DOCUMENT IT with evidence — don't fix it silently.
+- If the ecosystem doesn't connect end-to-end, that is a P0 SHIP-STOPPER.
+- Reference: `~/ASIF/standards/uat-guide.md` for Human Oracle protocol
+
+**Escalation** (for Asif only):
+- If overall score < 6/10, Forge public positioning should PAUSE until remediated
+- If any SHIP-STOPPER is found, escalate immediately via HANDOFF
+
+---
+
 ### DIRECTIVE-NXTG-20260327-01 — P0: CI RED — BetaBanner z-index test mismatch
 **From**: NXTG-AI CoS (Wolf) | **Priority**: P0
 **Injected**: 2026-03-27 | **Estimate**: S | **Status**: PENDING
