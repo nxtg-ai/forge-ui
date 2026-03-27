@@ -367,6 +367,34 @@ _(Add questions for FPL / ASIF CoS here.)_
 
 ---
 
+### DIRECTIVE-NXTG-20260327-01 — P0: CI RED — BetaBanner z-index test mismatch
+**From**: NXTG-AI CoS (Wolf) | **Priority**: P0
+**Injected**: 2026-03-27 | **Estimate**: S | **Status**: PENDING
+
+**Context**: Quality Gates CI is RED. **4098 pass, 1 fail, 1 skipped.** The single failure:
+
+```
+FAIL src/components/feedback/__tests__/BetaBanner.test.tsx
+  > BetaBanner > Banner Styling > has correct positioning classes
+
+Error: expect(element).toHaveClass("z-50")
+Expected: z-50
+Received: z-40
+```
+
+The BetaBanner component uses `z-40` but the test expects `z-50`. Either the component was changed without updating the test, or the test was written against the wrong value.
+
+**Action Items**:
+1. [ ] Fix `src/components/feedback/__tests__/BetaBanner.test.tsx:160` — change `z-50` to `z-40` (or update the component if `z-50` was intended)
+2. [ ] Run `npx vitest run` locally — confirm 4099+ pass, 0 fail
+3. [ ] Push fix. Verify Quality Gates CI goes GREEN.
+4. [ ] Close GitHub Issue #10 if still open (or confirm it's already closed)
+
+**Constraints**:
+- S-sized — one-line test fix. Verify the component's intended z-index before changing.
+
+---
+
 ## Changelog
 
 | Date | Change |
