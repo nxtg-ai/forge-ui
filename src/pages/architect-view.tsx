@@ -214,13 +214,13 @@ const ArchitectView: React.FC = () => {
                 key="empty-state"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="text-center py-16"
+                className="text-center py-16 min-w-0 overflow-hidden"
               >
                 <Building2 className="w-16 h-16 mx-auto text-gray-700 mb-4" />
-                <h2 className="text-2xl font-bold text-gray-400 mb-2">
+                <h2 className="text-2xl font-bold text-gray-400 mb-2 break-words">
                   Architecture Decision Records
                 </h2>
-                <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                <p className="text-gray-500 mb-6 max-w-md mx-auto break-words">
                   Select a decision from the history panel or create a new proposal
                   to start making architecture decisions.
                 </p>

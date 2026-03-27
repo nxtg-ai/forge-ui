@@ -46,7 +46,7 @@ export const BetaBanner: React.FC<BetaBannerProps> = ({ onFeedbackClick }) => {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-purple-900/90 to-blue-900/90 backdrop-blur-md border-b border-purple-500/30 shadow-elevation-3"
+          className="fixed top-0 left-0 right-0 z-40 bg-gradient-to-r from-purple-900/90 to-blue-900/90 backdrop-blur-md border-b border-purple-500/30 shadow-elevation-3 pointer-events-auto"
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between py-3">

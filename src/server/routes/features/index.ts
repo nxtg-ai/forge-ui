@@ -19,6 +19,7 @@ import { createYoloRoutes, createMemoryRoutes } from "./yolo";
 export function createFeatureRoutes(ctx: RouteContext): express.Router {
   const router = express.Router();
 
+  router.use("/", createAuthRoutes(ctx));
   router.use("/auth", createAuthRoutes(ctx));
   router.use("/vision", createVisionRoutes(ctx));
   router.use("/mcp", createMcpRoutes(ctx));
