@@ -192,7 +192,7 @@ const ArchitectView: React.FC = () => {
         data-testid="architect-view-container"
       >
         {/* Main Content */}
-        <div className="max-w-4xl mx-auto px-6 py-8">
+        <div className="w-full max-w-4xl mx-auto px-6 py-8">
           <AnimatePresence mode="wait">
             {showProposalForm ? (
               <ProposalForm
