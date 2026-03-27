@@ -138,3 +138,11 @@ On every session (check BOTH your own NEXUS and the program NEXUS):
 
 ---
 *Last updated: 2026-02-18 - ASIF governance + multi-device access*
+
+## Dx3 Brain Integration
+On every session start, recall relevant context from Dx3 before starting work:
+- Use recall() to check for prior decisions, lessons, and patterns related to your current task
+- After shipping work, use remember() to store what you learned
+- The brain at dx3-cognitive MCP has context from ALL projects — use it
+
+This is how the portfolio compounds intelligence. Your work benefits from every other team's learning.
