@@ -157,7 +157,7 @@ describe("BetaBanner", () => {
       expect(banner).toHaveClass("top-0");
       expect(banner).toHaveClass("left-0");
       expect(banner).toHaveClass("right-0");
-      expect(banner).toHaveClass("z-50");
+      expect(banner).toHaveClass("z-40");
     });
 
     test("has gradient background", () => {
