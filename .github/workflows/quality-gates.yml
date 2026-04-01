@@ -58,7 +58,8 @@ jobs:
               exit 1
             fi
           else
-            echo "::warning::No coverage report found"
+            echo "::error::No coverage report found — vitest must produce coverage-summary.json"
+            exit 1
           fi
 
       - name: Security audit (production only)

@@ -28,7 +28,6 @@ export default defineConfig({
         target: 'ws://localhost:5051',
         ws: true,
         changeOrigin: true,
-        rewriteWsOrigin: true,
       },
       '/terminal': {
         target: 'ws://localhost:5051',
