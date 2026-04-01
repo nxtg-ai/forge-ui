@@ -5,6 +5,38 @@ All notable changes to NXTG-Forge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-03-29
+
+### Fixed
+
+- **WebSocket connection flapping (P0)** — Removed `rewriteWsOrigin: true` from Vite `/ws` proxy that rewrote origin to `ws://localhost:5051`, rejected by server's allowed origins list. Dashboard no longer shows "Connection lost" toast spam.
+- **Architect text rendering (P0)** — Replaced Tailwind `max-w-md` (resolving to 16px instead of 28rem) with inline `style={{ maxWidth: '28rem' }}` in `architect-view.tsx`. Text no longer renders as stacked single characters.
+- **BetaBanner z-index test mismatch** — Updated test to match component's intended `z-40` (was asserting `z-50`).
+- **Dashboard analytics import (P0)** — Restored missing Analytics import that broke dashboard rendering for 9 days.
+- **3 launch blockers** — Fixed navigation, ws-token, and architect overflow issues.
+- **picomatch ReDoS vulnerability** — Resolved via `npm audit fix`.
+- **Sentry beforeSend types** — Added explicit parameter types to unblock CI.
+- **Dependabot CLA noise** — Skip CLA check for Dependabot PRs.
+
+### Changed
+
+- **Coverage enforcement hardened** — CI now fails with `::error` + `exit 1` when `coverage-summary.json` is missing (was silent warning).
+- **vitest reporters** — Added `json-summary` reporter so CI coverage gate works correctly.
+- **Build script** — Added `tsc --noEmit` to prevent type errors from shipping.
+
+### Added
+
+- **PR protection workflow** — Security, quality, build, and dependency audit checks on pull requests.
+- **Phase 3 UAT report** — Full visual UAT of all 5 dashboard pages with screenshots (`.asif/uat/`).
+- **Dx3 Brain Integration** — Standing instructions for cross-project intelligence in CLAUDE.md.
+
+### Documentation
+
+- **docs/README.md** — Rewritten, removed 24 broken links, deleted empty directories.
+- **Prerequisites section** — Added to docs for new users.
+
+---
+
 ## [3.1.3] - 2026-03-18
 
 ### Changed
