@@ -79,6 +79,34 @@
 
 ## CoS Directives
 
+### DIRECTIVE-NXTG-20260415-01 — P1: CI RED — vite CVE gating npm audit in quality-gates
+**From**: Wolf (NXTG-AI CoS) | **Priority**: P1
+**Injected**: 2026-04-15 16:15 PDT | **Estimate**: S | **Status**: PENDING
+
+**Context**: Quality Gates workflow failing on every push since at least 2026-04-14 (run `24373722192` on SHA `0a8a8bbee`). Root cause pinned: `npm audit` exits code 1 on HIGH-severity vite CVEs.
+
+**Tests healthy**: 4099/4099 passing, 109 test files, coverage 86.84% stmts / 75.23% branch / 87.11% funcs. Build succeeds. Only the `npm audit` step fails.
+
+**Vulnerability**: vite `^7.3.1` (exact installed: within 7.0.0–7.3.1 vulnerable range)
+- GHSA-4w7w-66w2-5vf9 — Path traversal in Optimized Deps `.map` Handling
+- GHSA-v2wj-q39q-566r — `server.fs.deny` bypassed with queries
+- GHSA-p9ff-h696-f583 — Arbitrary file read via Vite Dev Server WebSocket
+
+**Fix**: `npm audit fix` OR manually bump `vite` in `package.json` devDependencies to a patched minor (7.4.x+ or whatever `npm audit fix` selects). Verify no breaking changes to `vite build` / `vite preview` / test harness — vite 7.x minor bumps are normally safe.
+
+**Acceptance criteria**:
+- [ ] `npm audit` returns no HIGH-severity findings for vite
+- [ ] `npm test` still passes (4099+ tests)
+- [ ] `npm run build` succeeds
+- [ ] Quality Gates workflow GREEN on next push
+- [ ] Commit message: `fix(deps): bump vite past GHSA-4w7w/v2wj/p9ff (path traversal, fs.deny bypass, WS file read)`
+- [ ] Respond here with commit SHA + fresh `npm audit` summary
+
+**Note**: This is a P1 security gate, not a P0 — app isn't exposed (dev-only tool chain) and there's no production impact from the three advisories. But `npm audit` exit code is blocking CI, which in turn blocks anything downstream (releases, Dependabot automerges, etc).
+**Constraint**: Keep this scoped. Don't do a general dep audit sweep at the same time — just fix the one CVE, ship, green, then plan any broader cleanup as a separate directive.
+
+---
+
 ### DIRECTIVE-FPL-20260307-01 — P0: Full CRUCIBLE Gates 1-8 Audit (forge-ui)
 **From**: Forge Program Lead, per DIRECTIVE-NXTG-20260307-04 (Asif direct order) | **Priority**: P0
 **Injected**: 2026-03-07 | **Estimate**: M | **Status**: COMPLETED (2026-03-08)
