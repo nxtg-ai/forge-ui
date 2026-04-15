@@ -81,7 +81,7 @@
 
 ### DIRECTIVE-NXTG-20260415-01 — P1: CI RED — vite CVE gating npm audit in quality-gates
 **From**: Wolf (NXTG-AI CoS) | **Priority**: P1
-**Injected**: 2026-04-15 16:15 PDT | **Estimate**: S | **Status**: PENDING
+**Injected**: 2026-04-15 16:15 PDT | **Estimate**: S | **Status**: DONE (2026-04-15)
 
 **Context**: Quality Gates workflow failing on every push since at least 2026-04-14 (run `24373722192` on SHA `0a8a8bbee`). Root cause pinned: `npm audit` exits code 1 on HIGH-severity vite CVEs.
 
@@ -95,12 +95,26 @@
 **Fix**: `npm audit fix` OR manually bump `vite` in `package.json` devDependencies to a patched minor (7.4.x+ or whatever `npm audit fix` selects). Verify no breaking changes to `vite build` / `vite preview` / test harness — vite 7.x minor bumps are normally safe.
 
 **Acceptance criteria**:
-- [ ] `npm audit` returns no HIGH-severity findings for vite
-- [ ] `npm test` still passes (4099+ tests)
-- [ ] `npm run build` succeeds
+- [x] `npm audit` returns no HIGH-severity findings for vite
+- [x] `npm test` still passes (4165/4166, 1 known xfail skip)
+- [x] `npm run build` succeeds
 - [ ] Quality Gates workflow GREEN on next push
-- [ ] Commit message: `fix(deps): bump vite past GHSA-4w7w/v2wj/p9ff (path traversal, fs.deny bypass, WS file read)`
-- [ ] Respond here with commit SHA + fresh `npm audit` summary
+- [x] Commit message: `fix(deps): bump vite past GHSA-4w7w/v2wj/p9ff (path traversal, fs.deny bypass, WS file read)`
+- [x] Respond here with commit SHA + fresh `npm audit` summary
+
+**Response** (2026-04-15):
+`npm audit fix` bumped vite 7.3.1 → 7.3.2 (lock file only; package.json `^7.3.1` satisfied).
+
+```
+$ npm audit
+found 0 vulnerabilities
+```
+
+- Tests: 4165 passed, 1 skipped (known xfail AgentWorker.test.ts:377), 112 files
+- Build: ✓ 5.51s, all chunks generated
+- Commit: `2d1ef84` — `fix(deps): bump vite past GHSA-4w7w/v2wj/p9ff`
+
+CI GREEN expected on next push. No other deps touched.
 
 **Note**: This is a P1 security gate, not a P0 — app isn't exposed (dev-only tool chain) and there's no production impact from the three advisories. But `npm audit` exit code is blocking CI, which in turn blocks anything downstream (releases, Dependabot automerges, etc).
 **Constraint**: Keep this scoped. Don't do a general dep audit sweep at the same time — just fix the one CVE, ship, green, then plan any broader cleanup as a separate directive.
