@@ -79,6 +79,41 @@
 
 ## CoS Directives
 
+### DIRECTIVE-NXTG-20260418-03 — P2: Voice Identity Adoption
+**From**: NXTG-AI CoS (Wolf) — Asif-initiated | **Priority**: P2
+**Injected**: 2026-04-18 13:48 PDT | **Estimate**: S (under 30 min) | **Status**: PENDING
+
+**Context**: PP (P-04) just shipped the portfolio voice service (`http://100.123.83.34:8880`). Asif directive: every team picks its own voice, owns it, and uses it always — no duplicates, no silent completion, no generic TTS fallback. Voice is team identity.
+
+**Your voice**: `af_sarah`
+**Rationale**: Bright, UI-native — matches React dashboard craft
+
+**Direction**:
+1. Add a `## Voice Identity` section to your project's CLAUDE.md:
+   ```markdown
+   ## Voice Identity
+   **Voice**: `af_sarah`
+   **Service**: http://100.123.83.34:8880/v1/audio/speech
+   **Registry**: ~/ASIF/standards/portfolio-voice-registry.md
+   **Use**: every cycle-complete, every P0/P1 completion, every directive response.
+   ```
+2. Update your `cos-speak` wrapper (or equivalent) to default to `af_sarah` on your surfaces.
+3. On every directive DONE / ship complete / cycle complete, speak a one-sentence summary using your voice.
+4. Sample call:
+   ```bash
+   curl -sS -X POST http://100.123.83.34:8880/v1/audio/speech \
+     -H "Content-Type: application/json" \
+     -d '{"model":"kokoro","input":"Your message here.","voice":"af_sarah","response_format":"wav"}' \
+     -o /tmp/voice.wav && aplay /tmp/voice.wav  # or pipe to PowerShell on WSL2
+   ```
+
+**Push back allowed**: If you want a different voice, write a response in this NEXUS with the requested voice ID and reason. Registry file authoritative: `~/ASIF/standards/portfolio-voice-registry.md` — no duplicates portfolio-wide.
+
+**Not required**: don't build a new service. Use PP's endpoint as-is. If you need streaming (long narrations, live dialogue), use `/v1/audio/speech/stream` — see PP's `docs/voice-service/user-guide.md`.
+
+**Why P2 Saturday**: low-stakes identity work, immediate quality-of-life improvement. Won't block anything. Pick up at your next session-start.
+
+
 ### DIRECTIVE-NXTG-20260415-01 — P1: CI RED — vite CVE gating npm audit in quality-gates
 **From**: Wolf (NXTG-AI CoS) | **Priority**: P1
 **Injected**: 2026-04-15 16:15 PDT | **Estimate**: S | **Status**: DONE (2026-04-15)
