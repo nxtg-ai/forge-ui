@@ -81,7 +81,7 @@
 
 ### DIRECTIVE-NXTG-20260418-03 — P2: Voice Identity Adoption
 **From**: NXTG-AI CoS (Wolf) — Asif-initiated | **Priority**: P2
-**Injected**: 2026-04-18 13:48 PDT | **Estimate**: S (under 30 min) | **Status**: PENDING
+**Injected**: 2026-04-18 13:48 PDT | **Estimate**: S (under 30 min) | **Status**: DONE (2026-04-19)
 
 **Context**: PP (P-04) just shipped the portfolio voice service (`http://100.123.83.34:8880`). Asif directive: every team picks its own voice, owns it, and uses it always — no duplicates, no silent completion, no generic TTS fallback. Voice is team identity.
 
@@ -112,6 +112,13 @@
 **Not required**: don't build a new service. Use PP's endpoint as-is. If you need streaming (long narrations, live dialogue), use `/v1/audio/speech/stream` — see PP's `docs/voice-service/user-guide.md`.
 
 **Why P2 Saturday**: low-stakes identity work, immediate quality-of-life improvement. Won't block anything. Pick up at your next session-start.
+
+**Response** (2026-04-19):
+- Voice `af_sarah` already claimed in canonical `~/ASIF/standards/voice-registry.md:58` via commit `a58781b` (P-03a forge-ui row).
+- CLAUDE.md: replaced legacy `## Team Voice` block with directive-prescribed `## Voice Identity` section — includes service URL, registry path, wrapper invocation, and direct-curl fallback.
+- Wrapper already defaults to PP's service endpoint (`http://100.123.83.34:8880`) via `~/ASIF/scripts/cos-speak-remote`.
+- Registry note: directive referenced `portfolio-voice-registry.md`, which now redirects to `voice-registry.md` (consolidated 2026-04-18 per anti-collision rule) — CLAUDE.md points at canonical.
+- Spoke a one-sentence completion summary via `af_sarah` per directive rule.
 
 
 ### DIRECTIVE-NXTG-20260415-01 — P1: CI RED — vite CVE gating npm audit in quality-gates

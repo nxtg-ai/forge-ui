@@ -147,9 +147,24 @@ On every session start, recall relevant context from Dx3 before starting work:
 
 This is how the portfolio compounds intelligence. Your work benefits from every other team's learning.
 
-## Team Voice
+## Voice Identity
+**Voice**: `af_sarah`
+**Service**: http://100.123.83.34:8880/v1/audio/speech
+**Registry**: ~/ASIF/standards/voice-registry.md (canonical; `portfolio-voice-registry.md` redirects here)
+**Claim**: commit `a58781b` (2026-04-19), P-03a forge-ui
+**Use**: every cycle-complete, every P0/P1 completion, every directive response, every blocker/escalation.
 
-Our voice is `af_sarah`. Speak via:
-  ~/ASIF/scripts/cos-speak-remote --voice af_sarah "text"
-Use on cycle exit, deliverable shipped, P0/P1 completion, directive response, blocker, escalation.
-**Registry**: ~/ASIF/standards/voice-registry.md
+Wrapper (preferred):
+```bash
+~/ASIF/scripts/cos-speak-remote --voice af_sarah "Your message here."
+```
+
+Direct call (if wrapper unreachable):
+```bash
+curl -sS -X POST http://100.123.83.34:8880/v1/audio/speech \
+  -H "Content-Type: application/json" \
+  -d '{"model":"kokoro","input":"Your message here.","voice":"af_sarah","response_format":"wav"}' \
+  -o /tmp/voice.wav && aplay /tmp/voice.wav
+```
+
+**Rule**: no duplicates portfolio-wide. Do not silently complete directives — always speak.
