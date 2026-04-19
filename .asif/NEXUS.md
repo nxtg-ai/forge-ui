@@ -420,6 +420,50 @@ Previous commit `80fb36d` was GREEN. Something in the Node 22 upgrade or the com
 
 ---
 
+## Team Feedback (2026-04-19 Reflection)
+
+### 1. What did we ship since last check-in?
+
+- **DIRECTIVE-NXTG-20260418-03 (P2) DONE** — voice identity `af_sarah` adopted. CLAUDE.md swapped to directive-prescribed `## Voice Identity` section with service URL, canonical registry, wrapper + curl fallback. Commits `870f6f8`, `a58781b`, `e6921bd`.
+- **DIRECTIVE-NXTG-20260415-01 (P1) DONE** — vite CVE patched (`2d1ef84`). `npm audit fix` bumped vite 7.3.1 → 7.3.2 (lock only; `^7.3.1` satisfied). GHSA-4w7w, GHSA-v2wj, GHSA-p9ff resolved. Quality Gates CI back to green.
+- **Security scan pipeline hardened across 5 iterations** — `67a524b` added Semgrep SAST + Gitleaks alongside CodeQL. `e2f637a` → `b90545e` → `c7b7452` → `0a8a8bb` shipped PR annotations, private-repo fixes, Bandit + Bearer for Python/data privacy, YAML parse fixes, and graceful-fallback guards. Defense-in-depth SAST layer is now operational.
+- **npm audit debt cleared** — `2e81bf6` zeroed out vulnerabilities. `npm audit` reports 0 findings.
+- **Hook path repair** — `5e158d5` fixed stale `.claude/settings.json` path `NXTG-Forge/v3 → NXTG-Forge/forge-ui` after workspace rename. Session-start hooks were silently misdirected.
+
+**Current metrics**: 4,165 tests pass | 1 known xfail | 112 test files | 0 tsc errors | 0 npm audit findings | CI GREEN (last 3 runs all success).
+
+**Release debt**: **15 unreleased commits since v3.2.0**. Over the FPL routine threshold (>5). Cut v3.2.1 (or v3.3.0 if the security-scan additions are user-facing enough) next session.
+
+### 2. What surprised us?
+
+- **Security SAST v1 → v5.1 took five iterations to stabilize on private repos**. Each rev uncovered a new private-repo-specific failure mode: missing SARIF locations, YAML block-scalar parse errors, table-print crashes on empty result sets, and a Bearer/Bandit-Python discovery step that required explicit `|| true` guards. Private repos are a materially different CI environment — the GitHub-provided actions assume public-repo defaults. Lesson: always smoke-test CI additions on the target visibility (private vs public) before merging.
+- **The hook path bug (`5e158d5`) was silent for ~9 days**. Session-start hooks at `.claude/settings.json` pointed at the pre-rename `NXTG-Forge/v3` directory. Hooks ran but in the wrong context — no error, just wrong outputs. Anything that renames a workspace root must grep all settings/config files for the old name.
+- **Voice registry consolidation caught a forking bug before it spread**. Wolf and Emma created parallel `voice-registry.md` and `portfolio-voice-registry.md` on 2026-04-18. The anti-collision rule (earliest-commit-wins) resolved it to one canonical file. Without that rule, we'd have two drifting sources of truth inside 24h of directive issuance.
+
+### 3. Cross-project signals
+
+- **Security-scan v5.1 workflow is template-ready**. The 5-iteration hardening eliminated most of the common failure modes (missing SARIF locations, private-repo defaults, empty result sets). Other ASIF repos doing SAST should clone forge-ui's `.github/workflows/security-scan.yml` rather than re-derive it. Save them 4 broken CI cycles.
+- **Workspace-rename hook breakage is portfolio-wide risk**. If any repo references an old workspace path in `.claude/settings.json`, CLAUDE.md, or hook scripts, hooks silently run against the wrong tree. Recommend a one-shot portfolio grep for `NXTG-Forge/v3`, old FamilyMind paths, or any renamed directory.
+- **Bearer (data privacy SAST) and Bandit (Python SAST) are useful for any repo touching user data**. Neither is Forge-specific — CCUIC, PP, FPL could benefit. Low setup cost once forge-ui's config is the reference.
+- **Vite minor bumps are safe**. 7.3.1 → 7.3.2 via `npm audit fix` alone — lockfile-only change, no package.json edit, no test breakage. For dev-tooling CVEs, the minimal-diff `npm audit fix` path is the right default.
+
+### 4. What would you prioritize next with fresh directives?
+
+1. **Cut v3.2.1 (or v3.3.0)** — 15 unreleased commits is over the FPL threshold. The security-scan pipeline additions are arguably user-facing (other repos will want to inherit them). One release covers all pending work.
+2. **Gate 5 remediation (still outstanding)** — 252 silent catch blocks. `bootstrap.ts` cluster is the highest-priority. Flagged in both prior reflections; remains the highest-severity CRUCIBLE finding. This has aged 6+ weeks.
+3. **Gate 6 mutation score** — last audit was 36.27% on `useForgeIntegration` (below 40% threshold). No remediation shipped. Same age as Gate 5.
+4. **Phase 3 UAT polish items (P2-P3)** — Vision markdown `**bold**` rendering, stale HUD test count, "uncommitted changes" label. Noted in the 2026-03-29 reflection as quick wins; still unshipped.
+5. **Workspace-rename portfolio sweep** — grep every ASIF repo's `.claude/settings.json` and hook scripts for old paths. One-shot hygiene pass.
+
+### 5. Blockers or questions for CoS?
+
+- **No blockers.** CI GREEN, 0 audit findings, 0 pending directives, 0 tsc errors, 0 test regressions.
+- **Question**: Should the security-scan v5.1 workflow be promoted to a standards-level template (e.g. `~/ASIF/standards/security-scan-template.yml`) so other teams inherit rather than re-derive? I can extract it if you want.
+- **Question**: Gates 5 and 6 have been flagged in the last two reflections with no remediation directive. Is this a deprioritization call, or should forge-ui self-initiate a P2 remediation sprint? (bootstrap.ts alone would meaningfully shift Gate 5.)
+- **Observation**: Voice service endpoint is single-point-of-failure (PP's laptop at `100.123.83.34:8880`). Not a forge-ui problem, but worth noting — if PP's machine is offline, every team's directive-completion voicing fails silently. The `cos-speak-remote` wrapper does fall back to local `cos-speak.py`, so it's graceful.
+
+---
+
 ## Team Feedback (2026-03-29 Reflection)
 
 ### 1. What did we ship since last check-in?
