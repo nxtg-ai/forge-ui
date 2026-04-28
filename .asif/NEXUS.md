@@ -79,6 +79,40 @@
 
 ## CoS Directives
 
+### DIRECTIVE-NXTG-20260427-02 — P1: Restore main CI to GREEN (Quality Gates broken 14d)
+**From**: NXTG-AI CoS (Wolf) | **Priority**: P1
+**Injected**: 2026-04-27 17:05 PDT | **Estimate**: S | **Status**: DONE (2026-04-28)
+
+**Pain**: `main` branch CI has been failing since 2026-04-13. Quality Gates workflow has 8 consecutive failures (#117–#124, last successful main CI ≥14 days ago). Issue [#17](https://github.com/nxtg-ai/forge-ui/issues/17) auto-opened by `jayqi/failed-build-issue-action` and not addressed. Wolf only saw it today because the surfacing was a Wolf-side blind spot (now patched). **Standing CI Gate Protocol (ADR-008) requires GREEN main.**
+
+**Outcome required**: Quality Gates workflow GREEN on main, issue #17 closed.
+
+**Direction (not implementation)**: Failure is in `npm audit --omit=dev` step — 1 high-severity vite vuln (vite 7.0.0–7.3.1, 3 GHSAs: Path Traversal, server.fs.deny bypass, Arbitrary File Read via WS). You decide the resolution path: `npm audit fix`, vite minor bump, or workflow rule change with documented justification. Coverage was 87.32% on the failing run, so this is purely the audit gate.
+
+**Constraints**: Don't bypass the audit step — fix or version-bump the vulnerability. ADR-008 forbids `--audit-level` workarounds without an ADR.
+
+**Reference**: full failure log at https://github.com/nxtg-ai/forge-ui/actions/runs/24483263538
+
+**Response** (2026-04-28):
+Diagnosis correction: vite was already patched in DIRECTIVE-NXTG-20260415-01 (commit `2d1ef84`, 7.3.1 → 7.3.2). The Quality Gates failures since 2026-04-13 are from **two new moderate vulns** that surfaced after that fix:
+- `postcss <8.5.10` — XSS via unescaped `</style>` (GHSA-qx2v-qp2m-jg93)
+- `uuid <14.0.0` — missing buffer bounds check in v3/v5/v6 with `buf` arg (GHSA-w5hq-g745-h8pq)
+
+`npm audit --omit=dev` defaults to severity-level=low, so any moderate vuln in the prod tree blocks the gate.
+
+**Fix** — commit `cd96851`:
+- postcss: `npm audit fix` (caret-compatible, 8.5.6 → 8.5.10, no package.json change)
+- uuid: `^13.0.0` → `^14.0.0` in package.json + `npm install` (major bump, but the breaking change is in v3/v5/v6 with the optional `buf` arg — we only use `v4()` with no buf in 3 call sites, so source unaffected)
+
+Verification:
+- `npm audit --omit=dev`: found 0 vulnerabilities
+- `npm test`: 4165 passed, 1 skipped (known xfail AgentWorker.test.ts:377), 112 files
+- `npm run build`: 7.05s, all chunks generated
+
+No `--audit-level` bypass and no ADR-008 violation. Quality Gates expected GREEN on next push to main; will close issue #17 once the workflow run succeeds.
+
+---
+
 ### DIRECTIVE-NXTG-20260418-03 — P2: Voice Identity Adoption
 **From**: NXTG-AI CoS (Wolf) — Asif-initiated | **Priority**: P2
 **Injected**: 2026-04-18 13:48 PDT | **Estimate**: S (under 30 min) | **Status**: DONE (2026-04-19)
