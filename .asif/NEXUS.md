@@ -454,6 +454,39 @@ Previous commit `80fb36d` was GREEN. Something in the Node 22 upgrade or the com
 
 ---
 
+## Team Feedback (2026-04-28 Reflection)
+
+### 1. What did we ship since last check-in?
+
+- **DIRECTIVE-NXTG-20260427-02 (P1) DONE** — Quality Gates CI restored to GREEN on main. Two commits: `cd96851` (postcss 8.5.6→8.5.10 via `npm audit fix`, uuid `^13.0.0`→`^14.0.0` in package.json) and `ab97d2a` (NEXUS response). Run [25026607032](https://github.com/nxtg-ai/forge-ui/actions/runs/25026607032) green; issue #17 closed.
+- **Test count steady**: 4165 passed / 1 skipped (known xfail `AgentWorker.test.ts:377`) / 112 files — no decreases.
+- **`npm audit --omit=dev`**: 0 vulnerabilities. No `--audit-level` bypass; ADR-008 respected.
+
+### 2. What surprised us?
+
+- **Wolf's directive diagnosis was stale** — it cited the vite CVE (already patched in `2d1ef84` two weeks ago), but the actual blockers were two *new* moderate vulns: postcss XSS (GHSA-qx2v-qp2m-jg93) and uuid buffer-bounds (GHSA-w5hq-g745-h8pq). uuid v14.0.0 was published ~7 days ago, so the GHSA flag arrived after our last green run on 2026-04-19. Lesson: a CVE-based gate is a moving target — even repos with no commits can go red overnight when a transitive dep gets newly flagged.
+- **`npm audit --omit=dev` defaults to severity-level=low** — not high. Two moderate findings in the prod tree are enough to fail the gate. This is probably the desired behaviour, but it means *any* moderate vuln anywhere in production deps blocks main, which is a tighter contract than the "high-severity only" framing in Wolf's directive implied.
+- **uuid 13→14 is a "major" bump in name only** for our usage — the breaking change is scoped to v3/v5/v6 with the optional `buf` arg. We only call `v4()` (no buf) in 3 sites, so source code was untouched. Worth noting that semver-major doesn't always mean code changes.
+
+### 3. Cross-project signals
+
+- **Other ASIF projects with `uuid` or `postcss` as prod deps will also be RED right now** if they run `npm audit --omit=dev` in CI. Specifically anything with `uuid <14` or `postcss <8.5.10`. Recommend Wolf sweeps the portfolio for these two GHSAs — fix is mechanical (caret bump for postcss, package.json edit + `npm install` for uuid). Estimated S per repo.
+- **Pattern worth canonicalizing**: when a CVE-gated CI fails on a repo that hasn't changed, first check the **publish date of the GHSA**, not just our last-modified date. `npm view <pkg>@<patched-version> time.modified` (or check the GitHub advisory page) tells you whether this is a new flag on an old dep vs. a regression.
+- **`jayqi/failed-build-issue-action` + Wolf surfacing gap** — issue #17 sat 14 days because nothing surfaced it to a human. Wolf patched their side; we should consider whether forge-ui itself should escalate (e.g. NEXUS auto-injects a directive when a `build failed` issue is older than N days). Probably out of scope for forge-ui to own, but flagging for the program.
+
+### 4. What we'd prioritize next with fresh directives
+
+1. **Resume CRUCIBLE Gate 5/6 remediation** — the 2026-03-08 audit (DIRECTIVE-FPL-20260307-01) flagged Gate 5 (252 silent exceptions, mostly bootstrap.ts) and Gate 6 (mutation score 36.27% on `useForgeIntegration`, below 40% threshold). Both still open; nothing has driven them since. P2-P3 quality work.
+- **Dependabot grouping** — we're getting CVE drips one-at-a-time. A grouped weekly dependabot PR would batch these so the gate isn't a tripwire on a quiet repo.
+- **CRUCIBLE Gate 4 baseline restoration** — 6 integration tests need to come back per the audit remediation list. We're holding 4146 but the spec said grow.
+- **Release discipline** — last forge-ui release was v3.1.2 (DIRECTIVE-NXTG-20260316). v3.2.0 is in `package.json` but no tag/release exists for it. FPL incident pattern is unreleased commits accumulating; we should either tag 3.2.0 with notes or revert the version bump.
+
+### 5. Blockers / questions for CoS
+
+- **None blocking.** One question: **what severity threshold do we want `npm audit --omit=dev` gating at portfolio-wide?** Today it's implicit-low (default). If we want "high only", that's an ADR-008 amendment, not a per-workflow flag. If we want implicit-low, we should expect this kind of moving-target failure repeatedly and plan for grouped dependabot + auto-NEXUS surfacing. Either is fine; the current state (low + no surfacing) is the worst combination.
+
+---
+
 ## Team Feedback (2026-04-19 Reflection)
 
 ### 1. What did we ship since last check-in?
