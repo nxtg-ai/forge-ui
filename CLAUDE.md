@@ -139,6 +139,28 @@ On every session (check BOTH your own NEXUS and the program NEXUS):
 ---
 *Last updated: 2026-02-18 - ASIF governance + multi-device access*
 
+
+## Release Protocol Enforcement (ASIF Standard, ADR-036)
+
+This repo is currently NOT registered as a public-package distribution target, so the release-protocol gate skips on every push. Pre-push hook (Layer 1, `.git/hooks/pre-push`) and daily drift workflow (Layer 2) are installed and benign.
+
+If this repo later publishes to a registry (npm, PyPI, crates.io, GitHub Packages, etc.), add `.asif-ci` at the repo root:
+
+```
+release_protocol_enabled: true
+release_protocol_manifest: <path-to-published-manifest>
+```
+
+Then on each version bump in that manifest:
+1. **Tag**: `git tag vX.Y.Z && git push origin vX.Y.Z`
+2. **GH Release**: `gh release create vX.Y.Z --notes-from-tag`
+3. **Publish**: `<registry-specific publish command>`
+4. **CHANGELOG**: roll `[Unreleased]` → `[vX.Y.Z] — YYYY-MM-DD` in CHANGELOG.md
+5. **Docs**: update any pinned version references in README.md / docs
+
+Wolf's nightly sense pass surfaces drift portfolio-wide via `===SECTION:RELEASE_DRIFT===` once enabled.
+
+**Bypass (EMERGENCY ONLY)**: `git push --no-verify` — and document the bypass in NEXUS or HANDOFF.
 ## Dx3 Brain Integration
 On every session start, recall relevant context from Dx3 before starting work:
 - Use recall() to check for prior decisions, lessons, and patterns related to your current task
