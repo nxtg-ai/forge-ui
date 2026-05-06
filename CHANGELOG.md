@@ -5,6 +5,32 @@ All notable changes to NXTG-Forge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2026-05-06
+
+### Security
+
+- **simple-git RCE** — Bumped `simple-git` past GHSA-hffm-xvc3-vprc (RCE in versions < 3.36.0).
+- **Vite path traversal** — Bumped `vite` past GHSA-4w7w/v2wj/p9ff (path traversal, `fs.deny` bypass, WS file read).
+- **uuid + postcss dep bumps** — `uuid` 13→14 and `postcss` 8.5.6→8.5.10 to clear npm audit (DIRECTIVE-NXTG-20260427-02).
+- **npm audit clean** — 0 production vulnerabilities remaining.
+
+### CI
+
+- **Defense-in-depth security scanning** — Semgrep SAST + Gitleaks secrets detection added alongside CodeQL on all PRs.
+- **Security scan hardening (v2→v5.1)** — Added Bandit (Python SAST) + Bearer (data privacy), PR annotations + job summary, YAML parse fixes, guarded missing-location edge cases.
+- **ADR-036 release-protocol-check workflow** — Layer 0 Release Protocol Enforcement; daily drift check + pre-push gate catches unreleased commit accumulation.
+
+### Fixed
+
+- **Hook settings path** — Corrected `settings.json` path from `NXTG-Forge/v3` → `NXTG-Forge/forge-ui` (stale path after repo rename).
+
+### Governance
+
+- **Voice identity** — Claimed `af_sarah` as forge-ui team voice in portfolio voice registry (DIRECTIVE-NXTG-20260418-03).
+- **24 NEXUS reflections** — Continuous FPL check-ins and directive tracking (2026-04-03 → 2026-05-23).
+
+---
+
 ## [3.2.0] - 2026-03-29
 
 ### Fixed
