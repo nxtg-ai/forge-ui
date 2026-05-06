@@ -260,6 +260,13 @@ describe('MaintenanceDaemon', () => {
     it('should run health checks periodically', async () => {
       let checkCount = 0;
 
+      // Wait for first health-check taskComplete event rather than a fixed timeout
+      const firstCheck = new Promise<void>(resolve => {
+        daemon.once('taskComplete', (task: string) => {
+          if (task === 'health-check') resolve();
+        });
+      });
+
       daemon.on('taskComplete', (task: string) => {
         if (task === 'health-check') {
           checkCount++;
@@ -268,8 +275,8 @@ describe('MaintenanceDaemon', () => {
 
       await daemon.start();
 
-      // Wait for multiple checks
-      await new Promise(resolve => setTimeout(resolve, 250));
+      // Allow up to 2s for the async health check + DB write to complete
+      await Promise.race([firstCheck, new Promise(resolve => setTimeout(resolve, 2000))]);
 
       expect(checkCount).toBeGreaterThan(0);
     });

@@ -545,7 +545,8 @@ export class SecurityAuditor {
 }
 
 // CLI usage
-if (require.main === module) {
+const _isMain = process.argv[1]?.endsWith('security-audit.ts') || process.argv[1]?.endsWith('security-audit.js');
+if (_isMain) {
   const auditor = new SecurityAuditor();
   auditor
     .runAudit()
