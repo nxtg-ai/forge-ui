@@ -454,6 +454,40 @@ Previous commit `80fb36d` was GREEN. Something in the Node 22 upgrade or the com
 
 ---
 
+## Team Feedback (2026-05-25 Reflection)
+
+### 1. What did we ship since last check-in?
+
+- **P0 CI fix** (`69ef623`): Two fixes to restore Deploy & Release to GREEN:
+  1. `src/test/reports/security-audit.ts:548` — replaced `require.main === module` (CommonJS) with `process.argv` check. The project uses `"type":"module"` (ESM), so `require` is undefined. This was causing `ReferenceError` in the v3.3.0 Deploy & Release workflow.
+  2. `src/maintenance/__tests__/daemon.test.ts` — replaced fixed 250ms timeout in "should run health checks periodically" with an event-driven await (up to 2s). The async health check + DB write races the 250ms window under load.
+- **Tests**: 4165 passed / 1 skipped / 112 files — full suite green after fixes.
+- **`npm audit --omit=dev`**: 0 vulnerabilities.
+
+### 2. What surprised us?
+
+- **v3.3.0 was pushed while we were idle** — commit `0be66f1` ("release: v3.3.0 — security fixes, CI hardening, governance") appeared on `origin/main` between our last reflection and this session. It introduced the Deploy & Release workflow and the security-audit.ts script. The Quality Gates workflow (which runs tests) passed on that commit, but the Deploy & Release workflow failed immediately on the new `npx tsx security-audit.ts` step.
+- **Pre-push hook masked the ESLint issue** — the ASIF CI Gate hook ran `eslint .` (not `eslint src`) and reported 37k errors including the template file, but still exited PASSED. Meanwhile the actual CI only runs `eslint src` (warnings-only). The gap between hook ESLint scope and CI ESLint scope is a confusing signal.
+- **CommonJS `require.main` in an ESM project** — this is a category of bug that TypeScript doesn't catch (it's valid TS syntax, just wrong at runtime in ESM). Worth noting: any `require`, `__dirname`, or `__filename` usage in `.ts` files is an ESM landmine on Node 22+.
+- **learning-database test isolation** — the "should limit health events to 1000" test (1100 sequential DB writes) causes intermittent failures when the full 112-file suite runs in parallel on WSL2. Passes in isolation. Not a code bug but a test performance issue.
+
+### 3. Cross-project signals
+
+- **ESM landmines on Node 22**: `require.main`, `__dirname`, `__filename`, `require()` in `.ts` files will all throw `ReferenceError` at runtime on Node 22+ ESM projects. Any ASIF project using `"type":"module"` in `package.json` should grep for these patterns before shipping. ESLint rule `@typescript-eslint/no-require-imports` would catch these.
+- **Async test timeouts vs event-driven waits**: the 250ms fixed-timeout anti-pattern appears in other test files too. Event-driven `once()` + `Promise.race([event, timeout])` is more reliable and should be the portfolio standard for tests that wait on async daemon/timer behaviour.
+
+### 4. What we'd prioritize next
+
+1. Same carry list: patch sweep → `.gitignore` cleanup → CRUCIBLE Gate 5/6 → major-version ADR.
+2. **New**: add `@typescript-eslint/no-require-imports` to `eslint.config.js` to catch CJS-in-ESM at lint time.
+3. **New**: audit remaining test files for fixed-timeout anti-pattern (grep `setTimeout(resolve,` in test files, replace with event-driven waits).
+
+### 5. Blockers / questions for CoS
+
+- **None blocking.** CI should be GREEN after `69ef623`.
+
+---
+
 ## Team Feedback (2026-05-24 Reflection)
 
 4165 passed / 1 skipped / 112 files / 17.1s. Audit clean (20th day). 33 outdated unchanged. Twentieth consecutive nominal cycle. Holding for directive.
