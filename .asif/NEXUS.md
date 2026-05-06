@@ -454,6 +454,43 @@ Previous commit `80fb36d` was GREEN. Something in the Node 22 upgrade or the com
 
 ---
 
+## Team Feedback (2026-05-07 Reflection)
+
+### 1. What did we ship since last check-in?
+
+- **Nothing new.** Two commits from last session (`aae1a2b` simple-git fix, `357c518` NEXUS reflection) are now pushed to `origin/main`. No PRs, merges, or new work since.
+- **Tests steady**: 4165 passed / 1 skipped / 112 files / 15.6s. Third consecutive clean run at this count.
+- **`npm audit --omit=dev`**: 0 vulnerabilities. Holding clean since yesterday's simple-git patch.
+
+### 2. What surprised us?
+
+- **Dep list is completely static vs. yesterday** — same 33 packages outdated, same versions. Not one package moved overnight. Either registry publishing slowed or caret ranges are holding at already-wanted versions for the active packages. Normal variance, but notable after several days of at least one item ticking.
+- **Run-time stabilised** — 15.6s, consistent with yesterday (15.9s) and well below the anomalous 35.8s from two days ago. The WSL2 cold-start spike appears isolated.
+- **simple-git no longer appears in `npm outdated`** — yesterday's 3.36.0 fix landed cleanly; current == wanted for that dep. First time in three reflection cycles it's not on the list.
+
+### 3. Cross-project signals
+
+- **No new CVE pressure, third day running.** Pattern holds: quiet after a patch lands. The simple-git dep has now had two separate RCE advisories (GHSA-r275-fr43-pm7q in 2026-03, GHSA-hffm-xvc3-vprc in 2026-05). Any ASIF repo with `simple-git` < 3.36.0 in its lock file is currently vulnerable — Wolf should sweep the portfolio.
+- **Dep list churn rate is a useful CI signal.** Three days of `npm outdated` comparisons show: patch ring churns ~1 package/day; major ring is completely static (vite 8, TS 6, ESLint 10 unchanged since first flagged). If we added a `wanted_delta` metric to CI (packages where current < wanted), a spike would indicate either a missed `npm install` or a newly-published patch we haven't applied.
+
+### 4. What we'd prioritize next with fresh directives
+
+1. **Patch ring sweep** — `npm update` the 15+ caret-compatible packages (tailwindcss 4.2.4, vitest 4.1.5, framer-motion 12.38.0, postcss 8.5.14, react 19.2.5, ws 8.20.0, etc.) in one grouped commit. No source changes expected; risk is low.
+2. **simple-git dependabot floor** — add a `>=3.36.0` constraint so future advisories on this package auto-PR without waiting for a routine scan.
+3. **CRUCIBLE Gate 5/6** — 252 silent catches (bootstrap.ts cluster) and mutation score on `useForgeIntegration` (36.27%, below 40%). Longest-standing open debt (since 2026-03-08). P2.
+4. **Major-version decision** — vite 8 / TS 6 / ESLint 10 all need a portfolio-level ADR. They've been deferred three cycles; the gap keeps widening.
+
+### 5. Blockers / questions for CoS
+
+- **None blocking.**
+- **Carried questions (all P3, no response needed to unblock work):**
+  - npm audit severity threshold portfolio-wide: implicit-low (current) vs. high-only?
+  - Flake-detection budget / auto-quarantine policy
+  - Test-time variance tracking in CI dashboards
+  - Portfolio simple-git version sweep (simple-git has now had 2 RCEs — worth a dependabot group rule)
+
+---
+
 ## Team Feedback (2026-05-06 Reflection)
 
 ### 1. What did we ship since last check-in?
