@@ -96,7 +96,7 @@
     "@xterm/xterm": "^6.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "concurrently": "^9.2.1",
+    "concurrently": "^10.0.3",
     "cors": "^2.8.5",
     "express": "^5.2.1",
     "framer-motion": "^12.31.0",
