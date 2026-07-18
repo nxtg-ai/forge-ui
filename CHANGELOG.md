@@ -5,6 +5,42 @@ All notable changes to NXTG-Forge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.1] - 2026-07-18
+
+Security + health-contract remediation (DIRECTIVE-NXTG-20260718-02, P0).
+
+### Security
+
+- **npm audit: 18 vulnerabilities → 1 low** (was 5 critical / 3 high / 8 moderate / 2 low). All fixes stayed within existing majors; no breaking upgrades required.
+  - `vitest` → 4.1.10 (CRITICAL — UI server arbitrary file read/exec), plus `@vitest/ui` and `@vitest/coverage-v8`
+  - `shell-quote` → 1.9.0 and `concurrently` → 9.2.4 (CRITICAL — newline escaping in `quote()`)
+  - `ws` → 8.21.1 (HIGH — memory-exhaustion DoS; the only critical/high reachable from the network-exposed Express+WS server)
+  - `vite` → 7.3.6 (HIGH — `server.fs.deny` bypass)
+  - `form-data` → 4.0.6 (HIGH — CRLF injection)
+- **Accepted**: `esbuild` 0.27.3 (LOW, GHSA-g7r4-m6w7-qqqr) — dev-server-only arbitrary file read on Windows, pinned transitively by `tsx` and `vite` with no non-major fix published. Not reachable in production.
+
+### Fixed
+
+- **Health-score contract violation** (open since March) — the dashboard fabricated its own health number with hardcoded weights, an anti-pattern named in `contracts/dx-journeys.md`. There were two independent fabrications: one client-side, one server-side, using different formulas.
+  - Added `src/services/orchestrator-health.ts`, which sources the canonical score from forge-orchestrator's `forge_get_health` over stdio JSON-RPC 2.0. MCP is the only integration layer — no code dependency on forge-orchestrator.
+  - `ForgeStatus` now carries `health`, tagged with `source` (`orchestrator` | `estimate`).
+  - The local calculation is retained only as a last-resort fallback and is labeled **"Estimate — orchestrator unavailable"** in the UI, so a non-canonical number can never be mistaken for the real one.
+  - Verified end-to-end: `forge_get_health` → 95, and `GET /api/forge/status` → `{"score":95,"source":"orchestrator"}`.
+
+### Changed
+
+- Health degrades gracefully: a 5s timeout and 15s memoization keep the dashboard responsive when the orchestrator is absent.
+
+### Chore
+
+- Removed dead files (`draw-terminal-view.txt`, `dashboard-live.tsx.backup`, `.pytest_cache/`, test-checkpoint/state scratch dirs); ignored `.stryker-tmp/` and `reports/`.
+- Committed ASIF alignment wiring; discarded two runtime-state files that were dirtying the tree.
+
+### Tests
+
+- **4176 tests** (up from 4166) — 10 new tests drive the real spawn + JSON-RPC parse path against a stub binary rather than mocking `child_process`.
+- Coverage: 87.32% lines / 75.18% branches — both above threshold; branch coverage up from 74.8%.
+
 ## [3.3.0] - 2026-05-06
 
 ### Security
