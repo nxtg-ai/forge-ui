@@ -2,7 +2,9 @@
   "version": "3.0.0",
   "theme": "dark",
   "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "ASIF_ROOT": "/home/axw/ASIF",
+    "ALIGNMENT_AGENT": "forge"
   },
   "editor": {
     "tab_size": 2,
@@ -31,6 +33,16 @@
   },
   "hooks": {
     "UserPromptSubmit": [
+      {
+        "description": "ASIF /alignment bridge and team identity context",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/axw/ASIF/scripts/asif-hook-tap.sh --name team-alignment -- bash /home/axw/ASIF/scripts/asif-team-alignment-context-hook.sh",
+            "timeout": 5
+          }
+        ]
+      },
       {
         "description": "Pre-task initialization and state sync",
         "hooks": [
@@ -98,6 +110,18 @@
           {
             "type": "command",
             "command": "cd /home/axw/projects/NXTG-Forge/forge-ui && bash .claude/hooks/governance-check.sh"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "description": "ASIF /alignment bridge and team identity context",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/axw/ASIF/scripts/asif-hook-tap.sh --name team-alignment -- bash /home/axw/ASIF/scripts/asif-team-alignment-context-hook.sh",
+            "timeout": 5
           }
         ]
       }

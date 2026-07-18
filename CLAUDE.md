@@ -190,3 +190,14 @@ curl -sS -X POST http://100.123.83.34:8880/v1/audio/speech \
 ```
 
 **Rule**: no duplicates portfolio-wide. Do not silently complete directives — always speak.
+
+<!-- ASIF:TEAM-ALIGNMENT-WIRING:START -->
+## ASIF Alignment Wiring
+
+@/home/axw/ASIF/standards/claude-team-alignment-wiring.md
+
+- Team alignment id: `forge`.
+- Cross-team room: `/alignment`, written through `~/ASIF/scripts/alignment-say`.
+- If an `[ALIGNMENT ...]` message appears, respond through `alignment-say`; do not answer only in this private TUI.
+- Deterministic state first: typed Dx3/asifctl, `.asif/NEXUS.md`, git/tests/runtime probes. Prose is backup and local steering only.
+<!-- ASIF:TEAM-ALIGNMENT-WIRING:END -->
