@@ -52,6 +52,12 @@ export interface ProjectState {
   recentDecisions: Decision[];
   activeAgents: Agent[];
   healthScore: number;
+  /**
+   * Provenance of healthScore. When "estimate" the orchestrator was
+   * unreachable and the number is a local approximation — it is labeled as
+   * such so it is never mistaken for the canonical score.
+   */
+  healthSource?: "orchestrator" | "estimate";
 }
 
 interface Blocker {
@@ -436,6 +442,14 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
                     ? "Minor issues detected"
                     : "Attention required"}
               </div>
+              {projectState.healthSource === "estimate" && (
+                <div
+                  className="text-xs opacity-60 mt-1"
+                  data-testid="dashboard-health-estimate-label"
+                >
+                  Estimate — orchestrator unavailable
+                </div>
+              )}
             </div>
 
             {/* Blockers */}

@@ -6,7 +6,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ProjectState, Agent, Blocker, Decision } from "../components/types";
-import type { ForgeStatus } from "../services/status-service";
+import type { ForgeStatus, HealthSource } from "../services/status-service";
 import { wsManager } from "../services/ws-manager";
 import { logger } from "../utils/browser-logger";
 import { apiFetch } from "../utils/api-fetch";
@@ -39,6 +39,8 @@ export interface DashboardData {
     recentDecisions: Decision[];
     activeAgents: Agent[];
     healthScore: number;
+    /** Provenance of healthScore — "estimate" must be labeled in the UI. */
+    healthSource: HealthSource;
   };
   visionData: {
     mission: string;
@@ -72,6 +74,7 @@ const DEFAULT_PROJECT_STATE: DashboardData["projectState"] = {
   recentDecisions: [],
   activeAgents: [],
   healthScore: 0,
+  healthSource: "estimate",
 };
 
 /**
@@ -110,40 +113,19 @@ export function useDashboardData(): DashboardData {
   };
 
   /**
-   * Calculate health score from forge status data
+   * Read the health score served by the API.
+   *
+   * The score is NOT computed here. The server sources it from the
+   * orchestrator's `forge_get_health` (canonical) and falls back to a labeled
+   * local estimate — see status-service.resolveHealth. Recomputing it in the
+   * client is a contract violation (contracts/dx-journeys.md anti-patterns).
    */
-  const calculateHealthScore = (status: ForgeStatus | null): number => {
-    if (!status) return 0;
+  const readHealthScore = (status: ForgeStatus | null): number =>
+    status?.health?.score ?? 0;
 
-    let score = 100;
-
-    if (status.git?.hasUncommitted) score -= 5;
-    if (status.git?.modified > 0) score -= 3;
-    if (status.git?.untracked > 5) score -= 5;
-
-    if (status.tests) {
-      const testsPassing = status.tests.passing || 0;
-      const totalTests = status.tests.total || 0;
-      if (totalTests > 0) {
-        const passRate = (testsPassing / totalTests) * 100;
-        if (passRate < 80) score -= 20;
-        else if (passRate < 90) score -= 10;
-      }
-    }
-
-    if (status.build?.status === "error") {
-      score -= 15;
-    }
-
-    if (status.governance) {
-      if (status.governance.status === "blocked") score -= 20;
-      if (status.governance.workstreamsBlocked > 0) {
-        score -= Math.min(status.governance.workstreamsBlocked * 5, 15);
-      }
-    }
-
-    return Math.max(0, Math.min(100, score));
-  };
+  /** Provenance of the served score, so the UI can flag non-canonical values. */
+  const readHealthSource = (status: ForgeStatus | null): HealthSource =>
+    status?.health?.source ?? "estimate";
 
   /**
    * Fetch all dashboard data via HTTP
@@ -187,13 +169,15 @@ export function useDashboardData(): DashboardData {
           blockers: stateData.blockers || [],
           recentDecisions: stateData.recentDecisions || [],
           activeAgents: agentsData || [],
-          healthScore: calculateHealthScore(forgeStatusData),
+          healthScore: readHealthScore(forgeStatusData),
+          healthSource: readHealthSource(forgeStatusData),
         });
       } else {
         setProjectState({
           ...DEFAULT_PROJECT_STATE,
           activeAgents: agentsData || [],
-          healthScore: calculateHealthScore(forgeStatusData),
+          healthScore: readHealthScore(forgeStatusData),
+          healthSource: readHealthSource(forgeStatusData),
         });
       }
 

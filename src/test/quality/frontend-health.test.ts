@@ -154,6 +154,7 @@ describe("Frontend Health", () => {
         "daemon.ts",
         "logger.ts",
         "status-service.ts",
+        "orchestrator-health.ts", // spawns `forge mcp` — server-side bridge only
         "governance-state-manager.ts",
         "base-service.ts",
         "init-service.ts",

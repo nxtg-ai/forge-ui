@@ -8,6 +8,32 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import { Result } from "../utils/result";
 import type { GovernanceState } from "../types/governance.types";
+import {
+  getOrchestratorHealth,
+  type OrchestratorFinding,
+} from "./orchestrator-health";
+
+/**
+ * Turn orchestrator findings into a factor breakdown for the UI.
+ *
+ * Severities are counted per category rather than re-weighted — the score
+ * itself is the orchestrator's, and inventing weights here would reintroduce
+ * the local-fabrication problem this replaces.
+ */
+function summarizeFindings(
+  findings: OrchestratorFinding[],
+): { label: string; value: number; max: number }[] {
+  const byCategory = new Map<string, number>();
+  for (const f of findings) {
+    byCategory.set(f.category, (byCategory.get(f.category) ?? 0) + 1);
+  }
+  const total = findings.length;
+  return [...byCategory.entries()].map(([label, count]) => ({
+    label: `${label} findings`,
+    value: count,
+    max: total,
+  }));
+}
 
 export interface GitStatus {
   branch: string;
@@ -63,7 +89,21 @@ export interface ForgeStatus {
   build: BuildStatus;
   governance: GovernanceHealth;
   agents: AgentAvailability;
+  /**
+   * Canonical project health. Sourced from the orchestrator's
+   * `forge_get_health`; falls back to a local estimate that is explicitly
+   * tagged via `source` so the UI can label it. Consumers MUST read this
+   * rather than deriving their own number (contracts/dx-journeys.md).
+   */
+  health: ProjectHealth;
   timestamp: string;
+}
+
+export interface ProjectHealth {
+  score: number;
+  factors: { label: string; value: number; max: number }[];
+  source: HealthSource;
+  summary?: string;
 }
 
 export interface LastCommit {
@@ -92,9 +132,20 @@ export interface LiveContext {
   health: {
     score: number;
     factors: { label: string; value: number; max: number }[];
+    /**
+     * Where the score came from. "orchestrator" is the canonical source
+     * (forge_get_health via MCP); "estimate" means the orchestrator was
+     * unreachable and this is a locally-derived approximation that MUST be
+     * labeled as such in the UI. See contracts/dx-journeys.md.
+     */
+    source: HealthSource;
+    /** Orchestrator one-line summary, when canonical. */
+    summary?: string;
   };
   timestamp: string;
 }
+
+export type HealthSource = "orchestrator" | "estimate";
 
 export class StatusService {
   constructor(private projectRoot: string) {}
@@ -117,6 +168,23 @@ export class StatusService {
         this.getAgentAvailability(),
       ]);
 
+      const health = await this.resolveHealth(
+        {
+          branch: git.branch,
+          lastCommit: null,
+          uncommittedCount: git.staged + git.modified + git.untracked,
+          ahead: git.ahead,
+          behind: git.behind,
+        },
+        {
+          passing: tests.passing,
+          failing: Math.max(0, tests.total - tests.passing),
+          skipped: 0,
+          lastRun: null,
+        },
+        governance,
+      );
+
       const projectName = await this.getProjectName();
       const forgeVersion = await this.getForgeVersion();
 
@@ -131,6 +199,7 @@ export class StatusService {
         build,
         governance,
         agents,
+        health,
         timestamp: new Date().toISOString(),
       };
 
@@ -416,9 +485,10 @@ export class StatusService {
     // Test results
     const tests = await this.getCachedTestResults();
 
-    // Health
+    // Health — canonical score comes from the orchestrator; the local
+    // computation is a labeled last-resort estimate only.
     const governance = await this.getGovernanceHealth();
-    const health = this.computeHealthScore(gitState, tests, governance);
+    const health = await this.resolveHealth(gitState, tests, governance);
 
     return {
       git: gitState,
@@ -453,13 +523,47 @@ export class StatusService {
   }
 
   /**
-   * Derive a 0-100 health score from operational data
+   * Resolve project health, preferring the canonical orchestrator score.
+   *
+   * Order: orchestrator `forge_get_health` (canonical) → local estimate.
+   * The local path is retained ONLY as a labeled fallback so the dashboard
+   * still renders when the orchestrator is unavailable.
+   */
+  private async resolveHealth(
+    git: LiveContext["git"],
+    tests: LiveTestResults,
+    governance: GovernanceHealth,
+  ): Promise<LiveContext["health"]> {
+    const canonical = await getOrchestratorHealth(this.projectRoot);
+
+    if (canonical) {
+      return {
+        score: canonical.score,
+        // Orchestrator findings grouped by category become the factor
+        // breakdown, so the UI keeps a drill-down without inventing weights.
+        factors: summarizeFindings(canonical.findings),
+        source: "orchestrator",
+        summary: canonical.summary,
+      };
+    }
+
+    return {
+      ...this.computeHealthScore(git, tests, governance),
+      source: "estimate",
+    };
+  }
+
+  /**
+   * Derive a 0-100 health score from operational data.
+   *
+   * FALLBACK ONLY — this is not the canonical score. Anything surfacing it
+   * must label it as an estimate (see resolveHealth).
    */
   private computeHealthScore(
     git: LiveContext["git"],
     tests: LiveTestResults,
     governance: GovernanceHealth,
-  ): LiveContext["health"] {
+  ): Omit<LiveContext["health"], "source" | "summary"> {
     const factors: { label: string; value: number; max: number }[] = [];
 
     // Git hygiene (30 pts): lose points for large uncommitted counts
