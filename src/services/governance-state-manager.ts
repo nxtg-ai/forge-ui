@@ -154,21 +154,38 @@ export class GovernanceStateManager {
         throw new Error("Governance state not found");
       }
 
-      const versioned: GovernanceState = JSON.parse(data);
+      const parsed = JSON.parse(data) as Record<string, unknown>;
 
       // Overlay runtime state from the untracked file. When it is absent we
       // fall back to whatever the versioned file still carries, which
       // transparently migrates projects written under the old single-file
       // layout — their first write moves those fields across.
       const runtime = await this.readRuntimeState();
-      const state: GovernanceState = { ...versioned, ...runtime };
+      let state = { ...parsed, ...runtime } as GovernanceState;
 
-      // Validate state integrity
+      // A file that already satisfies forge-ui's schema is returned as-is.
       if (this.isValidState(state)) {
         return state;
-      } else {
-        throw new Error("Invalid state structure");
       }
+
+      // Otherwise it may be ANOTHER product's governance.json — governance-mcp
+      // writes `{ version:"3.0.0", project:{name}, workstreams, qualityGates }`
+      // with no `constitution`/`metadata`/`timestamp` and a STRING version.
+      // The old behaviour let this fall through to the startup's reseed, which
+      // overwrote the file with a fresh forge-ui state — dropping `project`
+      // (identity), `qualityGates`, and emptying `workstreams`. That is the
+      // GOVERNANCE_SCHEMA_DIVERGENCE the L3 harness caught (DIRECTIVE-...-18
+      // Leg B, re-gate 14 Item 1). Instead, FILL forge-ui's own missing fields
+      // from defaults and PRESERVE every field already present — the foreign
+      // product's data wins on every key it set.
+      if (this.looksLikeGovernance(parsed)) {
+        state = { ...this.normalizeForeignState(parsed), ...runtime };
+        if (this.isValidState(state)) {
+          return state;
+        }
+      }
+
+      throw new Error("Invalid state structure");
     } catch (error) {
       if (
         (error as NodeJS.ErrnoException).code === "ENOENT" ||
@@ -441,16 +458,62 @@ export class GovernanceStateManager {
    * Validate state structure
    */
   private isValidState(state: unknown): state is GovernanceState {
+    const v = (state as GovernanceState)?.version;
     return (
       typeof state === "object" &&
       state !== null &&
-      typeof (state as GovernanceState).version === "number" &&
+      // Shared field: governance-mcp writes a string ("3.0.0"), forge-ui seeds a
+      // number. Accept either and never coerce it — the precedence rule is that
+      // neither product rewrites the other's version. No code does arithmetic
+      // on it (it is a schema tag), so widening the guard is safe.
+      (typeof v === "number" || typeof v === "string") &&
       typeof (state as GovernanceState).timestamp === "string" &&
       typeof (state as GovernanceState).constitution === "object" &&
       Array.isArray((state as GovernanceState).workstreams) &&
       Array.isArray((state as GovernanceState).sentinelLog) &&
       typeof (state as GovernanceState).metadata === "object"
     );
+  }
+
+  /**
+   * True when a parsed file carries FOREIGN product data that a reseed would
+   * destroy — the only case worth migrating rather than reseeding.
+   *
+   * The test is "would seeding a fresh state lose something another product
+   * owns?", not "does this look governance-ish". A bare `{version: 1}` or a
+   * lone `constitution` carries no foreign identity, so it still falls through
+   * to a fresh seed (which is byte-equivalent anyway). `project`,
+   * `qualityGates`, and `metrics` are governance-mcp-owned; a NON-EMPTY
+   * `workstreams` is shared state with real content to keep. NEXUS:
+   * DIRECTIVE-NXTG-20260719-18 Leg B.
+   */
+  private looksLikeGovernance(parsed: Record<string, unknown>): boolean {
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+      return false;
+    }
+    const hasForeignField = ["project", "qualityGates", "metrics"].some(
+      (k) => parsed[k] != null,
+    );
+    const hasContentWorkstreams =
+      Array.isArray(parsed.workstreams) && parsed.workstreams.length > 0;
+    return hasForeignField || hasContentWorkstreams;
+  }
+
+  /**
+   * Fill forge-ui's own required fields from defaults, WITHOUT overwriting any
+   * field the parsed file already set.
+   *
+   * Merge direction is the whole point: defaults first, parsed last, so every
+   * value another product wrote — `project` (kept whole, so `name`/`vision`/
+   * `goals` and any future sub-field ride along), `qualityGates`, a NON-EMPTY
+   * `workstreams`, a string `version` — wins over the default. forge-ui only
+   * supplies what is missing (`constitution`, `timestamp`, `metadata`,
+   * `sentinelLog`). NEXUS: DIRECTIVE-NXTG-20260719-18 Leg B.
+   */
+  private normalizeForeignState(
+    parsed: Record<string, unknown>,
+  ): GovernanceState {
+    return { ...this.createInitialState(), ...parsed } as GovernanceState;
   }
 
   /**

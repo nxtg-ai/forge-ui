@@ -9,8 +9,12 @@
  * Represents the complete state of the governance system at a point in time
  */
 export interface GovernanceState {
-  /** Schema version for migration compatibility */
-  version: number;
+  /**
+   * Schema version. forge-ui seeds a number; governance-mcp writes a string
+   * ("3.0.0"). It is a schema tag, never used in arithmetic, and neither
+   * product coerces the other's — see GovernanceStateManager.isValidState.
+   */
+  version: number | string;
   /** ISO 8601 timestamp of last state update */
   timestamp: string;
   /** Constitutional directive and vision */

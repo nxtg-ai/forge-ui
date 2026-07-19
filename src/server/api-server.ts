@@ -22,6 +22,7 @@ import { BootstrapService } from "../core/bootstrap";
 import { MCPSuggestionEngine } from "../orchestration/mcp-suggestion-engine";
 import { RunspaceManager } from "../core/runspace-manager";
 import { GovernanceStateManager } from "../services/governance-state-manager";
+import type { GovernanceState } from "../types/governance.types";
 import { AgentWorkerPool } from "./workers";
 import { DEFAULT_POOL_CONFIG } from "./workers/types";
 import { detectBackend } from "../adapters/backend-detector";
@@ -490,17 +491,25 @@ server.listen(PORT, "0.0.0.0", async () => {
   createPTYBridge(server, runspaceManager);
   logger.info(`PTY Bridge initialized at ws://localhost:${PORT}/terminal`);
 
-  // Seed governance state if empty or missing (BEFORE watcher so file exists)
+  // Load, migrate, or seed governance state (BEFORE the watcher so the file
+  // exists). readState() now MIGRATES a foreign/partial governance.json in
+  // memory — e.g. governance-mcp's `{project, qualityGates, workstreams}` shape
+  // — instead of letting it fall through to a reseed that would discard the
+  // other product's fields. We then persist UNCONDITIONALLY: writeState's
+  // splitState preserves those foreign fields on disk, and its
+  // versionedStateChanged guard means an already-migrated file is left
+  // byte-identical, so this does not dirty the tree on a normal boot.
+  let governanceState: GovernanceState;
   try {
-    await governanceStateManager.readState();
+    governanceState = await governanceStateManager.readState();
     logger.info("[Governance] Existing state loaded successfully");
   } catch {
     logger.info("[Governance] No valid state found, seeding initial state...");
-    const seedState = governanceStateManager.createInitialState();
-    await governanceStateManager.writeState(seedState);
-    broadcast("governance.update", seedState);
-    logger.info("[Governance] Initial state seeded and broadcast");
+    governanceState = governanceStateManager.createInitialState();
   }
+  await governanceStateManager.writeState(governanceState);
+  broadcast("governance.update", governanceState);
+  logger.info("[Governance] State persisted (migrated foreign fields / seeded) and broadcast");
 
   // Materialize the runtime file BEFORE watchers are attached. On the legacy
   // single-file upgrade path the readState() above succeeds from the versioned
