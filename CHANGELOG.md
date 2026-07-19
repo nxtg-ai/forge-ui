@@ -5,6 +5,42 @@ All notable changes to NXTG-Forge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.2] - 2026-07-18
+
+Completes the anti-fabrication work started in 3.3.1, splits runtime state out of versioned config, and closes three governance-state defects that could silently stop the dashboard updating. Cleared by independent cross-vendor adversarial review (Codex re-gate round 4) on `7abaa63`.
+
+### Fixed
+
+- **The last fabricated metrics are gone** (DIRECTIVE-NXTG-20260718-04 items 1-2). 3.3.1 removed the fabricated *health score*; this release removes the rest. Four paths rendered invented numbers to users as if measured:
+  - `command-view.tsx` — six hardcoded literals (health 87, 3 active agents, 12 pending tasks, project name, phase) surfaced through `CommandPalette`. All five fields turned out to have real sources and are now read from `/api/forge/status` via `useDashboardData`.
+  - `state-bridge.ts` — seeded `healthScore: 100`, a perfect score nobody had measured, on every load.
+  - `dashboard-live.tsx` — hardcoded project name.
+  - `useDashboardData` — coerced a missing score to `0`, so a backend outage rendered "0% — Attention required" **and** made every downstream "unavailable" branch unreachable. Fixed at the data layer: `null`, not `0`.
+  - `ProjectContext.healthScore` is now `number | null`, so "we don't know" is representable and cannot be faked. All three health render sites carry an unavailable path and a provenance label; `CommandCenter` previously had neither.
+- **Health lookups no longer fan out one subprocess per caller.** `getOrchestratorHealth` consulted only the settled value cache, so its 15s TTL throttled sequential callers while the dashboard's real load shape is concurrent — 20 parallel callers spawned 20 `forge mcp` processes. Concurrent callers now join a single in-flight promise keyed by project root.
+- **Health subprocesses are guaranteed to be reaped.** The timeout path called bare `child.kill()` (SIGTERM) and resolved in the same tick, so a child that ignored or never received the signal survived — multiplied by the fan-out above. Now SIGTERM, then SIGKILL after a 1s grace, settling on `close`. Reaping runs in the background so process teardown never taxes the request path.
+- **Governance watchers survive atomic writes** — the dashboard could go permanently stale. Both state files are written by staging a `.tmp` and renaming over the target, which replaces the inode; `fs.watch(file)` binds to the inode, so the watcher went deaf after the first write, and the startup sentinel performs exactly such a write moments after attachment. Watchers now bind to the containing directory, filter by basename, and coalesce the multi-event rename burst so one write still means one broadcast.
+- **Governance watchers survive the upgrade from a pre-3.3.2 layout.** On a legacy single-file project, state loaded from the versioned file alone, so the runtime file did not exist when its watcher attached; the resulting `ENOENT` escaped past the sibling watcher into a non-fatal catch, leaving a healthy-looking server with *neither* watcher active. Runtime state is now materialized before attachment, and each watcher attaches inside its own try/catch so one failure can never disable the other. Each logs its own "watcher active" line.
+- **`sync_governance_progress` could destroy the committed constitution.** After `workstreams` moved to runtime state, the hook kept `jq`-editing `.claude/governance.json`; `jq` failed, the result was empty, and `echo "$updated" > f.tmp && mv` truncated the tracked file to one byte — while logging success, because `echo` succeeds on empty input. Observed live: 326 bytes to 1 on a routine post-task fire. The writer and its three readers now follow the data to the runtime file, and a write requires a zero `jq` exit **and** non-empty output **and** a non-empty temp file before the rename.
+- **`.mcp.json` pointed the forge server at a project path that does not exist**, through a stale v1.5.0 binary. Repointed to the forge-ui root using the binary on `PATH`. The failure mode is worth noting: the old config never errored, because `forge mcp` starts happily against a nonexistent project and serves it.
+- **`post-task.sh` overwrote a real test count with `0`** — it counted only Python `test_*.py` in a TypeScript repo. Aligned to the correct multi-language logic already upstream in forge-plugin; it now also refuses to write a zero, since 0 means "counted nothing", not "no tests".
+
+### Changed
+
+- **Runtime state is split from versioned config, so running the project no longer dirties the git tree.** `.claude/governance.json` keeps the human-authored version and constitution; `sentinelLog`, timestamps, workstreams, and metadata move to the gitignored `.forge/governance-runtime.json`. `.claude/project.json` gets the same treatment. Existing content is migrated, not discarded, and a project with no runtime file still reads from the legacy single-file layout. The uncapped shell writer now caps the sentinel log at 100 entries. Mechanism documented in `docs/architecture/RUNTIME-STATE-SPLIT.md`.
+
+### Tests
+
+- **4466 tests** (up from 4176), 119 files.
+- **Branch coverage threshold raised 75% → 80%**, honoured by real tests rather than tuned: 75.11% → 81.32%. Twelve modules covered, nine reaching 100% branches. The threshold is set ~1.3pp below measured and verified to bite — at 82 the run exits non-zero.
+- Coverage: 89.03% lines / 88.61% statements / 88.22% functions / 81.32% branches.
+- **Legacy `any` allowances retired to 0.** The 54/93 thresholds measured 0 actual — an allowance nothing uses is a gate that cannot fail. The detector also matched only `: any`, letting `as any` and `<any>` through with a `Record<string, any>` carve-out on top; broadened to all three forms with the carve-out removed, then mutation-tested to confirm each form fires the gate. Type assertions ratcheted <50 → 46.
+- New regression tests were each verified to **fail against the unfixed code**, not merely to pass — including the watcher liveness tests, which required two spaced write rounds per file to discriminate a live watcher from the single spurious event a dying one still emits.
+
+### Chore
+
+- Removed six `eslint-disable` directives naming `@typescript-eslint/no-throw-literal`, renamed to `only-throw-error` in typescript-eslint v8. An unresolvable rule name is an ESLint *error*, so these broke the lint gate; neither rule is enabled, so the directives suppressed nothing.
+
 ## [3.3.1] - 2026-07-18
 
 Security + health-contract remediation (DIRECTIVE-NXTG-20260718-02, P0).

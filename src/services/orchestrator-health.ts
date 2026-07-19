@@ -211,7 +211,7 @@ async function callHealthTool(
       params: {
         protocolVersion: "2024-11-05",
         capabilities: {},
-        clientInfo: { name: "forge-ui", version: "3.3.1" },
+        clientInfo: { name: "forge-ui", version: "3.3.2" },
       },
     });
     send({
