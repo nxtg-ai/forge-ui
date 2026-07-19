@@ -134,18 +134,12 @@ export class QualityDashboard {
   private async analyzeCodeQuality(
     srcPath: string,
   ): Promise<QualityMetrics["codeQuality"]> {
-    const files = await new Promise<string[]>((resolve, reject) => {
-      glob(
-        "**/*.{ts,tsx}",
-        {
-          cwd: srcPath,
-          ignore: ["**/*.test.ts", "**/*.test.tsx", "**/*.d.ts"],
-        },
-        (err, matches) => {
-          if (err) reject(err);
-          else resolve(matches);
-        },
-      );
+    // glob v9 removed the callback API; v13 is installed, so the callback was
+    // never invoked and this promise never settled — the audit hung forever and
+    // the process exited 0 having scanned nothing.
+    const files = await glob("**/*.{ts,tsx}", {
+      cwd: srcPath,
+      ignore: ["**/*.test.ts", "**/*.test.tsx", "**/*.d.ts"],
     });
 
     let totalComplexity = 0;
@@ -237,18 +231,12 @@ export class QualityDashboard {
   private async analyzeDocumentation(
     srcPath: string,
   ): Promise<QualityMetrics["documentation"]> {
-    const files = await new Promise<string[]>((resolve, reject) => {
-      glob(
-        "**/*.{ts,tsx}",
-        {
-          cwd: srcPath,
-          ignore: ["**/*.test.ts", "**/*.test.tsx", "**/*.d.ts"],
-        },
-        (err, matches) => {
-          if (err) reject(err);
-          else resolve(matches);
-        },
-      );
+    // glob v9 removed the callback API; v13 is installed, so the callback was
+    // never invoked and this promise never settled — the audit hung forever and
+    // the process exited 0 having scanned nothing.
+    const files = await glob("**/*.{ts,tsx}", {
+      cwd: srcPath,
+      ignore: ["**/*.test.ts", "**/*.test.tsx", "**/*.d.ts"],
     });
 
     let totalFunctions = 0;
@@ -596,7 +584,12 @@ export class QualityDashboard {
 }
 
 // CLI usage
-if (require.main === module) {
+// `require` does not exist in an ES module, so this threw at module scope and
+// the whole audit crashed before running (package is "type": "module").
+const _isMain =
+  process.argv[1]?.endsWith("quality-dashboard.ts") ||
+  process.argv[1]?.endsWith("quality-dashboard.js");
+if (_isMain) {
   const dashboard = new QualityDashboard();
   dashboard
     .generateMetrics()

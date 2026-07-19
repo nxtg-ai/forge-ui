@@ -58,23 +58,17 @@ export class SecurityAuditor {
     const srcPath = path.join(projectPath, "src");
 
     // Scan all TypeScript files
-    const files = await new Promise<string[]>((resolve, reject) => {
-      glob(
-        "**/*.{ts,tsx}",
-        {
-          cwd: srcPath,
-          ignore: [
+    // glob v9 removed the callback API; v13 is installed, so the callback was
+    // never invoked and this promise never settled — the audit hung forever and
+    // the process exited 0 having scanned nothing.
+    const files = await glob("**/*.{ts,tsx}", {
+      cwd: srcPath,
+      ignore: [
             "**/*.test.ts",
             "**/*.test.tsx",
             "**/*.d.ts",
             "**/node_modules/**",
           ],
-        },
-        (err, matches) => {
-          if (err) reject(err);
-          else resolve(matches);
-        },
-      );
     });
 
     console.log(`Scanning ${files.length} files for security issues...`);
