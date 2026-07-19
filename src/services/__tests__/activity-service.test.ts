@@ -870,7 +870,6 @@ describe("ActivityService", () => {
       const spy = vi
         .spyOn(service as any, "addToHistory")
         .mockImplementation(() => {
-          // eslint-disable-next-line @typescript-eslint/no-throw-literal
           throw "raw-string-failure";
         });
 
@@ -1246,7 +1245,6 @@ describe("ActivityService", () => {
         agentName: "AgentBad",
         timestamp: {
           toISOString: () => {
-            // eslint-disable-next-line @typescript-eslint/no-throw-literal
             throw "bad-timestamp";
           },
         },

@@ -533,7 +533,6 @@ describe("CommandService", () => {
 
     it("should wrap a non-Error thrown synchronously by spawn as COMMAND_ERROR", async () => {
       vi.mocked(spawn).mockImplementation(() => {
-        // eslint-disable-next-line @typescript-eslint/no-throw-literal
         throw "raw spawn failure";
       });
 
@@ -638,7 +637,6 @@ describe("CommandService", () => {
       mockProcess.stdout = new EventEmitter();
       mockProcess.stderr = new EventEmitter();
       mockProcess.kill = vi.fn(() => {
-        // eslint-disable-next-line @typescript-eslint/no-throw-literal
         throw "kill boom";
       });
       vi.mocked(spawn).mockReturnValue(mockProcess);

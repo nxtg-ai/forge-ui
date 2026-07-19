@@ -837,7 +837,6 @@ vision:
 
     it("should wrap a non-Error thrown from a visionUpdate listener", async () => {
       service.on("visionUpdate", () => {
-        // eslint-disable-next-line @typescript-eslint/no-throw-literal
         throw "listener boom string";
       });
 
@@ -1019,7 +1018,6 @@ vision:
 
     it("should wrap a non-Error thrown from an alignmentChecked listener", () => {
       service.on("alignmentChecked", () => {
-        // eslint-disable-next-line @typescript-eslint/no-throw-literal
         throw "alignment boom string";
       });
 
