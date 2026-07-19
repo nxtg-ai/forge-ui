@@ -57,6 +57,44 @@ const inflight = new Map<string, Promise<GovernanceMcpHealth | null>>();
 interface McpServerSpec {
   command: string;
   args?: string[];
+  /**
+   * The server's declared environment.
+   *
+   * Part of the CONTRACT, not decoration: a spec routinely carries the only
+   * configuration that makes the server address the right project. Dropping it
+   * silently launches a DIFFERENT server than the one declared — it starts
+   * fine and answers with defaults, which is why the omission survived tests
+   * that happened to set the same variables in the parent process.
+   * NEXUS: Codex re-gate 13 [P1].
+   */
+  env?: Record<string, string>;
+}
+
+/**
+ * Expand `${VAR}` and `${VAR:-default}` against the inherited environment.
+ *
+ * Returns null when a placeholder has no value and no default — a spec we
+ * cannot faithfully execute must make the tier unavailable rather than run a
+ * half-configured server.
+ */
+function expandPlaceholders(
+  value: string,
+  env: NodeJS.ProcessEnv,
+): string | null {
+  let unresolved = false;
+
+  const out = value.replace(
+    /\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}/g,
+    (_match, name: string, fallback?: string) => {
+      const resolved = env[name];
+      if (resolved !== undefined && resolved !== "") return resolved;
+      if (fallback !== undefined) return fallback;
+      unresolved = true;
+      return "";
+    },
+  );
+
+  return unresolved ? null : out;
 }
 
 /**
@@ -92,13 +130,33 @@ async function findGovernanceServer(
       const s = spec as McpServerSpec;
       if (typeof s?.command !== "string" || !s.command) continue;
 
-      const args = Array.isArray(s.args) ? s.args : [];
-      // An unexpanded `${...}` placeholder is a template, not a runnable
-      // command. Spawning it would fail in a confusing way; treat the tier as
-      // unavailable instead so health falls through to a labeled estimate.
-      if ([s.command, ...args].some((a) => /\$\{/.test(String(a)))) return null;
+      const rawArgs = Array.isArray(s.args) ? s.args : [];
+      const rawEnv =
+        s.env && typeof s.env === "object" ? s.env : ({} as Record<string, string>);
 
-      return { command: s.command, args };
+      // Placeholders are expanded against the inherited environment rather
+      // than rejected outright, so a spec written the way Claude Code writes
+      // them is executed as declared. An UNRESOLVABLE placeholder still makes
+      // the tier unavailable — running a half-configured server would answer
+      // with defaults and look healthy.
+      const command = expandPlaceholders(s.command, process.env);
+      if (command === null) return null;
+
+      const args: string[] = [];
+      for (const arg of rawArgs) {
+        const expanded = expandPlaceholders(String(arg), process.env);
+        if (expanded === null) return null;
+        args.push(expanded);
+      }
+
+      const env: Record<string, string> = {};
+      for (const [key, value] of Object.entries(rawEnv)) {
+        const expanded = expandPlaceholders(String(value), process.env);
+        if (expanded === null) return null;
+        env[key] = expanded;
+      }
+
+      return { command, args, env };
     }
   } catch {
     // No .mcp.json, unreadable, or malformed — no governance tier.
@@ -157,6 +215,9 @@ async function callGovernanceTool(
     try {
       child = spawn(server.command, server.args ?? [], {
         cwd: projectRoot,
+        // The spec's env layers OVER the inherited environment: the server
+        // still needs PATH and friends, but its declared configuration wins.
+        env: { ...process.env, ...(server.env ?? {}) },
         stdio: ["pipe", "pipe", "ignore"],
       });
     } catch {

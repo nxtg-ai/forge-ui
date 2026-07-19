@@ -178,7 +178,17 @@ export class StatusService {
       typeof projectRoot === "function" ? projectRoot : () => projectRoot;
   }
 
-  private get projectRoot(): string {
+  /**
+   * The root as of RIGHT NOW.
+   *
+   * Deliberately NOT read by the probe helpers. Each read can return a
+   * different value (the resolver follows the active runspace), so concurrent
+   * probes within a single request could each describe a DIFFERENT project —
+   * a response identifying project B while reporting project A's build status.
+   * Public entry points snapshot this once and thread the snapshot down.
+   * NEXUS: Codex re-gate 13 [P1].
+   */
+  private get currentRoot(): string {
     return this.resolveRoot();
   }
 
@@ -192,15 +202,21 @@ export class StatusService {
    */
   async getStatus(): Promise<Result<ForgeStatus, Error>> {
     try {
+      // Snapshot ONCE. Every probe and every output field below describes this
+      // exact root, so a runspace switch mid-request yields the pre-switch
+      // project in full rather than a blend of two.
+      const root = this.currentRoot;
+
       const [git, tests, build, governance, agents] = await Promise.all([
-        this.getGitStatus(),
-        this.getTestCoverage(),
-        this.getBuildStatus(),
-        this.getGovernanceHealth(),
-        this.getAgentAvailability(),
+        this.getGitStatus(root),
+        this.getTestCoverage(root),
+        this.getBuildStatus(root),
+        this.getGovernanceHealth(root),
+        this.getAgentAvailability(root),
       ]);
 
       const health = await this.resolveHealth(
+        root,
         {
           branch: git.branch,
           lastCommit: null,
@@ -217,13 +233,13 @@ export class StatusService {
         governance,
       );
 
-      const projectName = await this.getProjectName();
-      const forgeVersion = await this.getForgeVersion();
+      const projectName = await this.getProjectName(root);
+      const forgeVersion = await this.getForgeVersion(root);
 
       const status: ForgeStatus = {
         project: {
           name: projectName,
-          path: this.projectRoot,
+          path: root,
           forgeVersion,
         },
         git,
@@ -246,9 +262,9 @@ export class StatusService {
   /**
    * Get git repository status
    */
-  private async getGitStatus(): Promise<GitStatus> {
+  private async getGitStatus(root: string): Promise<GitStatus> {
     try {
-      const git = simpleGit(this.projectRoot);
+      const git = simpleGit(root);
       const status = await git.status();
       const branch = await git.branchLocal();
 
@@ -281,11 +297,11 @@ export class StatusService {
   /**
    * Get test coverage from vitest
    */
-  private async getTestCoverage(): Promise<TestCoverage> {
+  private async getTestCoverage(root: string): Promise<TestCoverage> {
     try {
       // Try to read coverage from coverage-final.json
       const coveragePath = path.join(
-        this.projectRoot,
+        root,
         "coverage",
         "coverage-summary.json",
       );
@@ -329,10 +345,10 @@ export class StatusService {
   /**
    * Get build status
    */
-  private async getBuildStatus(): Promise<BuildStatus> {
+  private async getBuildStatus(root: string): Promise<BuildStatus> {
     try {
       // Check if dist directory exists
-      const distPath = path.join(this.projectRoot, "dist");
+      const distPath = path.join(root, "dist");
       try {
         await fs.access(distPath);
         return {
@@ -355,10 +371,10 @@ export class StatusService {
   /**
    * Get governance health from governance.json
    */
-  private async getGovernanceHealth(): Promise<GovernanceHealth> {
+  private async getGovernanceHealth(root: string): Promise<GovernanceHealth> {
     try {
       const governancePath = path.join(
-        this.projectRoot,
+        root,
         ".claude",
         "governance.json",
       );
@@ -414,9 +430,9 @@ export class StatusService {
   /**
    * Get agent availability
    */
-  private async getAgentAvailability(): Promise<AgentAvailability> {
+  private async getAgentAvailability(root: string): Promise<AgentAvailability> {
     try {
-      const agentsPath = path.join(this.projectRoot, ".claude", "agents");
+      const agentsPath = path.join(root, ".claude", "agents");
       const files = await fs.readdir(agentsPath);
       const agentFiles = files.filter((f) => f.endsWith(".md"));
 
@@ -449,7 +465,7 @@ export class StatusService {
   /**
    * Get project name from package.json
    */
-  private async getProjectName(): Promise<string> {
+  private async getProjectName(root: string): Promise<string> {
     // Canonical first: `.forge/state.json:project_name` is what `forge init`
     // records and what the orchestrator reports as the project's identity.
     // package.json is a Node-only convention — a Rust/Python project, or any
@@ -458,7 +474,7 @@ export class StatusService {
     // surface (contracts/dx-journeys.md — the same project must be identifiable
     // on both sides). NEXUS: DIRECTIVE-NXTG-20260718-14.
     try {
-      const statePath = path.join(this.projectRoot, ".forge", "state.json");
+      const statePath = path.join(root, ".forge", "state.json");
       const state = JSON.parse(await fs.readFile(statePath, "utf-8"));
       if (typeof state.project_name === "string" && state.project_name) {
         return state.project_name;
@@ -468,7 +484,7 @@ export class StatusService {
     }
 
     try {
-      const pkgPath = path.join(this.projectRoot, "package.json");
+      const pkgPath = path.join(root, "package.json");
       const data = await fs.readFile(pkgPath, "utf-8");
       const pkg = JSON.parse(data);
       return pkg.name || "unknown";
@@ -480,9 +496,9 @@ export class StatusService {
   /**
    * Get forge version from package.json
    */
-  private async getForgeVersion(): Promise<string> {
+  private async getForgeVersion(root: string): Promise<string> {
     try {
-      const pkgPath = path.join(this.projectRoot, "package.json");
+      const pkgPath = path.join(root, "package.json");
       const data = await fs.readFile(pkgPath, "utf-8");
       const pkg = JSON.parse(data);
       return pkg.version || "0.0.0";
@@ -495,7 +511,9 @@ export class StatusService {
    * Gather live operational context (ephemeral, never written to governance.json)
    */
   async getLiveContext(): Promise<LiveContext> {
-    const git = simpleGit(this.projectRoot);
+    // Same snapshot discipline as getStatus — one root per response.
+    const root = this.currentRoot;
+    const git = simpleGit(root);
 
     // Git state
     let gitState: LiveContext["git"] = {
@@ -532,12 +550,12 @@ export class StatusService {
     }
 
     // Test results
-    const tests = await this.getCachedTestResults();
+    const tests = await this.getCachedTestResults(root);
 
     // Health — canonical score comes from the orchestrator; the local
     // computation is a labeled last-resort estimate only.
-    const governance = await this.getGovernanceHealth();
-    const health = await this.resolveHealth(gitState, tests, governance);
+    const governance = await this.getGovernanceHealth(root);
+    const health = await this.resolveHealth(root, gitState, tests, governance);
 
     return {
       git: gitState,
@@ -550,10 +568,10 @@ export class StatusService {
   /**
    * Read cached test results from .claude/state/test-results.json
    */
-  private async getCachedTestResults(): Promise<LiveTestResults> {
+  private async getCachedTestResults(root: string): Promise<LiveTestResults> {
     try {
       const testPath = path.join(
-        this.projectRoot,
+        root,
         ".claude",
         "state",
         "test-results.json",
@@ -579,12 +597,13 @@ export class StatusService {
    * still renders when the orchestrator is unavailable.
    */
   private async resolveHealth(
+    root: string,
     git: LiveContext["git"],
     tests: LiveTestResults,
     governance: GovernanceHealth,
   ): Promise<LiveContext["health"]> {
     // Tier 1 — the orchestrator, canonical whenever it is reachable.
-    const canonical = await getOrchestratorHealth(this.projectRoot);
+    const canonical = await getOrchestratorHealth(root);
 
     if (canonical) {
       return {
@@ -601,7 +620,7 @@ export class StatusService {
     // declares a governance MCP server. Still canonical, just a different
     // surface, so it must not be presented as a local estimate.
     const { getGovernanceHealth } = await import("./governance-health");
-    const plugin = await getGovernanceHealth(this.projectRoot);
+    const plugin = await getGovernanceHealth(root);
 
     if (plugin) {
       return {
