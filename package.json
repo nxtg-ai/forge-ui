@@ -11,7 +11,7 @@
     "ui:dev": "vite",
     "build": "tsc --noEmit && vite build",
     "build:all": "tsc && vite build",
-    "build:server": "tsc -p tsconfig.server.json",
+    "build:server": "tsc -p tsconfig.server.json && node scripts/fix-esm-imports.mjs",
     "start": "node dist/server/api-server.js",
     "test": "vitest",
     "test:watch": "vitest --watch",
@@ -23,7 +23,7 @@
     "test:quality": "vitest run src/test/quality/",
     "audit:security": "tsx src/test/reports/security-audit.ts",
     "audit:quality": "tsx src/test/reports/quality-dashboard.ts",
-    "quality:gates": "npm run build && npm run lint && npm run test:coverage && npm run audit:security && npm run audit:quality",
+    "quality:gates": "npm run build && npm run build:server && npm run smoke:built && npm run lint && npm run test:coverage && npm run audit:security && npm run audit:quality",
     "quality:report": "npm run audit:quality && open .claude/reports/quality-dashboard.html",
     "bootstrap:test": "tsx src/core/bootstrap.ts --test",
     "maintain": "tsx scripts/maintain.ts",
@@ -36,7 +36,8 @@
     "lint": "eslint src",
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
     "preview": "vite preview",
-    "init": "./init.sh"
+    "init": "./init.sh",
+    "smoke:built": "node scripts/smoke-built-server.mjs"
   },
   "keywords": [
     "forge",
