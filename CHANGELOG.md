@@ -5,6 +5,38 @@ All notable changes to NXTG-Forge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.4.0] - 2026-07-19
+
+Health and identity now come from the canonical MCP surfaces, the shipped server artifact runs again, and both are held there by instruments rather than by review.
+
+MINOR rather than PATCH because health gained a second canonical source. `HealthSource` is now `"orchestrator" | "governance" | "estimate"` — additive at runtime, but a TypeScript consumer that narrows exhaustively on that union must handle `"governance"`. Nothing else in the served payload changed shape.
+
+### Added
+
+- **Governance-MCP health tier for plugin-only (L1) projects.** Precedence is now **orchestrator → governance-mcp → labeled estimate**. Previously a project with no orchestrator binary fell straight to a local estimate even when a canonical governance surface was available — the dashboard was showing an approximation while the real number was one MCP call away.
+  - The server is **discovered from the project's own `.mcp.json`**, the same file Claude Code reads, and its declared command is spawned verbatim. forge-ui keeps no path dependency on forge-plugin; MCP remains the only integration layer.
+  - A declared command still carrying an unexpanded `${...}` placeholder is treated as unavailable rather than spawned.
+  - In-flight calls are coalesced per project root and children are reaped with SIGTERM→SIGKILL, so the new tier cannot reintroduce the subprocess fan-out or zombie classes fixed in 3.3.2.
+- **Build-artifact smoke gate** (`npm run smoke:built`, wired into `quality:gates`) — boots the real `dist/server/api-server.js` on an ephemeral port and requires a *shaped* `/api/forge/status`, then tears it down. Verified to exit non-zero against a seeded extensionless import.
+
+### Fixed
+
+- **The shipped server could not start.** `npm start` died with `ERR_MODULE_NOT_FOUND` and had done so since the ESM migration, shipping that way in 3.3.2. The package is `"type": "module"` and the server compiled with `module: ES2022` but `moduleResolution: "node"` — a combination TypeScript accepts and emits verbatim, while Node's ESM loader does not probe extensions or `index` files. `tsc` exited 0 throughout. `build:server` now rewrites emitted relative specifiers (109 across 42 files), and an unresolvable specifier fails the build instead of producing another artifact that cannot boot. Dev (tsx) and built output are verified to serve identical routes and health payloads.
+- **Project identity was invisible to non-Node projects.** The dashboard read the project name from `package.json` only, so a bare `forge init` project — or any Rust/Python one — reported `"unknown"`. Identity now comes from `.forge/state.json:project_name` first, falling back to `package.json`.
+- **Health and identity could describe the wrong project.** The status service was constructed once with the startup working directory while every other route followed the active runspace, and nothing ever moved it. After a runspace switch the dashboard reported the *previous* project's health and name. It now resolves the root on each read.
+- **Test isolation.** Suites that built temp directories from `Date.now()` — or from fixed repo-relative paths like `.forge-test-learning/` — could collide when Vitest workers started in the same millisecond or shared a directory across files. All such paths now use `mkdtemp`. This was a real intermittent failure (2 of 6 full runs before; 0 of 10 after), not a theoretical one.
+- **The MCP handshake reported a stale version.** `clientInfo.version` was a hardcoded literal that had already drifted a full release — a 3.3.2 client announced itself as 3.3.1. It now derives from `package.json` through a single version module, with a coupling test that fails if a literal reappears.
+- **Neither audit script in `quality:gates` was working.** `audit:quality` crashed at module scope (`require.main` in an ES module) and `audit:security` exited 0 having scanned nothing — it passed a `(pattern, options, callback)` call to glob v13, whose callback API was removed in v9, so the wrapping promise never settled and Node exited cleanly with no output. Both now run. See "Known issues" for what the security scanner reports.
+
+### Changed
+
+- The estimate label no longer says "orchestrator unavailable" — with a second canonical tier, an estimate means *no* MCP source answered.
+- `HealthSource` is exported and consumed by the components that previously redeclared the union inline, so the set of valid sources has one definition.
+
+### Known issues
+
+- **The security scanner is uncalibrated and its score is not meaningful.** Its first working run reports 39 critical / 626 high, but the findings do not survive inspection: 606 of the "high" are "SQL injection via string concatenation" in a project with **no SQL dependency at all** — one such line is `updatedAt?: string;`, a TypeScript interface field — and all 39 "critical" are every `spawn()` call flagged regardless of whether it uses `shell` (none do; all pass an argument array, which is the form that *prevents* injection). The scanner was never triaged because it never ran. Its 0/100 also drags the quality dashboard's overall grade down to D. Calibration is tracked separately; treat the current numbers as noise, not as a security posture.
+
 ## [3.3.2] - 2026-07-18
 
 Completes the anti-fabrication work started in 3.3.1, splits runtime state out of versioned config, and closes three governance-state defects that could silently stop the dashboard updating. Cleared by independent cross-vendor adversarial review (Codex re-gate round 4) on `7abaa63`.
