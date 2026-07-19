@@ -12,11 +12,11 @@
     },
     "forge": {
       "type": "stdio",
-      "command": "/home/axw/projects/NXTG-Forge/forge-orchestrator/target/release/forge",
+      "command": "forge",
       "args": [
         "mcp",
         "--project",
-        "/home/axw/projects/NXTG-Forge/v3"
+        "/home/axw/projects/NXTG-Forge/forge-ui"
       ]
     }
   }

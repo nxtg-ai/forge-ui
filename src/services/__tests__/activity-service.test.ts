@@ -840,6 +840,434 @@ describe("ActivityService", () => {
     });
   });
 
+  describe("recordActivity error handling", () => {
+    it("should wrap an Error thrown internally with its message", async () => {
+      const spy = vi
+        .spyOn(service as any, "addToHistory")
+        .mockImplementation(() => {
+          throw new Error("disk full");
+        });
+
+      const result = await service.recordActivity({
+        type: ActivityEventType.AGENT_STARTED,
+        agentId: "agent-1",
+        agentName: "Agent1",
+        data: {},
+        visibility: ["engineer"],
+        importance: "medium",
+        category: "execution",
+      });
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error.message).toBe("Failed to record activity: disk full");
+        expect(result.error.code).toBe("RECORD_ERROR");
+      }
+      spy.mockRestore();
+    });
+
+    it("should wrap a non-Error thrown internally via String(error)", async () => {
+      const spy = vi
+        .spyOn(service as any, "addToHistory")
+        .mockImplementation(() => {
+          // eslint-disable-next-line @typescript-eslint/no-throw-literal
+          throw "raw-string-failure";
+        });
+
+      const result = await service.recordActivity({
+        type: ActivityEventType.AGENT_STARTED,
+        agentId: "agent-1",
+        agentName: "Agent1",
+        data: {},
+        visibility: ["engineer"],
+        importance: "medium",
+        category: "execution",
+      });
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error.message).toBe(
+          "Failed to record activity: raw-string-failure",
+        );
+        expect(result.error.code).toBe("RECORD_ERROR");
+      }
+      spy.mockRestore();
+    });
+  });
+
+  describe("updateAgentStatus error handling", () => {
+    it("should wrap an Error thrown by recordActivity with its message", async () => {
+      const spy = vi
+        .spyOn(service, "recordActivity")
+        .mockRejectedValueOnce(new Error("network down"));
+
+      const agent = {
+        id: "agent-1",
+        name: "TestAgent",
+        role: "builder",
+        status: "working" as const,
+        currentTask: "Building feature",
+        confidence: 0.9,
+      };
+
+      const result = await service.updateAgentStatus(agent);
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error.message).toBe(
+          "Failed to update agent status: network down",
+        );
+        expect(result.error.code).toBe("STATUS_UPDATE_ERROR");
+      }
+      spy.mockRestore();
+    });
+
+    it("should wrap a non-Error rejection from recordActivity via String(error)", async () => {
+      const spy = vi
+        .spyOn(service, "recordActivity")
+        .mockRejectedValueOnce("plain-reject");
+
+      const agent = {
+        id: "agent-1",
+        name: "TestAgent",
+        role: "builder",
+        status: "working" as const,
+        currentTask: "Building feature",
+        confidence: 0.9,
+      };
+
+      const result = await service.updateAgentStatus(agent);
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error.message).toBe(
+          "Failed to update agent status: plain-reject",
+        );
+        expect(result.error.code).toBe("STATUS_UPDATE_ERROR");
+      }
+      spy.mockRestore();
+    });
+  });
+
+  describe("mapStatusToEventType branches", () => {
+    it("should map 'discussing' status to DISCUSSION_STARTED", async () => {
+      const agent = {
+        id: "agent-1",
+        name: "TestAgent",
+        role: "builder",
+        status: "discussing" as const,
+        currentTask: "Debating approach",
+        confidence: 0.7,
+      };
+
+      await service.updateAgentStatus(agent);
+
+      const history = service.getActivityHistory();
+      expect(history).toHaveLength(1);
+      expect(history[0].type).toBe(ActivityEventType.DISCUSSION_STARTED);
+    });
+
+    it("should map an unrecognized status ('idle') to AGENT_STARTED via the default case", async () => {
+      const agent = {
+        id: "agent-1",
+        name: "TestAgent",
+        role: "builder",
+        status: "idle" as const,
+        currentTask: "Waiting",
+        confidence: 0.3,
+      };
+
+      await service.updateAgentStatus(agent);
+
+      const history = service.getActivityHistory();
+      expect(history).toHaveLength(1);
+      expect(history[0].type).toBe(ActivityEventType.AGENT_STARTED);
+    });
+  });
+
+  describe("addToHistory nullish-coalescing fallbacks", () => {
+    it("should fall back to default maxEventHistory/streamBufferSize when config values are undefined", async () => {
+      const svc = new ActivityService({
+        name: "NullishConfigService",
+        persistActivity: false,
+        maxEventHistory: undefined,
+        streamBufferSize: undefined,
+      });
+      await svc.initialize();
+
+      const result = await svc.recordActivity({
+        type: ActivityEventType.AGENT_STARTED,
+        agentId: "agent-1",
+        agentName: "Agent1",
+        data: {},
+        visibility: ["engineer"],
+        importance: "medium",
+        category: "execution",
+      });
+
+      expect(result.isOk()).toBe(true);
+      expect(svc.getActivityHistory()).toHaveLength(1);
+
+      await svc.dispose();
+    });
+  });
+
+  describe("subscribeToStream additional filter branches (matchesFilter)", () => {
+    it("should include events matching filter.types and exclude events that don't", async () => {
+      const callback = vi.fn();
+      service.subscribeToStream("sub-types", callback, {
+        types: [ActivityEventType.TASK_COMPLETED],
+      });
+
+      await service.recordActivity({
+        type: ActivityEventType.TASK_COMPLETED,
+        agentId: "agent-1",
+        agentName: "Agent1",
+        data: {},
+        visibility: ["engineer"],
+        importance: "medium",
+        category: "execution",
+      });
+      await service.recordActivity({
+        type: ActivityEventType.AGENT_STARTED,
+        agentId: "agent-1",
+        agentName: "Agent1",
+        data: {},
+        visibility: ["engineer"],
+        importance: "medium",
+        category: "execution",
+      });
+
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback.mock.calls[0][0].type).toBe(
+        ActivityEventType.TASK_COMPLETED,
+      );
+    });
+
+    it("should include events matching filter.visibility and exclude events that don't", async () => {
+      const callback = vi.fn();
+      service.subscribeToStream("sub-vis", callback, { visibility: "founder" });
+
+      await service.recordActivity({
+        type: ActivityEventType.AGENT_STARTED,
+        agentId: "agent-1",
+        agentName: "Agent1",
+        data: {},
+        visibility: ["founder", "engineer"],
+        importance: "medium",
+        category: "execution",
+      });
+      await service.recordActivity({
+        type: ActivityEventType.AGENT_STARTED,
+        agentId: "agent-2",
+        agentName: "Agent2",
+        data: {},
+        visibility: ["engineer"],
+        importance: "medium",
+        category: "execution",
+      });
+
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback.mock.calls[0][0].agentId).toBe("agent-1");
+    });
+
+    it("should include events matching filter.importance and exclude events that don't", async () => {
+      const callback = vi.fn();
+      service.subscribeToStream("sub-imp", callback, {
+        importance: ["critical"],
+      });
+
+      await service.recordActivity({
+        type: ActivityEventType.ERROR_OCCURRED,
+        agentId: "agent-1",
+        agentName: "Agent1",
+        data: {},
+        visibility: ["engineer"],
+        importance: "critical",
+        category: "error",
+      });
+      await service.recordActivity({
+        type: ActivityEventType.AGENT_STARTED,
+        agentId: "agent-1",
+        agentName: "Agent1",
+        data: {},
+        visibility: ["engineer"],
+        importance: "low",
+        category: "execution",
+      });
+
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback.mock.calls[0][0].importance).toBe("critical");
+    });
+
+    it("should include events matching filter.categories and exclude events that don't", async () => {
+      const callback = vi.fn();
+      service.subscribeToStream("sub-cat", callback, {
+        categories: ["decision"],
+      });
+
+      await service.recordActivity({
+        type: ActivityEventType.DECISION_MADE,
+        agentId: "agent-1",
+        agentName: "Agent1",
+        data: {},
+        visibility: ["founder"],
+        importance: "high",
+        category: "decision",
+      });
+      await service.recordActivity({
+        type: ActivityEventType.AGENT_STARTED,
+        agentId: "agent-1",
+        agentName: "Agent1",
+        data: {},
+        visibility: ["engineer"],
+        importance: "medium",
+        category: "execution",
+      });
+
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback.mock.calls[0][0].category).toBe("decision");
+    });
+
+    it("should exclude stream events recorded before filter.startTime", async () => {
+      const future = new Date(Date.now() + 60_000);
+      const callback = vi.fn();
+      service.subscribeToStream("sub-start-exclude", callback, {
+        startTime: future,
+      });
+
+      await service.recordActivity({
+        type: ActivityEventType.AGENT_STARTED,
+        agentId: "agent-1",
+        agentName: "Agent1",
+        data: {},
+        visibility: ["engineer"],
+        importance: "medium",
+        category: "execution",
+      });
+
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it("should include stream events recorded at/after filter.startTime", async () => {
+      const past = new Date(Date.now() - 60_000);
+      const callback = vi.fn();
+      service.subscribeToStream("sub-start-include", callback, {
+        startTime: past,
+      });
+
+      await service.recordActivity({
+        type: ActivityEventType.AGENT_STARTED,
+        agentId: "agent-1",
+        agentName: "Agent1",
+        data: {},
+        visibility: ["engineer"],
+        importance: "medium",
+        category: "execution",
+      });
+
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    it("should exclude stream events recorded after filter.endTime", async () => {
+      const past = new Date(Date.now() - 60_000);
+      const callback = vi.fn();
+      service.subscribeToStream("sub-end-exclude", callback, {
+        endTime: past,
+      });
+
+      await service.recordActivity({
+        type: ActivityEventType.AGENT_STARTED,
+        agentId: "agent-1",
+        agentName: "Agent1",
+        data: {},
+        visibility: ["engineer"],
+        importance: "medium",
+        category: "execution",
+      });
+
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it("should include stream events recorded at/before filter.endTime", async () => {
+      const future = new Date(Date.now() + 60_000);
+      const callback = vi.fn();
+      service.subscribeToStream("sub-end-include", callback, {
+        endTime: future,
+      });
+
+      await service.recordActivity({
+        type: ActivityEventType.AGENT_STARTED,
+        agentId: "agent-1",
+        agentName: "Agent1",
+        data: {},
+        visibility: ["engineer"],
+        importance: "medium",
+        category: "execution",
+      });
+
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("exportActivityLog error handling", () => {
+    it("should wrap a circular-structure Error during JSON export with its message", async () => {
+      const circular: Record<string, unknown> = { a: 1 };
+      circular.self = circular;
+
+      (service as any).activityHistory.push({
+        id: "evt_circular",
+        type: ActivityEventType.AGENT_STARTED,
+        agentId: "agent-circular",
+        agentName: "AgentCircular",
+        timestamp: new Date(),
+        data: { circular },
+        visibility: ["engineer"],
+        importance: "medium",
+        category: "execution",
+      });
+
+      const result = await service.exportActivityLog("json");
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error.code).toBe("EXPORT_ERROR");
+        expect(result.error.message).toContain(
+          "Failed to export activity log:",
+        );
+      }
+    });
+
+    it("should wrap a non-Error thrown during CSV export via String(error)", async () => {
+      (service as any).activityHistory.push({
+        id: "evt_bad_timestamp",
+        type: ActivityEventType.AGENT_STARTED,
+        agentId: "agent-bad",
+        agentName: "AgentBad",
+        timestamp: {
+          toISOString: () => {
+            // eslint-disable-next-line @typescript-eslint/no-throw-literal
+            throw "bad-timestamp";
+          },
+        },
+        data: {},
+        visibility: ["engineer"],
+        importance: "medium",
+        category: "execution",
+      });
+
+      const result = await service.exportActivityLog("csv");
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error.message).toBe(
+          "Failed to export activity log: bad-timestamp",
+        );
+        expect(result.error.code).toBe("EXPORT_ERROR");
+      }
+    });
+  });
+
   describe("disposal", () => {
     it("should clear all data on disposal", async () => {
       await service.recordActivity({

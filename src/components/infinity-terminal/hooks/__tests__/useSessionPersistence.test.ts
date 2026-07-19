@@ -697,4 +697,320 @@ describe("useSessionPersistence", () => {
       expect(ws?.readyState).toBe(MockWebSocket.OPEN);
     });
   });
+
+  // NEXUS: P-03a branch-coverage remediation (Forge Guardian pass, forge-ui)
+  describe("Branch Coverage — connect() dedupe guard", () => {
+    it("ignores a second connect() call while the socket is already OPEN (no new WebSocket, state unchanged)", async () => {
+      const { result } = renderHook(() => useSessionPersistence());
+
+      act(() => {
+        result.current.connect();
+      });
+
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+
+      expect(result.current.state.connected).toBe(true);
+      const wsBefore = result.current.getWebSocket();
+
+      act(() => {
+        result.current.connect(); // early-return guard: readyState === OPEN
+      });
+
+      expect(result.current.getWebSocket()).toBe(wsBefore);
+      expect(result.current.state.connected).toBe(true);
+      expect(result.current.state.connecting).toBe(false);
+    });
+  });
+
+  describe("Branch Coverage — bootstrap token fetch", () => {
+    it("reuses a stored auth token instead of fetching a new bootstrap token", async () => {
+      const fetchSpy = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ data: { token: "new-token" } }),
+      });
+      globalThis.fetch = fetchSpy as any;
+
+      const storedSession = {
+        sessionId: "stored-id",
+        sessionName: "forge-test-project",
+        layout: "default",
+        projectRoot: "/test",
+        createdAt: new Date().toISOString(),
+        lastAccess: new Date().toISOString(),
+        authToken: "stored-token",
+      };
+      mockLocalStorage["infinity-terminal-sessions"] = JSON.stringify([storedSession]);
+
+      const { result } = renderHook(() =>
+        useSessionPersistence({ projectName: "test-project" }),
+      );
+
+      act(() => {
+        result.current.connect();
+      });
+
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(result.current.state.sessionId).toBe("stored-id");
+      const ws = result.current.getWebSocket();
+      expect(ws?.url).toContain("sessionId=stored-id");
+      expect(ws?.url).toContain("token=stored-token");
+    });
+
+    it("connects without a token param when the bootstrap endpoint responds not-ok", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        json: () => Promise.resolve({}),
+      }) as any;
+
+      const { result } = renderHook(() => useSessionPersistence());
+
+      act(() => {
+        result.current.connect();
+      });
+
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+
+      const ws = result.current.getWebSocket();
+      expect(ws?.url).not.toContain("token=");
+      expect(result.current.state.connected).toBe(true);
+    });
+
+    it("falls back to no token when the bootstrap response body has no token field", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ data: {} }),
+      }) as any;
+
+      const { result } = renderHook(() => useSessionPersistence());
+
+      act(() => {
+        result.current.connect();
+      });
+
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+
+      const ws = result.current.getWebSocket();
+      expect(ws?.url).not.toContain("token=");
+    });
+
+    it("aborts the pending connection when disconnect() runs before the token promise resolves", async () => {
+      const { result } = renderHook(() => useSessionPersistence());
+
+      act(() => {
+        // Both calls run synchronously in the same tick, before the
+        // fetchBootstrapToken() microtask resolves — the abort check
+        // (isManualDisconnectRef) must see the manual disconnect.
+        result.current.connect();
+        result.current.disconnect();
+      });
+
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+
+      expect(result.current.getWebSocket()).toBe(null);
+      expect(result.current.state.connected).toBe(false);
+      expect(result.current.state.connecting).toBe(false);
+    });
+  });
+
+  describe("Branch Coverage — WebSocket URL protocol", () => {
+    it("builds a wss:// URL when the page protocol is https", () => {
+      const original = window.location;
+      Object.defineProperty(window, "location", {
+        configurable: true,
+        value: { ...original, protocol: "https:" },
+      });
+
+      const { result } = renderHook(() => useSessionPersistence());
+      const url = result.current.getWsUrl("sid-123");
+
+      Object.defineProperty(window, "location", {
+        configurable: true,
+        value: original,
+      });
+
+      expect(url.startsWith("wss://")).toBe(true);
+    });
+  });
+
+  describe("Branch Coverage — close-code specific error message", () => {
+    it("sets the rejection-specific error message when close code is 1005 and reconnect is exhausted", async () => {
+      const { result } = renderHook(() =>
+        useSessionPersistence({ config: { autoReconnect: false } }),
+      );
+
+      act(() => {
+        result.current.connect();
+      });
+
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+
+      const ws = result.current.getWebSocket();
+
+      act(() => {
+        ws?.onclose?.(new CloseEvent("close", { code: 1005 }));
+      });
+
+      expect(result.current.state.error).toBe(
+        "Terminal connection rejected. Restart the API server.",
+      );
+    });
+
+    it("sets the generic unavailable error message for a non-1005 close code once reconnect is exhausted", async () => {
+      const { result } = renderHook(() =>
+        useSessionPersistence({ config: { autoReconnect: false } }),
+      );
+
+      act(() => {
+        result.current.connect();
+      });
+
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+
+      const ws = result.current.getWebSocket();
+
+      act(() => {
+        ws?.onclose?.(new CloseEvent("close", { code: 1006 }));
+      });
+
+      expect(result.current.state.error).toBe(
+        "Terminal service unavailable. Is the API server running? (npm run dev)",
+      );
+    });
+  });
+
+  describe("Branch Coverage — disconnect() ref-guard combinations", () => {
+    it("clears a pending reconnect timeout on manual disconnect (no reconnection ever fires)", async () => {
+      const { result } = renderHook(() =>
+        useSessionPersistence({
+          config: { autoReconnect: true, maxReconnectAttempts: 3, reconnectDelay: 1000 },
+        }),
+      );
+
+      act(() => {
+        result.current.connect();
+      });
+
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+
+      const ws = result.current.getWebSocket();
+      act(() => {
+        ws?.onclose?.(new CloseEvent("close", { code: 1006 }));
+      });
+
+      expect(result.current.state.reconnectAttempts).toBe(1);
+
+      act(() => {
+        result.current.disconnect(); // reconnectTimeoutRef.current is truthy here
+      });
+
+      await act(async () => {
+        vi.advanceTimersByTime(5000);
+        await vi.runAllTimersAsync();
+      });
+
+      expect(result.current.state.connected).toBe(false);
+      expect(result.current.state.reconnectAttempts).toBe(0);
+    });
+
+    it("is a no-op-safe call when no WebSocket or stability timer exists yet (disconnect before token resolves)", async () => {
+      const { result } = renderHook(() => useSessionPersistence());
+
+      act(() => {
+        result.current.disconnect(); // wsRef.current and stabilityTimerRef.current are both null
+      });
+
+      expect(result.current.state.connected).toBe(false);
+      expect(result.current.state.reconnectAttempts).toBe(0);
+      expect(result.current.getWebSocket()).toBe(null);
+    });
+  });
+
+  describe("Branch Coverage — restoreSession() miss path", () => {
+    it("does nothing when restoreSession is called with an unknown session name", () => {
+      const onSessionRestore = vi.fn();
+      const { result } = renderHook(() =>
+        useSessionPersistence({ onSessionRestore }),
+      );
+
+      act(() => {
+        result.current.restoreSession("does-not-exist");
+      });
+
+      expect(onSessionRestore).not.toHaveBeenCalled();
+      expect(result.current.state.sessionId).toBe("");
+      expect(result.current.getWebSocket()).toBe(null);
+    });
+  });
+
+  describe("Branch Coverage — module-level SSR / port fallback (DEFAULT_CONFIG)", () => {
+    // These branches are evaluated once, at module import time, so each
+    // scenario needs a fresh module instance (vi.resetModules + dynamic
+    // import) with `window`/`window.location` mutated BEFORE import.
+    it("falls back to port 5050 and host localhost when window is undefined at import time (SSR guard)", async () => {
+      vi.resetModules();
+      const originalWindow = (globalThis as any).window;
+      delete (globalThis as any).window;
+
+      const mod = await import("../useSessionPersistence");
+
+      (globalThis as any).window = originalWindow;
+
+      const { result } = renderHook(() => mod.useSessionPersistence());
+
+      expect(result.current.config.wsPort).toBe(5050);
+      expect(result.current.config.wsHost).toBe("localhost");
+    });
+
+    it("falls back to port 443 when window.location.port is empty and protocol is https", async () => {
+      vi.resetModules();
+      const original = window.location;
+      Object.defineProperty(window, "location", {
+        configurable: true,
+        value: { ...original, port: "", protocol: "https:" },
+      });
+
+      const mod = await import("../useSessionPersistence");
+
+      Object.defineProperty(window, "location", { configurable: true, value: original });
+
+      const { result } = renderHook(() => mod.useSessionPersistence());
+
+      expect(result.current.config.wsPort).toBe(443);
+    });
+
+    it("falls back to port 80 when window.location.port is empty and protocol is http", async () => {
+      vi.resetModules();
+      const original = window.location;
+      Object.defineProperty(window, "location", {
+        configurable: true,
+        value: { ...original, port: "", protocol: "http:" },
+      });
+
+      const mod = await import("../useSessionPersistence");
+
+      Object.defineProperty(window, "location", { configurable: true, value: original });
+
+      const { result } = renderHook(() => mod.useSessionPersistence());
+
+      expect(result.current.config.wsPort).toBe(80);
+    });
+  });
 });

@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import * as os from "os";
 import {
   getIntelligenceContext,
   formatCardForInjection,
@@ -17,6 +18,13 @@ vi.mock("fs/promises", () => ({
   access: vi.fn(),
   readdir: vi.fn(),
 }));
+
+// Partially mock "os" so homedir() can be forced to throw for outer-catch branch tests,
+// while keeping the real implementation for every other test in this file.
+vi.mock("os", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("os")>();
+  return { ...actual, homedir: vi.fn(actual.homedir) };
+});
 
 describe("Intelligence Injector", () => {
   beforeEach(() => {
@@ -419,6 +427,114 @@ Maybe we should try this approach.
       // Should still work and respect token limit
       const tokens = Math.ceil(context.length / 4);
       expect(tokens).toBeLessThanOrEqual(200);
+    });
+  });
+
+  describe("parseMemoryContent DECISION branch (via getIntelligenceContext)", () => {
+    it("should detect a DECISION card from a content line mentioning 'Architecture:' that is not a heading", async () => {
+      const { readFile, access } = await import("fs/promises");
+      const content = `## Notes\n- Architecture: event-driven microservices with Kafka\n`;
+      vi.mocked(readFile).mockResolvedValue(content);
+      vi.mocked(access).mockResolvedValue(undefined);
+
+      const context = await getIntelligenceContext({
+        categories: ["DECISION"],
+        maxTokens: 500,
+        minPriority: "high",
+      });
+
+      expect(context).toContain(
+        "- DECISION: Architecture: event-driven microservices with Kafka [high]",
+      );
+    });
+
+    it("should detect a DECISION card from a content line mentioning 'Decision' after scanning project directories", async () => {
+      const { readFile, access, readdir } = await import("fs/promises");
+      const content = `## Notes\n- Decision: adopt event sourcing\n`;
+      vi.mocked(readFile).mockResolvedValue(content);
+      vi.mocked(readdir).mockResolvedValue([
+        "unrelated-project",
+        "-home-axw-projects-nxtg-forge-scan-test",
+      ] as never);
+      vi.mocked(access).mockImplementation((p: unknown) => {
+        const target = String(p);
+        if (target.includes("NXTG-Forge-v3")) {
+          return Promise.reject(new Error("known path missing"));
+        }
+        if (target.includes("nxtg-forge-scan-test")) {
+          return Promise.resolve(undefined);
+        }
+        return Promise.reject(new Error("not found"));
+      });
+
+      const context = await getIntelligenceContext({
+        categories: ["DECISION"],
+        maxTokens: 500,
+        minPriority: "high",
+      });
+
+      expect(context).toContain("- DECISION: Decision: adopt event sourcing [high]");
+    });
+
+    it("should return empty context when no project directory matches and the known path is unavailable", async () => {
+      const { readFile, access, readdir } = await import("fs/promises");
+      vi.mocked(readdir).mockResolvedValue(["totally-unrelated-app"] as never);
+      vi.mocked(access).mockRejectedValue(new Error("not found"));
+
+      const context = await getIntelligenceContext();
+
+      expect(context).toBe("");
+      expect(readFile).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("getMemoryPath outer catch branch (via getIntelligenceContext)", () => {
+    it("should return empty context when an Error is thrown while resolving the memory path", async () => {
+      vi.mocked(os.homedir).mockImplementationOnce(() => {
+        throw new Error("home directory unavailable");
+      });
+
+      const context = await getIntelligenceContext();
+      expect(context).toBe("");
+    });
+
+    it("should return empty context when a non-Error value is thrown while resolving the memory path", async () => {
+      vi.mocked(os.homedir).mockImplementationOnce(() => {
+        // Intentionally throw a non-Error to exercise the `error instanceof Error` false branch.
+        throw "disk unmounted";
+      });
+
+      const context = await getIntelligenceContext();
+      expect(context).toBe("");
+    });
+  });
+
+  describe("readIntelligenceCards catch branch (via getIntelligenceContext)", () => {
+    it("should return empty context when readFile rejects with a non-Error value", async () => {
+      const { readFile, access } = await import("fs/promises");
+      vi.mocked(access).mockResolvedValue(undefined);
+      vi.mocked(readFile).mockRejectedValue("disk read failure");
+
+      const context = await getIntelligenceContext();
+
+      expect(context).toBe("");
+    });
+  });
+
+  describe("getIntelligenceContext empty-selection branch", () => {
+    it("should return empty string when the token budget is too small to fit even one card", async () => {
+      const { readFile, access } = await import("fs/promises");
+      const content = `## Notes\n- Architecture: microservices\n`;
+      vi.mocked(readFile).mockResolvedValue(content);
+      vi.mocked(access).mockResolvedValue(undefined);
+
+      const context = await getIntelligenceContext({
+        maxTokens: 1,
+        categories: ["DECISION"],
+        minPriority: "high",
+      });
+
+      expect(context).toBe("");
     });
   });
 });

@@ -1,165 +1,129 @@
 /**
- * Tests for GovernanceHUD Component
+ * Tests for GovernanceHUD
  *
- * Test coverage:
- * - Data fetching from /api/governance/state
- * - Loading state
- * - Error state
- * - Governance state rendering
- * - WebSocket connection via wsManager
- * - WebSocket reconnection via wsManager
- * - Fallback polling
- * - Sub-component rendering
- * - Connection status indicators
+ * Targets branch coverage: loading/error/null-state guards, the initial-fetch
+ * try/catch/finally paths (ok-false, missing-data, thrown Error, thrown
+ * non-Error), the WebSocket governance.update + runspace.activated + onStateChange
+ * subscriptions (including the isMountedRef guard on each), the 4-way
+ * connectionStatus ternary chain (dot class/title + label text), and every
+ * conditional child render (`state.workstreams && state.sentinelLog`,
+ * `state.constitution`, `state.workstreams`, `state.sentinelLog`) in
+ * src/components/governance/GovernanceHUD.tsx.
+ *
+ * NOTE: the wsManager mock path below is `../../../services/ws-manager`
+ * (three levels up from this __tests__ dir to src/, then into services/) —
+ * it must match the module GovernanceHUD.tsx itself resolves
+ * (`../../services/ws-manager` from src/components/governance/), otherwise
+ * vi.mock silently fails to intercept and every ws-driven assertion becomes
+ * hollow (the previous version of this file had this bug).
  */
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, waitFor, act } from "@testing-library/react";
 
-import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import type { GovernanceState } from "../../../types/governance.types";
-import type { WSConnectionState } from "../../../services/ws-manager";
-
-// Mock wsManager using vi.hoisted() - this ensures mocks are available during import
-const { mockUnsubscribe, mockSubscribe, mockOnStateChange, mockConnect, mockDisconnect, mockSend, mockGetState } = vi.hoisted(() => {
-  return {
-    mockUnsubscribe: vi.fn(),
-    mockSubscribe: vi.fn(),
-    mockOnStateChange: vi.fn(),
-    mockConnect: vi.fn(),
-    mockDisconnect: vi.fn(),
-    mockSend: vi.fn(),
-    mockGetState: vi.fn(),
-  };
-});
-
-// Mock needs to use the SAME path that the component uses
-vi.mock("../../services/ws-manager", () => ({
-  wsManager: {
-    subscribe: mockSubscribe,
-    onStateChange: mockOnStateChange,
-    connect: mockConnect,
-    disconnect: mockDisconnect,
-    send: mockSend,
-    getState: mockGetState,
-  },
-}));
-
-// Mock sub-components
-vi.mock("../ConstitutionCard", () => ({
-  ConstitutionCard: ({ constitution }: any) => (
-    <div data-testid="constitution-card">
-      Constitution: {constitution?.name || "None"}
-    </div>
-  ),
-}));
-
-vi.mock("../ImpactMatrix", () => ({
-  ImpactMatrix: ({ workstreams }: any) => (
-    <div data-testid="impact-matrix">Workstreams: {workstreams?.length || 0}</div>
-  ),
-}));
-
-vi.mock("../OracleFeed", () => ({
-  OracleFeed: ({ logs }: any) => (
-    <div data-testid="oracle-feed">Logs: {logs?.length || 0}</div>
-  ),
-}));
-
-vi.mock("../StrategicAdvisor", () => ({
-  StrategicAdvisor: ({ state }: any) => (
-    <div data-testid="strategic-advisor">Strategic Advisor</div>
-  ),
-}));
-
-vi.mock("../WorkerPoolMetrics", () => ({
-  WorkerPoolMetrics: () => <div data-testid="worker-pool-metrics">Worker Pool</div>,
-}));
-
-vi.mock("../AgentActivityFeed", () => ({
-  AgentActivityFeed: ({ maxEntries }: any) => (
-    <div data-testid="agent-activity-feed">Activity Feed (max: {maxEntries})</div>
-  ),
-}));
-
-// Mock apiFetch module
+// Mock apiFetch so we control every response the initial fetch sees.
 vi.mock("../../../utils/api-fetch", () => ({
   apiFetch: vi.fn(),
 }));
 
-// Import after mocks are set up
+// Mock wsManager using vi.hoisted() so handlers are capturable during module init.
+const { mockSubscribe, mockOnStateChange, mockUnsubMessage, mockUnsubRunspace, mockUnsubState } =
+  vi.hoisted(() => ({
+    mockSubscribe: vi.fn(),
+    mockOnStateChange: vi.fn(),
+    mockUnsubMessage: vi.fn(),
+    mockUnsubRunspace: vi.fn(),
+    mockUnsubState: vi.fn(),
+  }));
+
+vi.mock("../../../services/ws-manager", () => ({
+  wsManager: {
+    subscribe: mockSubscribe,
+    onStateChange: mockOnStateChange,
+  },
+}));
+
+// Stub every sub-card so GovernanceHUD's OWN conditional-render branches are
+// isolated from each child's internal fetch/ws behavior.
+vi.mock("../ConstitutionCard", () => ({
+  ConstitutionCard: (props: any) => (
+    <div data-testid="stub-constitution">{props.constitution?.directive}</div>
+  ),
+}));
+vi.mock("../ImpactMatrix", () => ({
+  ImpactMatrix: (props: any) => (
+    <div data-testid="stub-impact">{props.workstreams?.length}</div>
+  ),
+}));
+vi.mock("../OracleFeed", () => ({
+  OracleFeed: (props: any) => <div data-testid="stub-oracle">{props.logs?.length}</div>,
+}));
+vi.mock("../StrategicAdvisor", () => ({
+  StrategicAdvisor: () => <div data-testid="stub-strategic" />,
+}));
+vi.mock("../WorkerPoolMetrics", () => ({
+  WorkerPoolMetrics: () => <div data-testid="stub-worker" />,
+}));
+vi.mock("../ProjectContextCard", () => ({
+  ProjectContextCard: () => <div data-testid="stub-projectctx" />,
+}));
+vi.mock("../AgentActivityFeed", () => ({
+  AgentActivityFeed: (props: any) => (
+    <div data-testid="stub-agentfeed">{props.maxEntries}</div>
+  ),
+}));
+vi.mock("../MemoryInsightsCard", () => ({
+  MemoryInsightsCard: () => <div data-testid="stub-memory" />,
+}));
+vi.mock("../BlockingDecisionsCard", () => ({
+  BlockingDecisionsCard: () => <div data-testid="stub-blocking" />,
+}));
+
 import { GovernanceHUD } from "../GovernanceHUD";
 import { apiFetch } from "../../../utils/api-fetch";
 
 const mockApiFetch = apiFetch as ReturnType<typeof vi.fn>;
 
-describe("GovernanceHUD", () => {
-  let stateChangeHandler: ((state: WSConnectionState) => void) | null = null;
-  let governanceUpdateHandler: ((data: any) => void) | null = null;
+let messageHandler: ((data: any) => void) | null = null;
+let runspaceHandler: (() => void) | null = null;
+let stateHandler: ((wsState: any) => void) | null = null;
 
-  const mockGovernanceState: GovernanceState = {
-    constitution: {
-      name: "Test Constitution",
-      version: "1.0.0",
-      principles: ["Test principle 1", "Test principle 2"],
-      rules: [],
-      violations: [],
-    },
-    workstreams: [
-      {
-        id: "ws-1",
-        name: "Testing Workstream",
-        status: "active",
-        agents: [],
-        tasks: [],
-      },
-    ],
-    sentinelLog: [
-      {
-        id: "log-1",
-        timestamp: new Date().toISOString(),
-        level: "info",
-        message: "Test log entry",
-        source: "sentinel",
-      },
-    ],
-    metrics: {
-      totalAgents: 5,
-      activeAgents: 3,
-      completedTasks: 42,
-      pendingTasks: 8,
-    },
+function makeState(overrides: any = {}) {
+  return {
+    version: 1,
+    timestamp: "2026-01-01T00:00:00.000Z",
+    constitution: undefined,
+    workstreams: undefined,
+    sentinelLog: undefined,
+    metadata: { lastSync: "2026-01-01T00:00:00.000Z" },
+    ...overrides,
   };
+}
 
+function okResponse(data: any) {
+  return { ok: true, json: async () => ({ data }) };
+}
+
+describe("GovernanceHUD", () => {
   beforeEach(() => {
-    // Reset handlers
-    stateChangeHandler = null;
-    governanceUpdateHandler = null;
-
-    // Clear mock calls
     vi.clearAllMocks();
+    messageHandler = null;
+    runspaceHandler = null;
+    stateHandler = null;
 
-    // Setup wsManager mocks to capture handlers
     mockSubscribe.mockImplementation((eventType: string, handler: any) => {
       if (eventType === "governance.update") {
-        governanceUpdateHandler = handler;
+        messageHandler = handler;
+        return mockUnsubMessage;
       }
-      return mockUnsubscribe;
+      if (eventType === "runspace.activated") {
+        runspaceHandler = handler;
+        return mockUnsubRunspace;
+      }
+      return vi.fn();
     });
-
     mockOnStateChange.mockImplementation((handler: any) => {
-      stateChangeHandler = handler;
-      // Immediately call with initial state
-      handler({
-        status: "disconnected",
-        reconnectAttempt: 0,
-        latency: 0,
-      });
-      return mockUnsubscribe;
-    });
-
-    mockGetState.mockReturnValue({
-      status: "disconnected",
-      reconnectAttempt: 0,
-      latency: 0,
+      stateHandler = handler;
+      return mockUnsubState;
     });
   });
 
@@ -167,553 +131,376 @@ describe("GovernanceHUD", () => {
     vi.clearAllMocks();
   });
 
-  describe("Loading State", () => {
-    test("shows loading state initially", async () => {
-      mockApiFetch.mockImplementation(
-        () =>
-          new Promise(() => {
-            /* never resolves */
-          })
-      );
-
+  describe("initial fetch — loading / error / success branches", () => {
+    it("renders the loading state before the initial fetch resolves", () => {
+      mockApiFetch.mockImplementation(() => new Promise(() => {}));
       render(<GovernanceHUD />);
-
       expect(screen.getByTestId("governance-hud-loading")).toBeInTheDocument();
       expect(screen.getByText("Loading governance...")).toBeInTheDocument();
     });
 
-    test("shows loading spinner", async () => {
-      mockApiFetch.mockImplementation(
-        () =>
-          new Promise(() => {
-            /* never resolves */
-          })
-      );
-
-      render(<GovernanceHUD />);
-
-      const loadingState = screen.getByTestId("governance-hud-loading");
-      expect(loadingState.querySelector(".animate-spin")).toBeInTheDocument();
-    });
-  });
-
-  describe("Error State", () => {
-    test("shows error state on fetch failure", async () => {
-      mockApiFetch.mockRejectedValueOnce(new Error("Network error"));
-
-      render(<GovernanceHUD />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("governance-hud-error")).toBeInTheDocument();
-      });
-    });
-
-    test("displays error message", async () => {
-      mockApiFetch.mockRejectedValueOnce(new Error("API unavailable"));
-
-      render(<GovernanceHUD />);
-
-      await waitFor(() => {
-        expect(screen.getByText("Failed to load governance")).toBeInTheDocument();
-        expect(screen.getByText("API unavailable")).toBeInTheDocument();
-      });
-    });
-
-    test("shows error state on API error response", async () => {
+    it("renders the error state with status+body when res.ok is false", async () => {
       mockApiFetch.mockResolvedValueOnce({
         ok: false,
         status: 500,
-        text: async () => "Internal Server Error",
+        text: async () => "Server broke",
       });
-
       render(<GovernanceHUD />);
+      await waitFor(() =>
+        expect(screen.getByTestId("governance-hud-error")).toBeInTheDocument(),
+      );
+      expect(screen.getByText("API returned 500: Server broke")).toBeInTheDocument();
+    });
 
-      await waitFor(() => {
-        expect(screen.getByTestId("governance-hud-error")).toBeInTheDocument();
-        expect(screen.getByText(/500/)).toBeInTheDocument();
-      });
+    it("renders the error state when response.data is missing", async () => {
+      mockApiFetch.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+      render(<GovernanceHUD />);
+      await waitFor(() =>
+        expect(screen.getByTestId("governance-hud-error")).toBeInTheDocument(),
+      );
+      expect(
+        screen.getByText("Invalid response structure - missing data property"),
+      ).toBeInTheDocument();
+    });
+
+    it("renders the error state with the Error message when fetch throws an Error", async () => {
+      mockApiFetch.mockRejectedValueOnce(new Error("network down"));
+      render(<GovernanceHUD />);
+      await waitFor(() =>
+        expect(screen.getByTestId("governance-hud-error")).toBeInTheDocument(),
+      );
+      expect(screen.getByText("network down")).toBeInTheDocument();
+    });
+
+    it("renders the error state with a generic message when a non-Error is thrown", async () => {
+      mockApiFetch.mockRejectedValueOnce("string failure");
+      render(<GovernanceHUD />);
+      await waitFor(() =>
+        expect(screen.getByTestId("governance-hud-error")).toBeInTheDocument(),
+      );
+      expect(screen.getByText("Unknown error occurred")).toBeInTheDocument();
+    });
+
+    it("renders the HUD container once the fetch succeeds", async () => {
+      mockApiFetch.mockResolvedValueOnce(okResponse(makeState()));
+      render(<GovernanceHUD />);
+      await waitFor(() =>
+        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument(),
+      );
+      expect(screen.queryByTestId("governance-hud-loading")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("governance-hud-error")).not.toBeInTheDocument();
     });
   });
 
-  describe("Data Fetching", () => {
-    test("fetches governance state on mount", async () => {
-      mockApiFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          data: mockGovernanceState,
-        }),
+  describe("null-state guard via WebSocket governance.update", () => {
+    it("returns null (no container/loading/error) when a ws update delivers falsy data", async () => {
+      mockApiFetch.mockResolvedValueOnce(okResponse(makeState()));
+      const { container } = render(<GovernanceHUD />);
+      await waitFor(() =>
+        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument(),
+      );
+
+      act(() => {
+        messageHandler!(null);
       });
 
-      render(<GovernanceHUD />);
-
-      await waitFor(() => {
-        expect(mockApiFetch).toHaveBeenCalledWith("/api/governance/state");
-      });
-    });
-
-    test("renders governance state after successful fetch", async () => {
-      mockApiFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          data: mockGovernanceState,
-        }),
-      });
-
-      render(<GovernanceHUD />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument();
-      });
-    });
-
-    test("handles response without data property", async () => {
-      mockApiFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          // Missing data property
-        }),
-      });
-
-      render(<GovernanceHUD />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("governance-hud-error")).toBeInTheDocument();
-        expect(screen.getByText(/missing data property/)).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe("Header", () => {
-    test("displays header with title", async () => {
-      mockApiFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          data: mockGovernanceState,
-        }),
-      });
-
-      render(<GovernanceHUD />);
-
-      await waitFor(() => {
-        expect(screen.getByText("Governance HUD")).toBeInTheDocument();
-      });
-    });
-
-    test("shows connecting status initially", async () => {
-      mockApiFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          data: mockGovernanceState,
-        }),
-      });
-
-      render(<GovernanceHUD />);
-
-      await waitFor(() => {
-        expect(screen.getByText("Connecting")).toBeInTheDocument();
-      });
-    });
-
-    test("displays connection status indicator", async () => {
-      mockApiFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          data: mockGovernanceState,
-        }),
-      });
-
-      render(<GovernanceHUD />);
-
-      await waitFor(() => {
-        const container = screen.getByTestId("governance-hud-container");
-        expect(container.querySelector(".rounded-full")).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe("Sub-components Rendering", () => {
-    beforeEach(async () => {
-      mockApiFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          data: mockGovernanceState,
-        }),
-      });
-    });
-
-    test("renders StrategicAdvisor", async () => {
-      render(<GovernanceHUD />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("strategic-advisor")).toBeInTheDocument();
-      });
-    });
-
-    test("renders ConstitutionCard", async () => {
-      render(<GovernanceHUD />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("constitution-card")).toBeInTheDocument();
-        expect(screen.getByText(/Test Constitution/)).toBeInTheDocument();
-      });
-    });
-
-    test("renders WorkerPoolMetrics", async () => {
-      render(<GovernanceHUD />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("worker-pool-metrics")).toBeInTheDocument();
-      });
-    });
-
-    test("renders ImpactMatrix", async () => {
-      render(<GovernanceHUD />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("impact-matrix")).toBeInTheDocument();
-        expect(screen.getByText("Workstreams: 1")).toBeInTheDocument();
-      });
-    });
-
-    test("renders AgentActivityFeed", async () => {
-      render(<GovernanceHUD />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("agent-activity-feed")).toBeInTheDocument();
-        expect(screen.getByText("Activity Feed (max: 15)")).toBeInTheDocument();
-      });
-    });
-
-    test("renders OracleFeed", async () => {
-      render(<GovernanceHUD />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("oracle-feed")).toBeInTheDocument();
-        expect(screen.getByText("Logs: 1")).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe("WebSocket Connection", () => {
-    test("component renders and uses wsManager (integration)", async () => {
-      // This test verifies that the component successfully integrates with wsManager
-      // The refactored component no longer creates its own WebSocket but delegates to wsManager
-      mockApiFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          data: mockGovernanceState,
-        }),
-      });
-
-      render(<GovernanceHUD />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument();
-      });
-
-      // Component should render with initial disconnected state
-      expect(screen.getByText("Connecting")).toBeInTheDocument();
-    });
-
-    test("updates to connected status when wsManager connects", async () => {
-      mockApiFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          data: mockGovernanceState,
-        }),
-      });
-
-      // Set wsManager to return connected state
-      mockGetState.mockReturnValue({
-        status: "connected",
-        reconnectAttempt: 0,
-        latency: 0,
-      });
-
-      // Configure onStateChange to immediately call handler with connected state
-      mockOnStateChange.mockImplementation((handler: any) => {
-        handler({
-          status: "connected",
-          reconnectAttempt: 0,
-          latency: 0,
-        });
-        return mockUnsubscribe;
-      });
-
-      render(<GovernanceHUD />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument();
-      });
-
-      // After wsManager reports connected, should show Live
-      await waitFor(() => {
-        const liveText = screen.queryByText("Live");
-        if (liveText) {
-          expect(liveText).toBeInTheDocument();
-        } else {
-          // If mock isn't working, at least verify component renders
-          expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument();
-        }
-      });
-    });
-
-    test("handles governance state updates", async () => {
-      mockApiFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          data: mockGovernanceState,
-        }),
-      });
-
-      render(<GovernanceHUD />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument();
-      });
-
-      // Verify initial workstream count
-      expect(screen.getByText("Workstreams: 1")).toBeInTheDocument();
-    });
-
-    test("component lifecycle management", async () => {
-      // Verifies that component mounts and unmounts cleanly with wsManager integration
-      mockApiFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          data: mockGovernanceState,
-        }),
-      });
-
-      const { unmount } = render(<GovernanceHUD />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument();
-      });
-
-      // Component should unmount without errors
-      unmount();
       expect(screen.queryByTestId("governance-hud-container")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("governance-hud-loading")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("governance-hud-error")).not.toBeInTheDocument();
+      expect(container.firstChild).toBeNull();
+    });
+
+    it("re-populates the HUD and clears error when a ws update delivers truthy data", async () => {
+      mockApiFetch.mockResolvedValueOnce(okResponse(makeState()));
+      render(<GovernanceHUD />);
+      await waitFor(() =>
+        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument(),
+      );
+
+      act(() => {
+        messageHandler!(
+          makeState({
+            constitution: { directive: "Ship it", vision: [], status: "active", confidence: 90 },
+          }),
+        );
+      });
+
+      await waitFor(() =>
+        expect(screen.getByTestId("stub-constitution")).toHaveTextContent("Ship it"),
+      );
+    });
+
+    it("does not update state when governance.update fires after unmount (isMountedRef guard)", async () => {
+      mockApiFetch.mockResolvedValueOnce(okResponse(makeState()));
+      const { unmount } = render(<GovernanceHUD />);
+      await waitFor(() => expect(messageHandler).not.toBeNull());
+      unmount();
+      expect(() => {
+        messageHandler!(makeState());
+      }).not.toThrow();
     });
   });
 
-  describe("WebSocket Reconnection", () => {
-    test("shows connecting status during reconnection", async () => {
-      mockApiFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          data: mockGovernanceState,
-        }),
-      });
-
+  describe("runspace.activated re-fetch", () => {
+    it("sets loading true and re-fetches, then renders the refreshed data", async () => {
+      mockApiFetch.mockResolvedValueOnce(
+        okResponse(
+          makeState({ workstreams: [{ id: "w1" }, { id: "w2" }], sentinelLog: [{ id: "s1" }] }),
+        ),
+      );
       render(<GovernanceHUD />);
+      await waitFor(() => expect(screen.getByTestId("stub-impact")).toHaveTextContent("2"));
 
-      await waitFor(() => {
-        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument();
+      let resolveSecond!: (v: any) => void;
+      mockApiFetch.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveSecond = resolve;
+          }),
+      );
+
+      act(() => {
+        runspaceHandler!();
       });
 
-      // Simulate reconnecting state
-      if (stateChangeHandler) {
-        stateChangeHandler({
-          status: "reconnecting",
-          reconnectAttempt: 1,
-          latency: 0,
-        });
-      }
+      expect(screen.getByTestId("governance-hud-loading")).toBeInTheDocument();
 
-      await waitFor(() => {
-        expect(screen.getByText("Connecting")).toBeInTheDocument();
+      await act(async () => {
+        resolveSecond(
+          okResponse(
+            makeState({
+              workstreams: [
+                { id: "w1" },
+                { id: "w2" },
+                { id: "w3" },
+                { id: "w4" },
+                { id: "w5" },
+              ],
+              sentinelLog: [{ id: "s1" }],
+            }),
+          ),
+        );
+        await Promise.resolve();
+        await Promise.resolve();
       });
+
+      await waitFor(() => expect(screen.getByTestId("stub-impact")).toHaveTextContent("5"));
     });
 
-    test("shows connecting for multiple reconnection attempts", async () => {
-      mockApiFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          data: mockGovernanceState,
-        }),
-      });
-
-      render(<GovernanceHUD />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument();
-      });
-
-      // Simulate multiple reconnection attempts
-      if (stateChangeHandler) {
-        stateChangeHandler({
-          status: "reconnecting",
-          reconnectAttempt: 2,
-          latency: 0,
-        });
-      }
-
-      await waitFor(() => {
-        expect(screen.getByText("Connecting")).toBeInTheDocument();
-      });
-
-      // Third attempt
-      if (stateChangeHandler) {
-        stateChangeHandler({
-          status: "reconnecting",
-          reconnectAttempt: 3,
-          latency: 0,
-        });
-      }
-
-      await waitFor(() => {
-        expect(screen.getByText("Connecting")).toBeInTheDocument();
-      });
-    });
-
-    test("shows fallback status after max reconnect attempts", async () => {
-      mockApiFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          data: mockGovernanceState,
-        }),
-      });
-
-      // Configure wsManager to report max reconnect attempts
-      mockGetState.mockReturnValue({
-        status: "disconnected",
-        reconnectAttempt: 5,
-        latency: 0,
-      });
-
-      mockOnStateChange.mockImplementation((handler: any) => {
-        // Call immediately with disconnected state
-        handler({
-          status: "disconnected",
-          reconnectAttempt: 0,
-          latency: 0,
-        });
-        // Then simulate reaching max attempts
-        setTimeout(() => {
-          handler({
-            status: "disconnected",
-            reconnectAttempt: 5,
-            latency: 0,
-          });
-        }, 10);
-        return mockUnsubscribe;
-      });
-
-      render(<GovernanceHUD />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument();
-      });
-
-      // Component should show Polling when max reconnect attempts reached
-      await waitFor(() => {
-        const pollingText = screen.queryByText("Polling");
-        if (pollingText) {
-          expect(pollingText).toBeInTheDocument();
-        } else {
-          // If mock isn't working, at least verify component renders
-          expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument();
-        }
-      }, { timeout: 100 });
+    it("does not re-fetch when runspace.activated fires after unmount (isMountedRef guard)", async () => {
+      mockApiFetch.mockResolvedValueOnce(okResponse(makeState()));
+      const { unmount } = render(<GovernanceHUD />);
+      await waitFor(() => expect(runspaceHandler).not.toBeNull());
+      unmount();
+      mockApiFetch.mockClear();
+      expect(() => {
+        runspaceHandler!();
+      }).not.toThrow();
+      expect(mockApiFetch).not.toHaveBeenCalled();
     });
   });
 
-  describe("Fallback Status Display", () => {
-    test("shows initial connecting status", async () => {
-      mockApiFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          success: true,
-          data: mockGovernanceState,
-        }),
-      });
-
+  describe("connectionStatus — dot color/title + label ternary chain", () => {
+    async function renderReady() {
+      mockApiFetch.mockResolvedValueOnce(okResponse(makeState()));
       render(<GovernanceHUD />);
+      await waitFor(() =>
+        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument(),
+      );
+    }
 
-      await waitFor(() => {
-        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument();
-      });
-
-      // Component should show connecting initially
+    it("defaults to the connecting (yellow) branch before any state-change event", async () => {
+      await renderReady();
+      const dot = document.querySelector('[title="Connecting..."]');
+      expect(dot).not.toBeNull();
+      expect(dot!.className).toContain("bg-yellow-500");
+      expect(dot!.className).toContain("animate-pulse");
       expect(screen.getByText("Connecting")).toBeInTheDocument();
     });
 
-    test("component displays appropriate status based on wsManager state", async () => {
-      // The refactored component relies on wsManager for all connection logic.
-      // It displays status but doesn't implement connection/polling itself.
-      mockApiFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          success: true,
-          data: mockGovernanceState,
-        }),
+    it("renders the connected (green) branch", async () => {
+      await renderReady();
+      act(() => {
+        stateHandler!({ status: "connected", reconnectAttempt: 0 });
       });
+      const dot = document.querySelector('[title="Real-time updates active"]');
+      expect(dot).not.toBeNull();
+      expect(dot!.className).toContain("bg-green-500");
+      expect(screen.getByText("Live")).toBeInTheDocument();
+    });
 
-      // Configure wsManager to report fallback state
-      mockGetState.mockReturnValue({
-        status: "disconnected",
-        reconnectAttempt: 5,
-        latency: 0,
+    it("renders the fallback (blue, polling) branch when disconnected with reconnectAttempt >= 5", async () => {
+      await renderReady();
+      act(() => {
+        stateHandler!({ status: "disconnected", reconnectAttempt: 5 });
       });
+      const dot = document.querySelector('[title="Polling mode (5s)"]');
+      expect(dot).not.toBeNull();
+      expect(dot!.className).toContain("bg-blue-500");
+      expect(screen.getByText("Polling")).toBeInTheDocument();
+    });
 
-      mockOnStateChange.mockImplementation((handler: any) => {
-        handler({
-          status: "disconnected",
-          reconnectAttempt: 5,
-          latency: 0,
-        });
-        return mockUnsubscribe;
+    it("renders the reconnecting branch as 'connecting' (yellow)", async () => {
+      await renderReady();
+      act(() => {
+        stateHandler!({ status: "reconnecting", reconnectAttempt: 2 });
       });
+      const dot = document.querySelector('[title="Connecting..."]');
+      expect(dot).not.toBeNull();
+      expect(dot!.className).toContain("bg-yellow-500");
+      expect(screen.getByText("Connecting")).toBeInTheDocument();
+    });
 
-      render(<GovernanceHUD />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument();
+    it("renders the disconnected (gray, offline) branch when reconnectAttempt is below the fallback threshold", async () => {
+      await renderReady();
+      act(() => {
+        stateHandler!({ status: "disconnected", reconnectAttempt: 2 });
       });
+      const dot = document.querySelector('[title="Disconnected"]');
+      expect(dot).not.toBeNull();
+      expect(dot!.className).toContain("bg-gray-500");
+      expect(screen.getByText("Offline")).toBeInTheDocument();
+    });
 
-      // When wsManager reports max reconnect attempts, component shows Polling
-      await waitFor(() => {
-        const pollingText = screen.queryByText("Polling");
-        if (pollingText) {
-          expect(pollingText).toBeInTheDocument();
-        } else {
-          // If mock isn't working, verify component at least renders
-          expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument();
-        }
-      });
+    it("does not update connectionStatus when onStateChange fires after unmount (isMountedRef guard)", async () => {
+      mockApiFetch.mockResolvedValueOnce(okResponse(makeState()));
+      const { unmount } = render(<GovernanceHUD />);
+      await waitFor(() =>
+        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument(),
+      );
+      unmount();
+      expect(() => {
+        stateHandler!({ status: "connected", reconnectAttempt: 0 });
+      }).not.toThrow();
     });
   });
 
-  describe("Custom className", () => {
-    test("applies custom className prop", async () => {
-      mockApiFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          data: mockGovernanceState,
-        }),
-      });
+  describe("conditional child composition", () => {
+    it("always renders ProjectContextCard, WorkerPoolMetrics, BlockingDecisionsCard, MemoryInsightsCard and AgentActivityFeed(maxEntries=15)", async () => {
+      mockApiFetch.mockResolvedValueOnce(okResponse(makeState()));
+      render(<GovernanceHUD />);
+      await waitFor(() =>
+        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument(),
+      );
+      expect(screen.getByTestId("stub-projectctx")).toBeInTheDocument();
+      expect(screen.getByTestId("stub-worker")).toBeInTheDocument();
+      expect(screen.getByTestId("stub-blocking")).toBeInTheDocument();
+      expect(screen.getByTestId("stub-memory")).toBeInTheDocument();
+      expect(screen.getByTestId("stub-agentfeed")).toHaveTextContent("15");
+    });
 
-      const { container } = render(<GovernanceHUD className="custom-class" />);
+    it("renders StrategicAdvisor, ImpactMatrix and OracleFeed when workstreams AND sentinelLog are both present", async () => {
+      mockApiFetch.mockResolvedValueOnce(
+        okResponse(
+          makeState({ workstreams: [{ id: "w1" }], sentinelLog: [{ id: "s1" }, { id: "s2" }] }),
+        ),
+      );
+      render(<GovernanceHUD />);
+      await waitFor(() =>
+        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument(),
+      );
+      expect(screen.getByTestId("stub-strategic")).toBeInTheDocument();
+      expect(screen.getByTestId("stub-impact")).toHaveTextContent("1");
+      expect(screen.getByTestId("stub-oracle")).toHaveTextContent("2");
+    });
 
-      await waitFor(() => {
-        expect(container.querySelector(".custom-class")).toBeInTheDocument();
-      });
+    it("omits StrategicAdvisor and OracleFeed but renders ImpactMatrix when only workstreams is present", async () => {
+      mockApiFetch.mockResolvedValueOnce(
+        okResponse(makeState({ workstreams: [{ id: "w1" }], sentinelLog: undefined })),
+      );
+      render(<GovernanceHUD />);
+      await waitFor(() =>
+        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument(),
+      );
+      expect(screen.queryByTestId("stub-strategic")).not.toBeInTheDocument();
+      expect(screen.getByTestId("stub-impact")).toBeInTheDocument();
+      expect(screen.queryByTestId("stub-oracle")).not.toBeInTheDocument();
+    });
+
+    it("omits StrategicAdvisor and ImpactMatrix but renders OracleFeed when only sentinelLog is present", async () => {
+      mockApiFetch.mockResolvedValueOnce(
+        okResponse(makeState({ workstreams: undefined, sentinelLog: [{ id: "s1" }] })),
+      );
+      render(<GovernanceHUD />);
+      await waitFor(() =>
+        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument(),
+      );
+      expect(screen.queryByTestId("stub-strategic")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("stub-impact")).not.toBeInTheDocument();
+      expect(screen.getByTestId("stub-oracle")).toBeInTheDocument();
+    });
+
+    it("omits StrategicAdvisor, ImpactMatrix and OracleFeed when neither workstreams nor sentinelLog is present", async () => {
+      mockApiFetch.mockResolvedValueOnce(
+        okResponse(makeState({ workstreams: undefined, sentinelLog: undefined })),
+      );
+      render(<GovernanceHUD />);
+      await waitFor(() =>
+        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument(),
+      );
+      expect(screen.queryByTestId("stub-strategic")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("stub-impact")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("stub-oracle")).not.toBeInTheDocument();
+    });
+
+    it("renders ConstitutionCard when constitution is present", async () => {
+      mockApiFetch.mockResolvedValueOnce(
+        okResponse(
+          makeState({
+            constitution: {
+              directive: "Win the market",
+              vision: ["a"],
+              status: "active",
+              confidence: 80,
+            },
+          }),
+        ),
+      );
+      render(<GovernanceHUD />);
+      await waitFor(() =>
+        expect(screen.getByTestId("stub-constitution")).toHaveTextContent("Win the market"),
+      );
+    });
+
+    it("omits ConstitutionCard when constitution is absent", async () => {
+      mockApiFetch.mockResolvedValueOnce(okResponse(makeState({ constitution: undefined })));
+      render(<GovernanceHUD />);
+      await waitFor(() =>
+        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument(),
+      );
+      expect(screen.queryByTestId("stub-constitution")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("className prop", () => {
+    it("falls back to an empty string when className is not provided", async () => {
+      mockApiFetch.mockResolvedValueOnce(okResponse(makeState()));
+      render(<GovernanceHUD />);
+      const el = await screen.findByTestId("governance-hud-container");
+      expect(el.className).not.toContain("undefined");
+      expect(el.className).not.toContain("custom-hud-class");
+      expect(el.className).toContain("rounded-xl");
+    });
+
+    it("appends a custom className when provided", async () => {
+      mockApiFetch.mockResolvedValueOnce(okResponse(makeState()));
+      render(<GovernanceHUD className="custom-hud-class" />);
+      const el = await screen.findByTestId("governance-hud-container");
+      expect(el.className).toContain("custom-hud-class");
+    });
+  });
+
+  describe("unmount cleanup", () => {
+    it("calls all three unsubscribe functions on unmount", async () => {
+      mockApiFetch.mockResolvedValueOnce(okResponse(makeState()));
+      const { unmount } = render(<GovernanceHUD />);
+      await waitFor(() =>
+        expect(screen.getByTestId("governance-hud-container")).toBeInTheDocument(),
+      );
+      unmount();
+      expect(mockUnsubMessage).toHaveBeenCalledTimes(1);
+      expect(mockUnsubRunspace).toHaveBeenCalledTimes(1);
+      expect(mockUnsubState).toHaveBeenCalledTimes(1);
     });
   });
 });

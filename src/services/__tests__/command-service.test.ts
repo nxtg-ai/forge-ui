@@ -477,4 +477,307 @@ describe("CommandService", () => {
       }
     });
   });
+
+  describe("concurrency limit", () => {
+    it("should reject command when concurrent limit reached", async () => {
+      const limitedService = new CommandService({
+        name: "LimitedService",
+        maxConcurrentCommands: 1,
+      });
+
+      const mockProcess = new EventEmitter() as any;
+      mockProcess.stdout = new EventEmitter();
+      mockProcess.stderr = new EventEmitter();
+      mockProcess.kill = vi.fn();
+      vi.mocked(spawn).mockReturnValue(mockProcess);
+
+      // Fire-and-forget: fills the single concurrency slot synchronously.
+      limitedService.execute("long-running", { stream: true });
+
+      const result = await limitedService.execute("second-command");
+
+      expect(result.isErr()).toBe(true);
+      expect(result.error?.code).toBe("COMMAND_LIMIT_EXCEEDED");
+      expect(result.error?.message).toBe(
+        "Maximum concurrent commands reached",
+      );
+    });
+
+    it("should apply default concurrency limit when maxConcurrentCommands is undefined", async () => {
+      const defaultLimitService = new CommandService({
+        name: "DefaultLimitService",
+        maxConcurrentCommands: undefined,
+      });
+      mockExecAsync.mockResolvedValue({ stdout: "ok", stderr: "" });
+
+      const result = await defaultLimitService.execute("echo hi");
+
+      expect(result.isOk()).toBe(true);
+    });
+  });
+
+  describe("synchronous spawn failure", () => {
+    it("should wrap an Error thrown synchronously by spawn as COMMAND_ERROR", async () => {
+      vi.mocked(spawn).mockImplementation(() => {
+        throw new Error("spawn ENOENT");
+      });
+
+      const result = await service.execute("bad-cmd", { stream: true });
+
+      expect(result.isErr()).toBe(true);
+      expect(result.error?.code).toBe("COMMAND_ERROR");
+      expect(result.error?.message).toBe(
+        "Command execution failed: spawn ENOENT",
+      );
+    });
+
+    it("should wrap a non-Error thrown synchronously by spawn as COMMAND_ERROR", async () => {
+      vi.mocked(spawn).mockImplementation(() => {
+        // eslint-disable-next-line @typescript-eslint/no-throw-literal
+        throw "raw spawn failure";
+      });
+
+      const result = await service.execute("bad-cmd", { stream: true });
+
+      expect(result.isErr()).toBe(true);
+      expect(result.error?.code).toBe("COMMAND_ERROR");
+      expect(result.error?.message).toBe(
+        "Command execution failed: raw spawn failure",
+      );
+    });
+  });
+
+  describe("blocking execution non-Error rejection", () => {
+    it("should default error message, exit code, and output when exec rejects a non-Error without metadata", async () => {
+      mockExecAsync.mockRejectedValue("boom");
+
+      const result = await service.execute("cmd");
+
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
+        expect(result.value.status).toBe("failed");
+        expect(result.value.error).toBe("boom");
+        expect(result.value.exitCode).toBe(-1);
+        expect(result.value.output).toEqual([]);
+      }
+    });
+  });
+
+  describe("streaming timeout race", () => {
+    it("should clear the pending timeout when the process exits normally first", async () => {
+      const mockProcess = new EventEmitter() as any;
+      mockProcess.stdout = new EventEmitter();
+      mockProcess.stderr = new EventEmitter();
+      mockProcess.kill = vi.fn();
+      vi.mocked(spawn).mockReturnValue(mockProcess);
+
+      const resultPromise = service.execute("cmd", {
+        stream: true,
+        timeout: 5000,
+      });
+
+      mockProcess.emit("exit", 0);
+
+      const result = await resultPromise;
+
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
+        expect(result.value.status).toBe("completed");
+      }
+      expect(mockProcess.kill).not.toHaveBeenCalled();
+    });
+
+    it("should clear the pending timeout when the process errors first", async () => {
+      const mockProcess = new EventEmitter() as any;
+      mockProcess.stdout = new EventEmitter();
+      mockProcess.stderr = new EventEmitter();
+      mockProcess.kill = vi.fn();
+      vi.mocked(spawn).mockReturnValue(mockProcess);
+
+      const resultPromise = service.execute("cmd", {
+        stream: true,
+        timeout: 5000,
+      });
+
+      mockProcess.emit("error", new Error("boom"));
+
+      const result = await resultPromise;
+
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
+        expect(result.value.status).toBe("failed");
+        expect(result.value.error).toBe("boom");
+      }
+    });
+  });
+
+  describe("cancel failure paths", () => {
+    it("should return CANCEL_ERROR with the underlying message when kill throws an Error", async () => {
+      const mockProcess = new EventEmitter() as any;
+      mockProcess.stdout = new EventEmitter();
+      mockProcess.stderr = new EventEmitter();
+      mockProcess.kill = vi.fn(() => {
+        throw new Error("kill failed");
+      });
+      vi.mocked(spawn).mockReturnValue(mockProcess);
+
+      service.execute("long-running", { stream: true });
+      const [active] = service.getActiveCommands();
+
+      const cancelResult = await service.cancel(active.commandId);
+
+      expect(cancelResult.isErr()).toBe(true);
+      expect(cancelResult.error?.code).toBe("CANCEL_ERROR");
+      expect(cancelResult.error?.message).toBe(
+        "Failed to cancel command: kill failed",
+      );
+    });
+
+    it("should return CANCEL_ERROR with a stringified message when kill throws a non-Error", async () => {
+      const mockProcess = new EventEmitter() as any;
+      mockProcess.stdout = new EventEmitter();
+      mockProcess.stderr = new EventEmitter();
+      mockProcess.kill = vi.fn(() => {
+        // eslint-disable-next-line @typescript-eslint/no-throw-literal
+        throw "kill boom";
+      });
+      vi.mocked(spawn).mockReturnValue(mockProcess);
+
+      service.execute("long-running", { stream: true });
+      const [active] = service.getActiveCommands();
+
+      const cancelResult = await service.cancel(active.commandId);
+
+      expect(cancelResult.isErr()).toBe(true);
+      expect(cancelResult.error?.code).toBe("CANCEL_ERROR");
+      expect(cancelResult.error?.message).toBe(
+        "Failed to cancel command: kill boom",
+      );
+    });
+  });
+
+  describe("streamOutput", () => {
+    it("should invoke the callback only for matching commandId and stop after unsubscribe", async () => {
+      const mockProcess = new EventEmitter() as any;
+      mockProcess.stdout = new EventEmitter();
+      mockProcess.stderr = new EventEmitter();
+      mockProcess.kill = vi.fn();
+      vi.mocked(spawn).mockReturnValue(mockProcess);
+
+      const resultPromise = service.execute("cmd", { stream: true });
+      const [active] = service.getActiveCommands();
+      const commandId = active.commandId;
+
+      const callback = vi.fn();
+      const unsubscribe = service.streamOutput(commandId, callback);
+
+      // Event for a different commandId must be filtered out.
+      service.emit("commandStream", {
+        commandId: "other-command-id",
+        type: "stdout",
+        data: "ignored",
+        timestamp: new Date(),
+      });
+      expect(callback).not.toHaveBeenCalled();
+
+      // Event for the matching commandId must invoke the callback.
+      mockProcess.stdout.emit("data", Buffer.from("hello\n"));
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({
+          commandId,
+          type: "stdout",
+          data: "hello",
+        }),
+      );
+
+      // After unsubscribe, no further callback invocations.
+      unsubscribe();
+      mockProcess.stdout.emit("data", Buffer.from("world\n"));
+      expect(callback).toHaveBeenCalledTimes(1);
+
+      mockProcess.emit("exit", 0);
+      await resultPromise;
+    });
+  });
+
+  describe("output buffer trimming", () => {
+    it("should shift the oldest line once the buffer exceeds outputBufferSize", async () => {
+      const smallBufferService = new CommandService({
+        name: "SmallBufferService",
+        outputBufferSize: 2,
+      });
+
+      const mockProcess = new EventEmitter() as any;
+      mockProcess.stdout = new EventEmitter();
+      mockProcess.stderr = new EventEmitter();
+      mockProcess.kill = vi.fn();
+      vi.mocked(spawn).mockReturnValue(mockProcess);
+
+      const resultPromise = smallBufferService.execute("cmd", {
+        stream: true,
+      });
+
+      mockProcess.stdout.emit("data", Buffer.from("line1\nline2\nline3\n"));
+      mockProcess.emit("exit", 0);
+
+      const result = await resultPromise;
+
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
+        expect(result.value.output).toEqual(["line2", "line3"]);
+      }
+    });
+
+    it("should apply the default output buffer size when outputBufferSize is undefined", async () => {
+      const defaultBufferService = new CommandService({
+        name: "DefaultBufferService",
+        outputBufferSize: undefined,
+      });
+
+      const mockProcess = new EventEmitter() as any;
+      mockProcess.stdout = new EventEmitter();
+      mockProcess.stderr = new EventEmitter();
+      mockProcess.kill = vi.fn();
+      vi.mocked(spawn).mockReturnValue(mockProcess);
+
+      const resultPromise = defaultBufferService.execute("cmd", {
+        stream: true,
+      });
+
+      mockProcess.stdout.emit("data", Buffer.from("only-line\n"));
+      mockProcess.emit("exit", 0);
+
+      const result = await resultPromise;
+
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
+        expect(result.value.output).toEqual(["only-line"]);
+      }
+    });
+  });
+
+  describe("disposal of active commands", () => {
+    it("should kill active processes and mark their results cancelled", async () => {
+      const mockProcess = new EventEmitter() as any;
+      mockProcess.stdout = new EventEmitter();
+      mockProcess.stderr = new EventEmitter();
+      mockProcess.kill = vi.fn();
+      vi.mocked(spawn).mockReturnValue(mockProcess);
+
+      service.execute("long-running", { stream: true });
+
+      const [active] = service.getActiveCommands();
+      const captured = service.getResult(active.commandId);
+      expect(captured.isOk()).toBe(true);
+
+      await service.dispose();
+
+      expect(mockProcess.kill).toHaveBeenCalledWith("SIGTERM");
+      if (captured.isOk()) {
+        expect(captured.value.status).toBe("cancelled");
+        expect(captured.value.endTime).toBeInstanceOf(Date);
+      }
+    });
+  });
 });

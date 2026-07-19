@@ -28,9 +28,12 @@ describe("Type Safety Validation", () => {
         const lines = content.split("\n");
 
         lines.forEach((line, index) => {
-          // Check for explicit 'any' type (excluding comments and 'any[]')
+          // Detects `: any`, `as any`, and `<any>`. The original checked only
+          // `: any`, so `as any` and `<any>` escaped the gate entirely — a
+          // 0-violation result against a partial detector would be nominal,
+          // not real. All three forms measure 0 in src/core today.
           if (
-            /:\s*any\b/.test(line) &&
+            /(:\s*any\b|\bas\s+any\b|<any>)/.test(line) &&
             !line.trim().startsWith("//") &&
             !line.trim().startsWith("*")
           ) {
@@ -51,10 +54,12 @@ describe("Type Safety Validation", () => {
         });
       }
 
-      // TODO: Target is 0 violations. Current threshold allows legacy any types.
-      // Track progress: any count should decrease over time.
-      const MAX_ALLOWED_CORE_ANY = 50; // Temporary threshold for launch
-      expect(violations.length).toBeLessThan(MAX_ALLOWED_CORE_ANY);
+      // Target reached: src/core is `any`-free. The legacy allowance (50) was
+      // measured at 0 actual and is therefore RETIRED, not merely lowered —
+      // an unused allowance is a gate that cannot fail.
+      // DIRECTIVE-NXTG-20260718-08 item 2.
+      const MAX_ALLOWED_CORE_ANY = 0;
+      expect(violations.length).toBe(MAX_ALLOWED_CORE_ANY);
       console.log(`Core files any count: ${violations.length}/${MAX_ALLOWED_CORE_ANY} (threshold)`);
     });
 
@@ -70,10 +75,14 @@ describe("Type Safety Validation", () => {
         const lines = content.split("\n");
 
         lines.forEach((line, index) => {
+          // Same broadened detector as the core check. The previous
+          // `Record<string, any>` carve-out was an open loophole — any `any`
+          // could be laundered through it. It measures 0 today, so the
+          // exemption is removed rather than preserved.
           if (
-            /:\s*any\b/.test(line) &&
-            !line.includes("//") &&
-            !line.includes("Record<string, any>")
+            /(:\s*any\b|\bas\s+any\b|<any>)/.test(line) &&
+            !line.trim().startsWith("//") &&
+            !line.trim().startsWith("*")
           ) {
             violations.push({
               file,
@@ -90,9 +99,10 @@ describe("Type Safety Validation", () => {
         });
       }
 
-      // TODO: Target is 0 violations. Current threshold allows legacy any types.
-      const MAX_ALLOWED_COMPONENT_ANY = 10; // Temporary threshold for launch
-      expect(violations.length).toBeLessThan(MAX_ALLOWED_COMPONENT_ANY);
+      // Target reached: src/components is `any`-free. Allowance (10) measured
+      // at 0 actual → retired. DIRECTIVE-NXTG-20260718-08 item 2.
+      const MAX_ALLOWED_COMPONENT_ANY = 0;
+      expect(violations.length).toBe(MAX_ALLOWED_COMPONENT_ANY);
       console.log(`Component files any count: ${violations.length}/${MAX_ALLOWED_COMPONENT_ANY} (threshold)`);
     });
   });
@@ -290,8 +300,11 @@ describe("Type Safety Validation", () => {
         }
       }
 
-      // Should have minimal type assertions (< 50 in all core files)
-      expect(assertionCount).toBeLessThan(50);
+      // Ratcheted from <50 to the measured actual (46). This is a ratchet, not
+      // a budget: it may only ever move DOWN. If a change legitimately needs a
+      // new assertion, remove one elsewhere or justify raising this line in
+      // review. DIRECTIVE-NXTG-20260718-08 item 2.
+      expect(assertionCount).toBeLessThanOrEqual(46);
 
       console.log(`Type assertions in core files: ${assertionCount}`);
     });

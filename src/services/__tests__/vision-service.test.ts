@@ -757,6 +757,284 @@ vision:
     });
   });
 
+  describe("updateVision branch coverage — no prior vision data", () => {
+    it("should build new vision from update fields when none are omitted", async () => {
+      const freshService = new VisionService({
+        name: "FreshFieldsService",
+        autoSave: false,
+        validateOnSave: false,
+      });
+
+      const update: Partial<VisionData> = {
+        mission: "Fresh mission",
+        goals: ["Fresh goal"],
+        constraints: ["Fresh constraint"],
+        successMetrics: ["Fresh metric"],
+        timeframe: "1 month",
+        engagementMode: "engineer",
+      };
+
+      const result = await freshService.updateVision(update);
+
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
+        expect(result.value.mission).toBe("Fresh mission");
+        expect(result.value.goals).toEqual(["Fresh goal"]);
+        expect(result.value.constraints).toEqual(["Fresh constraint"]);
+        expect(result.value.successMetrics).toEqual(["Fresh metric"]);
+        expect(result.value.timeframe).toBe("1 month");
+        expect(result.value.engagementMode).toBe("engineer");
+        expect(result.value.version).toBe(1);
+      }
+
+      // canonicalVision was never set on this fresh instance, so the
+      // "update canonical vision" branch must take its false path.
+      const canonical = freshService.getCanonicalVision();
+      expect(canonical.isErr()).toBe(true);
+      if (canonical.isErr()) {
+        expect(canonical.error.code).toBe("NO_CANONICAL_VISION");
+      }
+    });
+
+    it("should fall back to empty/default values when update fields are omitted", async () => {
+      const freshService = new VisionService({
+        name: "FreshDefaultsService",
+        autoSave: false,
+        validateOnSave: false,
+      });
+
+      const result = await freshService.updateVision({});
+
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
+        expect(result.value.mission).toBe("");
+        expect(result.value.goals).toEqual([]);
+        expect(result.value.constraints).toEqual([]);
+        expect(result.value.successMetrics).toEqual([]);
+        expect(result.value.timeframe).toBe("");
+        expect(result.value.engagementMode).toBeUndefined();
+        expect(result.value.version).toBe(1);
+      }
+    });
+  });
+
+  describe("updateVision branch coverage — thrown listener errors", () => {
+    it("should wrap an Error thrown from a visionUpdate listener", async () => {
+      service.on("visionUpdate", () => {
+        throw new Error("listener boom");
+      });
+
+      const result = await service.updateVision({ timeframe: "9 months" });
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error.code).toBe("UPDATE_ERROR");
+        expect(result.error.message).toBe(
+          "Failed to update vision: listener boom",
+        );
+      }
+    });
+
+    it("should wrap a non-Error thrown from a visionUpdate listener", async () => {
+      service.on("visionUpdate", () => {
+        // eslint-disable-next-line @typescript-eslint/no-throw-literal
+        throw "listener boom string";
+      });
+
+      const result = await service.updateVision({ timeframe: "9 months" });
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error.code).toBe("UPDATE_ERROR");
+        expect(result.error.message).toBe(
+          "Failed to update vision: listener boom string",
+        );
+      }
+    });
+  });
+
+  describe("saveVision branch coverage — non-Error rejection", () => {
+    it("should stringify a non-Error rejection from writeFile", async () => {
+      vi.spyOn(fs, "writeFile").mockRejectedValue("disk full string");
+
+      const visionResult = service.getVision();
+      expect(visionResult.isOk()).toBe(true);
+
+      if (visionResult.isOk()) {
+        const result = await service.saveVision(visionResult.value);
+
+        expect(result.isErr()).toBe(true);
+        if (result.isErr()) {
+          expect(result.error.code).toBe("SAVE_ERROR");
+          expect(result.error.message).toBe(
+            "Failed to save vision: disk full string",
+          );
+        }
+      }
+    });
+  });
+
+  describe("loadCanonicalVision branch coverage — read failures", () => {
+    it("should wrap an Error thrown while reading the vision file", async () => {
+      vi.spyOn(fs, "access").mockResolvedValue(undefined);
+      vi.spyOn(fs, "readFile").mockRejectedValue(new Error("read boom"));
+
+      const result = await service.loadCanonicalVision();
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error.code).toBe("LOAD_ERROR");
+        expect(result.error.message).toBe("Failed to load vision: read boom");
+      }
+    });
+
+    it("should stringify a non-Error rejection while reading the vision file", async () => {
+      vi.spyOn(fs, "access").mockResolvedValue(undefined);
+      vi.spyOn(fs, "readFile").mockRejectedValue("read boom string");
+
+      const result = await service.loadCanonicalVision();
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error.code).toBe("LOAD_ERROR");
+        expect(result.error.message).toBe(
+          "Failed to load vision: read boom string",
+        );
+      }
+    });
+  });
+
+  describe("captureVision branch coverage — non-Error rejection", () => {
+    it("should stringify a non-Error rejection from mkdir", async () => {
+      vi.spyOn(fs, "mkdir").mockRejectedValue("mkdir boom string");
+
+      const visionResult = service.getVision();
+      expect(visionResult.isOk()).toBe(true);
+
+      if (visionResult.isOk()) {
+        const captureData: VisionCaptureData = {
+          capturedAt: new Date(),
+          capturedBy: "test",
+          engagementMode: "builder",
+          vision: visionResult.value,
+        };
+
+        const result = await service.captureVision(captureData);
+
+        expect(result.isErr()).toBe(true);
+        if (result.isErr()) {
+          expect(result.error.code).toBe("CAPTURE_ERROR");
+          expect(result.error.message).toBe(
+            "Failed to capture vision: mkdir boom string",
+          );
+        }
+      }
+    });
+  });
+
+  describe("loadVisionCaptures branch coverage — readdir failures", () => {
+    it("should wrap an Error thrown while reading the captures directory", async () => {
+      vi.spyOn(fs, "access").mockResolvedValue(undefined);
+      vi.spyOn(fs, "readdir").mockRejectedValue(new Error("readdir boom"));
+
+      const result = await service.loadVisionCaptures();
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error.code).toBe("LOAD_CAPTURES_ERROR");
+        expect(result.error.message).toBe(
+          "Failed to load captures: readdir boom",
+        );
+      }
+    });
+
+    it("should stringify a non-Error rejection while reading the captures directory", async () => {
+      vi.spyOn(fs, "access").mockResolvedValue(undefined);
+      vi.spyOn(fs, "readdir").mockRejectedValue("readdir boom string");
+
+      const result = await service.loadVisionCaptures();
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error.code).toBe("LOAD_CAPTURES_ERROR");
+        expect(result.error.message).toBe(
+          "Failed to load captures: readdir boom string",
+        );
+      }
+    });
+  });
+
+  describe("checkAlignment branch coverage", () => {
+    it("should score zero when the vision text yields no extractable keywords", async () => {
+      await service.updateVision({
+        mission: "",
+        goals: [],
+        constraints: [],
+      });
+
+      const result = service.checkAlignment("anything at all");
+
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
+        expect(result.value.score).toBe(0);
+        expect(result.value.aligned).toBe(false);
+      }
+    });
+
+    it("should mark a decision aligned with no suggestions when score exceeds threshold and no violations exist", async () => {
+      await service.updateVision({
+        mission: "Build secure software",
+        goals: ["Security first", "Fast development"],
+        constraints: ["Must use TypeScript"],
+      });
+
+      const result = service.checkAlignment(
+        "Build secure software with security first and fast development",
+      );
+
+      expect(result.isOk()).toBe(true);
+      if (result.isOk()) {
+        expect(result.value.score).toBeGreaterThan(0.3);
+        expect(result.value.violations).toBeUndefined();
+        expect(result.value.aligned).toBe(true);
+        expect(result.value.suggestions).toBeUndefined();
+      }
+    });
+
+    it("should wrap an Error thrown from an alignmentChecked listener", () => {
+      service.on("alignmentChecked", () => {
+        throw new Error("alignment boom");
+      });
+
+      const result = service.checkAlignment("Test decision");
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error.code).toBe("ALIGNMENT_ERROR");
+        expect(result.error.message).toBe(
+          "Alignment check failed: alignment boom",
+        );
+      }
+    });
+
+    it("should wrap a non-Error thrown from an alignmentChecked listener", () => {
+      service.on("alignmentChecked", () => {
+        // eslint-disable-next-line @typescript-eslint/no-throw-literal
+        throw "alignment boom string";
+      });
+
+      const result = service.checkAlignment("Test decision");
+
+      expect(result.isErr()).toBe(true);
+      if (result.isErr()) {
+        expect(result.error.code).toBe("ALIGNMENT_ERROR");
+        expect(result.error.message).toBe(
+          "Alignment check failed: alignment boom string",
+        );
+      }
+    });
+  });
+
   describe("edge cases", () => {
     it("should handle vision with Goal objects instead of strings", async () => {
       const visionWithGoalObjects: VisionData = {

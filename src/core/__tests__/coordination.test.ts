@@ -9,8 +9,52 @@ import { AgentCoordinationProtocol, MessagePriority, CoordinationStatus } from "
 import { Agent, Message, MessageType, Artifact, AgentResponse } from "../../types/agents";
 import { Task, TaskStatus } from "../../types/state";
 import { approvalQueue } from "../../services/approval-queue";
-import { ApprovalStatus } from "../../types/approval";
+import { ApprovalStatus, ApproverRole, ApprovalRequest } from "../../types/approval";
 import * as crypto from "crypto";
+
+// Structural shape of the private QueueEntry used internally by the protocol.
+// Not exported by the source module, so we mirror its shape here for
+// whitebox tests that need to reach into private state deliberately.
+interface QueueEntryShape {
+  message: Message;
+  priority: number;
+  timestamp: Date;
+  retries: number;
+}
+
+// Typed view of the protocol's private members, used ONLY for whitebox
+// tests that exercise defensive branches unreachable via the public API
+// (e.g. race-condition fallbacks). Avoids `any` per project convention.
+interface ProtocolInternals {
+  messageQueue: Map<string, QueueEntryShape[]>;
+  approvalRequestIds: Map<string, string>;
+  mapAgentToApproverRole(agentId: string): ApproverRole | undefined;
+  getSignOffResult(artifactId: string): unknown;
+  retryMessage(message: Message): void;
+  processMessageQueues(): Promise<void>;
+}
+
+const asInternals = (protocol: AgentCoordinationProtocol): ProtocolInternals =>
+  protocol as unknown as ProtocolInternals;
+
+const baseApprovalRequest = (
+  overrides: Partial<ApprovalRequest>,
+): ApprovalRequest => ({
+  id: "approval-base",
+  timestamp: new Date(),
+  context: {
+    taskId: "task-1",
+    agentId: "orchestrator",
+    action: "test",
+    rationale: "test",
+    filesAffected: [],
+  },
+  impact: "medium" as const,
+  risk: "medium" as const,
+  status: ApprovalStatus.PENDING,
+  timeoutMinutes: 5,
+  ...overrides,
+});
 
 // Mock approval queue service
 vi.mock("../../services/approval-queue", () => ({
@@ -884,6 +928,349 @@ describe("AgentCoordinationProtocol", () => {
       await expect(
         protocol.sendMessage("payload-agent", message)
       ).resolves.not.toThrow();
+    });
+  });
+
+  describe("Lifecycle - destroy() branch coverage", () => {
+    it("should no-op safely when destroy is called after the processor already stopped", () => {
+      protocol.destroy();
+      // Second call: processorInterval is already null, exercises the
+      // false branch of `if (this.processorInterval)`.
+      expect(() => protocol.destroy()).not.toThrow();
+    });
+  });
+
+  describe("Message processor defensive branch", () => {
+    it("should not deliver when the queue holds a falsy entry despite a positive length check", async () => {
+      const handler = vi.fn();
+      protocol.registerAgent(createTestAgent("falsy-agent"), handler);
+
+      // Directly seed the private queue with a falsy element (never
+      // reachable via the public API, where every pushed entry is a real
+      // object). This exercises the defensive `if (entry)` false branch
+      // inside processMessageQueues without global monkey-patching.
+      asInternals(protocol).messageQueue.set(
+        "falsy-agent",
+        [undefined as unknown as QueueEntryShape],
+      );
+
+      await asInternals(protocol).processMessageQueues();
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("sendMessage / retryMessage defensive queue fallback", () => {
+    it("should fall back to an empty queue when the internal map entry is missing on send", async () => {
+      const agent = createTestAgent("orphan-agent");
+      protocol.registerAgent(agent);
+
+      // Simulate a defensive race: registry still knows the agent, but its
+      // queue map entry has vanished, exercising the `|| []` fallback in
+      // sendMessage.
+      asInternals(protocol).messageQueue.delete("orphan-agent");
+
+      const message = createTestMessage("sender", "orphan-agent");
+      await protocol.sendMessage("orphan-agent", message);
+
+      const stats = protocol.getQueueStats();
+      expect(stats.byAgent["orphan-agent"]).toBe(1);
+    });
+
+    it("should emit messageFailed when retrying a message for an agent with no queue entry", () => {
+      const failed: Message[] = [];
+      protocol.on("messageFailed", (msg: Message) => failed.push(msg));
+
+      const message = createTestMessage("sender", "ghost-agent");
+      // messageQueue.get("ghost-agent") is undefined (never registered),
+      // exercising the `|| []` fallback, and the subsequent find() returns
+      // undefined, exercising the false side of `if (entry && ...)`.
+      asInternals(protocol).retryMessage(message);
+
+      expect(failed).toHaveLength(1);
+      expect(failed[0].id).toBe(message.id);
+    });
+
+    it("should increment retries when a matching queue entry exists and is below the max", () => {
+      protocol.registerAgent(createTestAgent("retry-target"));
+      const message = createTestMessage("sender", "retry-target");
+
+      // Manually seed a matching queue entry to exercise the true branch of
+      // `if (entry && entry.retries < 3)` — in real traffic the entry is
+      // already shifted out by the time retryMessage runs.
+      asInternals(protocol).messageQueue.set("retry-target", [
+        { message, priority: MessagePriority.NORMAL, timestamp: new Date(), retries: 0 },
+      ]);
+
+      asInternals(protocol).retryMessage(message);
+
+      const updatedQueue = asInternals(protocol).messageQueue.get("retry-target");
+      expect(updatedQueue?.[0].retries).toBe(1);
+    });
+  });
+
+  describe("requestSignOff artifact fallback", () => {
+    beforeEach(() => {
+      protocol.registerAgent(createTestAgent("architect"));
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("should default filesAffected to an empty array when artifact.files is absent", async () => {
+      const artifact: Artifact = {
+        id: "no-files-artifact",
+        type: "code",
+        path: "/test/no-files",
+        checksum: "abc123",
+        createdBy: "test-agent",
+        createdAt: new Date(),
+        signOffs: [],
+        // files intentionally omitted
+      };
+
+      vi.mocked(approvalQueue.requestApproval).mockImplementation((context) => {
+        expect(context.filesAffected).toEqual([]);
+        return Promise.resolve(
+          baseApprovalRequest({ id: "approval-no-files", status: ApprovalStatus.PENDING }),
+        );
+      });
+
+      vi.mocked(approvalQueue.getRequest).mockReturnValue(
+        baseApprovalRequest({
+          id: "approval-no-files",
+          status: ApprovalStatus.APPROVED,
+          approver: ApproverRole.ARCHITECT,
+          approvedAt: new Date(),
+          feedback: "Approved",
+        }),
+      );
+
+      const signOffPromise = protocol.requestSignOff("architect", artifact);
+      vi.advanceTimersByTime(1000);
+      const result = await signOffPromise;
+
+      expect(result.approved).toBe(true);
+      expect(approvalQueue.requestApproval).toHaveBeenCalled();
+    });
+  });
+
+  describe("mapAgentToApproverRole", () => {
+    it("should map an architect agent id to ARCHITECT", () => {
+      expect(asInternals(protocol).mapAgentToApproverRole("lead-architect")).toBe(
+        ApproverRole.ARCHITECT,
+      );
+    });
+
+    it("should map a designer agent id to DESIGNER", () => {
+      expect(asInternals(protocol).mapAgentToApproverRole("ui-designer")).toBe(
+        ApproverRole.DESIGNER,
+      );
+    });
+
+    it("should map a vanguard agent id to DESIGNER", () => {
+      expect(asInternals(protocol).mapAgentToApproverRole("design-vanguard")).toBe(
+        ApproverRole.DESIGNER,
+      );
+    });
+
+    it("should map a ceo agent id to CEO", () => {
+      expect(asInternals(protocol).mapAgentToApproverRole("ceo-agent")).toBe(
+        ApproverRole.CEO,
+      );
+    });
+
+    it("should map a CEO-LOOP agent id to CEO", () => {
+      expect(asInternals(protocol).mapAgentToApproverRole("CEO-LOOP-1")).toBe(
+        ApproverRole.CEO,
+      );
+    });
+
+    it("should return undefined for an agent id matching no known role", () => {
+      expect(
+        asInternals(protocol).mapAgentToApproverRole("executor-1"),
+      ).toBeUndefined();
+    });
+  });
+
+  describe("getSignOffResult branch coverage (direct whitebox access)", () => {
+    it("should return null when no approval request id was ever tracked", () => {
+      const result = asInternals(protocol).getSignOffResult("never-requested");
+      expect(result).toBeNull();
+    });
+
+    it("should return null when the tracked approval request cannot be found in the queue", () => {
+      asInternals(protocol).approvalRequestIds.set("art-missing-request", "req-missing");
+      vi.mocked(approvalQueue.getRequest).mockReturnValue(undefined);
+
+      const result = asInternals(protocol).getSignOffResult("art-missing-request");
+      expect(result).toBeNull();
+    });
+
+    it("should return null while the approval request is still PENDING", () => {
+      asInternals(protocol).approvalRequestIds.set("art-pending", "req-pending");
+      vi.mocked(approvalQueue.getRequest).mockReturnValue(
+        baseApprovalRequest({ id: "req-pending", status: ApprovalStatus.PENDING }),
+      );
+
+      const result = asInternals(protocol).getSignOffResult("art-pending");
+      expect(result).toBeNull();
+    });
+
+    it("should default reviewer/timestamp when an APPROVED request lacks approver/approvedAt", () => {
+      asInternals(protocol).approvalRequestIds.set("art-approved-fallback", "req-approved-fallback");
+      vi.mocked(approvalQueue.getRequest).mockReturnValue(
+        baseApprovalRequest({ id: "req-approved-fallback", status: ApprovalStatus.APPROVED }),
+      );
+
+      const result = asInternals(protocol).getSignOffResult("art-approved-fallback") as {
+        approved: boolean;
+        reviewer: string;
+        timestamp: Date;
+        comments: string;
+      };
+
+      expect(result.approved).toBe(true);
+      expect(result.reviewer).toBe("unknown");
+      expect(result.timestamp).toBeInstanceOf(Date);
+      expect(result.comments).toBe("Approved");
+    });
+
+    it("should default reviewer/comments when a REJECTED request lacks approver/feedback", () => {
+      asInternals(protocol).approvalRequestIds.set("art-rejected-fallback", "req-rejected-fallback");
+      vi.mocked(approvalQueue.getRequest).mockReturnValue(
+        baseApprovalRequest({ id: "req-rejected-fallback", status: ApprovalStatus.REJECTED }),
+      );
+
+      const result = asInternals(protocol).getSignOffResult("art-rejected-fallback") as {
+        approved: boolean;
+        reviewer: string;
+        comments: string;
+      };
+
+      expect(result.approved).toBe(false);
+      expect(result.reviewer).toBe("unknown");
+      expect(result.comments).toBe("Rejected");
+    });
+
+    it("should return a cancelled result (falling past the TIMEOUT check) when status is CANCELLED", () => {
+      asInternals(protocol).approvalRequestIds.set("art-cancelled", "req-cancelled");
+      vi.mocked(approvalQueue.getRequest).mockReturnValue(
+        baseApprovalRequest({ id: "req-cancelled", status: ApprovalStatus.CANCELLED }),
+      );
+
+      const result = asInternals(protocol).getSignOffResult("art-cancelled") as {
+        approved: boolean;
+        reviewer: string;
+        comments: string;
+      };
+
+      expect(result.approved).toBe(false);
+      expect(result.reviewer).toBe("system");
+      expect(result.comments).toBe("Request was cancelled");
+    });
+
+    it("should return null for a status value matching none of the recognized outcomes", () => {
+      asInternals(protocol).approvalRequestIds.set("art-unrecognized", "req-unrecognized");
+      vi.mocked(approvalQueue.getRequest).mockReturnValue(
+        baseApprovalRequest({
+          id: "req-unrecognized",
+          status: "unrecognized_status" as ApprovalStatus,
+        }),
+      );
+
+      const result = asInternals(protocol).getSignOffResult("art-unrecognized");
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("waitForSignOff polling branch", () => {
+    beforeEach(() => {
+      protocol.registerAgent(createTestAgent("architect"));
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("should poll again when the first check finds no result yet, then resolve once approved", async () => {
+      const artifact = createTestArtifact("poll-artifact");
+
+      vi.mocked(approvalQueue.requestApproval).mockResolvedValue(
+        baseApprovalRequest({ id: "approval-poll", status: ApprovalStatus.PENDING }),
+      );
+
+      // First getRequest call (the synchronous initial check) finds the
+      // request still PENDING -> getSignOffResult returns null -> the
+      // `else` branch of `if (signOff)` schedules a retry via setTimeout.
+      // The second call (after the timer fires) reports APPROVED.
+      vi.mocked(approvalQueue.getRequest)
+        .mockReturnValueOnce(
+          baseApprovalRequest({ id: "approval-poll", status: ApprovalStatus.PENDING }),
+        )
+        .mockReturnValue(
+          baseApprovalRequest({
+            id: "approval-poll",
+            status: ApprovalStatus.APPROVED,
+            approver: ApproverRole.ARCHITECT,
+            approvedAt: new Date(),
+            feedback: "Approved",
+          }),
+        );
+
+      const signOffPromise = protocol.requestSignOff("architect", artifact);
+
+      // First tick: still PENDING, schedules another check in 1000ms.
+      await vi.advanceTimersByTimeAsync(1000);
+      // Second tick: now APPROVED, resolves.
+      await vi.advanceTimersByTimeAsync(1000);
+
+      const result = await signOffPromise;
+      expect(result.approved).toBe(true);
+      expect(approvalQueue.getRequest).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("handleMessageResponse replyTo branch", () => {
+    it("should emit responseReceived carrying the originalId when the message has replyTo set", async () => {
+      const handler = vi.fn().mockResolvedValue({ success: true, duration: 5 });
+      protocol.registerAgent(createTestAgent("reply-agent"), handler);
+
+      const responses: Array<{ originalId: string; response: AgentResponse }> = [];
+      protocol.on("responseReceived", (payload: { originalId: string; response: AgentResponse }) => {
+        responses.push(payload);
+      });
+
+      const message: Message = {
+        ...createTestMessage("sender", "reply-agent"),
+        replyTo: "original-msg-id",
+      };
+      await protocol.sendMessage("reply-agent", message);
+
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      expect(responses).toHaveLength(1);
+      expect(responses[0].originalId).toBe("original-msg-id");
+      expect(responses[0].response.success).toBe(true);
+    });
+
+    it("should not emit responseReceived when the message has no replyTo", async () => {
+      const handler = vi.fn().mockResolvedValue({ success: true, duration: 5 });
+      protocol.registerAgent(createTestAgent("no-reply-agent"), handler);
+
+      const responses: unknown[] = [];
+      protocol.on("responseReceived", (payload) => responses.push(payload));
+
+      const message = createTestMessage("sender", "no-reply-agent");
+      await protocol.sendMessage("no-reply-agent", message);
+
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      expect(responses).toHaveLength(0);
+      expect(handler).toHaveBeenCalled();
     });
   });
 });
