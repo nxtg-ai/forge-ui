@@ -26,7 +26,7 @@ import path from "node:path";
 // The global test setup mocks `fs`; this test touches the real filesystem
 // (temp fixture dirs the spawned server must actually read).
 vi.unmock("fs");
-const { mkdtempSync, writeFileSync, mkdirSync, rmSync, existsSync } =
+const { mkdtempSync, writeFileSync, mkdirSync, rmSync, existsSync, readFileSync, renameSync } =
   await vi.importActual<typeof import("node:fs")>("node:fs");
 
 const REPO_ROOT = path.resolve(__dirname, "../../..");
@@ -81,16 +81,33 @@ function writeLegacyFixture(dir: string) {
   );
 }
 
-/** Run the server until `predicate` sees enough output, then kill it. */
+/**
+ * Run the server until `predicate` is satisfied, then kill it.
+ *
+ * `afterReady` runs once `readyMarker` appears and is followed by `settleMs`
+ * of extra capture — that window is what proves the watchers are still LIVE
+ * after startup, rather than merely attached at startup.
+ */
 function runServer(
   cwd: string,
   port: number,
   predicate: (log: string) => boolean,
   timeoutMs: number,
-): Promise<string> {
+  opts: {
+    readyMarker?: string;
+    afterReady?: () => void | Promise<void>;
+    settleMs?: number;
+  } = {},
+): Promise<{ log: string; logAtWrite: string }> {
   return new Promise((resolve) => {
     let log = "";
     let done = false;
+    let readyFired = false;
+    // Snapshot of the log taken the instant BEFORE the test's writes.
+    // Baselining on the "initialized" marker instead would be wrong: the
+    // startup sentinel's own broadcast arrives AFTER that line, so it would be
+    // miscounted as one of the post-write broadcasts and mask a dead watcher.
+    let logAtWrite = "";
 
     const child: ChildProcess = spawn(
       "npx",
@@ -118,12 +135,31 @@ function runServer(
       } catch {
         /* already gone */
       }
-      resolve(log);
+      resolve({ log, logAtWrite });
     };
 
     const onData = (chunk: Buffer) => {
       log += chunk.toString();
-      if (predicate(log)) finish();
+
+      // Startup complete: perform the mutations, then keep capturing so the
+      // resulting broadcasts land in `log` before we tear the server down.
+      if (
+        !readyFired &&
+        opts.readyMarker &&
+        opts.afterReady &&
+        log.includes(opts.readyMarker)
+      ) {
+        readyFired = true;
+        setTimeout(async () => {
+          logAtWrite = log;
+          await opts.afterReady!();
+          setTimeout(finish, opts.settleMs ?? 2_000);
+        }, 500);
+        return;
+      }
+
+      // When an afterReady phase is configured, only IT decides when to stop.
+      if (!opts.afterReady && predicate(log)) finish();
     };
     child.stdout?.on("data", onData);
     child.stderr?.on("data", onData);
@@ -150,7 +186,7 @@ describe("governance watchers — legacy single-file startup", () => {
       false,
     );
 
-    const log = await runServer(
+    const { log } = await runServer(
       projectDir,
       5197,
       (l) =>
@@ -172,8 +208,117 @@ describe("governance watchers — legacy single-file startup", () => {
     );
   }, 60_000);
 
+  /**
+   * Codex re-gate 3, [P1]. Attaching the watchers is not the same as KEEPING
+   * them. Both state files are written atomically (temp file + rename), which
+   * replaces the inode — and `fs.watch(file)` stays bound to the OLD inode, so
+   * a file-based watcher goes deaf after the very first write. Our own
+   * atomic-write correctness was what killed it.
+   *
+   * The earlier version of this suite could not see that: it stopped as soon
+   * as the "watcher active" strings appeared, before the startup sentinel's
+   * rename ever proved continued liveness.
+   */
+  const productionWrite = (target: string, mutate: (o: any) => any) => {
+    const current = JSON.parse(readFileSync(target, "utf-8"));
+    const tmp = `${target}.tmp`;
+    // Exactly how the server writes: stage to .tmp, then rename over target.
+    writeFileSync(tmp, JSON.stringify(mutate(current), null, 2));
+    renameSync(tmp, target);
+  };
+
+  const countBroadcasts = (log: string) =>
+    log.split("State change detected and broadcast").length - 1;
+
+  it("keeps BOTH watchers live across atomic rewrites of each file", async () => {
+    const runtimePath = path.join(projectDir, ".forge/governance-runtime.json");
+    const constitutionPath = path.join(projectDir, ".claude/governance.json");
+
+    const { log, logAtWrite } = await runServer(projectDir, 5196, () => false, 90_000, {
+      readyMarker: "All services initialized successfully",
+      settleMs: 4_000,
+      afterReady: async () => {
+        // TWO spaced rounds per file, deliberately. Replacing a watched file
+        // emits one spurious "change" from the unlink of the OLD inode, so a
+        // single write per file cannot tell a live watcher from one that is
+        // about to go deaf — an earlier version of this test passed against
+        // the broken implementation for exactly that reason.
+        for (const round of [1, 2]) {
+        productionWrite(runtimePath, (s) => ({
+          ...s,
+          sentinelLog: [
+            ...(s.sentinelLog ?? []),
+            {
+              id: `liveness-probe-${round}`,
+              timestamp: 1,
+              type: "INFO",
+              severity: "low",
+              category: "governance",
+              source: "test",
+              message: "runtime rewrite",
+              context: {},
+              actionRequired: false,
+            },
+          ],
+        }));
+        productionWrite(constitutionPath, (s) => ({
+          ...s,
+          constitution: { ...s.constitution, confidence: 79 + round },
+        }));
+        await new Promise((r) => setTimeout(r, 400));
+        }
+      },
+    });
+
+    // Baseline is the count at the moment of the writes — NOT at the
+    // "initialized" line, which precedes the startup sentinel broadcast.
+    // 2 files x 2 rounds. A watcher that dies after its first write yields 2.
+    expect(countBroadcasts(log) - countBroadcasts(logAtWrite)).toBeGreaterThanOrEqual(4);
+
+    // The mutations really happened — otherwise "no new broadcasts" would be
+    // indistinguishable from "nothing was written", which is exactly how an
+    // earlier hand probe of mine produced a false reading.
+    const runtime = JSON.parse(readFileSync(runtimePath, "utf-8"));
+    expect(
+      runtime.sentinelLog.some((e: { id: string }) => e.id === "liveness-probe-2"),
+    ).toBe(true);
+    expect(
+      JSON.parse(readFileSync(constitutionPath, "utf-8")).constitution.confidence,
+    ).toBe(81);
+  }, 100_000);
+
+  it("survives repeated rewrites and ignores .tmp staging files", async () => {
+    const runtimePath = path.join(projectDir, ".forge/governance-runtime.json");
+
+    const { log, logAtWrite } = await runServer(projectDir, 5195, () => false, 90_000, {
+      readyMarker: "All services initialized successfully",
+      settleMs: 5_000,
+      afterReady: async () => {
+        // A watcher that reattaches only once would pass a single-rewrite test
+        // and still be dead by the third write. Spaced beyond the coalescing
+        // window so each rewrite is its own logical event — bunching them would
+        // (correctly) collapse into one broadcast and prove nothing about
+        // survival.
+        for (const n of [1, 2, 3]) {
+          productionWrite(runtimePath, (s) => ({
+            ...s,
+            metadata: { ...s.metadata, sessionId: `rewrite-${n}` },
+          }));
+          await new Promise((r) => setTimeout(r, 400));
+        }
+        // Staging file alone must NOT broadcast — the basename filter's job.
+        writeFileSync(`${runtimePath}.tmp`, JSON.stringify({ ignored: true }));
+      },
+    });
+
+    expect(countBroadcasts(log) - countBroadcasts(logAtWrite)).toBeGreaterThanOrEqual(3);
+    expect(
+      JSON.parse(readFileSync(runtimePath, "utf-8")).metadata.sessionId,
+    ).toBe("rewrite-3");
+  }, 100_000);
+
   it("took the legacy read path, not the seed path", async () => {
-    const log = await runServer(
+    const { log } = await runServer(
       projectDir,
       5198,
       (l) => l.includes("watcher active") || l.includes("seeding initial state"),

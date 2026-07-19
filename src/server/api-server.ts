@@ -386,9 +386,15 @@ server.on("upgrade", (request, socket, head) => {
 let governanceWatcher: ReturnType<typeof watch> | null = null;
 let constitutionWatcher: ReturnType<typeof watch> | null = null;
 
+/**
+ * Window for collapsing the multiple filesystem events a single atomic
+ * write-and-rename produces into one broadcast. Long enough to absorb the
+ * rename burst, short enough to stay live for the dashboard.
+ */
+const WATCH_COALESCE_MS = 40;
+
 function setupGovernanceWatcher() {
-  const onChange = async (eventType: string) => {
-    if (eventType !== "change") return;
+  const onChange = async () => {
     try {
       const state = await governanceStateManager.readState();
       broadcast("governance.update", state);
@@ -403,9 +409,35 @@ function setupGovernanceWatcher() {
   // constitution watcher into the caller's non-fatal catch — leaving the server
   // healthy-looking with NEITHER watcher active for its whole life. One
   // watcher failing must never take the other down. (Codex re-gate 2, [P1].)
+  /**
+   * Watch the CONTAINING DIRECTORY and filter by basename — never the file.
+   *
+   * Both state files are written atomically (write temp, then rename over the
+   * target), which REPLACES the inode. On Linux `fs.watch(file)` stays bound to
+   * the old inode, so a file watcher goes deaf after the very first write —
+   * i.e. our own atomic-write correctness silently killed the watcher. A
+   * directory watch survives replacement because the directory inode is
+   * stable. (Codex re-gate 3, [P1].)
+   */
   const attach = (label: string, target: string) => {
+    const dir = path.dirname(target);
+    const base = path.basename(target);
+    // A single rename emits several events ("rename" + "change"); coalesce so
+    // one logical write produces exactly one broadcast.
+    let pending: ReturnType<typeof setTimeout> | null = null;
+
     try {
-      const w = watch(target, onChange);
+      const w = watch(dir, (_eventType, filename) => {
+        // Directory events include siblings and our own `.tmp` staging files;
+        // only the target basename counts.
+        if (!filename || path.basename(filename.toString()) !== base) return;
+        if (pending) clearTimeout(pending);
+        pending = setTimeout(() => {
+          pending = null;
+          void onChange();
+        }, WATCH_COALESCE_MS);
+        pending.unref?.();
+      });
       logger.info(`[Governance] ${label} watcher active: ${target}`);
       return w;
     } catch (err: unknown) {
