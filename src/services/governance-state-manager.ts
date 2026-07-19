@@ -40,13 +40,67 @@ export class GovernanceStateManager {
     this.backupDir = path.join(projectRoot, ".claude/governance/backups");
   }
 
-  /** Fields owned by the runtime file; everything else stays versioned. */
+  /**
+   * Fields that mutate at runtime and must stay OUT of the git-tracked
+   * `.claude/governance.json`. Everything NOT in this set stays versioned.
+   *
+   * This is an allowlist of what to STRIP, deliberately not an allowlist of
+   * what to keep. The original split kept only `version` + `constitution` and
+   * swept everything else to the runtime file — which silently dropped fields
+   * forge-ui does not model but another product owns: governance-mcp reads
+   * `project` (identity), `qualityGates`, and `metrics` from this file
+   * (contracts: forge-plugin/docs/governance-mcp-governance-json-contract.md).
+   * Inverting the rule means any field this project does not explicitly claim
+   * as volatile — including a field a future product version adds — is
+   * preserved by default rather than lost. NEXUS: DIRECTIVE-NXTG-20260719-18
+   * Leg B / Codex re-gate 14.
+   */
+  private static readonly RUNTIME_ONLY_FIELDS = [
+    "timestamp",
+    "sentinelLog",
+    "metadata",
+    "workerPool",
+  ] as const;
+
+  /**
+   * `workstreams` is deliberately in BOTH halves.
+   *
+   * It is shared: governance-mcp reads it from the tracked file, while
+   * forge-ui's own sync hook (`.claude/hooks/lib.sh`) mutates it in the runtime
+   * file — the arrangement ccc259d established to stop that hook truncating the
+   * tracked constitution. Keeping it in the runtime file leaves the hook and
+   * ccc259d untouched; also snapshotting it into the versioned file gives
+   * governance-mcp the value it consumes. `versionedStateChanged` still gates
+   * the tracked write, so idle running (sentinel + timestamp churn, both
+   * runtime-only) does not dirty the tree — only a real workstream milestone
+   * does, which is legitimate governance state.
+   */
+  private static readonly RUNTIME_MIRRORED_FIELDS = ["workstreams"] as const;
+
   private splitState(state: GovernanceState): {
-    versioned: Pick<GovernanceState, "version" | "constitution">;
-    runtime: Omit<GovernanceState, "version" | "constitution">;
+    versioned: Record<string, unknown>;
+    runtime: Record<string, unknown>;
   } {
-    const { version, constitution, ...runtime } = state;
-    return { versioned: { version, constitution }, runtime };
+    const runtimeOnly = new Set<string>(
+      GovernanceStateManager.RUNTIME_ONLY_FIELDS,
+    );
+    const runtimeMirrored = new Set<string>(
+      GovernanceStateManager.RUNTIME_MIRRORED_FIELDS,
+    );
+
+    const versioned: Record<string, unknown> = {};
+    const runtime: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries(state)) {
+      // Volatile → runtime file only. Everything else (constitution, version,
+      // and any foreign field another product owns) → tracked file.
+      if (runtimeOnly.has(key)) runtime[key] = value;
+      else versioned[key] = value;
+      // Shared working-copy fields additionally live in the runtime file.
+      if (runtimeMirrored.has(key)) runtime[key] = value;
+    }
+
+    return { versioned, runtime };
   }
 
   /**
@@ -132,7 +186,7 @@ export class GovernanceStateManager {
    * write will strip (a one-time migration).
    */
   private async versionedStateChanged(
-    versioned: Pick<GovernanceState, "version" | "constitution">,
+    versioned: Record<string, unknown>,
   ): Promise<boolean> {
     try {
       const onDisk = await fs.readFile(this.statePath, "utf-8");
