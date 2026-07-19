@@ -40,8 +40,7 @@ describe("ComplianceService", () => {
   let service: ComplianceService;
 
   beforeEach(async () => {
-    testDir = path.join(tmpdir(), `compliance-service-test-${Date.now()}`);
-    await fs.mkdir(testDir, { recursive: true });
+    testDir = await fs.mkdtemp(path.join(tmpdir(), "compliance-service-test-"));
     service = new ComplianceService(testDir);
 
     // Reset mocks

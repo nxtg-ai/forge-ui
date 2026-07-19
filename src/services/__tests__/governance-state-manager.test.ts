@@ -19,8 +19,7 @@ describe("GovernanceStateManager", () => {
   let manager: GovernanceStateManager;
 
   beforeEach(async () => {
-    testDir = path.join(tmpdir(), `governance-test-${Date.now()}`);
-    await fs.mkdir(testDir, { recursive: true });
+    testDir = await fs.mkdtemp(path.join(tmpdir(), "governance-test-"));
     manager = new GovernanceStateManager(testDir);
   });
 

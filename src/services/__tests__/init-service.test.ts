@@ -34,8 +34,7 @@ describe("InitService", () => {
 
   beforeEach(async () => {
     // Create temporary test directory
-    testDir = path.join(tmpdir(), `init-service-test-${Date.now()}`);
-    await fs.mkdir(testDir, { recursive: true });
+    testDir = await fs.mkdtemp(path.join(tmpdir(), "init-service-test-"));
     initService = new InitService(testDir);
   });
 

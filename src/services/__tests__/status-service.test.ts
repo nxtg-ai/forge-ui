@@ -18,8 +18,7 @@ describe("StatusService", () => {
   let service: StatusService;
 
   beforeEach(async () => {
-    testDir = path.join(tmpdir(), `status-service-test-${Date.now()}`);
-    await fs.mkdir(testDir, { recursive: true });
+    testDir = await fs.mkdtemp(path.join(tmpdir(), "status-service-test-"));
     service = new StatusService(testDir);
 
     // Reset mocks

@@ -14,7 +14,11 @@ import { Runspace, RunspaceStatus, CreateRunspaceConfig } from "../runspace";
 const testHomeBase = vi.hoisted(() => {
   const _path = require("path");
   const _os = require("os");
-  return _path.join(_os.tmpdir(), "forge-test-home-" + Date.now());
+  const _fs = require("fs");
+  // mkdtempSync, not a Date.now() suffix: workers that start in the same
+  // millisecond would otherwise share this fake HOME. beforeEach re-creates it
+  // recursively and afterEach removes it, so creating it here is idempotent.
+  return _fs.mkdtempSync(_path.join(_os.tmpdir(), "forge-test-home-"));
 });
 
 // Mock os.homedir() BEFORE RunspaceManager is imported (it reads at module level)

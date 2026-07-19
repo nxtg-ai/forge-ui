@@ -10,18 +10,21 @@ import type { PatternScan } from '../pattern-scanner';
 import type { HealthCheck } from '../health-monitor';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { tmpdir } from 'os';
 
 describe('LearningDatabase', () => {
   let database: LearningDatabase;
-  const testDbPath = '.forge-test-learning/learning-test.db';
+  // A per-test directory under the OS temp dir, not a fixed repo-relative path.
+  // The old shared '.forge-test-learning/' was torn down and recreated by every
+  // beforeEach, so under parallel load this suite raced itself: one run in five
+  // either timed out writing the 1000-event fixture or read a previous test's
+  // rows back (DIRECTIVE-NXTG-20260718-12 item 1).
+  let testDir: string;
+  let testDbPath: string;
 
   beforeEach(async () => {
-    // Clean up before each test
-    try {
-      await fs.rm(path.dirname(testDbPath), { recursive: true, force: true });
-    } catch (error) {
-      // Directory might not exist
-    }
+    testDir = await fs.mkdtemp(path.join(tmpdir(), 'forge-learning-test-'));
+    testDbPath = path.join(testDir, 'learning-test.db');
 
     database = new LearningDatabase(testDbPath);
   });
@@ -35,7 +38,7 @@ describe('LearningDatabase', () => {
 
     // Clean up test files
     try {
-      await fs.rm(path.dirname(testDbPath), { recursive: true, force: true });
+      await fs.rm(testDir, { recursive: true, force: true });
     } catch (error) {
       // Directory might not exist
     }
@@ -997,7 +1000,8 @@ describe('LearningDatabase', () => {
       const exported = await database.export();
 
       // Create new database and import
-      const database2 = new LearningDatabase('.forge-test-learning/learning-test2.db');
+      const secondDbPath = path.join(testDir, 'learning-test2.db');
+      const database2 = new LearningDatabase(secondDbPath);
       await database2.initialize();
       await database2.import(exported);
 
@@ -1006,7 +1010,7 @@ describe('LearningDatabase', () => {
       expect(stats.metricCount).toBe(1);
 
       await database2.close();
-      await fs.rm('.forge-test-learning/learning-test2.db', { force: true });
+      await fs.rm(secondDbPath, { force: true });
     });
   });
 

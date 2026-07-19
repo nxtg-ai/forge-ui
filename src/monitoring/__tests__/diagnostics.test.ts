@@ -642,7 +642,7 @@ describe("DiagnosticTools", () => {
     it("should enable debug mode with output path", () => {
       diagnosticTools.enableDebugMode({
         verbose: true,
-        outputPath: "/tmp/debug",
+        outputPath: "/workspace/example-project/debug",
       });
 
       expect(() => diagnosticTools.enableDebugMode()).not.toThrow();

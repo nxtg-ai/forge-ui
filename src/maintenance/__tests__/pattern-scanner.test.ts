@@ -9,6 +9,7 @@ import { PatternScanner, type PatternScan } from '../pattern-scanner';
 import { LearningDatabase } from '../learning-database';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { tmpdir } from 'os';
 
 // Mock logger
 vi.mock('../utils/logger', () => ({
@@ -23,28 +24,30 @@ vi.mock('../utils/logger', () => ({
 describe('PatternScanner', () => {
   let scanner: PatternScanner;
   let database: LearningDatabase;
-  const testDbPath = '.forge-test-scanner/scanner-test.db';
-  const testTaskDir = '.forge-test-scanner/history/tasks';
-  const testCorrectionDir = '.forge-test-scanner/history/corrections';
+  // Per-test temp dir rather than a fixed repo-relative '.forge-test-scanner/',
+  // which every beforeEach removed and recreated while other suites ran
+  // (DIRECTIVE-NXTG-20260718-12 item 1).
+  let testRoot: string;
+  let testDbPath: string;
+  let testTaskDir: string;
+  let testCorrectionDir: string;
 
   beforeEach(async () => {
-    // Clean up before each test
-    try {
-      await fs.rm(path.resolve('.forge-test-scanner'), { recursive: true, force: true });
-    } catch (error) {
-      // Directory might not exist
-    }
+    testRoot = await fs.mkdtemp(path.join(tmpdir(), 'forge-scanner-test-'));
+    testDbPath = path.join(testRoot, 'scanner-test.db');
+    testTaskDir = path.join(testRoot, 'history/tasks');
+    testCorrectionDir = path.join(testRoot, 'history/corrections');
 
     // Create test directories
-    await fs.mkdir(path.resolve(testTaskDir), { recursive: true });
-    await fs.mkdir(path.resolve(testCorrectionDir), { recursive: true });
+    await fs.mkdir(testTaskDir, { recursive: true });
+    await fs.mkdir(testCorrectionDir, { recursive: true });
 
     database = new LearningDatabase(testDbPath);
     await database.initialize();
 
     scanner = new PatternScanner(database, {
-      taskHistoryDir: path.resolve(testTaskDir),
-      correctionLogsDir: path.resolve(testCorrectionDir),
+      taskHistoryDir: testTaskDir,
+      correctionLogsDir: testCorrectionDir,
       minFrequency: 1,
       minConfidence: 0,
     });
@@ -59,7 +62,7 @@ describe('PatternScanner', () => {
 
     // Clean up test files
     try {
-      await fs.rm(path.resolve('.forge-test-scanner'), { recursive: true, force: true });
+      await fs.rm(testRoot, { recursive: true, force: true });
     } catch (error) {
       // Directory might not exist
     }
@@ -182,7 +185,7 @@ describe('PatternScanner', () => {
     });
 
     it('should handle missing task history directory', async () => {
-      await fs.rm(path.resolve(testTaskDir), { recursive: true, force: true });
+      await fs.rm(testTaskDir, { recursive: true, force: true });
 
       const patterns = await scanner.scan();
 
@@ -300,7 +303,7 @@ describe('PatternScanner', () => {
     });
 
     it('should handle missing correction directory', async () => {
-      await fs.rm(path.resolve(testCorrectionDir), { recursive: true, force: true });
+      await fs.rm(testCorrectionDir, { recursive: true, force: true });
 
       const patterns = await scanner.scan();
 
@@ -430,8 +433,8 @@ describe('PatternScanner', () => {
   describe('mergePatterns', () => {
     beforeEach(async () => {
       // Ensure directories exist for these tests
-      await fs.mkdir(path.resolve(testTaskDir), { recursive: true });
-      await fs.mkdir(path.resolve(testCorrectionDir), { recursive: true });
+      await fs.mkdir(testTaskDir, { recursive: true });
+      await fs.mkdir(testCorrectionDir, { recursive: true });
     });
 
     it('should merge similar patterns', async () => {
@@ -619,8 +622,8 @@ describe('PatternScanner', () => {
   describe('full scan', () => {
     beforeEach(async () => {
       // Ensure directories exist for these tests
-      await fs.mkdir(path.resolve(testTaskDir), { recursive: true });
-      await fs.mkdir(path.resolve(testCorrectionDir), { recursive: true });
+      await fs.mkdir(testTaskDir, { recursive: true });
+      await fs.mkdir(testCorrectionDir, { recursive: true });
     });
 
     it('should combine all scan sources', async () => {

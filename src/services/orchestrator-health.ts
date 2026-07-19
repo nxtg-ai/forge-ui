@@ -154,8 +154,14 @@ async function callHealthTool(
   projectRoot: string,
 ): Promise<OrchestratorHealth | null> {
   let spawn: typeof import("child_process").spawn;
+  // Loaded lazily alongside child_process, and for the same reason: app-version
+  // resolves package.json through `node:module` at load time, so a static
+  // import would break this module's "safe to import in a browser-like
+  // environment" contract.
+  let appVersion: string;
   try {
     ({ spawn } = await import("child_process"));
+    ({ appVersion } = await import("./app-version"));
   } catch {
     return null; // non-Node runtime — no orchestrator reachable
   }
@@ -211,7 +217,7 @@ async function callHealthTool(
       params: {
         protocolVersion: "2024-11-05",
         capabilities: {},
-        clientInfo: { name: "forge-ui", version: "3.3.2" },
+        clientInfo: { name: "forge-ui", version: appVersion },
       },
     });
     send({

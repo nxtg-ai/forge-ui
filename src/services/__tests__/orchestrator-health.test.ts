@@ -13,13 +13,26 @@
 
 import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { fileURLToPath } from "node:url";
+import { randomUUID } from "node:crypto";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const STUB = fileURLToPath(
   new URL("../../test/fixtures/forge-mcp-stub.mjs", import.meta.url),
 );
 
 // Unique per run so the spawn counter never carries across runs.
-const COUNTER = `/tmp/forge-stub-count-${process.pid}-${Date.now()}`;
+//
+// randomUUID rather than mkdtempSync, for two reasons: this is a file-path
+// PREFIX (tests derive siblings like `${COUNTER}-concurrent`), not a directory;
+// and the global setup mocks `fs`, so calling mkdtempSync at module scope would
+// reach the mock. randomUUID is collision-safe without touching the filesystem.
+const COUNTER = join(tmpdir(), `forge-stub-count-${process.pid}-${randomUUID()}`);
+
+// Cache keys, not directories on disk — the bridge memoizes per project root and
+// never stats these. Unique per process so no fixed temp path remains, but
+// STABLE within a test: the cache tests deliberately reuse one key to prove a hit.
+const probe = (name: string) => join(tmpdir(), `forge-probe-${process.pid}-${name}`);
 
 const originalBin = process.env.FORGE_BIN;
 const originalMode = process.env.FORGE_STUB_MODE;
@@ -51,7 +64,7 @@ describe("getOrchestratorHealth", () => {
   it("returns the orchestrator's canonical score", async () => {
     process.env.FORGE_STUB_MODE = "ok";
 
-    const health = await getOrchestratorHealth("/tmp");
+    const health = await getOrchestratorHealth(probe("root"));
 
     expect(health).not.toBeNull();
     expect(health!.score).toBe(95);
@@ -64,37 +77,37 @@ describe("getOrchestratorHealth", () => {
 
   it("clamps a score above 100", async () => {
     process.env.FORGE_STUB_MODE = "high";
-    expect((await getOrchestratorHealth("/tmp"))!.score).toBe(100);
+    expect((await getOrchestratorHealth(probe("root")))!.score).toBe(100);
   });
 
   it("clamps a negative score to 0", async () => {
     process.env.FORGE_STUB_MODE = "low";
-    expect((await getOrchestratorHealth("/tmp"))!.score).toBe(0);
+    expect((await getOrchestratorHealth(probe("root")))!.score).toBe(0);
   });
 
   it("rounds a fractional score", async () => {
     process.env.FORGE_STUB_MODE = "fractional";
-    expect((await getOrchestratorHealth("/tmp"))!.score).toBe(87);
+    expect((await getOrchestratorHealth(probe("root")))!.score).toBe(87);
   });
 
   it("returns null when the binary does not exist", async () => {
     process.env.FORGE_BIN = "/nonexistent/definitely-not-a-real-binary";
-    expect(await getOrchestratorHealth("/tmp")).toBeNull();
+    expect(await getOrchestratorHealth(probe("root"))).toBeNull();
   });
 
   it("returns null when the response omits health_score", async () => {
     process.env.FORGE_STUB_MODE = "no-score";
-    expect(await getOrchestratorHealth("/tmp")).toBeNull();
+    expect(await getOrchestratorHealth(probe("root"))).toBeNull();
   });
 
   it("returns null on malformed (non-JSON) output", async () => {
     process.env.FORGE_STUB_MODE = "garbage";
-    expect(await getOrchestratorHealth("/tmp")).toBeNull();
+    expect(await getOrchestratorHealth(probe("root"))).toBeNull();
   });
 
   it("returns null when the binary exits non-zero without output", async () => {
     process.env.FORGE_STUB_MODE = "exit";
-    expect(await getOrchestratorHealth("/tmp")).toBeNull();
+    expect(await getOrchestratorHealth(probe("root"))).toBeNull();
   });
 
   it("memoizes within the cache window so repeated reads spawn once", async () => {
@@ -103,8 +116,8 @@ describe("getOrchestratorHealth", () => {
     process.env.FORGE_STUB_MODE = "counted";
     process.env.FORGE_STUB_COUNTER = COUNTER;
 
-    const first = await getOrchestratorHealth("/tmp/cache-probe");
-    const second = await getOrchestratorHealth("/tmp/cache-probe");
+    const first = await getOrchestratorHealth(probe("cache"));
+    const second = await getOrchestratorHealth(probe("cache"));
 
     expect(first!.score).toBe(1);
     expect(second!.score).toBe(1);
@@ -120,7 +133,7 @@ describe("getOrchestratorHealth", () => {
 
     const results = await Promise.all(
       Array.from({ length: 20 }, () =>
-        getOrchestratorHealth("/tmp/concurrent-probe"),
+        getOrchestratorHealth(probe("concurrent")),
       ),
     );
 
@@ -136,7 +149,7 @@ describe("getOrchestratorHealth", () => {
     const pidfile = `${COUNTER}-stubborn-pid`;
     process.env.FORGE_STUB_PIDFILE = pidfile;
 
-    const health = await getOrchestratorHealth("/tmp/reap-probe");
+    const health = await getOrchestratorHealth(probe("reap"));
     expect(health!.score).toBe(50);
 
     await awaitPendingReaps();
@@ -151,9 +164,9 @@ describe("getOrchestratorHealth", () => {
     process.env.FORGE_STUB_MODE = "counted";
     process.env.FORGE_STUB_COUNTER = `${COUNTER}-cleared`;
 
-    const first = await getOrchestratorHealth("/tmp/clear-probe");
+    const first = await getOrchestratorHealth(probe("clear"));
     clearOrchestratorHealthCache();
-    const second = await getOrchestratorHealth("/tmp/clear-probe");
+    const second = await getOrchestratorHealth(probe("clear"));
 
     expect(first!.score).toBe(1);
     expect(second!.score).toBe(2);

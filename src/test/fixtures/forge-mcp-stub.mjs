@@ -15,6 +15,9 @@
  *   stubborn   — answers, writes its pid to FORGE_STUB_PIDFILE, then IGNORES
  *                SIGTERM and stays alive, so a caller can prove the bridge
  *                escalates to SIGKILL instead of leaking the process
+ *   record-client — writes the handshake's clientInfo to FORGE_STUB_CLIENTFILE
+ *                before answering, so a caller can assert the version the
+ *                bridge really sends rather than inspecting its source
  */
 
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
@@ -65,10 +68,45 @@ if (mode === "counted") {
   payload = { health_score: readFileSync(counter, "utf-8").length };
 }
 
-process.stdout.write(
-  JSON.stringify({
-    jsonrpc: "2.0",
-    id: 2,
-    result: { content: [{ type: "text", text: JSON.stringify(payload) }] },
-  }) + "\n",
-);
+const respond = () =>
+  process.stdout.write(
+    JSON.stringify({
+      jsonrpc: "2.0",
+      id: 2,
+      result: { content: [{ type: "text", text: JSON.stringify(payload) }] },
+    }) + "\n",
+  );
+
+if (mode === "record-client") {
+  // Capture the clientInfo the bridge actually puts on the wire, so a test can
+  // assert the handshake version end-to-end instead of reading the source.
+  // This is the only mode that reads stdin; the others answer unconditionally.
+  //
+  // The answer is deliberately withheld until clientInfo has been written:
+  // responding first would let the bridge resolve and reap this process before
+  // the capture landed, which is a race, not a test.
+  payload = payloads.ok;
+  let buffered = "";
+  process.stdin.setEncoding("utf-8");
+  process.stdin.on("data", (chunk) => {
+    buffered += chunk;
+    for (const line of buffered.split("\n")) {
+      if (!line.trim()) continue;
+      try {
+        const msg = JSON.parse(line);
+        if (msg.method === "initialize" && msg.params?.clientInfo) {
+          writeFileSync(
+            process.env.FORGE_STUB_CLIENTFILE,
+            JSON.stringify(msg.params.clientInfo),
+          );
+          respond();
+        }
+      } catch {
+        // Partial line — wait for the rest.
+      }
+    }
+  });
+} else {
+  respond();
+}
+

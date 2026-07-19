@@ -8,14 +8,20 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MaintenanceDaemon } from '../daemon';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { tmpdir } from 'os';
 
 describe('MaintenanceDaemon', () => {
   let daemon: MaintenanceDaemon;
-  const testDbPath = '.forge-test/test-maintenance.db';
+  // Per-test temp dir. The old '.forge-test/' was shared with
+  // update-applier.test.ts, which vitest runs in a SEPARATE worker — two files
+  // creating and removing one directory concurrently
+  // (DIRECTIVE-NXTG-20260718-12 item 1).
+  let testDir: string;
+  let testDbPath: string;
 
   beforeEach(async () => {
-    // Create test directory
-    await fs.mkdir(path.dirname(testDbPath), { recursive: true });
+    testDir = await fs.mkdtemp(path.join(tmpdir(), 'forge-daemon-test-'));
+    testDbPath = path.join(testDir, 'test-maintenance.db');
 
     daemon = new MaintenanceDaemon({
       databasePath: testDbPath,

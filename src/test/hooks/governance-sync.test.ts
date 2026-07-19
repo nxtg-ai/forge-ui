@@ -53,7 +53,12 @@ const RUNTIME = JSON.stringify(
       },
     ],
     sentinelLog: [],
-    metadata: { sessionId: "t", projectPath: "/tmp", forgeVersion: "3.3.1", lastSync: "x" },
+    metadata: {
+      sessionId: "t",
+      projectPath: "/workspace/example-project",
+      forgeVersion: "3.3.1",
+      lastSync: "x",
+    },
   },
   null,
   2,

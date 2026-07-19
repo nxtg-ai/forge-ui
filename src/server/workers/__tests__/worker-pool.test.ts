@@ -122,7 +122,7 @@ describe("Task Type Handling", () => {
         type: "claude-code",
         payload: {
           prompt: "Write a hello world function",
-          workingDirectory: "/tmp/test",
+          workingDirectory: "/workspace/example-project",
         },
       });
 
