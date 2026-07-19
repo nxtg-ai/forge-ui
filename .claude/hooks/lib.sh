@@ -188,8 +188,14 @@ get_state() {
 
 # Calculate and sync workstream progress from tasks
 sync_governance_progress() {
-    if [ ! -f "$GOVERNANCE_STATE_FILE" ]; then
-        log_warning "Governance state file not found"
+    # Workstreams are RUNTIME state — they live in the untracked runtime file,
+    # not in the versioned constitution. Pointing this at
+    # GOVERNANCE_STATE_FILE after the split made jq fail on a missing
+    # `.workstreams`, and the unguarded write below then truncated the tracked
+    # constitution to a single newline while logging "Success".
+    # (DIRECTIVE-NXTG-20260718-04 item 3 follow-up.)
+    if [ ! -f "$GOVERNANCE_RUNTIME_FILE" ]; then
+        log_warning "Governance runtime state not found"
         return 1
     fi
 
@@ -199,8 +205,9 @@ sync_governance_progress() {
     fi
 
     # Calculate progress for each workstream based on completed tasks
-    local updated=$(jq '
-        .workstreams = [.workstreams[] |
+    local updated
+    updated=$(jq '
+        .workstreams = [(.workstreams // [])[] |
             . as $ws |
             ($ws.tasks | map(select(.status == "completed")) | length) as $completed |
             ($ws.tasks | length) as $total |
@@ -210,9 +217,22 @@ sync_governance_progress() {
             .metrics.tasksCompleted = $completed |
             .metrics.totalTasks = $total
         ]
-    ' "$GOVERNANCE_STATE_FILE")
+    ' "$GOVERNANCE_RUNTIME_FILE")
+    local jq_status=$?
 
-    echo "$updated" > "$GOVERNANCE_STATE_FILE.tmp" && mv "$GOVERNANCE_STATE_FILE.tmp" "$GOVERNANCE_STATE_FILE"
+    # NEVER write unverified output. `echo "$updated" > file` succeeds even when
+    # $updated is empty, so a failed jq silently truncated the target to a
+    # newline — and the old code still logged success. Require BOTH a zero exit
+    # and non-empty output before the file is replaced.
+    if [ $jq_status -ne 0 ] || [ -z "$updated" ]; then
+        log_warning "Governance sync skipped: jq produced no usable output"
+        return 1
+    fi
+
+    printf '%s\n' "$updated" > "$GOVERNANCE_RUNTIME_FILE.tmp" \
+        && [ -s "$GOVERNANCE_RUNTIME_FILE.tmp" ] \
+        && mv "$GOVERNANCE_RUNTIME_FILE.tmp" "$GOVERNANCE_RUNTIME_FILE" \
+        || { rm -f "$GOVERNANCE_RUNTIME_FILE.tmp"; log_warning "Governance sync write failed"; return 1; }
     log_success "Synced governance workstream progress"
 }
 
@@ -276,7 +296,7 @@ get_governance_summary() {
         return 1
     fi
 
-    jq -r '.workstreams | map("\(.id): \(.metrics.tasksCompleted)/\(.metrics.totalTasks) (\(.progress)%)") | join(", ")' "$GOVERNANCE_STATE_FILE" 2>/dev/null
+    jq -r '(.workstreams // []) | map("\(.id): \(.metrics.tasksCompleted)/\(.metrics.totalTasks) (\(.progress)%)") | join(", ")' "$GOVERNANCE_RUNTIME_FILE" 2>/dev/null
 }
 
 # Check if governance progress changed and log it
@@ -286,13 +306,13 @@ check_and_log_governance_progress() {
     fi
 
     # Get current progress before sync
-    local before=$(jq '[.workstreams[].progress] | add / length | floor' "$GOVERNANCE_STATE_FILE" 2>/dev/null)
+    local before=$(jq '[(.workstreams // [])[].progress] | add / length | floor' "$GOVERNANCE_RUNTIME_FILE" 2>/dev/null)
 
     # Sync progress from tasks
     sync_governance_progress
 
     # Get progress after sync
-    local after=$(jq '[.workstreams[].progress] | add / length | floor' "$GOVERNANCE_STATE_FILE" 2>/dev/null)
+    local after=$(jq '[(.workstreams // [])[].progress] | add / length | floor' "$GOVERNANCE_RUNTIME_FILE" 2>/dev/null)
 
     # If progress changed significantly (>= 5%), log it
     if [ -n "$before" ] && [ -n "$after" ]; then
