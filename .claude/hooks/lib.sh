@@ -16,6 +16,17 @@ export CLAUDE_DIR="$PROJECT_ROOT/.claude"
 export CONFIG_FILE="$CLAUDE_DIR/config.json"
 export PROJECT_STATE_FILE="$CLAUDE_DIR/project.json"
 export GOVERNANCE_STATE_FILE="$CLAUDE_DIR/governance.json"
+# Runtime half of governance state — untracked, so hook activity never dirties
+# the git tree. Mirrors src/services/governance-state-manager.ts.
+# (DIRECTIVE-NXTG-20260718-04 item 3.)
+export FORGE_RUNTIME_DIR="$PROJECT_ROOT/.forge"
+export GOVERNANCE_RUNTIME_FILE="$FORGE_RUNTIME_DIR/governance-runtime.json"
+# Session/metric fields that hooks rewrite on every task. project.json itself
+# stays versioned config (agents, architecture, mcp_servers, spec).
+export PROJECT_RUNTIME_FILE="$FORGE_RUNTIME_DIR/project-runtime.json"
+# Cap on sentinelLog entries. The TS writer prunes to 100; this writer had NO
+# cap at all, so the log grew without bound.
+export SENTINEL_LOG_MAX_ENTRIES="${SENTINEL_LOG_MAX_ENTRIES:-100}"
 
 # Backward compatibility alias (deprecated - use PROJECT_STATE_FILE)
 export STATE_FILE="$PROJECT_STATE_FILE"
@@ -205,6 +216,16 @@ sync_governance_progress() {
     log_success "Synced governance workstream progress"
 }
 
+# Ensure the untracked runtime files exist before a hook writes to them.
+ensure_runtime_file() {
+    local file="$1"
+    mkdir -p "$FORGE_RUNTIME_DIR" || return 1
+    if [ ! -f "$file" ]; then
+        echo '{}' > "$file" || return 1
+    fi
+    return 0
+}
+
 # Append entry to governance sentinel log
 append_sentinel_log() {
     local log_type="$1"      # INFO, WARN, ERROR, SUCCESS, CRITICAL
@@ -212,12 +233,15 @@ append_sentinel_log() {
     local category="${3:-governance}"
     local severity="${4:-low}"
 
-    if [ ! -f "$GOVERNANCE_STATE_FILE" ]; then
+    if ! command -v jq &> /dev/null; then
         return 1
     fi
 
-    if ! command -v jq &> /dev/null; then
-        return 1
+    # Write to the untracked runtime file, seeding it if this is the first
+    # hook fire. Never touches the versioned constitution.
+    mkdir -p "$FORGE_RUNTIME_DIR" || return 1
+    if [ ! -f "$GOVERNANCE_RUNTIME_FILE" ]; then
+        echo '{"sentinelLog":[]}' > "$GOVERNANCE_RUNTIME_FILE" || return 1
     fi
 
     local timestamp=$(date +%s)000
@@ -229,7 +253,8 @@ append_sentinel_log() {
        --arg sev "$severity" \
        --arg cat "$category" \
        --arg msg "$message" \
-       '.sentinelLog += [{
+       --argjson max "$SENTINEL_LOG_MAX_ENTRIES" \
+       '.sentinelLog = ((.sentinelLog // []) + [{
            "id": $id,
            "timestamp": $ts,
            "type": $type,
@@ -239,7 +264,9 @@ append_sentinel_log() {
            "message": $msg,
            "context": {},
            "actionRequired": false
-       }]' "$GOVERNANCE_STATE_FILE" > "$GOVERNANCE_STATE_FILE.tmp" && mv "$GOVERNANCE_STATE_FILE.tmp" "$GOVERNANCE_STATE_FILE"
+       }] | .[-$max:])' "$GOVERNANCE_RUNTIME_FILE" > "$GOVERNANCE_RUNTIME_FILE.tmp" \
+        && mv "$GOVERNANCE_RUNTIME_FILE.tmp" "$GOVERNANCE_RUNTIME_FILE" \
+        || rm -f "$GOVERNANCE_RUNTIME_FILE.tmp"
 }
 
 # Get governance workstream summary

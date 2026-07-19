@@ -68,45 +68,5 @@
     "configured": [],
     "recommended": []
   },
-  "quality": {
-    "tests": {
-      "unit": {
-        "total": 654,
-        "passing": 0,
-        "coverage": 0
-      },
-      "integration": {
-        "total": 0,
-        "passing": 0,
-        "coverage": 0
-      },
-      "e2e": {
-        "total": 0,
-        "passing": 0,
-        "coverage": 0
-      }
-    },
-    "linting": {
-      "issues": 0,
-      "last_run": null
-    },
-    "security": {
-      "vulnerabilities": {
-        "critical": 0,
-        "high": 0,
-        "medium": 0,
-        "low": 0
-      },
-      "last_scan": null
-    }
-  },
-  "checkpoints": [],
-  "last_session": {
-    "id": null,
-    "started": null,
-    "agent": null,
-    "task": null,
-    "status": null,
-    "resume_command": null
-  }
+  "checkpoints": []
 }

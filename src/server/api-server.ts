@@ -384,21 +384,39 @@ server.on("upgrade", (request, socket, head) => {
 // ============= Governance File Watcher =============
 
 let governanceWatcher: ReturnType<typeof watch> | null = null;
+let constitutionWatcher: ReturnType<typeof watch> | null = null;
 
 function setupGovernanceWatcher() {
-  const governancePath = path.join(projectRoot, ".claude/governance.json");
-  governanceWatcher = watch(governancePath, async (eventType) => {
-    if (eventType === "change") {
-      try {
-        const state = await governanceStateManager.readState();
-        broadcast("governance.update", state);
-        logger.info("[Governance] State change detected and broadcast to clients");
-      } catch (error) {
-        logger.error("[Governance] Failed to read state after change:", error);
-      }
+  const onChange = async (eventType: string) => {
+    if (eventType !== "change") return;
+    try {
+      const state = await governanceStateManager.readState();
+      broadcast("governance.update", state);
+      logger.info("[Governance] State change detected and broadcast to clients");
+    } catch (error) {
+      logger.error("[Governance] Failed to read state after change:", error);
     }
-  });
-  logger.info("[Governance] File watcher initialized");
+  };
+
+  // Watch the RUNTIME file: since the runtime/config split, sentinel appends
+  // and workstream progress land there, not in the versioned constitution.
+  // Watching only .claude/governance.json would silently stop live dashboard
+  // updates (DIRECTIVE-NXTG-20260718-04 item 3).
+  const runtimePath = path.join(projectRoot, ".forge/governance-runtime.json");
+  governanceWatcher = watch(runtimePath, onChange);
+
+  // The constitution still changes when a human edits it — watch it too so a
+  // directive/vision edit reaches clients without a restart.
+  const constitutionPath = path.join(projectRoot, ".claude/governance.json");
+  try {
+    constitutionWatcher = watch(constitutionPath, onChange);
+  } catch (err: unknown) {
+    logger.warn("[Governance] Constitution watcher failed (non-fatal):", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
+  logger.info("[Governance] File watchers initialized (runtime + constitution)");
 }
 
 // ============= Server Startup =============
@@ -490,6 +508,11 @@ process.on("SIGTERM", async () => {
   if (governanceWatcher) {
     governanceWatcher.close();
     logger.info("Governance watcher closed");
+  }
+
+  if (constitutionWatcher) {
+    constitutionWatcher.close();
+    logger.info("Constitution watcher closed");
   }
 
   generalLimiter.cleanup();

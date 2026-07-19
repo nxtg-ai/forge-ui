@@ -144,7 +144,7 @@ describe("GovernanceStateManager", () => {
       await manager.writeState(state);
 
       const written = await fs.readFile(
-        path.join(claudeDir, "governance.json"),
+        path.join(testDir, ".forge/governance-runtime.json"),
         "utf-8",
       );
       const parsedState = JSON.parse(written);
@@ -213,7 +213,7 @@ describe("GovernanceStateManager", () => {
       await manager.writeState(state);
 
       const written = await fs.readFile(
-        path.join(claudeDir, "governance.json"),
+        path.join(testDir, ".forge/governance-runtime.json"),
         "utf-8",
       );
       const parsedState = JSON.parse(written);
@@ -264,7 +264,7 @@ describe("GovernanceStateManager", () => {
       await manager.writeState(state);
 
       const written = await fs.readFile(
-        path.join(claudeDir, "governance.json"),
+        path.join(testDir, ".forge/governance-runtime.json"),
         "utf-8",
       );
       const parsedState = JSON.parse(written);
@@ -318,7 +318,7 @@ describe("GovernanceStateManager", () => {
       await manager.writeState(state);
 
       const written = await fs.readFile(
-        path.join(claudeDir, "governance.json"),
+        path.join(testDir, ".forge/governance-runtime.json"),
         "utf-8",
       );
       const parsedState = JSON.parse(written);
@@ -718,7 +718,7 @@ describe("GovernanceStateManager", () => {
       await manager.writeState(state);
 
       const written = await fs.readFile(
-        path.join(claudeDir, "governance.json"),
+        path.join(testDir, ".forge/governance-runtime.json"),
         "utf-8",
       );
       const parsedState = JSON.parse(written);
@@ -750,7 +750,7 @@ describe("GovernanceStateManager", () => {
       await manager.writeState(state);
 
       const written = await fs.readFile(
-        path.join(claudeDir, "governance.json"),
+        path.join(testDir, ".forge/governance-runtime.json"),
         "utf-8",
       );
       const parsedState = JSON.parse(written);
@@ -774,7 +774,7 @@ describe("GovernanceStateManager", () => {
       await expect(manager.writeState(state)).resolves.not.toThrow();
 
       const written = await fs.readFile(
-        path.join(claudeDir, "governance.json"),
+        path.join(testDir, ".forge/governance-runtime.json"),
         "utf-8",
       );
       const parsedState = JSON.parse(written);
@@ -823,12 +823,12 @@ describe("GovernanceStateManager", () => {
 
       await manager.writeState(state1);
       const written1 = JSON.parse(
-        await fs.readFile(path.join(claudeDir, "governance.json"), "utf-8")
+        await fs.readFile(path.join(testDir, ".forge/governance-runtime.json"), "utf-8")
       );
 
       await manager.writeState(state2);
       const written2 = JSON.parse(
-        await fs.readFile(path.join(claudeDir, "governance.json"), "utf-8")
+        await fs.readFile(path.join(testDir, ".forge/governance-runtime.json"), "utf-8")
       );
 
       // Checksums should differ because timestamps changed
@@ -859,15 +859,151 @@ describe("GovernanceStateManager", () => {
 
       await manager.writeState(state1);
       const written1 = JSON.parse(
-        await fs.readFile(path.join(claudeDir, "governance.json"), "utf-8")
+        await fs.readFile(path.join(testDir, ".forge/governance-runtime.json"), "utf-8")
       );
 
       await manager.writeState(state2);
       const written2 = JSON.parse(
-        await fs.readFile(path.join(claudeDir, "governance.json"), "utf-8")
+        await fs.readFile(path.join(testDir, ".forge/governance-runtime.json"), "utf-8")
       );
 
       expect(written1.metadata.checksum).not.toBe(written2.metadata.checksum);
+    });
+  });
+
+  /**
+   * NEXUS: DIRECTIVE-NXTG-20260718-04 item 3.
+   *
+   * Runtime activity used to rewrite the tracked `.claude/governance.json` on
+   * every server start and hook fire, so the git tree was dirty after any run.
+   * The constitution stays versioned; the growing runtime log does not.
+   */
+  describe("runtime/config split", () => {
+    const seedConfig = async () => {
+      const claudeDir = path.join(testDir, ".claude");
+      const govDir = path.join(claudeDir, "governance");
+      await fs.mkdir(govDir, { recursive: true });
+      await fs.writeFile(
+        path.join(govDir, "config.json"),
+        JSON.stringify({
+          sentinelLog: { maxEntries: 100, retentionDays: 30, persistCritical: true },
+          stateManagement: { backupEnabled: false, maxBackups: 10 },
+        }),
+      );
+      return claudeDir;
+    };
+
+    it("leaves the versioned constitution byte-identical across writes", async () => {
+      const claudeDir = await seedConfig();
+      const statePath = path.join(claudeDir, "governance.json");
+
+      // First write establishes the versioned file.
+      const first = createValidState();
+      await manager.writeState(first);
+      const afterFirst = await fs.readFile(statePath, "utf-8");
+
+      // Subsequent runtime writes must not touch it — this is the property
+      // that keeps `git status` clean across an api-server start/stop cycle.
+      // The constitution is carried over UNCHANGED (only runtime fields move),
+      // which is what an ordinary server start does. An actual constitution
+      // edit is a real content change and SHOULD rewrite the versioned file.
+      const second = createValidState();
+      second.constitution = first.constitution;
+      second.sentinelLog = [
+        {
+          id: "sentinel-1",
+          timestamp: Date.now(),
+          type: "INFO",
+          message: "Server started",
+          source: "api-server",
+        } as any,
+      ];
+      await manager.writeState(second);
+
+      expect(await fs.readFile(statePath, "utf-8")).toBe(afterFirst);
+    });
+
+    it("writes the growing sentinel log to the untracked runtime path", async () => {
+      await seedConfig();
+      const state = createValidState();
+      state.sentinelLog = [
+        {
+          id: "sentinel-1",
+          timestamp: Date.now(),
+          type: "INFO",
+          message: "Server started",
+          source: "api-server",
+        } as any,
+      ];
+
+      await manager.writeState(state);
+
+      const versioned = JSON.parse(
+        await fs.readFile(path.join(testDir, ".claude/governance.json"), "utf-8"),
+      );
+      const runtime = JSON.parse(
+        await fs.readFile(
+          path.join(testDir, ".forge/governance-runtime.json"),
+          "utf-8",
+        ),
+      );
+
+      // Runtime fields live only in the untracked file...
+      expect(runtime.sentinelLog).toHaveLength(1);
+      expect(versioned.sentinelLog).toBeUndefined();
+      // ...and the constitution lives only in the versioned one.
+      expect(versioned.constitution).toBeDefined();
+      expect(runtime.constitution).toBeUndefined();
+    });
+
+    it("round-trips a split state back through readState", async () => {
+      await seedConfig();
+      const state = createValidState();
+      state.sentinelLog = [
+        {
+          id: "sentinel-1",
+          timestamp: Date.now(),
+          type: "INFO",
+          message: "Server started",
+          source: "api-server",
+        } as any,
+      ];
+
+      await manager.writeState(state);
+      const read = await manager.readState();
+
+      // Consumers see one merged state regardless of how it is stored.
+      expect(read.constitution).toBeDefined();
+      expect(read.sentinelLog).toHaveLength(1);
+      // And the merged object still validates — the checksum is canonical, so
+      // it survives being reassembled from two files in a different key order.
+      await expect(manager.validateStateIntegrity()).resolves.toMatchObject({
+        valid: true,
+      });
+    });
+
+    it("still reads legacy single-file state written before the split", async () => {
+      const claudeDir = await seedConfig();
+      const legacy = createValidState();
+      legacy.sentinelLog = [
+        {
+          id: "legacy-1",
+          timestamp: Date.now(),
+          type: "INFO",
+          message: "Written under the old layout",
+          source: "api-server",
+        } as any,
+      ];
+      // Old layout: everything in the tracked file, no runtime file at all.
+      await fs.writeFile(
+        path.join(claudeDir, "governance.json"),
+        JSON.stringify(legacy, null, 2),
+      );
+
+      const read = await manager.readState();
+
+      expect(read.sentinelLog).toHaveLength(1);
+      expect(read.constitution).toBeDefined();
     });
   });
 });

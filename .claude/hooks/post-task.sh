@@ -24,17 +24,23 @@ fi
 
 log_info "Post-task hook triggered"
 
-# 1. Update project.json with completion status
-if [ -n "$TASK_ID" ] && has_command jq && [ -f "$PROJECT_STATE_FILE" ]; then
+# 1. Update runtime session state with completion status (see pre-task.sh —
+#    runtime fields live in the untracked .forge/ file, not in versioned config)
+if [ -n "$TASK_ID" ] && has_command jq && ensure_runtime_file "$PROJECT_RUNTIME_FILE"; then
     CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     STATUS="${TASK_STATUS:-completed}"
 
-    jq --arg status "$STATUS" \
+    if jq --arg status "$STATUS" \
        --arg time "$CURRENT_TIME" \
        '.last_session.status = $status |
         .last_session.completed = $time |
-        .project.last_updated = $time' \
-       "$PROJECT_STATE_FILE" > "$PROJECT_STATE_FILE.tmp" && mv "$PROJECT_STATE_FILE.tmp" "$PROJECT_STATE_FILE"
+        .last_updated = $time' \
+       "$PROJECT_RUNTIME_FILE" > "$PROJECT_RUNTIME_FILE.tmp" 2>/dev/null \
+       && [ -s "$PROJECT_RUNTIME_FILE.tmp" ]; then
+        mv "$PROJECT_RUNTIME_FILE.tmp" "$PROJECT_RUNTIME_FILE"
+    else
+        rm -f "$PROJECT_RUNTIME_FILE.tmp"
+    fi
 
     if [ "$STATUS" = "success" ]; then
         log_success "Task completed successfully"
@@ -77,15 +83,28 @@ if [ -f "$GOVERNANCE_STATE_FILE" ]; then
 fi
 
 # 5. Update quality metrics in project.json
-if has_command python && [ -f "$PROJECT_STATE_FILE" ]; then
-    # Get test count
-    if [ -d "$PROJECT_ROOT/tests" ]; then
-        TEST_COUNT=$(find "$PROJECT_ROOT/tests" -name "test_*.py" -type f | wc -l)
+#
+# This previously counted ONLY Python `test_*.py` files, under a `tests/`
+# directory, gated on python being installed. In this TypeScript repo that
+# matched nothing and wrote 0 over a real count — active corruption, not drift
+# (DIRECTIVE-NXTG-20260718-04 item 3). Logic now matches the forge-plugin
+# upstream: count test files across languages, and never write a zero.
+if has_command jq && ensure_runtime_file "$PROJECT_RUNTIME_FILE"; then
+    TEST_COUNT=$(find "$PROJECT_ROOT" -name "*.test.ts" -o -name "*.test.tsx" \
+        -o -name "*.test.js" -o -name "*.spec.ts" -o -name "*.spec.tsx" \
+        -o -name "*.spec.js" -o -name "test_*.py" -type f 2>/dev/null \
+        | grep -v node_modules | wc -l)
 
-        if has_command jq; then
-            jq --argjson count "$TEST_COUNT" \
-               '.quality.tests.unit.total = $count' \
-               "$PROJECT_STATE_FILE" > "$PROJECT_STATE_FILE.tmp" && mv "$PROJECT_STATE_FILE.tmp" "$PROJECT_STATE_FILE"
+    # Never write a zero: 0 here has always meant "counted nothing", which is a
+    # measurement failure, not a project with no tests.
+    if [ "$TEST_COUNT" -gt 0 ]; then
+        if jq --argjson count "$TEST_COUNT" \
+           '.quality.tests.unit.total = $count' \
+           "$PROJECT_RUNTIME_FILE" > "$PROJECT_RUNTIME_FILE.tmp" 2>/dev/null \
+           && [ -s "$PROJECT_RUNTIME_FILE.tmp" ]; then
+            mv "$PROJECT_RUNTIME_FILE.tmp" "$PROJECT_RUNTIME_FILE"
+        else
+            rm -f "$PROJECT_RUNTIME_FILE.tmp"
         fi
     fi
 fi

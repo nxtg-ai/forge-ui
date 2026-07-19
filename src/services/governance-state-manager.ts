@@ -17,15 +17,36 @@ import type {
 
 export class GovernanceStateManager {
   private projectRoot: string;
+  /**
+   * Versioned constitution — `.claude/governance.json`. Human-authored,
+   * committed, and NOT rewritten by runtime activity.
+   */
   private statePath: string;
+  /**
+   * Runtime state — `.forge/governance-runtime.json`. Grows on every server
+   * start and hook fire (sentinelLog, timestamps, workstream progress), so it
+   * lives on an untracked path. Keeping it inside the versioned file made the
+   * git tree dirty on every run (DIRECTIVE-NXTG-20260718-04 item 3).
+   */
+  private runtimePath: string;
   private configPath: string;
   private backupDir: string;
 
   constructor(projectRoot: string) {
     this.projectRoot = projectRoot;
     this.statePath = path.join(projectRoot, ".claude/governance.json");
+    this.runtimePath = path.join(projectRoot, ".forge/governance-runtime.json");
     this.configPath = path.join(projectRoot, ".claude/governance/config.json");
     this.backupDir = path.join(projectRoot, ".claude/governance/backups");
+  }
+
+  /** Fields owned by the runtime file; everything else stays versioned. */
+  private splitState(state: GovernanceState): {
+    versioned: Pick<GovernanceState, "version" | "constitution">;
+    runtime: Omit<GovernanceState, "version" | "constitution">;
+  } {
+    const { version, constitution, ...runtime } = state;
+    return { versioned: { version, constitution }, runtime };
   }
 
   /**
@@ -62,6 +83,7 @@ export class GovernanceStateManager {
   setProjectRoot(newRoot: string): void {
     this.projectRoot = newRoot;
     this.statePath = path.join(newRoot, ".claude/governance.json");
+    this.runtimePath = path.join(newRoot, ".forge/governance-runtime.json");
     this.configPath = path.join(newRoot, ".claude/governance/config.json");
     this.backupDir = path.join(newRoot, ".claude/governance/backups");
   }
@@ -78,7 +100,14 @@ export class GovernanceStateManager {
         throw new Error("Governance state not found");
       }
 
-      const state: GovernanceState = JSON.parse(data);
+      const versioned: GovernanceState = JSON.parse(data);
+
+      // Overlay runtime state from the untracked file. When it is absent we
+      // fall back to whatever the versioned file still carries, which
+      // transparently migrates projects written under the old single-file
+      // layout — their first write moves those fields across.
+      const runtime = await this.readRuntimeState();
+      const state: GovernanceState = { ...versioned, ...runtime };
 
       // Validate state integrity
       if (this.isValidState(state)) {
@@ -94,6 +123,48 @@ export class GovernanceStateManager {
         throw new Error("Governance state not found");
       }
       throw error;
+    }
+  }
+
+  /**
+   * True when the versioned half differs from what is on disk — including the
+   * legacy case where the tracked file still carries runtime fields that this
+   * write will strip (a one-time migration).
+   */
+  private async versionedStateChanged(
+    versioned: Pick<GovernanceState, "version" | "constitution">,
+  ): Promise<boolean> {
+    try {
+      const onDisk = await fs.readFile(this.statePath, "utf-8");
+      // Compare CONTENT, not bytes. A raw string compare treats cosmetic
+      // differences — a trailing newline from `jq`, a different key order —
+      // as a change and rewrites the tracked file on every boot, which is the
+      // exact tree-dirtying this split exists to stop.
+      return (
+        this.canonicalStringify(JSON.parse(onDisk)) !==
+        this.canonicalStringify(versioned)
+      );
+    } catch {
+      return true; // missing, empty, or unparseable — write it
+    }
+  }
+
+  /**
+   * Read the untracked runtime half. Returns an empty object when it does not
+   * exist yet (fresh project, or one still on the legacy single-file layout)
+   * so the caller can fall back to the versioned file's fields.
+   */
+  private async readRuntimeState(): Promise<
+    Partial<Omit<GovernanceState, "version" | "constitution">>
+  > {
+    try {
+      const data = await fs.readFile(this.runtimePath, "utf-8");
+      if (!data.trim()) return {};
+      return JSON.parse(data);
+    } catch {
+      // Missing or unparseable runtime state is not fatal — governance still
+      // reads from the versioned constitution.
+      return {};
     }
   }
 
@@ -114,14 +185,28 @@ export class GovernanceStateManager {
     // Add checksum for integrity (must be after all mutations)
     rotatedState.metadata.checksum = this.calculateChecksum(rotatedState);
 
-    // Atomic write using temp file
-    const tempPath = `${this.statePath}.tmp`;
-    await fs.writeFile(
-      tempPath,
-      JSON.stringify(rotatedState, null, 2),
-      "utf-8",
-    );
-    await fs.rename(tempPath, this.statePath);
+    const { versioned, runtime } = this.splitState(rotatedState);
+
+    // Runtime half → untracked path. Atomic write via temp file.
+    await fs.mkdir(path.dirname(this.runtimePath), { recursive: true });
+    const runtimeTemp = `${this.runtimePath}.tmp`;
+    await fs.writeFile(runtimeTemp, JSON.stringify(runtime, null, 2), "utf-8");
+    await fs.rename(runtimeTemp, this.runtimePath);
+
+    // Versioned half → written ONLY when it actually changed. Runtime activity
+    // must never dirty the git tree, so an unchanged constitution is left
+    // byte-identical rather than rewritten with a new timestamp.
+    if (await this.versionedStateChanged(versioned)) {
+      const tempPath = `${this.statePath}.tmp`;
+      // Trailing newline keeps the file POSIX-clean and stable against tools
+      // (jq, editors) that add one.
+      await fs.writeFile(
+        tempPath,
+        JSON.stringify(versioned, null, 2) + "\n",
+        "utf-8",
+      );
+      await fs.rename(tempPath, this.statePath);
+    }
 
     // Create backup if enabled
     if (config.stateManagement.backupEnabled) {
@@ -244,9 +329,36 @@ export class GovernanceStateManager {
 
     return crypto
       .createHash("sha256")
-      .update(JSON.stringify(stateForHash))
+      .update(this.canonicalStringify(stateForHash))
       .digest("hex")
       .substring(0, 16); // Use first 16 chars for brevity
+  }
+
+  /**
+   * JSON.stringify with deterministic key ordering.
+   *
+   * Plain stringify is key-ORDER sensitive, so the same logical state hashed
+   * to different checksums depending on how the object was assembled. That
+   * surfaced when state began round-tripping through two files: the merged
+   * `{...versioned, ...runtime}` object carries a different key order than the
+   * one that was written, which failed integrity validation even though not a
+   * single value had changed. Sorting keys makes the checksum a function of
+   * CONTENT alone.
+   */
+  private canonicalStringify(value: unknown): string {
+    if (value === null || typeof value !== "object") return JSON.stringify(value);
+    if (Array.isArray(value)) {
+      return `[${value.map((v) => this.canonicalStringify(v)).join(",")}]`;
+    }
+    const entries = Object.keys(value as Record<string, unknown>)
+      .sort()
+      .map(
+        (k) =>
+          `${JSON.stringify(k)}:${this.canonicalStringify(
+            (value as Record<string, unknown>)[k],
+          )}`,
+      );
+    return `{${entries.join(",")}}`;
   }
 
   /**

@@ -35,9 +35,13 @@ if [ -f "$PROJECT_STATE_FILE" ]; then
 fi
 
 # 3. Update last session info
-if [ -n "$TASK_ID" ] && has_command jq && [ -f "$PROJECT_STATE_FILE" ]; then
+#
+# Session tracking is RUNTIME state — it changed on every task and dirtied the
+# tracked .claude/project.json. It now lives in the untracked runtime file
+# (DIRECTIVE-NXTG-20260718-04 item 3); project.json stays versioned config.
+if [ -n "$TASK_ID" ] && has_command jq && ensure_runtime_file "$PROJECT_RUNTIME_FILE"; then
     CURRENT_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    jq --arg id "$TASK_ID" \
+    if jq --arg id "$TASK_ID" \
        --arg time "$CURRENT_TIME" \
        --arg task "${TASK_DESCRIPTION:-Unknown task}" \
        --arg agent "${AGENT_TYPE:-general}" \
@@ -46,10 +50,14 @@ if [ -n "$TASK_ID" ] && has_command jq && [ -f "$PROJECT_STATE_FILE" ]; then
         .last_session.task = $task |
         .last_session.agent = $agent |
         .last_session.status = "in_progress" |
-        .project.last_updated = $time' \
-       "$PROJECT_STATE_FILE" > "$PROJECT_STATE_FILE.tmp" && mv "$PROJECT_STATE_FILE.tmp" "$PROJECT_STATE_FILE"
-
-    log_success "Updated project.json with task info"
+        .last_updated = $time' \
+       "$PROJECT_RUNTIME_FILE" > "$PROJECT_RUNTIME_FILE.tmp" 2>/dev/null \
+       && [ -s "$PROJECT_RUNTIME_FILE.tmp" ]; then
+        mv "$PROJECT_RUNTIME_FILE.tmp" "$PROJECT_RUNTIME_FILE"
+        log_success "Updated runtime session info"
+    else
+        rm -f "$PROJECT_RUNTIME_FILE.tmp"
+    fi
 fi
 
 # 4. Check for uncommitted changes
