@@ -11,7 +11,7 @@
  * response shape.
  */
 
-import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import { fileURLToPath } from "node:url";
 
 const STUB = fileURLToPath(
@@ -26,11 +26,16 @@ const originalMode = process.env.FORGE_STUB_MODE;
 
 let getOrchestratorHealth: typeof import("../orchestrator-health").getOrchestratorHealth;
 let clearOrchestratorHealthCache: typeof import("../orchestrator-health").clearOrchestratorHealthCache;
+let awaitPendingReaps: typeof import("../orchestrator-health").awaitPendingReaps;
+
+// The global test setup mocks `fs`; these assertions read files the stub really
+// wrote, so they need the unmocked module.
+let readFileSync: typeof import("node:fs").readFileSync;
 
 beforeEach(async () => {
-  ({ getOrchestratorHealth, clearOrchestratorHealthCache } = await import(
-    "../orchestrator-health"
-  ));
+  ({ readFileSync } = await vi.importActual<typeof import("node:fs")>("node:fs"));
+  ({ getOrchestratorHealth, clearOrchestratorHealthCache, awaitPendingReaps } =
+    await import("../orchestrator-health"));
   clearOrchestratorHealthCache();
   process.env.FORGE_BIN = STUB;
 });
@@ -103,6 +108,43 @@ describe("getOrchestratorHealth", () => {
 
     expect(first!.score).toBe(1);
     expect(second!.score).toBe(1);
+  });
+
+  // Codex Wave-1 gate, [P1]: v3.3.1 measured concurrent_calls=20 spawned=20.
+  // The memoization test above only covers SEQUENTIAL callers, which is why
+  // the concurrent fan-out survived that release.
+  it("coalesces 20 concurrent callers into a single spawn", async () => {
+    process.env.FORGE_STUB_MODE = "counted";
+    const counter = `${COUNTER}-concurrent`;
+    process.env.FORGE_STUB_COUNTER = counter;
+
+    const results = await Promise.all(
+      Array.from({ length: 20 }, () =>
+        getOrchestratorHealth("/tmp/concurrent-probe"),
+      ),
+    );
+
+    // The stub appends one byte per invocation: the file length IS the spawn
+    // count, measured the same way Codex measured it.
+    expect(readFileSync(counter, "utf-8").length).toBe(1);
+    // Every caller still gets the real answer, not a null.
+    expect(results.map((r) => r!.score)).toEqual(Array(20).fill(1));
+  });
+
+  it("kills a child that ignores SIGTERM by escalating to SIGKILL", async () => {
+    process.env.FORGE_STUB_MODE = "stubborn";
+    const pidfile = `${COUNTER}-stubborn-pid`;
+    process.env.FORGE_STUB_PIDFILE = pidfile;
+
+    const health = await getOrchestratorHealth("/tmp/reap-probe");
+    expect(health!.score).toBe(50);
+
+    await awaitPendingReaps();
+
+    // `close` fires only after Node reaps the child, so a resolved reap means
+    // the pid is released — signal 0 probes existence without sending one.
+    const pid = Number(readFileSync(pidfile, "utf-8"));
+    expect(() => process.kill(pid, 0)).toThrow(/ESRCH/);
   });
 
   it("re-spawns after the cache is cleared", async () => {

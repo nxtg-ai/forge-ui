@@ -29,6 +29,15 @@ const MCP_TIMEOUT_MS = 5_000;
 /** Health is re-fetched at most this often — each call spawns a subprocess. */
 const CACHE_TTL_MS = 15_000;
 
+/**
+ * How long a child gets to honour SIGTERM before we escalate to SIGKILL.
+ *
+ * The orchestrator exits promptly on stdin close, so this grace period is for
+ * the pathological case only: a build that ignores, blocks, or never receives
+ * the signal. Without escalation such a child outlives the request.
+ */
+const REAP_GRACE_MS = 1_000;
+
 export interface OrchestratorFinding {
   category: string;
   severity: string;
@@ -55,6 +64,25 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>();
 
+/**
+ * Calls that have been issued but have not settled yet, keyed by project root.
+ *
+ * The value cache alone only throttles SEQUENTIAL callers: concurrent readers
+ * arriving on a cold or expired entry all miss the lookup and each spawn their
+ * own subprocess. The dashboard's real load shape is concurrent (multiple
+ * clients, parallel API requests), so coalescing in-flight work — not the TTL —
+ * is what actually bounds process fan-out.
+ */
+const inflight = new Map<string, Promise<OrchestratorHealth | null>>();
+
+/**
+ * Reaps still running in the background, exposed for tests via
+ * `awaitPendingReaps()`. A request answers as soon as it has a value; killing
+ * the child is deliberately NOT on that path, so nothing here is awaited by
+ * production code.
+ */
+const pendingReaps = new Set<Promise<void>>();
+
 /** Binary is overridable so a project can pin a specific orchestrator build. */
 function forgeBinary(): string {
   return process.env.FORGE_BIN || "forge";
@@ -67,6 +95,61 @@ function forgeBinary(): string {
  * malformed response) — health is a display concern and must degrade to the
  * local estimate rather than break the dashboard.
  */
+/**
+ * Terminate a child and do not stop chasing it until it is actually gone.
+ *
+ * SIGTERM first, then SIGKILL if it has not closed within the grace period.
+ * Resolves on `close`, which Node emits only after it has reaped the process,
+ * so a resolved reap means the pid is genuinely released rather than a zombie.
+ *
+ * Runs in the background: the caller already has its answer, and making every
+ * health request wait on process teardown would tax the common path to fix a
+ * rare one.
+ */
+function reapChild(child: {
+  exitCode: number | null;
+  signalCode: NodeJS.Signals | null;
+  once: (event: string, cb: () => void) => unknown;
+  kill: (signal?: NodeJS.Signals) => unknown;
+}): Promise<void> {
+  const done = new Promise<void>((settleReap) => {
+    // Already exited — nothing to chase.
+    if (child.exitCode !== null || child.signalCode !== null) return settleReap();
+
+    // Registered before the timers exist, so it clears whatever has been
+    // scheduled by the time the child actually closes.
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    child.once("close", () => {
+      timers.forEach(clearTimeout);
+      settleReap();
+    });
+
+    const signal = (sig: NodeJS.Signals) => {
+      try {
+        child.kill(sig);
+      } catch {
+        /* already gone — `close` has fired or will fire */
+      }
+    };
+
+    signal("SIGTERM");
+
+    const escalation = setTimeout(() => signal("SIGKILL"), REAP_GRACE_MS);
+    // SIGKILL cannot be caught, so `close` is guaranteed to follow. This only
+    // exists so a wedged handle can never leave the promise dangling forever.
+    const backstop = setTimeout(() => settleReap(), REAP_GRACE_MS * 2);
+
+    escalation.unref?.();
+    backstop.unref?.();
+    timers.push(escalation, backstop);
+  });
+
+  pendingReaps.add(done);
+  void done.finally(() => pendingReaps.delete(done));
+  return done;
+}
+
 async function callHealthTool(
   projectRoot: string,
 ): Promise<OrchestratorHealth | null> {
@@ -95,7 +178,8 @@ async function callHealthTool(
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      child.kill();
+      // Answer now; guarantee the child dies in the background.
+      void reapChild(child);
       resolve(value);
     };
 
@@ -199,12 +283,34 @@ export async function getOrchestratorHealth(
     return hit.value;
   }
 
-  const value = await callHealthTool(projectRoot);
-  cache.set(projectRoot, { value, at: Date.now() });
-  return value;
+  // A call for this root is already running — join it instead of spawning a
+  // second orchestrator. This is what bounds fan-out under concurrent load.
+  const existing = inflight.get(projectRoot);
+  if (existing) return existing;
+
+  const pending = callHealthTool(projectRoot)
+    .then((value) => {
+      cache.set(projectRoot, { value, at: Date.now() });
+      return value;
+    })
+    .finally(() => {
+      inflight.delete(projectRoot);
+    });
+
+  inflight.set(projectRoot, pending);
+  return pending;
+}
+
+/**
+ * Test seam — resolves once every background reap has finished, so a test can
+ * assert the child is actually gone rather than assuming it.
+ */
+export async function awaitPendingReaps(): Promise<void> {
+  await Promise.all([...pendingReaps]);
 }
 
 /** Test seam — drops memoized health so a fresh call re-spawns. */
 export function clearOrchestratorHealthCache(): void {
   cache.clear();
+  inflight.clear();
 }

@@ -12,9 +12,12 @@
  *   exit       — non-zero exit, no output
  *   counted    — increments FORGE_STUB_COUNTER and reports the count as the
  *                score, so a caller can prove how many times it was spawned
+ *   stubborn   — answers, writes its pid to FORGE_STUB_PIDFILE, then IGNORES
+ *                SIGTERM and stays alive, so a caller can prove the bridge
+ *                escalates to SIGKILL instead of leaking the process
  */
 
-import { appendFileSync, readFileSync } from "node:fs";
+import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 
 const mode = process.env.FORGE_STUB_MODE || "ok";
 
@@ -46,6 +49,15 @@ const payloads = {
 };
 
 let payload = payloads[mode];
+
+if (mode === "stubborn") {
+  writeFileSync(process.env.FORGE_STUB_PIDFILE, String(process.pid));
+  // Refuse to die politely. Only SIGKILL can end this process.
+  process.on("SIGTERM", () => {});
+  // Keep the event loop alive after stdin closes.
+  setInterval(() => {}, 1_000);
+  payload = { health_score: 50 };
+}
 
 if (mode === "counted") {
   const counter = process.env.FORGE_STUB_COUNTER;
