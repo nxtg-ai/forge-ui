@@ -51,7 +51,8 @@ export interface ProjectState {
   blockers: Blocker[];
   recentDecisions: Decision[];
   activeAgents: Agent[];
-  healthScore: number;
+  /** null when no score has been measured — renders as unavailable, never 0. */
+  healthScore: number | null;
   /**
    * Provenance of healthScore. When "estimate" the orchestrator was
    * unreachable and the number is a local approximation — it is labeled as
@@ -173,7 +174,9 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
     deploying: 100,
   };
 
-  const getHealthColor = (score: number) => {
+  const getHealthColor = (score: number | null) => {
+    // No score is NOT a bad score — render it neutral rather than alarming red.
+    if (score === null) return "text-gray-400 bg-gray-500/10 border-gray-500/20";
     if (score >= 80)
       return "text-green-400 bg-green-500/10 border-green-500/20";
     if (score >= 60)
@@ -433,14 +436,18 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
                 className="text-4xl font-bold mb-2"
                 data-testid="dashboard-health-score"
               >
-                {projectState.healthScore}%
+                {projectState.healthScore === null
+                  ? "—"
+                  : `${projectState.healthScore}%`}
               </div>
               <div className="text-sm opacity-75">
-                {projectState.healthScore >= 80
-                  ? "All systems optimal"
-                  : projectState.healthScore >= 60
-                    ? "Minor issues detected"
-                    : "Attention required"}
+                {projectState.healthScore === null
+                  ? "Health unavailable — no score reported"
+                  : projectState.healthScore >= 80
+                    ? "All systems optimal"
+                    : projectState.healthScore >= 60
+                      ? "Minor issues detected"
+                      : "Attention required"}
               </div>
               {projectState.healthSource === "estimate" && (
                 <div

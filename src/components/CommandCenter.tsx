@@ -55,7 +55,10 @@ interface ProjectContext {
   phase: string;
   activeAgents: number;
   pendingTasks: number;
-  healthScore: number;
+  /** null when no score has been measured — renders unavailable, never 0. */
+  healthScore: number | null;
+  /** Provenance, so an estimated score is never shown as canonical. */
+  healthSource?: "orchestrator" | "estimate" | null;
   lastActivity: Date;
 }
 
@@ -313,20 +316,43 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                         </span>
                         <span className="text-gray-400">agents</span>
                       </div>
-                      <div
-                        className={`
-                        px-2 py-0.5 rounded-full text-xs
-                        ${
-                          projectContext.healthScore >= 80
-                            ? "bg-green-500/20 text-green-400"
-                            : projectContext.healthScore >= 60
-                              ? "bg-yellow-500/20 text-yellow-400"
-                              : "bg-red-500/20 text-red-400"
-                        }
-                      `}
-                      >
-                        {projectContext.healthScore}% health
-                      </div>
+                      {projectContext.healthScore === null ? (
+                        <div
+                          className="px-2 py-0.5 rounded-full text-xs bg-gray-700/40 text-gray-400"
+                          data-testid="command-center-health"
+                        >
+                          health unavailable
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <div
+                            className={`
+                            px-2 py-0.5 rounded-full text-xs
+                            ${
+                              projectContext.healthScore >= 80
+                                ? "bg-green-500/20 text-green-400"
+                                : projectContext.healthScore >= 60
+                                  ? "bg-yellow-500/20 text-yellow-400"
+                                  : "bg-red-500/20 text-red-400"
+                            }
+                          `}
+                            data-testid="command-center-health"
+                          >
+                            {projectContext.healthScore}% health
+                          </div>
+                          {/* Every rendered health number carries its
+                              provenance (DIRECTIVE-NXTG-20260718-04 item 2). */}
+                          {projectContext.healthSource === "estimate" && (
+                            <span
+                              className="text-[10px] text-amber-400/80"
+                              title="Orchestrator unavailable — locally estimated, not the canonical score"
+                              data-testid="command-center-health-estimate-label"
+                            >
+                              estimate
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

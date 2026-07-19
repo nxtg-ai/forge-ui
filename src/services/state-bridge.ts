@@ -430,28 +430,39 @@ export class StateBridgeService extends BaseService {
   }
 
   /**
-   * Load initial state from backend or persistence
-   * Note: Currently initializes with default state. Backend integration
-   * will sync with StateManager when backend orchestrator is running.
+   * Load initial state from backend or persistence.
+   *
+   * Deliberately leaves state NULL until the backend actually syncs. This
+   * previously seeded a fabricated snapshot — including `healthScore: 100`,
+   * a perfect score no one had measured — which `getSnapshot()`'s existing
+   * null-guard was already designed to represent honestly. Inventing the
+   * values defeated that guard and is the dx-journeys fabrication
+   * anti-pattern (DIRECTIVE-NXTG-20260718-04 item 1).
+   *
+   * The state OBJECT still exists (mutation APIs like addBlocker depend on
+   * it), but every not-yet-measured metric is null rather than invented.
+   * Structural zeros are kept only where they are literally true of a fresh
+   * store — an empty store really does hold zero blockers.
    */
   private async loadInitialState(): Promise<Result<void, IntegrationError>> {
     try {
-      // Initialize with default state; backend sync happens via polling
       this.currentState = {
         phase: "planning",
         progress: 0,
         blockers: [],
         recentDecisions: [],
         activeAgents: [],
-        healthScore: 100,
+        // Not measured yet — the orchestrator is the only source of truth.
+        healthScore: null,
       };
 
       this.projectContext = {
-        name: "NXTG-Forge",
+        // Unknown until /api/forge/status answers; never a baked-in literal.
+        name: null,
         phase: "planning",
         activeAgents: 0,
         pendingTasks: 0,
-        healthScore: 100,
+        healthScore: null,
         lastActivity: new Date(),
       };
 
@@ -549,7 +560,9 @@ export class StateBridgeService extends BaseService {
       blockers: z.array(z.any()),
       recentDecisions: z.array(z.any()),
       activeAgents: z.array(z.any()),
-      healthScore: z.number().min(0).max(100),
+      // Nullable: "not measured yet" is a valid state. A real score is still
+      // range-checked; only the absence of one is additionally permitted.
+      healthScore: z.number().min(0).max(100).nullable(),
     });
 
     const result = this.validate(state, ProjectStateSchema);

@@ -51,15 +51,18 @@ export interface ProjectState {
   blockers: Blocker[];
   recentDecisions: Decision[];
   activeAgents: Agent[];
-  healthScore: number;
+  /** null until a real score is measured — never fabricate a placeholder. */
+  healthScore: number | null;
 }
 
 export interface ProjectContext {
-  name: string;
+  /** null until /api/forge/status supplies the real project name. */
+  name: string | null;
   phase: string;
   activeAgents: number;
   pendingTasks: number;
-  healthScore: number;
+  /** null until a real score is measured — never fabricate a placeholder. */
+  healthScore: number | null;
   lastActivity: Date;
 }
 

@@ -38,9 +38,11 @@ export interface DashboardData {
     blockers: Blocker[];
     recentDecisions: Decision[];
     activeAgents: Agent[];
-    healthScore: number;
-    /** Provenance of healthScore — "estimate" must be labeled in the UI. */
-    healthSource: HealthSource;
+    /** null when no score has been measured — render unavailable, never 0. */
+    healthScore: number | null;
+    /** Provenance of healthScore — "estimate" must be labeled in the UI;
+     *  null means no score was reported at all. */
+    healthSource: HealthSource | null;
   };
   visionData: {
     mission: string;
@@ -73,8 +75,8 @@ const DEFAULT_PROJECT_STATE: DashboardData["projectState"] = {
   blockers: [],
   recentDecisions: [],
   activeAgents: [],
-  healthScore: 0,
-  healthSource: "estimate",
+  healthScore: null,
+  healthSource: null,
 };
 
 /**
@@ -120,12 +122,15 @@ export function useDashboardData(): DashboardData {
    * local estimate — see status-service.resolveHealth. Recomputing it in the
    * client is a contract violation (contracts/dx-journeys.md anti-patterns).
    */
-  const readHealthScore = (status: ForgeStatus | null): number =>
-    status?.health?.score ?? 0;
+  const readHealthScore = (status: ForgeStatus | null): number | null =>
+    // null, NOT 0. Coercing an absent score to 0 rendered "0% — Attention
+    // required" whenever the backend was down, which is a fabricated health
+    // claim and made every downstream unavailable-state branch unreachable.
+    status?.health?.score ?? null;
 
   /** Provenance of the served score, so the UI can flag non-canonical values. */
-  const readHealthSource = (status: ForgeStatus | null): HealthSource =>
-    status?.health?.source ?? "estimate";
+  const readHealthSource = (status: ForgeStatus | null): HealthSource | null =>
+    status?.health?.source ?? null;
 
   /**
    * Fetch all dashboard data via HTTP

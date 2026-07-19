@@ -119,6 +119,7 @@ const LiveDashboard: React.FC = () => {
     projectState,
     visionData,
     agents: realAgents,
+    forgeStatus,
     loading: dashboardLoading,
     error: dashboardError,
     refresh: refreshDashboard,
@@ -544,11 +545,14 @@ const LiveDashboard: React.FC = () => {
         onCommandExecute={handleCommandExecute}
         availableCommands={availableCommands}
         projectContext={{
-          name: "NXTG-Forge",
+          // Real project name from /api/forge/status, not a baked-in literal.
+          name: forgeStatus?.project.name ?? "unavailable",
           phase: projectState.phase,
           activeAgents: workerAgents.filter((a) => a.status !== "idle").length,
           pendingTasks: projectState.blockers.length,
           healthScore: projectState.healthScore,
+          // Provenance travels WITH the number so the estimate label renders.
+          healthSource: projectState.healthSource,
           lastActivity: new Date(),
         }}
         isExecuting={isExecuting}

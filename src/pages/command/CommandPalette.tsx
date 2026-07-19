@@ -26,6 +26,9 @@ interface CommandPaletteProps {
   onExecute: (command: CommandType) => void;
   isExecuting: boolean;
   projectContext: ProjectContext;
+  /** True while the first context fetch is in flight — distinguishes
+   *  "not loaded yet" from "backend unreachable". */
+  contextLoading?: boolean;
 }
 
 export const CommandPalette: React.FC<CommandPaletteProps> = ({
@@ -35,7 +38,13 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onExecute,
   isExecuting,
   projectContext,
+  contextLoading = false,
 }) => {
+  /**
+   * Rendered in place of any metric with no real value behind it. Showing a
+   * fabricated number here is the anti-pattern this replaced.
+   */
+  const unavailable = contextLoading ? "…" : "unavailable";
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -146,30 +155,70 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                 <div className="flex items-center gap-1">
                   <Target className="w-3 h-3 text-purple-400" />
                   <span className="text-gray-400">Project:</span>
-                  <span className="text-gray-200 font-medium">{projectContext.name}</span>
+                  <span
+                    className="text-gray-200 font-medium"
+                    data-testid="palette-project-name"
+                  >
+                    {projectContext.name ?? unavailable}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Activity className="w-3 h-3 text-blue-400" />
                   <span className="text-gray-400">Phase:</span>
-                  <span className="text-gray-200 font-medium">{projectContext.phase}</span>
+                  <span
+                    className="text-gray-200 font-medium"
+                    data-testid="palette-phase"
+                  >
+                    {projectContext.phase ?? unavailable}
+                  </span>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-1">
                   <Users className="w-3 h-3 text-green-400" />
-                  <span className="text-gray-200">{projectContext.activeAgents}</span>
+                  <span className="text-gray-200" data-testid="palette-agents">
+                    {projectContext.activeAgents ?? unavailable}
+                  </span>
                   <span className="text-gray-400">agents</span>
                 </div>
-                <div className={`
-                  px-2 py-0.5 rounded-full text-xs
-                  ${projectContext.healthScore >= 80
-                    ? "bg-green-500/20 text-green-400"
-                    : projectContext.healthScore >= 60
-                      ? "bg-yellow-500/20 text-yellow-400"
-                      : "bg-red-500/20 text-red-400"}
-                `}>
-                  {projectContext.healthScore}% health
-                </div>
+                {projectContext.healthScore === null ? (
+                  <div
+                    className="px-2 py-0.5 rounded-full text-xs bg-gray-700/40 text-gray-400"
+                    data-testid="palette-health"
+                  >
+                    {unavailable} health
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <div
+                      className={`
+                        px-2 py-0.5 rounded-full text-xs
+                        ${projectContext.healthScore >= 80
+                          ? "bg-green-500/20 text-green-400"
+                          : projectContext.healthScore >= 60
+                            ? "bg-yellow-500/20 text-yellow-400"
+                            : "bg-red-500/20 text-red-400"}
+                      `}
+                      data-testid="palette-health"
+                    >
+                      {projectContext.healthScore}% health
+                    </div>
+                    {/*
+                      Source labeling per DIRECTIVE-NXTG-20260718-04 item 2 (as
+                      amended): a non-canonical score must never render as if it
+                      came from the orchestrator.
+                    */}
+                    {projectContext.healthSource === "estimate" && (
+                      <span
+                        className="text-[10px] text-amber-400/80"
+                        title="Orchestrator unavailable — locally estimated, not the canonical score"
+                        data-testid="palette-health-estimate-label"
+                      >
+                        estimate
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

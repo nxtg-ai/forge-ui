@@ -10,7 +10,7 @@
  * - Accessibility and screen reader support
  */
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Command } from "lucide-react";
 
 import { AppShell } from "../components/layout";
@@ -21,6 +21,7 @@ import {
   useRealtimeConnection,
 } from "../hooks/useRealtimeConnection";
 import { apiClient } from "../services/api-client";
+import { useDashboardData } from "../hooks/useDashboardData";
 import type { OracleMessage } from "../components/infinity-terminal/OracleFeedMarquee";
 import type { Command as CommandType } from "../components/types";
 
@@ -69,15 +70,47 @@ const CommandView: React.FC = () => {
   const [isExecuting, setIsExecuting] = useState(false);
   const [announcement, setAnnouncement] = useState("");
 
-  // Project context (would come from API in real implementation)
-  const [projectContext] = useState<ProjectContext>({
-    name: "NXTG-Forge",
-    phase: "building",
-    activeAgents: 3,
-    pendingTasks: 12,
-    healthScore: 87,
-    lastActivity: new Date(),
-  });
+  /**
+   * Live project context.
+   *
+   * Previously six hardcoded literals (healthScore 87, activeAgents 3,
+   * pendingTasks 12, …) that rendered to users as if they were real —
+   * DIRECTIVE-NXTG-20260718-04 item 1. Now sourced from useDashboardData,
+   * which is the canonical consumer of /api/forge/status and carries the
+   * orchestrator's health provenance.
+   *
+   * When the backend is unreachable (`forgeStatus === null`) every field
+   * resolves to null so the palette renders "unavailable" instead of
+   * inventing a plausible number.
+   */
+  const { projectState, forgeStatus, loading: contextLoading } =
+    useDashboardData();
+
+  const projectContext = useMemo<ProjectContext>(() => {
+    if (!forgeStatus) {
+      return {
+        name: null,
+        phase: null,
+        activeAgents: null,
+        pendingTasks: null,
+        healthScore: null,
+        healthSource: null,
+        lastActivity: null,
+      };
+    }
+
+    return {
+      name: forgeStatus.project.name,
+      phase: projectState.phase,
+      activeAgents: projectState.activeAgents.length,
+      pendingTasks: forgeStatus.governance.tasksPending,
+      healthScore: projectState.healthScore,
+      healthSource: projectState.healthSource,
+      lastActivity: forgeStatus.timestamp
+        ? new Date(forgeStatus.timestamp)
+        : null,
+    };
+  }, [forgeStatus, projectState]);
 
   // Oracle messages for footer
   const [oracleMessages] = useState<OracleMessage[]>([
@@ -300,6 +333,7 @@ const CommandView: React.FC = () => {
         onExecute={executeCommand}
         isExecuting={isExecuting}
         projectContext={projectContext}
+        contextLoading={contextLoading}
       />
 
       {/* Mobile Bottom Navigation */}

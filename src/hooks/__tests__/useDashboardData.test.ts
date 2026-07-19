@@ -100,13 +100,22 @@ describe("useDashboardData", () => {
     expect(result.current.projectState).toBeDefined();
   });
 
-  it("should calculate health score correctly", async () => {
+  /**
+   * The client MUST NOT compute a health score — it reads the one the server
+   * served (contracts/dx-journeys.md; calculateHealthScore was deleted in
+   * v3.3.1). These two tests replace a "should calculate health score
+   * correctly" test whose mock carried no `health` field at all: it passed
+   * only because a missing score was coerced to 0, so `0 < 100 && 0 >= 0`
+   * held vacuously. It asserted nothing. (DIRECTIVE-NXTG-20260718-04 item 1.)
+   */
+  it("reads the served health score and its provenance verbatim", async () => {
     global.fetch = createFetchMock({
       "/api/forge/status": {
         git: { hasUncommitted: true, modified: 5, untracked: 3 },
         tests: { passing: 8, total: 10 },
         build: { status: "success" },
         governance: { status: "ok", workstreamsBlocked: 0 },
+        health: { score: 73, factors: [], source: "orchestrator" },
       },
     });
 
@@ -116,8 +125,31 @@ describe("useDashboardData", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.projectState.healthScore).toBeLessThan(100);
-    expect(result.current.projectState.healthScore).toBeGreaterThanOrEqual(0);
+    // Exactly the served number — not recomputed, not adjusted.
+    expect(result.current.projectState.healthScore).toBe(73);
+    expect(result.current.projectState.healthSource).toBe("orchestrator");
+  });
+
+  it("reports a missing health score as null, never as 0", async () => {
+    global.fetch = createFetchMock({
+      "/api/forge/status": {
+        git: { hasUncommitted: true, modified: 5, untracked: 3 },
+        tests: { passing: 8, total: 10 },
+        build: { status: "success" },
+        governance: { status: "ok", workstreamsBlocked: 0 },
+        // no `health` key — the server reported no score
+      },
+    });
+
+    const { result } = renderHook(() => useDashboardData());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    // 0 would render as "0% — Attention required": a fabricated health claim.
+    expect(result.current.projectState.healthScore).toBeNull();
+    expect(result.current.projectState.healthSource).toBeNull();
   });
 
   it("should handle 4xx/5xx response codes gracefully", async () => {
