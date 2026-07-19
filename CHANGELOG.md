@@ -35,7 +35,9 @@ MINOR rather than PATCH because health gained a second canonical source. `Health
 
 ### Known issues
 
-- **The security scanner is uncalibrated and its score is not meaningful.** Its first working run reports 39 critical / 626 high, but the findings do not survive inspection: 606 of the "high" are "SQL injection via string concatenation" in a project with **no SQL dependency at all** — one such line is `updatedAt?: string;`, a TypeScript interface field — and all 39 "critical" are every `spawn()` call flagged regardless of whether it uses `shell` (none do; all pass an argument array, which is the form that *prevents* injection). The scanner was never triaged because it never ran. Its 0/100 also drags the quality dashboard's overall grade down to D. Calibration is tracked separately; treat the current numbers as noise, not as a security posture.
+- **The security scanner is uncalibrated and its score is not meaningful — it runs REPORT-ONLY.** Its first working run reports ~40 critical / ~627 high, but the findings do not survive inspection: 606 of the "high" are "SQL injection via string concatenation" in a project with **no SQL dependency at all** — one such line is `updatedAt?: string;`, a TypeScript interface field — and every "critical" is a `spawn()` call flagged regardless of whether it uses `shell` (none do; all pass an argument array, which is the form that *prevents* injection). The scanner was never triaged because it never ran. Its 0/100 also drags the quality dashboard's overall grade to D.
+  - It prints a loud `SECURITY SCAN: REPORT-ONLY (uncalibrated)` banner on every run, naming the finding count and the calibration directive, so the state cannot pass unnoticed and the numbers cannot travel as a posture.
+  - **The report-only window expires by version**: the scanner returns to blocking at **v3.5.0** whether or not calibration has landed, and sooner if it lands first. Treat the current numbers as noise until then.
 
 ## [3.3.2] - 2026-07-18
 
