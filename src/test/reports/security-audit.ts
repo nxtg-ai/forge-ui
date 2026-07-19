@@ -538,13 +538,96 @@ export class SecurityAuditor {
   }
 }
 
+/**
+ * Enforcement state — FPL ruling, NEXUS 621005a (DIRECTIVE-NXTG-20260718-17).
+ *
+ * This scanner spent an unknown period exiting 0 having scanned nothing (glob's
+ * callback API was removed in v9; the wrapping promise never settled). With it
+ * actually running, its output turned out to be uncalibrated: 606 of 626 "high"
+ * were SQL-injection warnings in a project with NO SQL dependency — one flagged
+ * line is `updatedAt?: string;` — and every `spawn()` is "critical" regardless
+ * of form, though none use `shell` and all pass an argument array, which is the
+ * construction that prevents injection.
+ *
+ * So it runs REPORT-ONLY until calibrated, and says so loudly on every run — a
+ * silent green is what got us here. The report-only window is not open-ended:
+ * it expires by VERSION, so the gate returns to blocking on its own even if
+ * nobody does the calibration work.
+ */
+
+/** Flipped to true by DIRECTIVE-NXTG-20260718-17 when calibration lands. */
+export const SECURITY_SCAN_CALIBRATED = false;
+
+/** Blocking resumes at this version regardless of calibration state. */
+export const SECURITY_SCAN_BLOCKING_FROM = "3.5.0";
+
+/** Numeric compare of major.minor.patch; non-semver sorts low. */
+function compareVersions(a: string, b: string): number {
+  const parse = (v: string) =>
+    (v.split("-")[0].split(".").map((n) => Number.parseInt(n, 10)) ?? []).map(
+      (n) => (Number.isNaN(n) ? 0 : n),
+    );
+  const [x, y] = [parse(a), parse(b)];
+  for (let i = 0; i < 3; i += 1) {
+    const d = (x[i] ?? 0) - (y[i] ?? 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+
+export interface ScanEnforcement {
+  blocking: boolean;
+  reason: "calibrated" | "expired" | "report-only";
+}
+
+/**
+ * Whether the scanner blocks the build.
+ *
+ * Pure, so the expiry is a tested behavior rather than a promise in a comment.
+ */
+export function resolveScanEnforcement(opts: {
+  version: string;
+  calibrated?: boolean;
+  blockingFrom?: string;
+}): ScanEnforcement {
+  const blockingFrom = opts.blockingFrom ?? SECURITY_SCAN_BLOCKING_FROM;
+
+  if (opts.calibrated ?? SECURITY_SCAN_CALIBRATED) {
+    return { blocking: true, reason: "calibrated" };
+  }
+  if (compareVersions(opts.version, blockingFrom) >= 0) {
+    return { blocking: true, reason: "expired" };
+  }
+  return { blocking: false, reason: "report-only" };
+}
+
+/** The loud banner. A report-only gate that whispers is a silent green. */
+export function formatReportOnlyBanner(
+  findings: number,
+  version: string,
+): string {
+  const bar = "=".repeat(72);
+  return [
+    "",
+    bar,
+    `SECURITY SCAN: REPORT-ONLY (uncalibrated) — ${findings} findings, see DIRECTIVE-NXTG-20260718-17`,
+    "",
+    "  These findings are NOT a security posture. The rule classes do not match",
+    "  this project's dependency surface and have never been triaged.",
+    `  Currently v${version}. Returns to BLOCKING at v${SECURITY_SCAN_BLOCKING_FROM},`,
+    "  or sooner when calibration lands — whichever comes first.",
+    bar,
+    "",
+  ].join("\n");
+}
+
 // CLI usage
 const _isMain = process.argv[1]?.endsWith('security-audit.ts') || process.argv[1]?.endsWith('security-audit.js');
 if (_isMain) {
   const auditor = new SecurityAuditor();
   auditor
     .runAudit()
-    .then((report) => {
+    .then(async (report) => {
       console.log("\n=== Security Audit Complete ===");
       console.log(`Overall Score: ${report.summary.overallScore}/100`);
       console.log(`Critical Issues: ${report.summary.violations.critical}`);
@@ -552,8 +635,25 @@ if (_isMain) {
       console.log(`Medium Issues: ${report.summary.violations.medium}`);
       console.log(`Low Issues: ${report.summary.violations.low}`);
 
+      // Single version surface (the app-version pattern ratified for -12):
+      // read the version, never re-hardcode it.
+      const { appVersion } = await import("../../services/app-version");
+      const enforcement = resolveScanEnforcement({ version: appVersion });
+      const total =
+        report.summary.violations.critical +
+        report.summary.violations.high +
+        report.summary.violations.medium +
+        report.summary.violations.low;
+
+      if (!enforcement.blocking) {
+        console.log(formatReportOnlyBanner(total, appVersion));
+        return; // exit 0 — reported loudly, does not block
+      }
+
       if (report.summary.violations.critical > 0) {
-        console.error("\n⚠️  CRITICAL security issues detected!");
+        console.error(
+          `\n⚠️  CRITICAL security issues detected! (scanner BLOCKING — ${enforcement.reason})`,
+        );
         process.exit(1);
       }
     })
