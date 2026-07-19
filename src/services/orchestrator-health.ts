@@ -106,7 +106,7 @@ function forgeBinary(): string {
  * health request wait on process teardown would tax the common path to fix a
  * rare one.
  */
-function reapChild(child: {
+export function reapChild(child: {
   exitCode: number | null;
   signalCode: NodeJS.Signals | null;
   once: (event: string, cb: () => void) => unknown;

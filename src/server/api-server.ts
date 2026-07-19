@@ -90,7 +90,12 @@ const bootstrapService = new BootstrapService(stateManager);
 const mcpSuggestionEngine = new MCPSuggestionEngine();
 const runspaceManager = new RunspaceManager();
 const initService = new InitService(projectRoot);
-const statusService = new StatusService(projectRoot);
+// Resolver, not a snapshot: status must follow the active runspace like every
+// other route does (see ctx.projectRoot below), or a runspace switch leaves the
+// dashboard reporting the previous project's health and identity.
+const statusService = new StatusService(
+  () => runspaceManager.getActiveRunspace()?.path ?? projectRoot,
+);
 const complianceService = new ComplianceService(projectRoot);
 
 // ============= Worker Pool (Auto-detected backend) =============

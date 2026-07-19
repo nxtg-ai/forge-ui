@@ -31,6 +31,7 @@ import {
   Target,
   BarChart3,
 } from "lucide-react";
+import type { HealthSource } from "../services/status-service";
 
 interface CommandCenterProps {
   onCommandExecute: (command: string, args?: Record<string, unknown>) => void;
@@ -58,7 +59,7 @@ interface ProjectContext {
   /** null when no score has been measured — renders unavailable, never 0. */
   healthScore: number | null;
   /** Provenance, so an estimated score is never shown as canonical. */
-  healthSource?: "orchestrator" | "estimate" | null;
+  healthSource?: HealthSource | null;
   lastActivity: Date;
 }
 
@@ -345,7 +346,7 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
                           {projectContext.healthSource === "estimate" && (
                             <span
                               className="text-[10px] text-amber-400/80"
-                              title="Orchestrator unavailable — locally estimated, not the canonical score"
+                              title="No MCP health source reachable — locally estimated, not the canonical score"
                               data-testid="command-center-health-estimate-label"
                             >
                               estimate

@@ -28,6 +28,7 @@ import {
   Layers,
 } from "lucide-react";
 import { ProgressBar } from "./ui/ProgressBar";
+import type { HealthSource } from "../services/status-service";
 
 interface DashboardProps {
   visionData: VisionData;
@@ -58,7 +59,7 @@ export interface ProjectState {
    * unreachable and the number is a local approximation — it is labeled as
    * such so it is never mistaken for the canonical score.
    */
-  healthSource?: "orchestrator" | "estimate";
+  healthSource?: HealthSource;
 }
 
 interface Blocker {
@@ -454,7 +455,7 @@ export const ChiefOfStaffDashboard: React.FC<DashboardProps> = ({
                   className="text-xs opacity-60 mt-1"
                   data-testid="dashboard-health-estimate-label"
                 >
-                  Estimate — orchestrator unavailable
+                  Estimate — no MCP health source
                 </div>
               )}
             </div>

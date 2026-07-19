@@ -211,7 +211,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                     {projectContext.healthSource === "estimate" && (
                       <span
                         className="text-[10px] text-amber-400/80"
-                        title="Orchestrator unavailable — locally estimated, not the canonical score"
+                        title="No MCP health source reachable — locally estimated, not the canonical score"
                         data-testid="palette-health-estimate-label"
                       >
                         estimate

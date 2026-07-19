@@ -145,14 +145,46 @@ export interface LiveContext {
   timestamp: string;
 }
 
-export type HealthSource = "orchestrator" | "estimate";
+/**
+ * Where a displayed health score came from.
+ *
+ * "orchestrator" and "governance" are both CANONICAL MCP surfaces (L2/L3 and
+ * L1-plugin-only respectively). "estimate" is locally derived and MUST be
+ * labeled as non-canonical in the UI — see contracts/dx-journeys.md.
+ */
+export type HealthSource = "orchestrator" | "governance" | "estimate";
+
+/** The canonical (non-estimate) sources, for consumers that must distinguish. */
+export const CANONICAL_HEALTH_SOURCES: readonly HealthSource[] = [
+  "orchestrator",
+  "governance",
+];
 
 export class StatusService {
-  constructor(private projectRoot: string) {}
+  private resolveRoot: () => string;
+
+  /**
+   * Accepts a fixed root or a resolver.
+   *
+   * The resolver form exists because the API server's project root is dynamic
+   * — it follows the active runspace. This service was constructed once with
+   * the startup cwd and `setProjectRoot` was never called, so after a runspace
+   * switch the dashboard reported health and identity for the ORIGINAL project
+   * while every other route had moved. Passing a resolver keeps the two in step
+   * by construction. NEXUS: DIRECTIVE-NXTG-20260718-14.
+   */
+  constructor(projectRoot: string | (() => string)) {
+    this.resolveRoot =
+      typeof projectRoot === "function" ? projectRoot : () => projectRoot;
+  }
+
+  private get projectRoot(): string {
+    return this.resolveRoot();
+  }
 
   /** Switch to a different project root (for multi-project support) */
   setProjectRoot(newRoot: string): void {
-    this.projectRoot = newRoot;
+    this.resolveRoot = () => newRoot;
   }
 
   /**
@@ -418,6 +450,23 @@ export class StatusService {
    * Get project name from package.json
    */
   private async getProjectName(): Promise<string> {
+    // Canonical first: `.forge/state.json:project_name` is what `forge init`
+    // records and what the orchestrator reports as the project's identity.
+    // package.json is a Node-only convention — a Rust/Python project, or any
+    // bare `forge init` fixture, has no package.json at all and used to report
+    // "unknown" here, which broke identity binding against the canonical
+    // surface (contracts/dx-journeys.md — the same project must be identifiable
+    // on both sides). NEXUS: DIRECTIVE-NXTG-20260718-14.
+    try {
+      const statePath = path.join(this.projectRoot, ".forge", "state.json");
+      const state = JSON.parse(await fs.readFile(statePath, "utf-8"));
+      if (typeof state.project_name === "string" && state.project_name) {
+        return state.project_name;
+      }
+    } catch {
+      // No forge state — fall through to the Node convention.
+    }
+
     try {
       const pkgPath = path.join(this.projectRoot, "package.json");
       const data = await fs.readFile(pkgPath, "utf-8");
@@ -534,6 +583,7 @@ export class StatusService {
     tests: LiveTestResults,
     governance: GovernanceHealth,
   ): Promise<LiveContext["health"]> {
+    // Tier 1 — the orchestrator, canonical whenever it is reachable.
     const canonical = await getOrchestratorHealth(this.projectRoot);
 
     if (canonical) {
@@ -547,6 +597,25 @@ export class StatusService {
       };
     }
 
+    // Tier 2 — plugin-only (L1): no orchestrator binary, but the project
+    // declares a governance MCP server. Still canonical, just a different
+    // surface, so it must not be presented as a local estimate.
+    const { getGovernanceHealth } = await import("./governance-health");
+    const plugin = await getGovernanceHealth(this.projectRoot);
+
+    if (plugin) {
+      return {
+        score: plugin.score,
+        factors: [],
+        source: "governance",
+        summary: plugin.grade
+          ? `Governance health: ${plugin.score}/100 (${plugin.grade})`
+          : `Governance health: ${plugin.score}/100`,
+      };
+    }
+
+    // Tier 3 — nothing canonical is reachable. Labeled, never presented as
+    // canonical health (the DoD's hard FAIL condition).
     return {
       ...this.computeHealthScore(git, tests, governance),
       source: "estimate",
