@@ -398,25 +398,39 @@ function setupGovernanceWatcher() {
     }
   };
 
+  // Each watcher is isolated. Previously the runtime watcher ran unguarded and
+  // FIRST, so its ENOENT on a legacy upgrade (no .forge/ yet) escaped past the
+  // constitution watcher into the caller's non-fatal catch — leaving the server
+  // healthy-looking with NEITHER watcher active for its whole life. One
+  // watcher failing must never take the other down. (Codex re-gate 2, [P1].)
+  const attach = (label: string, target: string) => {
+    try {
+      const w = watch(target, onChange);
+      logger.info(`[Governance] ${label} watcher active: ${target}`);
+      return w;
+    } catch (err: unknown) {
+      logger.warn(`[Governance] ${label} watcher failed (non-fatal):`, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return null;
+    }
+  };
+
   // Watch the RUNTIME file: since the runtime/config split, sentinel appends
   // and workstream progress land there, not in the versioned constitution.
   // Watching only .claude/governance.json would silently stop live dashboard
   // updates (DIRECTIVE-NXTG-20260718-04 item 3).
-  const runtimePath = path.join(projectRoot, ".forge/governance-runtime.json");
-  governanceWatcher = watch(runtimePath, onChange);
+  governanceWatcher = attach(
+    "runtime",
+    path.join(projectRoot, ".forge/governance-runtime.json"),
+  );
 
   // The constitution still changes when a human edits it — watch it too so a
   // directive/vision edit reaches clients without a restart.
-  const constitutionPath = path.join(projectRoot, ".claude/governance.json");
-  try {
-    constitutionWatcher = watch(constitutionPath, onChange);
-  } catch (err: unknown) {
-    logger.warn("[Governance] Constitution watcher failed (non-fatal):", {
-      error: err instanceof Error ? err.message : String(err),
-    });
-  }
-
-  logger.info("[Governance] File watchers initialized (runtime + constitution)");
+  constitutionWatcher = attach(
+    "constitution",
+    path.join(projectRoot, ".claude/governance.json"),
+  );
 }
 
 // ============= Server Startup =============
@@ -451,7 +465,22 @@ server.listen(PORT, "0.0.0.0", async () => {
     logger.info("[Governance] Initial state seeded and broadcast");
   }
 
-  // Start watching governance file AFTER seed ensures it exists
+  // Materialize the runtime file BEFORE watchers are attached. On the legacy
+  // single-file upgrade path the readState() above succeeds from the versioned
+  // file alone, so the seed branch is skipped and .forge/ may not exist yet —
+  // which used to make the runtime watcher throw ENOENT. (Codex re-gate 2.)
+  try {
+    const migrated = await governanceStateManager.ensureRuntimeState();
+    if (migrated) {
+      logger.info("[Governance] Runtime state materialized from legacy layout");
+    }
+  } catch (err: unknown) {
+    logger.warn("[Governance] Runtime state ensure failed (non-fatal):", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
+  // Start watching governance files AFTER the runtime file is guaranteed
   try {
     setupGovernanceWatcher();
   } catch (err: unknown) {

@@ -169,6 +169,28 @@ export class GovernanceStateManager {
   }
 
   /**
+   * Guarantee the runtime file exists on disk, migrating a legacy single-file
+   * state into it if needed. Returns true if it had to create the file.
+   *
+   * Callers that watch the runtime path MUST await this first. On the legacy
+   * upgrade path `readState()` succeeds from the versioned file alone, so
+   * nothing else forces the runtime file into existence, and a watcher
+   * registered against the missing path throws ENOENT at startup.
+   */
+  async ensureRuntimeState(): Promise<boolean> {
+    try {
+      await fs.access(this.runtimePath);
+      return false; // already present
+    } catch {
+      // Absent: materialize it from current state (which merges any legacy
+      // runtime fields still living in the versioned file).
+      const state = await this.readState();
+      await this.writeState(state);
+      return true;
+    }
+  }
+
+  /**
    * Write governance state with rotation and backup
    */
   async writeState(state: GovernanceState): Promise<void> {
