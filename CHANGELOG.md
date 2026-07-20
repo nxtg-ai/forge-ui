@@ -5,6 +5,12 @@ All notable changes to NXTG-Forge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+
+- **esbuild bumped 0.27.3 → 0.28.1** to clear GHSA-g7r4-m6w7-qqqr (low — dev-server arbitrary file read on Windows), which the CI production audit flags. This is the same advisory 3.3.1 *accepted* as unfixable-without-a-major at the time; 0.28.1 is now published, so it is resolved rather than accepted. Pinned via an `overrides` entry because it reaches the production tree transitively through `tsx` and `vite`; the lockfile change is esbuild-only, and `tsx`/`vite` run unchanged against it. `npm audit --omit=dev` is now clean (0 vulnerabilities).
+
 ## [3.4.0] - 2026-07-19
 
 Health and identity now come from the canonical MCP surfaces, the shipped server artifact runs again, and both are held there by instruments rather than by review.
