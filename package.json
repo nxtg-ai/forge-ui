@@ -102,7 +102,7 @@
     "express": "^5.2.1",
     "framer-motion": "^12.31.0",
     "gray-matter": "^4.0.3",
-    "js-yaml": "^4.1.1",
+    "js-yaml": "^4.3.1",
     "lucide-react": "^0.563.0",
     "node-pty": "^1.1.0",
     "postcss": "^8.5.6",
