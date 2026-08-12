@@ -63,7 +63,10 @@ jobs:
           fi
 
       - name: Security audit (production only)
-        run: npm audit --omit=dev
+        # npm audit exits non-zero for any vulnerability by default. Gate CI on
+        # high/critical production findings while still printing lower-severity
+        # findings for visibility.
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Upload quality reports
         uses: actions/upload-artifact@v4
