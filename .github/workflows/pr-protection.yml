@@ -48,7 +48,11 @@ jobs:
         id: tests
         run: |
           npx vitest run --reporter=verbose 2>&1 | tee test-output.txt
-          COUNT=$(grep -oP 'Tests\s+\K[0-9]+(?=\s+passed)' test-output.txt || echo 0)
+          # Strip ANSI color codes before parsing: GitHub Actions runners make
+          # vitest emit colorized output (FORCE_COLOR), so the summary line is
+          # "Tests \e[22m \e[32m4513 passed" — the escape bytes between "Tests"
+          # and the digits defeat a plain \s+ match and the count reads 0.
+          COUNT=$(sed -r 's/\x1B\[[0-9;]*[mK]//g' test-output.txt | grep -oP 'Tests\s+\K[0-9]+(?=\s+passed)' || echo 0)
           echo "count=$COUNT" >> "$GITHUB_OUTPUT"
           echo "Test count: $COUNT (baseline: 4165)"
           [ "$COUNT" -ge 4165 ] || { echo "::error::Test count decreased: $COUNT < 4165"; exit 1; }
@@ -93,7 +97,7 @@ jobs:
       - name: Post PR comment
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.NXTG_SENTINEL_TOKEN }}
+          github-token: ${{ github.token }}
           script: |
             const jobs = {
               'Security Scan': '${{ needs.security-scan.result }}',
