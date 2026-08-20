@@ -1,203 +1,37 @@
-# NXTG-Forge v3 - Claude Code Knowledge Base
+# NXTG-Forge UI — Claude Code Project Guide
 
-## CRITICAL: Read Before Responding
+## Product Architecture
 
-### Infinity Terminal Architecture
+The Infinity Terminal provides persistent browser terminal sessions through the public application stack:
 
-**The Infinity Terminal has BUILT-IN session persistence. Zellij is NOT required.**
-
-```
-Architecture:
-Browser (xterm.js) → WebSocket → PTY Bridge (api-server.ts) → Shell
-                          ↓
-               Session persistence via:
-               - useSessionPersistence.ts hook
-               - PTY Bridge session management
-               - Session ID tracking + auto-reconnect
+```text
+Browser (xterm.js) -> WebSocket -> PTY bridge -> shell
 ```
 
-**Key facts:**
-- Sessions survive browser close/reopen
-- Sessions survive network disconnects
-- Multiple clients can connect to same session
-- This is the "Infinity" in Infinity Terminal
-- Zellij is OPTIONAL local terminal enhancement, not a dependency
+Session identity and reconnect logic should survive ordinary browser and network interruptions. Keep client URLs environment-neutral and use the documented proxy/configuration layer rather than developer-machine addresses.
 
-### Multi-Device Access (WSL2)
+## Development Rules
 
-The UI uses **Vite's proxy** for multi-device access:
+- Read the implementation before making architectural claims.
+- Preserve session persistence and reconnect behavior.
+- Prefer relative URLs and environment-driven configuration over hardcoded hosts or ports.
+- Run the full test suite, typecheck, security audit, and build before release changes.
+- Keep test coverage and meaningful assertions from regressing without explicit justification.
+- Use synthetic fixtures and portable examples.
 
-```
-Remote Device → http://192.168.1.206:5050/api/* → Vite Proxy → localhost:5051
-```
+## Public / Private Boundary
 
-**Critical configuration:**
-- `.env` must NOT hardcode `VITE_API_URL` or `VITE_WS_URL`
-- Client code uses relative URLs (`/api/...`) in dev mode
-- Vite proxies `/api`, `/ws`, `/terminal` to `localhost:5051`
-- Windows firewall rule required: `New-NetFirewallRule -DisplayName 'NXTG Forge' -Direction Inbound -LocalPort 5050,5051,5173,8003 -Protocol TCP -Action Allow`
+This is a public repository. Do not commit private portfolio state, internal directives, agent handoffs, personal design workspaces, organization-internal runtime paths, private network addresses, machine topology, private cross-project memory configuration, credentials, or generated internal audit output.
 
-### Port Assignments
+Public agent guidance belongs in this file. Organization-internal runtime wiring must be injected outside the repository.
 
-| Port | Service | Binding |
-|------|---------|---------|
-| 5050 | Vite UI Dev Server | 0.0.0.0 |
-| 5051 | API Server + WebSocket | 0.0.0.0 |
-| 5173 | Vite (alternate) | 0.0.0.0 |
-| 8003 | Reserved | 0.0.0.0 |
+## Security
 
-### Core Principles (from USER-CRITICAL-INSTRUCTIONS.md)
+- Never commit environment secrets or private keys.
+- Keep browser/API boundaries explicit and validate input crossing them.
+- Do not publish developer-machine firewall rules, LAN addresses, private service endpoints, or internal voice/runtime services.
+- Generated screenshots, reports, checkpoints, and session data remain local unless intentionally scrubbed for release.
 
-1. **Dog-Food or Die** - Use Claude Code's native capabilities, not TypeScript meta-services
-2. **Agent Teams First** - For multi-file features, reviews, and debugging: spawn agent teams with specialized teammates, not sequential subagents. Teams talk to each other, challenge findings, and self-coordinate
-3. **Parallel Agents** - Launch up to 20 agents in parallel with multiple Task calls in ONE message
-4. **Real Logs, No Mocking** - QA sees real web logs, no simulated data
-5. **Everything to Memory** - Store all user feedback/corrections persistently
+## Release Discipline
 
-### Agent Teams (Always Active)
-
-NXTG-Forge has Agent Teams permanently enabled (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in `.claude/settings.json`). This is a super-human capability — use it aggressively.
-
-**When to spawn a team (default for non-trivial work):**
-- Features touching 3+ files → builder + tester + reviewer teammates
-- Code reviews → security + performance + coverage teammates in parallel
-- Debugging unclear issues → competing hypothesis teammates that debate each other
-- `/forge:gap-analysis` → 4 teammates analyzing test/doc/security/architecture gaps simultaneously
-
-**Team patterns for NXTG-Forge:**
-| Command | Team Structure |
-|---------|---------------|
-| `/forge:feature` | Lead plans → builder implements → tester writes tests → security reviews |
-| `/forge:gap-analysis` | 4 teammates: test gaps, doc gaps, security gaps, arch gaps |
-| Health Check | 3 teammates run vitest, tsc, npm audit simultaneously |
-| Code review | 3 reviewers: security lens, performance lens, test coverage lens |
-
-**Rules for teammates:**
-- Each teammate owns **separate files** — never two teammates editing the same file
-- Use **delegate mode** (Shift+Tab) when the lead should only coordinate, not code
-- Use **plan approval** for risky changes — teammate plans, lead approves before implementation
-- CLAUDE.md is automatically loaded by all teammates — project context is shared
-
-### Before Making Claims About This Codebase
-
-1. **READ THE CODE** - Don't assume. Check `src/` for actual implementation
-2. **CHECK EXISTING DOCS** - `docs/infinity-terminal/README.md`, `.claude/` files
-3. **VERIFY RUNNING SERVICES** - `ss -tlnp | grep 505` to see what's actually running
-4. **TEST BEFORE CLAIMING** - Don't say "X doesn't work" without testing
-
-### Common Mistakes to Avoid
-
-- ❌ Claiming Zellij is required for session persistence
-- ❌ Suggesting hardcoded localhost URLs for multi-device
-- ❌ Building TypeScript services when agents should do the work
-- ❌ Asking permission after decisions are made
-- ❌ Making claims about features without reading the implementation
-
-## CRUCIBLE Protocol (Test Quality — Mandatory)
-
-CRUCIBLE = Code Review Under Conditions Inducing Bug Latency Exposure. All ASIF projects must pass all 8 gates before any release. Reference: `~/ASIF/standards/crucible-protocol.md`.
-
-### The 8 Gates
-
-| Gate | Name | Threshold | Current Status |
-|------|------|-----------|----------------|
-| 1 | xfail governance | 0 unexplained skips | 1 skip (`AgentWorker.test.ts:377`) |
-| 2 | Hollow assertions | < 10% | 7.35% (612/8,322) — CLEAN |
-| 3 | Mock drift | Justified mocks only | 1,037 mocks — flag heavy internal mocking |
-| 4 | Delta gate | Count never decreases | 4,146 baseline — maintain or grow |
-| 5 | Silent exceptions | No swallowed errors | 252 found — remediate in bootstrap.ts |
-| 6 | Mutation testing | ≥ 40% score | 36.27% on useForgeIntegration — FAIL |
-| 7 | Spec-test trace | New tests cite NEXUS ID | N/A for existing; required for new tests |
-| 8 | Coverage integrity | Lines/Funcs/Stmts ≥ 80%, Branches ≥ 75% | 86.8%/87.1%/87.3%/74.8% |
-
-### Key Rules
-- **Do NOT delete tests** — fix or flag them. Test count is a ratchet.
-- **Hollow assertions** (`toBeDefined`, `toBeTruthy`) count against Gate 2. Use specific matchers.
-- **Every mock must be justified** — external API/filesystem = fine; mocking your own service = suspicious.
-- **Silent catch blocks** = P1 violation. Always log or rethrow.
-- **New integration tests** must cite a NEXUS initiative ID in a comment.
-- **Mutation score target**: 40% minimum per module. Run: `npx stryker run /tmp/stryker.config.json`
-
-### Last CRUCIBLE Audit
-Completed: 2026-03-08 | Directive: DIRECTIVE-FPL-20260307-01 | Verdict: FAIL
-Remediations due: Gate 6 (mutation score), Gate 5 (bootstrap.ts silent catches), Gate 4 (restore 6 tests)
-
----
-
-## ASIF Governance
-
-This project is part of NXTG-Forge (P-03) in the ASIF portfolio (Developer Tools vertical).
-
-On every session (check BOTH your own NEXUS and the program NEXUS):
-1. Read `.asif/NEXUS.md` (your own) — check for `## CoS Directives` section
-1a. ALSO read `../.asif/NEXUS.md` (program-level) — check for directives targeting this repo
-2. Execute any PENDING directives before other work (unless Asif overrides)
-3. Write your response inline under each directive
-4. Update initiative statuses in NEXUS if your work changes them
-5. If you have questions for the CoS, add them under `## Team Questions` in NEXUS
-
----
-*Last updated: 2026-02-18 - ASIF governance + multi-device access*
-
-
-## Release Protocol Enforcement (ASIF Standard, ADR-036)
-
-This repo is currently NOT registered as a public-package distribution target, so the release-protocol gate skips on every push. Pre-push hook (Layer 1, `.git/hooks/pre-push`) and daily drift workflow (Layer 2) are installed and benign.
-
-If this repo later publishes to a registry (npm, PyPI, crates.io, GitHub Packages, etc.), add `.asif-ci` at the repo root:
-
-```
-release_protocol_enabled: true
-release_protocol_manifest: <path-to-published-manifest>
-```
-
-Then on each version bump in that manifest:
-1. **Tag**: `git tag vX.Y.Z && git push origin vX.Y.Z`
-2. **GH Release**: `gh release create vX.Y.Z --notes-from-tag`
-3. **Publish**: `<registry-specific publish command>`
-4. **CHANGELOG**: roll `[Unreleased]` → `[vX.Y.Z] — YYYY-MM-DD` in CHANGELOG.md
-5. **Docs**: update any pinned version references in README.md / docs
-
-Wolf's nightly sense pass surfaces drift portfolio-wide via `===SECTION:RELEASE_DRIFT===` once enabled.
-
-**Bypass (EMERGENCY ONLY)**: `git push --no-verify` — and document the bypass in NEXUS or HANDOFF.
-## Dx3 Brain Integration
-On every session start, recall relevant context from Dx3 before starting work:
-- Use recall() to check for prior decisions, lessons, and patterns related to your current task
-- After shipping work, use remember() to store what you learned
-- The brain at dx3-cognitive MCP has context from ALL projects — use it
-
-This is how the portfolio compounds intelligence. Your work benefits from every other team's learning.
-
-## Voice Identity
-**Voice**: `af_sarah`
-**Service**: http://100.123.83.34:8880/v1/audio/speech
-**Registry**: ~/ASIF/standards/voice-registry.md (canonical; `portfolio-voice-registry.md` redirects here)
-**Claim**: commit `a58781b` (2026-04-19), P-03a forge-ui
-**Use**: every cycle-complete, every P0/P1 completion, every directive response, every blocker/escalation.
-
-Wrapper (preferred):
-```bash
-~/ASIF/scripts/cos-speak-remote --voice af_sarah "Your message here."
-```
-
-Direct call (if wrapper unreachable):
-```bash
-curl -sS -X POST http://100.123.83.34:8880/v1/audio/speech \
-  -H "Content-Type: application/json" \
-  -d '{"model":"kokoro","input":"Your message here.","voice":"af_sarah","response_format":"wav"}' \
-  -o /tmp/voice.wav && aplay /tmp/voice.wav
-```
-
-**Rule**: no duplicates portfolio-wide. Do not silently complete directives — always speak.
-
-<!-- ASIF:TEAM-ALIGNMENT-WIRING:START -->
-## ASIF Alignment Wiring
-
-@/home/axw/ASIF/standards/claude-team-alignment-wiring.md
-
-- Team alignment id: `forge`.
-- Cross-team room: `/alignment`, written through `~/ASIF/scripts/alignment-say`.
-- If an `[ALIGNMENT ...]` message appears, respond through `alignment-say`; do not answer only in this private TUI.
-- Deterministic state first: typed Dx3/asifctl, `.asif/NEXUS.md`, git/tests/runtime probes. Prose is backup and local steering only.
-<!-- ASIF:TEAM-ALIGNMENT-WIRING:END -->
+Keep version metadata, changelog entries, tags, and release artifacts consistent. Do not bypass failing security, typecheck, test, or build gates to ship a release.
