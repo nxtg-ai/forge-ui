@@ -9,10 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Release workflow (`deploy.yml`)** — no tag since v3.1.3 produced a release with assets.
+  - v3.3.1, v3.3.2 and v3.4.0 never started (account billing lock). v3.3.0 failed at the security step, which re-read the scanner's JSON and blocked on criticals, overriding the scanner's own report-only decision. That step now relies on the scanner's exit code.
+  - The archive put the server at `dist-server/` while `npm start` runs `dist/server/api-server.js`, so an extracted archive could not start. It now ships `dist/`.
+  - The post-release smoke test was `timeout 5 npm start || true`, which passed whether or not the server booted. It now runs before release: it installs production deps from the archive, boots it with `scripts/smoke-built-server.mjs`, and requires a shaped `/api/forge/status`.
+  - Added a `dry_run` dispatch input that builds and smoke-tests the archives without creating a release; removed the no-op rollback job; `softprops/action-gh-release` v1 (node16) → v2; the tag gate now also runs `npm audit --omit=dev`.
+- **Always-red PR checks**:
+  - `cla-assistant` pins `contributor-assistant/github-action@v2.6.1` (the floating `@v2` ref no longer resolves) and allowlists the repository owner.
+  - `quality-gate` strips ANSI before reading the vitest count (it read 0), fails on a failing test run (`pipefail`; `tee` masked it), and raises the baseline to 4513.
+  - `staging-build` no longer runs `src/test/performance/` and `src/test/integration/`, neither of which exists; the full suite already runs in the same job.
+  - `pr-summary` posts with `GITHUB_TOKEN` (the `NXTG_SENTINEL_TOKEN` secret returns "Bad credentials").
+  - PR jobs run on Node 22 like the rest of CI.
 - **License** — Removed the stale MIT `LICENSE` left over from the 3.1.3 transition, so `LICENSE.md` (FSL-1.1-ALv2) is the repo's single license file. The `claude.json` manifest and `SECURITY.md` still claimed MIT and now say FSL-1.1-ALv2. The release workflow copied `LICENSE`, not `LICENSE.md`, into the release archive and skipped it silently if missing; it now copies `LICENSE.md` and fails if the file is missing. Versions up to and including v3.1.2 were published under the MIT License; FSL-1.1-ALv2 applies from v3.1.3 onward.
 
 ### Security
 
+- **Production audit clean** (`npm audit --omit=dev` → 0).
+  - `simple-git` 3 → 4.0.2 (GHSA-v5rq-49vh-5v5c; v4 drops the default export, so one import changed).
+  - `argparse` overridden to `^2.0.1` (GHSA-hp3w-g68c-fv3c via `gray-matter` → `js-yaml@3`, whose library code does not import argparse).
+  - `concurrently` moved to devDependencies (only `dev:raw` uses it), and `shell-quote` overridden to `^1.12.0` (GHSA-pqg4-j6r4-53mv).
+  - Remaining dev-only advisory: `@vitest/mocker` ≤ 4.1.10, left for a test-runner upgrade.
+- `package.json` is now `"private": true`. forge-ui ships through GitHub Releases only, and without the flag the release-drift check expected an npm publish (#27).
 - **esbuild bumped 0.27.3 → 0.28.1** to clear GHSA-g7r4-m6w7-qqqr (low — dev-server arbitrary file read on Windows), which the CI production audit flags. This is the same advisory 3.3.1 *accepted* as unfixable-without-a-major at the time; 0.28.1 is now published, so it is resolved rather than accepted. Pinned via an `overrides` entry because it reaches the production tree transitively through `tsx` and `vite`; the lockfile change is esbuild-only, and `tsx`/`vite` run unchanged against it. `npm audit --omit=dev` is now clean (0 vulnerabilities).
 
 ## [3.4.0] - 2026-07-19
