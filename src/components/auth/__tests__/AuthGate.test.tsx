@@ -6,6 +6,7 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { AuthGate } from "../AuthGate";
+import { resetSignInParamsForTests } from "../signin-params";
 
 function response(status: number): Response {
   return { ok: status >= 200 && status < 300, status, json: async () => ({}) } as Response;
@@ -18,6 +19,7 @@ describe("AuthGate", () => {
     fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     window.history.replaceState(null, "", "/");
+    resetSignInParamsForTests();
   });
 
   afterEach(() => {

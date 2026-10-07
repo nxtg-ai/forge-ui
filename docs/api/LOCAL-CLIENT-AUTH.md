@@ -77,9 +77,11 @@ An agent that drives a browser through tool calls (`browser_navigate`, `browser_
 1. On the machine running Forge, mint a link. The script reads the token from its file (or `FORGE_UI_SECRET`), sends it only in a request header to the running server, and prints a link carrying a one-time code, never the token:
 
    ```bash
-   npx tsx src/server/auth/print-login-link.ts      # or: node dist/server/auth/print-login-link.js
+   npm run auth:login-link        # same as: npx tsx src/server/auth/print-login-link.ts
    # http://localhost:5050/?forge_login_code=<64 hex>
    ```
+
+   Use `npm run --silent auth:login-link` to get only the link on stdout. Neither form prints the token: npm echoes the script name, not its environment.
 
    `FORGE_UI_API_URL` (default `http://127.0.0.1:5051`) and `FORGE_UI_URL` (default `http://localhost:5050`) point it at other ports. `FORGE_UI_API_URL` must be an `http://` loopback address, because the token is sent there; the script refuses anything else.
 
@@ -101,6 +103,14 @@ The code is random, **single-use** and **expires after 60 seconds**. A copy left
 
 A probe that treats "any HTTP response" as "up" sees a 401 and thinks the server is ready. Probe with the token and require a `200`.
 
-## 5. Network
+## 5. Sign-in values and analytics
+
+The page removes `?forge_token=` and `?forge_login_code=` from the address bar before any other script runs, including analytics. The sign-in screen then uses the values it took.
+
+Vercel Web Analytics is **off** in local installs. A hosted build can turn it on with `VITE_VERCEL_ANALYTICS=1` at build time, and every analytics event then passes through a `beforeSend` that strips both sign-in values.
+
+The browser itself still sends the full page URL as `Referer` on the HTML's own asset requests (the JS and CSS bundles), before any script can run. Those requests go to the same server that just received the URL, so no new party sees it. Even so, prefer the one-time link (§3) over `?forge_token=` wherever a URL might be recorded.
+
+## 6. Network
 
 The server listens on `127.0.0.1` unless `FORGE_UI_HOST` is set. Local tools should call `http://127.0.0.1:<port>`. `localhost` can resolve to `::1` first, and the server doesn't listen there.

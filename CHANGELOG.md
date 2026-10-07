@@ -12,6 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **One-time sign-in links for automated browser sessions.** `print-login-link.ts` reads the access token locally, sends it only in a request header, and prints a link carrying a single-use code that expires in 60 seconds. An agent driving a browser through tool calls can sign in without the token ever reaching a URL, a tool call, argv or a log. See `docs/api/LOCAL-CLIENT-AUTH.md`. Existing sign-in paths and token semantics are unchanged.
+- `npm run auth:login-link`: the one-time sign-in link, runnable by tools that may only use `npm run`.
+
+### Changed
+
+- **Vercel Web Analytics is off in local installs.** forge-ui is a local-first tool, and Vercel Analytics only reports on a Vercel deployment. A hosted build opts in with `VITE_VERCEL_ANALYTICS=1`. It was also being injected twice (`inject()` plus `<Analytics />`); it is now injected once.
+
+### Security
+
+- The page takes `?forge_token=` / `?forge_login_code=` out of the URL before analytics or the app load, and analytics events (when enabled) are scrubbed of both. On a Vercel-hosted build, the token could otherwise have reached Vercel in the analytics script request's `Referer` and in its pageview URL.
 
 ### Fixed
 
