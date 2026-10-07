@@ -1,9 +1,9 @@
 /**
  * Auth Routes - session login/logout and WebSocket token issuance.
  *
- * Everything here except /login and /logout sits behind requireApiAuth
- * (ui-auth.ts), so a WebSocket token is only ever issued to a caller that
- * already holds the per-install secret.
+ * Everything here except /login, /logout and /redeem sits behind
+ * requireApiAuth (ui-auth.ts), so a WebSocket token or a one-time sign-in code
+ * is only ever issued to a caller that already holds the per-install secret.
  */
 
 import express from "express";
@@ -11,6 +11,7 @@ import * as crypto from "crypto";
 import type { RouteContext } from "../../route-context";
 import { rateLimit, authLimiter } from "../../middleware";
 import { clearedSessionCookieHeader, sessionCookieHeader, verifySecret } from "../../auth/ui-auth";
+import { mintLoginCode, redeemLoginCode } from "../../auth/login-codes";
 
 const wsAuthTokens = new Map<string, { createdAt: number; clientId: string }>();
 const WS_TOKEN_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
@@ -50,6 +51,30 @@ export function createAuthRoutes(_ctx: RouteContext): express.Router {
     const token = (req.body as { token?: unknown } | undefined)?.token;
     if (!verifySecret(token)) {
       res.status(401).json({ success: false, error: "Invalid access token", timestamp: new Date().toISOString() });
+      return;
+    }
+    res.setHeader("Set-Cookie", sessionCookieHeader());
+    res.json({ success: true, data: { authenticated: true }, timestamp: new Date().toISOString() });
+  });
+
+  // Mint a one-time sign-in code for an automated browser session
+  // (DIRECTIVE-NXTG-20261007-15). Authenticated: the caller already holds the
+  // token; the code lets a browser sign in without the token entering a URL.
+  router.post("/login-code", rateLimit(authLimiter), (_req, res) => {
+    const minted = mintLoginCode();
+    if (!minted) {
+      res.status(429).json({ success: false, error: "Too many outstanding sign-in codes", timestamp: new Date().toISOString() });
+      return;
+    }
+    res.json({ success: true, data: minted, timestamp: new Date().toISOString() });
+  });
+
+  // Spend a one-time code for the normal session cookie. Public by necessity
+  // (the browser has no credential yet); the code is single-use and short-lived.
+  router.post("/redeem", rateLimit(authLimiter), (req, res) => {
+    const code = (req.body as { code?: unknown } | undefined)?.code;
+    if (!redeemLoginCode(code)) {
+      res.status(401).json({ success: false, error: "Invalid or expired sign-in code", timestamp: new Date().toISOString() });
       return;
     }
     res.setHeader("Set-Cookie", sessionCookieHeader());

@@ -174,7 +174,15 @@ export function authorize(req: IncomingMessage): AuthDecision {
 }
 
 /** Routes under /api reachable without a credential (Origin policy still applies). */
-const PUBLIC_API_PATHS = new Set(["/auth/login", "/login", "/auth/logout", "/logout"]);
+const PUBLIC_API_PATHS = new Set([
+  "/auth/login",
+  "/login",
+  "/auth/logout",
+  "/logout",
+  // One-time code redemption (DIRECTIVE-NXTG-20261007-15). Minting is NOT public.
+  "/auth/redeem",
+  "/redeem",
+]);
 
 /** Express middleware for the /api mount. */
 export function requireApiAuth(req: Request, res: Response, next: NextFunction): void {
