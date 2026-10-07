@@ -1,7 +1,7 @@
 # NXTG-Forge Security Policy
 
 **Version:** 3.0.0
-**Release Type:** MIT Open Source
+**Release Type:** Source available (FSL-1.1-ALv2, see LICENSE.md)
 **Last Updated:** 2026-02-05
 **Status:** PRODUCTION HARDENING REQUIRED
 

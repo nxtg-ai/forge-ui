@@ -3,7 +3,7 @@
   "version": "3.0.0",
   "description": "AI Chief of Staff for Developers — autonomous orchestration across Claude, Codex, and Gemini",
   "author": "NXTG.ai",
-  "license": "MIT",
+  "license": "FSL-1.1-ALv2",
   "features": {
     "commands": {
       "enabled": true,

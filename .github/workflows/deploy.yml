@@ -122,7 +122,7 @@ jobs:
           cp package-lock.json release/
           cp .env.example release/
           cp README.md release/
-          cp LICENSE release/ 2>/dev/null || true
+          cp LICENSE.md release/
 
           # Create archives
           cd release
