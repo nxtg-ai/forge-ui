@@ -1,6 +1,6 @@
 # Local client authentication
 
-From v3.4.1, every `/api` route and every WebSocket upgrade (`/ws`, `/terminal`) requires this install's access token. That includes health and status routes, because they return project data. There is **no unauthenticated route** under `/api`, except `POST /api/auth/login` and `POST /api/auth/logout`.
+From v3.4.1, every `/api` route and every WebSocket upgrade (`/ws`, `/terminal`) requires this install's access token. That includes health and status routes, because they return project data. The only unauthenticated routes under `/api` are login and logout, which are mounted twice: `POST /api/auth/login`, `POST /api/login`, `POST /api/auth/logout` and `POST /api/logout`.
 
 This page is for **local tools**: test harnesses, scripts, MCP servers and CI jobs that call the forge-ui API directly.
 
@@ -25,7 +25,7 @@ Authorization: Bearer <token>
 X-Forge-Token: <token>
 ```
 
-WebSocket clients send the same header on the upgrade request. Browsers can't set headers on a WebSocket, so the dashboard uses a session cookie instead. Local tools should use the header.
+WebSocket clients send the same header on the upgrade request. That needs a client that can set upgrade headers, such as the `ws` package this repo's tests use; Node's built-in `WebSocket` and browsers can't. The dashboard therefore uses a session cookie instead.
 
 ## 3. Recipes
 
@@ -49,15 +49,15 @@ const res = await fetch(`http://127.0.0.1:${port}/api/health`, { headers: auth }
 
 If the harness isolates `HOME`, pass `FORGE_UI_SECRET` explicitly anyway. An inherited `XDG_CONFIG_HOME` would otherwise point the server at the developer's real token file.
 
-`scripts/smoke-built-server.mjs` and `src/server/__tests__/security-auth.integration.test.ts` in this repo both follow this pattern.
+In this repo, `scripts/smoke-built-server.mjs` uses `FORGE_UI_SECRET`. `src/server/__tests__/security-auth.integration.test.ts` uses `FORGE_UI_SECRET_FILE` (a temp path) and reads the token back from that file.
 
 ### You talk to a server that's already running
 
-Read the token from the file the server uses, and keep it in memory:
+Read the token from the file the server uses, and keep it in memory. With curl, pass the header on stdin (`-K -`) so the token isn't on curl's command line:
 
 ```bash
-curl -s -H "Authorization: Bearer $(cat "${XDG_CONFIG_HOME:-$HOME/.config}/nxtg-forge/ui-secret")" \
-  http://127.0.0.1:5051/api/health
+f="${XDG_CONFIG_HOME:-$HOME/.config}/nxtg-forge/ui-secret"
+printf 'header = "Authorization: Bearer %s"\n' "$(cat "$f")" | curl -s -K - http://127.0.0.1:5051/api/health
 ```
 
 ```js
