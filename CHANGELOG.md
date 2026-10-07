@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`main` is PR-only.** Direct pushes are blocked for everyone, admins included (`enforce_admins`). A PR merges only when the required checks are green: `quality-gates`, `quality-gate`, `build-check`, `dependency-audit`, `security-scan`, `staging-build`, `cla-assistant` and `Analyze (javascript-typescript)`. No approval is required, because the repository has one human code owner, who cannot approve their own PR. Independent review is required before a release tag instead. Every `main` commit is therefore a squash merge with Quality Gates green on the PR, and Quality Gates runs again on the push.
+
 ### Fixed
 
 - **Release workflow (`deploy.yml`)** — no tag since v3.1.3 produced a release with assets.
