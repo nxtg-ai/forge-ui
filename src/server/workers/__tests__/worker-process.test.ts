@@ -180,7 +180,8 @@ describe("worker-process", () => {
     id: "test-task-id",
     type: "shell",
     priority: "medium",
-    command: "echo",
+    // Must be on the worker allowlist (task-policy.ts, GHSA-rc7c-r55p-923j).
+    command: "codex",
     args: ["hello"],
     createdAt: new Date(),
     ...overrides,
@@ -249,7 +250,7 @@ describe("worker-process", () => {
       it("should execute shell task and send result", async () => {
         const task = createMockTask({
           type: "shell",
-          command: "echo",
+          command: "codex",
           args: ["test"],
         });
 
@@ -265,10 +266,11 @@ describe("worker-process", () => {
         await waitForNextTick();
 
         expect(mockSpawn).toHaveBeenCalledWith(
-          "echo",
+          "codex",
           ["test"],
           expect.objectContaining({
-            shell: true,
+            // Argument array, never a shell: args are not re-parsed by /bin/sh.
+            shell: false,
             stdio: ["pipe", "pipe", "pipe"],
             cwd: "/test/worker/dir",
           })
@@ -295,7 +297,7 @@ describe("worker-process", () => {
       it("should handle shell task failure", async () => {
         const task = createMockTask({
           type: "shell",
-          command: "false",
+          command: "claude",
         });
 
         emitProcessEvent("message", {
@@ -325,7 +327,7 @@ describe("worker-process", () => {
 
       it("should handle spawn error", async () => {
         const task = createMockTask({
-          command: "nonexistent-command",
+          command: "gemini",
         });
 
         emitProcessEvent("message", {
@@ -450,7 +452,7 @@ describe("worker-process", () => {
       it("should handle script task type", async () => {
         const task = createMockTask({
           type: "script",
-          command: "node",
+          command: "codex",
           args: ["script.js"],
         });
 
@@ -463,7 +465,32 @@ describe("worker-process", () => {
 
         await waitForNextTick();
 
-        expect(mockSpawn).toHaveBeenCalledWith("node", ["script.js"], expect.any(Object));
+        expect(mockSpawn).toHaveBeenCalledWith("codex", ["script.js"], expect.any(Object));
+      });
+
+      it("refuses a command off the allowlist without spawning it", async () => {
+        const task = createMockTask({
+          type: "shell",
+          command: "sh",
+          args: ["-c", "touch /tmp/forge-marker"],
+        });
+
+        emitProcessEvent("message", {
+          type: "task",
+          id: "msg-1",
+          timestamp: Date.now(),
+          payload: task,
+        });
+
+        await waitForNextTick();
+
+        expect(mockSpawn).not.toHaveBeenCalled();
+        const resultMessages = getMessagesByType("result");
+        expect(resultMessages[0].payload).toMatchObject({
+          taskId: task.id,
+          success: false,
+          error: "COMMAND_NOT_ALLOWED",
+        });
       });
 
       it("should handle claude-code task type", async () => {
@@ -840,7 +867,7 @@ describe("worker-process", () => {
     it("should handle task execution errors gracefully", async () => {
       const task = createMockTask({
         type: "shell",
-        command: "error-command",
+        command: "claude",
       });
 
       emitProcessEvent("message", {

@@ -17,10 +17,20 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { execSync, spawn, type ChildProcess } from "child_process";
 import * as path from "path";
+import { randomBytes } from "crypto";
 
 const PROJECT_ROOT = path.resolve(__dirname, "../../..");
 const PORT = 15051; // Use non-standard port to avoid conflicts
 const BASE_URL = `http://localhost:${PORT}`;
+
+// Every /api route needs the per-install secret (DIRECTIVE-NXTG-20261007-10).
+const SECRET = randomBytes(32).toString("hex");
+function authFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  return fetch(url, {
+    ...init,
+    headers: { ...(init.headers as Record<string, string> | undefined), Authorization: `Bearer ${SECRET}` },
+  });
+}
 
 let serverProcess: ChildProcess | null = null;
 
@@ -28,7 +38,7 @@ async function waitForServer(url: string, timeoutMs = 15000): Promise<boolean> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {
-      const response = await fetch(`${url}/api/health`);
+      const response = await authFetch(`${url}/api/health`);
       if (response.ok) return true;
     } catch {
       // Server not ready yet
@@ -54,7 +64,7 @@ beforeAll(async () => {
   // Start the REAL server (detached so we can kill the whole process group)
   serverProcess = spawn("npx", ["tsx", path.join(PROJECT_ROOT, "src/server/api-server.ts")], {
     cwd: PROJECT_ROOT,
-    env: { ...process.env, PORT: String(PORT), NODE_ENV: "test" },
+    env: { ...process.env, PORT: String(PORT), NODE_ENV: "test", FORGE_UI_SECRET: SECRET },
     stdio: ["ignore", "pipe", "pipe"],
     detached: true,
   });
@@ -83,7 +93,7 @@ describe("Smoke Tests: Real Server, Real Requests", () => {
   // ============= Health Check =============
 
   it("GET /api/health returns 200", async () => {
-    const res = await fetch(`${BASE_URL}/api/health`);
+    const res = await authFetch(`${BASE_URL}/api/health`);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.status).toBe("healthy");
@@ -92,7 +102,7 @@ describe("Smoke Tests: Real Server, Real Requests", () => {
   // ============= Command Execution =============
 
   it("POST /api/commands/execute with frg-status returns real project data", async () => {
-    const res = await fetch(`${BASE_URL}/api/commands/execute`, {
+    const res = await authFetch(`${BASE_URL}/api/commands/execute`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ command: "frg-status" }),
@@ -118,7 +128,7 @@ describe("Smoke Tests: Real Server, Real Requests", () => {
   }, 30000);
 
   it("POST /api/commands/execute with git-status returns real git data", async () => {
-    const res = await fetch(`${BASE_URL}/api/commands/execute`, {
+    const res = await authFetch(`${BASE_URL}/api/commands/execute`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ command: "git-status" }),
@@ -132,7 +142,7 @@ describe("Smoke Tests: Real Server, Real Requests", () => {
   }, 10000);
 
   it("POST /api/commands/execute with analyze-types returns real tsc output", async () => {
-    const res = await fetch(`${BASE_URL}/api/commands/execute`, {
+    const res = await authFetch(`${BASE_URL}/api/commands/execute`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ command: "analyze-types" }),
@@ -146,7 +156,7 @@ describe("Smoke Tests: Real Server, Real Requests", () => {
   }, 60000);
 
   it("POST /api/commands/execute with system-info returns real system data", async () => {
-    const res = await fetch(`${BASE_URL}/api/commands/execute`, {
+    const res = await authFetch(`${BASE_URL}/api/commands/execute`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ command: "system-info" }),
@@ -162,7 +172,7 @@ describe("Smoke Tests: Real Server, Real Requests", () => {
   // ============= Error Handling =============
 
   it("POST /api/commands/execute with unknown command returns 404 with available list", async () => {
-    const res = await fetch(`${BASE_URL}/api/commands/execute`, {
+    const res = await authFetch(`${BASE_URL}/api/commands/execute`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ command: "nonexistent-garbage" }),
@@ -176,7 +186,7 @@ describe("Smoke Tests: Real Server, Real Requests", () => {
   });
 
   it("POST /api/commands/execute with missing command returns 400", async () => {
-    const res = await fetch(`${BASE_URL}/api/commands/execute`, {
+    const res = await authFetch(`${BASE_URL}/api/commands/execute`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
@@ -190,7 +200,7 @@ describe("Smoke Tests: Real Server, Real Requests", () => {
   it("POST /api/commands/execute with wrong payload shape returns 400", async () => {
     // This is what the old client used to send — the full Command object
     // instead of { command: "frg-status" }. This must fail, not silently succeed.
-    const res = await fetch(`${BASE_URL}/api/commands/execute`, {
+    const res = await authFetch(`${BASE_URL}/api/commands/execute`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: "Status Report", id: "frg-status", category: "forge" }),
@@ -208,7 +218,7 @@ describe("Smoke Tests: Real Server, Real Requests", () => {
 
   it("every registered command returns a valid response", async () => {
     // First, get the list of available commands from an error response
-    const errRes = await fetch(`${BASE_URL}/api/commands/execute`, {
+    const errRes = await authFetch(`${BASE_URL}/api/commands/execute`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ command: "__list__" }),
@@ -226,7 +236,7 @@ describe("Smoke Tests: Real Server, Real Requests", () => {
     for (const cmd of commands) {
       if (skipLongRunning.has(cmd)) continue;
 
-      const res = await fetch(`${BASE_URL}/api/commands/execute`, {
+      const res = await authFetch(`${BASE_URL}/api/commands/execute`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ command: cmd }),
@@ -256,7 +266,7 @@ describe("Smoke Tests: Real Server, Real Requests", () => {
     // The server must accept this exact format
     const clientPayload = { command: "frg-status" };
 
-    const res = await fetch(`${BASE_URL}/api/commands/execute`, {
+    const res = await authFetch(`${BASE_URL}/api/commands/execute`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(clientPayload),
@@ -272,7 +282,7 @@ describe("Smoke Tests: Real Server, Real Requests", () => {
   // ============= State Endpoints =============
 
   it("GET /api/state returns real state data", async () => {
-    const res = await fetch(`${BASE_URL}/api/state`);
+    const res = await authFetch(`${BASE_URL}/api/state`);
     if (res.status === 200) {
       const body = await res.json();
       expect(body.success).toBe(true);
@@ -282,7 +292,7 @@ describe("Smoke Tests: Real Server, Real Requests", () => {
   });
 
   it("GET /api/governance/state returns governance data", async () => {
-    const res = await fetch(`${BASE_URL}/api/governance/state`);
+    const res = await authFetch(`${BASE_URL}/api/governance/state`);
     if (res.status === 200) {
       const body = await res.json();
       expect(body.success).toBe(true);
@@ -295,7 +305,7 @@ describe("Smoke Tests: Real Server, Real Requests", () => {
 
   it("GET /api/health returns health check data [dashboard health display]", async () => {
     // N-02: Governance HUD — health check display is a critical user path
-    const res = await fetch(`${BASE_URL}/api/health`);
+    const res = await authFetch(`${BASE_URL}/api/health`);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.status).toBe("healthy");
@@ -305,7 +315,7 @@ describe("Smoke Tests: Real Server, Real Requests", () => {
 
   it("GET /api/commands/ returns command registry [dashboard load]", async () => {
     // Dashboard loads command list on startup — this path must work
-    const res = await fetch(`${BASE_URL}/api/commands/`);
+    const res = await authFetch(`${BASE_URL}/api/commands/`);
     expect([200, 404]).toContain(res.status);
     if (res.status === 200) {
       const body = await res.json();
@@ -317,7 +327,7 @@ describe("Smoke Tests: Real Server, Real Requests", () => {
 
   it("GET /api/forge/detect returns forge detection result [project context]", async () => {
     // Governance HUD needs forge project detection to display project context
-    const res = await fetch(`${BASE_URL}/api/forge/detect`);
+    const res = await authFetch(`${BASE_URL}/api/forge/detect`);
     expect([200, 404, 500]).toContain(res.status);
     if (res.status === 200) {
       const body = await res.json();
@@ -327,7 +337,7 @@ describe("Smoke Tests: Real Server, Real Requests", () => {
 
   it("GET /api/governance/config returns governance config [dashboard settings]", async () => {
     // Dashboard reads governance config to configure display
-    const res = await fetch(`${BASE_URL}/api/governance/config`);
+    const res = await authFetch(`${BASE_URL}/api/governance/config`);
     expect([200, 404]).toContain(res.status);
     if (res.status === 200) {
       const body = await res.json();
@@ -337,7 +347,7 @@ describe("Smoke Tests: Real Server, Real Requests", () => {
 
   it("GET /api/governance/blockers returns blockers list [blocking decisions card]", async () => {
     // N-02: BlockingDecisionsCard requires this endpoint for real-time display
-    const res = await fetch(`${BASE_URL}/api/governance/blockers`);
+    const res = await authFetch(`${BASE_URL}/api/governance/blockers`);
     expect([200, 404]).toContain(res.status);
     if (res.status === 200) {
       const body = await res.json();
@@ -348,7 +358,7 @@ describe("Smoke Tests: Real Server, Real Requests", () => {
 
   it("GET /api/governance/validate returns validation result [health check display]", async () => {
     // Governance HUD uses validation result to display quality gate status
-    const res = await fetch(`${BASE_URL}/api/governance/validate`);
+    const res = await authFetch(`${BASE_URL}/api/governance/validate`);
     expect([200, 404]).toContain(res.status);
     if (res.status === 200) {
       const body = await res.json();

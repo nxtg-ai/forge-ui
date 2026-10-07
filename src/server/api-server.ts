@@ -50,6 +50,15 @@ import { createWorkerRoutes } from "./routes/workers";
 import { createRunspaceRoutes } from "./routes/runspaces";
 import { createFeatureRoutes, validateWSAuthToken } from "./routes/features";
 import { createForgeRoutes } from "./routes/forge";
+import {
+  authorize,
+  getAllowedOrigins,
+  getSecretFilePath,
+  isLoopbackHost,
+  loadOrCreateSecret,
+  requireApiAuth,
+  resolveBindHost,
+} from "./auth/ui-auth";
 
 const app = express();
 const logger = getLogger("api-server");
@@ -137,9 +146,10 @@ function broadcast(type: string, payload: unknown) {
 }
 
 const isProduction = process.env.NODE_ENV === "production";
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
-  : ["http://localhost:5050", "http://127.0.0.1:5050", "http://localhost:5173"];
+const allowedOrigins = getAllowedOrigins();
+
+// Fail at startup, not on the first request, if the secret can't be loaded.
+loadOrCreateSecret();
 
 wss.on("connection", (ws, req) => {
   // Validate origin in all modes
@@ -255,7 +265,9 @@ app.use(
         return callback(null, true);
       }
       logger.warn(`[Security] Blocked CORS request from unauthorized origin: ${origin}`);
-      callback(new Error("Not allowed by CORS"));
+      // Decline without throwing: requireApiAuth answers 403 for /api, instead
+      // of a CORS exception surfacing as a 500.
+      callback(null, false);
     },
     credentials: true,
   }),
@@ -264,6 +276,10 @@ app.use(
 // Body parser + general rate limit
 app.use(express.json({ limit: "1mb" }));
 app.use(rateLimit(generalLimiter));
+
+// Every /api route requires the per-install secret (header or session cookie)
+// and an allow-listed or absent Origin. GHSA-rc7c-r55p-923j.
+app.use("/api", requireApiAuth);
 
 // ============= Pre-existing Route Modules =============
 
@@ -380,6 +396,13 @@ detectDuplicateRoutes(app, routerMountPaths);
 server.on("upgrade", (request, socket, head) => {
   const url = new URL(request.url!, `http://${request.headers.host}`);
   if (url.pathname === "/ws") {
+    const decision = authorize(request);
+    if (!decision.ok) {
+      logger.warn(`[Security] Rejected /ws upgrade: ${decision.reason}`);
+      socket.write(`HTTP/1.1 ${decision.status} ${decision.status === 401 ? "Unauthorized" : "Forbidden"}\r\nConnection: close\r\n\r\n`);
+      socket.destroy();
+      return;
+    }
     wss.handleUpgrade(request, socket, head, (ws) => {
       wss.emit("connection", ws, request);
     });
@@ -474,10 +497,22 @@ function setupGovernanceWatcher() {
 // ============= Server Startup =============
 
 const PORT = Number(process.env.PORT) || 5051;
+const HOST = resolveBindHost();
 
-server.listen(PORT, "0.0.0.0", async () => {
-  logger.info(`NXTG-Forge API Server running on http://0.0.0.0:${PORT}`);
-  logger.info(`WebSocket server available at ws://0.0.0.0:${PORT}/ws`);
+server.listen(PORT, HOST, async () => {
+  logger.info(`NXTG-Forge API Server running on http://${HOST}:${PORT}`);
+  logger.info(`WebSocket server available at ws://${HOST}:${PORT}/ws`);
+  if (!isLoopbackHost(HOST)) {
+    logger.warn(
+      `[Security] FORGE_UI_HOST=${HOST}: the API and terminal are reachable from the network. ` +
+        "Every request still needs the access token; keep it private.",
+    );
+  }
+  // The path, never the secret.
+  logger.info(
+    `Sign-in required. Access token: ${process.env.FORGE_UI_SECRET ? "FORGE_UI_SECRET" : getSecretFilePath()} ` +
+      "(or run: npx tsx src/server/auth/print-auth-url.ts)",
+  );
 
   // Initialize services
   orchestrator.initialize();

@@ -12,6 +12,7 @@ import type { RunspaceManager } from "../core/runspace-manager";
 import type { Runspace } from "../core/runspace";
 import { WSLBackend } from "../core/backends/wsl-backend";
 import { validateWSAuthToken } from "./routes/features";
+import { authorize } from "./auth/ui-auth";
 import { getLogger } from "../utils/logger";
 
 const logger = getLogger('pty-bridge');
@@ -149,6 +150,16 @@ export function createPTYBridge(
     const url = new URL(request.url!, `http://${request.headers.host}`);
 
     if (url.pathname === "/terminal") {
+      // The upgrade itself needs the per-install secret (session cookie or
+      // header) and an allow-listed or absent Origin, BEFORE any PTY exists.
+      // A WebSocket token alone is not enough. GHSA-rc7c-r55p-923j.
+      const decision = authorize(request);
+      if (!decision.ok) {
+        logger.warn(`[PTY Bridge] Rejected /terminal upgrade: ${decision.reason}`);
+        socket.write(`HTTP/1.1 ${decision.status} ${decision.status === 401 ? "Unauthorized" : "Forbidden"}\r\nConnection: close\r\n\r\n`);
+        socket.destroy();
+        return;
+      }
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit("connection", ws, request);
       });

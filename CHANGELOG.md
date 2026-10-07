@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.4.1] - 2026-10-07
+
+Security release. **Upgrade if you run the dashboard on a machine reachable from a network.** Details are in the GitHub security advisory for this release.
+
+### Security
+
+- **The API and terminal now require authentication.** A per-install access token is created on first run (`~/.config/nxtg-forge/ui-secret`, mode 0600, never logged). Every `/api` route and every WebSocket upgrade (`/ws`, `/terminal`) requires it, either as a header or as an `HttpOnly`, `SameSite=Strict` session cookie set by the new sign-in screen. Requests from origins outside `ALLOWED_ORIGINS` are refused.
+- **The API server binds `127.0.0.1` by default.** Network access is opt-in with `FORGE_UI_HOST` and prints a warning at startup. The Vite dev proxy now targets `127.0.0.1`.
+- **Worker tasks no longer accept free-form commands.** `shell`/`script` tasks may run only `claude`, `codex` or `gemini`; `env` is not accepted over HTTP; the worker spawns without a shell and re-checks the allowlist itself.
+
+### Changed
+
+- New sign-in screen; `npx tsx src/server/auth/print-auth-url.ts` prints a one-click sign-in link. Tools that call the API directly must send `Authorization: Bearer <token>`.
+- A CORS origin outside the allowlist now gets a 403 from the API instead of a 500.
+
+
 ### Changed
 
 - **`main` is PR-only.** Direct pushes are blocked for everyone, admins included (`enforce_admins`). A PR merges only when the required checks are green: `quality-gates`, `quality-gate`, `build-check`, `dependency-audit`, `security-scan`, `staging-build`, `cla-assistant` and `Analyze (javascript-typescript)`. No approval is required, because the repository has one human code owner, who cannot approve their own PR. Independent review is required before a release tag instead. Every `main` commit is therefore a squash merge with Quality Gates green on the PR, and Quality Gates runs again on the push.

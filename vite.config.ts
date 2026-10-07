@@ -20,17 +20,19 @@ export default defineConfig({
     strictPort: true, // FAIL if port in use - do NOT auto-increment
     open: true,
     proxy: {
+      // 127.0.0.1, not localhost: the API binds IPv4 loopback only, and
+      // `localhost` can resolve to ::1 first.
       '/api': {
-        target: 'http://localhost:5051',
+        target: 'http://127.0.0.1:5051',
         changeOrigin: true,
       },
       '/ws': {
-        target: 'ws://localhost:5051',
+        target: 'ws://127.0.0.1:5051',
         ws: true,
         changeOrigin: true,
       },
       '/terminal': {
-        target: 'ws://localhost:5051',
+        target: 'ws://127.0.0.1:5051',
         ws: true,
       },
     },
