@@ -53,9 +53,8 @@ npm run format && npm run lint
 ## Test Categories
 
 ```bash
-npm run test:integration   # UI → Backend → Storage
+npm run test:integration   # *.integration.test.ts (real server, real requests)
 npm run test:security      # XSS, injection, secrets
-npm run test:performance   # Latency, throughput
 npm run test:quality       # Type safety, errors
 ```
 

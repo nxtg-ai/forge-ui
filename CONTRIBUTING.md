@@ -228,9 +228,8 @@ npm run test:ui           # Interactive UI mode
 ### Test Categories
 
 ```bash
-npm run test:integration  # Integration tests
+npm run test:integration  # Integration tests (*.integration.test.ts)
 npm run test:security     # Security tests
-npm run test:performance  # Performance tests
 npm run test:quality      # Quality assurance tests
 ```
 

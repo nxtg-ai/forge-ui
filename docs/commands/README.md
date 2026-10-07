@@ -23,9 +23,8 @@ NXTG-Forge provides a comprehensive set of commands for development, testing, de
 | `npm run test` | Run tests in watch mode | ✅ Available |
 | `npm run test:coverage` | Generate coverage report | ✅ Available |
 | `npm run test:ui` | Interactive test UI | ✅ Available |
-| `npm run test:integration` | Integration tests only | ✅ Available |
+| `npm run test:integration` | Integration tests only (`*.integration.test.ts`) | ✅ Available |
 | `npm run test:security` | Security tests only | ✅ Available |
-| `npm run test:performance` | Performance tests only | ✅ Available |
 | `npm run lint` | Run ESLint | ✅ Available |
 | `npm run format` | Format code with Prettier | ✅ Available |
 | `npm run quality:gates` | Full quality gate check | ✅ Available |
@@ -74,9 +73,8 @@ npm run preview          # Preview built app
 npm run test             # Watch mode
 npm run test:coverage    # Coverage report
 npm run test:ui          # Test UI dashboard
-npm run test:integration # Integration tests only
+npm run test:integration # Integration tests only (*.integration.test.ts)
 npm run test:security    # Security tests only
-npm run test:performance # Performance tests only
 
 # Code Quality
 npm run lint             # ESLint check
