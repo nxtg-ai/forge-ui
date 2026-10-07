@@ -23,8 +23,21 @@ function readToken(): string {
   return fs.readFileSync(file, "utf-8").trim();
 }
 
+/**
+ * The token may only travel to a server on THIS machine. A mistyped or
+ * malicious FORGE_UI_API_URL must not send it anywhere else.
+ */
+function loopbackApiUrl(raw: string): URL {
+  const url = new URL(raw);
+  const host = url.hostname.replace(/^\[|\]$/g, "");
+  if (url.protocol !== "http:" || !["127.0.0.1", "::1", "localhost"].includes(host)) {
+    throw new Error(`FORGE_UI_API_URL must be an http:// loopback address (127.0.0.1, ::1 or localhost), got ${url.origin}`);
+  }
+  return url;
+}
+
 async function main(): Promise<void> {
-  const api = process.env.FORGE_UI_API_URL || "http://127.0.0.1:5051";
+  const api = loopbackApiUrl(process.env.FORGE_UI_API_URL || "http://127.0.0.1:5051").origin;
   const ui = process.env.FORGE_UI_URL || "http://localhost:5050";
 
   const res = await fetch(`${api}/api/auth/login-code`, {

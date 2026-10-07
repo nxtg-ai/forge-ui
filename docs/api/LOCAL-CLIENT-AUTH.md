@@ -81,7 +81,7 @@ An agent that drives a browser through tool calls (`browser_navigate`, `browser_
    # http://localhost:5050/?forge_login_code=<64 hex>
    ```
 
-   `FORGE_UI_API_URL` (default `http://127.0.0.1:5051`) and `FORGE_UI_URL` (default `http://localhost:5050`) point it at other ports.
+   `FORGE_UI_API_URL` (default `http://127.0.0.1:5051`) and `FORGE_UI_URL` (default `http://localhost:5050`) point it at other ports. `FORGE_UI_API_URL` must be an `http://` loopback address, because the token is sent there; the script refuses anything else.
 
 2. Navigate the browser to that link (`browser_navigate`). The sign-in screen redeems the code for the normal session cookie and removes it from the address bar. The session then behaves like any signed-in browser.
 

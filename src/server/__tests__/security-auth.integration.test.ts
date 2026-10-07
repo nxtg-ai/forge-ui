@@ -301,6 +301,22 @@ describe.sequential("API and terminal require authentication (GHSA-rc7c-r55p-923
     expect(serverLog).not.toContain(secret());
   }, 30_000);
 
+  it("print-login-link refuses to send the token to a non-loopback API", async () => {
+    const result = await new Promise<{ code: number | null; err: string }>((resolve) => {
+      const cli = spawn("npx", ["tsx", path.join(REPO_ROOT, "src/server/auth/print-login-link.ts")], {
+        cwd: REPO_ROOT,
+        env: { ...process.env, FORGE_UI_SECRET_FILE: secretFile, FORGE_UI_SECRET: "", FORGE_UI_API_URL: "http://example.com:5051" },
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      let err = "";
+      cli.stderr?.on("data", (d) => (err += d.toString()));
+      cli.on("close", (code) => resolve({ code, err }));
+    });
+    expect(result.code).toBe(1);
+    expect(result.err).toContain("must be an http:// loopback address");
+    expect(result.err).not.toContain(secret());
+  }, 30_000);
+
   it("positive control: the signed-in owner gets a terminal that runs input", async () => {
     const cookie = await login();
     expect(cookie).toMatch(/^forge_session=[0-9a-f]{64}$/);
