@@ -37,7 +37,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",
     "preview": "vite preview",
     "init": "./init.sh",
-    "smoke:built": "node scripts/smoke-built-server.mjs"
+    "smoke:built": "node scripts/smoke-built-server.mjs",
+    "auth:login-link": "tsx src/server/auth/print-login-link.ts"
   },
   "keywords": [
     "forge",

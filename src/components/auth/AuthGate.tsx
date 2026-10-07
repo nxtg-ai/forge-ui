@@ -13,8 +13,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 
 type GateState = "checking" | "authenticated" | "signed-out" | "forbidden";
 
-const TOKEN_PARAM = "forge_token";
-const CODE_PARAM = "forge_login_code";
+import { takeSignInParams } from "./signin-params";
 
 async function checkSession(): Promise<GateState> {
   const res = await fetch("/api/auth/session", { credentials: "include" });
@@ -43,14 +42,6 @@ async function redeem(code: string): Promise<boolean> {
   return res.ok;
 }
 
-/** Remove sign-in values from the address bar so they do not linger in history. */
-function stripTokenFromUrl(): void {
-  const url = new URL(window.location.href);
-  if (!url.searchParams.has(TOKEN_PARAM) && !url.searchParams.has(CODE_PARAM)) return;
-  url.searchParams.delete(TOKEN_PARAM);
-  url.searchParams.delete(CODE_PARAM);
-  window.history.replaceState(window.history.state, "", url.toString());
-}
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<GateState>("checking");
@@ -71,10 +62,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!signIn.current) {
-      const params = new URL(window.location.href).searchParams;
-      const fromUrl = params.get(TOKEN_PARAM);
-      const code = params.get(CODE_PARAM);
-      stripTokenFromUrl();
+      // Already stripped from the URL by main.tsx; this returns the stashed values.
+      const { token: fromUrl, code } = takeSignInParams();
       signIn.current = (async () => {
         if (code) {
           try {
