@@ -1,6 +1,6 @@
 # Local client authentication
 
-From v3.4.1, every `/api` route and every WebSocket upgrade (`/ws`, `/terminal`) requires this install's access token. That includes health and status routes, because they return project data. The only unauthenticated routes under `/api` are login and logout, which are mounted twice: `POST /api/auth/login`, `POST /api/login`, `POST /api/auth/logout` and `POST /api/logout`.
+From v3.4.1, every `/api` route and every WebSocket upgrade (`/ws`, `/terminal`) requires this install's access token. That includes health and status routes, because they return project data. The only unauthenticated routes under `/api` are login, logout and one-time-code redemption, each mounted twice: `POST /api/auth/login`, `POST /api/login`, `POST /api/auth/logout`, `POST /api/logout`, `POST /api/auth/redeem` and `POST /api/redeem`.
 
 This page is for **local tools**: test harnesses, scripts, MCP servers and CI jobs that call the forge-ui API directly.
 
@@ -69,6 +69,25 @@ const file = process.env.FORGE_UI_SECRET_FILE
   ?? join(process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config"), "nxtg-forge", "ui-secret");
 const token = process.env.FORGE_UI_SECRET ?? readFileSync(file, "utf-8").trim();
 ```
+
+### You drive a browser from an agent (Playwright MCP, automation)
+
+An agent that drives a browser through tool calls (`browser_navigate`, `browser_type`, …) has every value it passes recorded in its transcript. So never navigate to a `?forge_token=` link and never type the token: both put the token into a tool call. Use a **one-time sign-in link** instead. It is on `main` after v3.4.1 and ships in the next release:
+
+1. On the machine running Forge, mint a link. The script reads the token from its file (or `FORGE_UI_SECRET`), sends it only in a request header to the running server, and prints a link carrying a one-time code, never the token:
+
+   ```bash
+   npx tsx src/server/auth/print-login-link.ts      # or: node dist/server/auth/print-login-link.js
+   # http://localhost:5050/?forge_login_code=<64 hex>
+   ```
+
+   `FORGE_UI_API_URL` (default `http://127.0.0.1:5051`) and `FORGE_UI_URL` (default `http://localhost:5050`) point it at other ports. `FORGE_UI_API_URL` must be an `http://` loopback address, because the token is sent there; the script refuses anything else.
+
+2. Navigate the browser to that link (`browser_navigate`). The sign-in screen redeems the code for the normal session cookie and removes it from the address bar. The session then behaves like any signed-in browser.
+
+The code is random, **single-use** and **expires after 60 seconds**. A copy left in a transcript or in browser history is already spent or stale, and it is not the token. The trade-off: for those 60 seconds, anyone who reads the transcript could redeem the code first. The agent would then get "used or expired", so a stolen code is detectable, and the token itself is never exposed. Minting requires the token (`POST /api/auth/login-code` sits behind the normal gate); redeeming a used, expired or made-up code returns `401`, and a foreign `Origin` gets `403`. At most 8 unexpired codes can be outstanding (`429` beyond that).
+
+`src/test/e2e/automated-sign-in.e2e.mjs` checks this path with a real headless browser. It signs in, requires the app header, and fails if the token appears in any navigated URL, in the server's output, or in a process's argv at the end of the session. The argv check is a single scan that catches a lingering process; the link script itself takes no arguments, so it never puts the token on argv. Run it with `MODE=token` as a negative control, and it catches the token in the URL history.
 
 ## 4. What to expect
 

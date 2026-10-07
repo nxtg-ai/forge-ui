@@ -4,14 +4,17 @@
  * NEXUS: DIRECTIVE-NXTG-20261007-10. Every /api route and WebSocket now needs
  * the per-install access token. The browser exchanges it once for an HttpOnly
  * session cookie (POST /api/auth/login), either from a `?forge_token=` sign-in
- * link or by pasting the token.
+ * link or by pasting the token. Automated sessions use a one-time
+ * `?forge_login_code=` link instead (POST /api/auth/redeem), so the token never
+ * enters a URL (DIRECTIVE-NXTG-20261007-15).
  */
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 type GateState = "checking" | "authenticated" | "signed-out" | "forbidden";
 
 const TOKEN_PARAM = "forge_token";
+const CODE_PARAM = "forge_login_code";
 
 async function checkSession(): Promise<GateState> {
   const res = await fetch("/api/auth/session", { credentials: "include" });
@@ -30,11 +33,22 @@ async function login(token: string): Promise<boolean> {
   return res.ok;
 }
 
-/** Remove the token from the address bar so it does not linger in history. */
+async function redeem(code: string): Promise<boolean> {
+  const res = await fetch("/api/auth/redeem", {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code }),
+  });
+  return res.ok;
+}
+
+/** Remove sign-in values from the address bar so they do not linger in history. */
 function stripTokenFromUrl(): void {
   const url = new URL(window.location.href);
-  if (!url.searchParams.has(TOKEN_PARAM)) return;
+  if (!url.searchParams.has(TOKEN_PARAM) && !url.searchParams.has(CODE_PARAM)) return;
   url.searchParams.delete(TOKEN_PARAM);
+  url.searchParams.delete(CODE_PARAM);
   window.history.replaceState(window.history.state, "", url.toString());
 }
 
@@ -42,6 +56,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<GateState>("checking");
   const [token, setToken] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // One sign-in attempt per mount, shared by StrictMode's double effect run, so
+  // no session check can race ahead of the redeem/login it depends on.
+  const signIn = useRef<Promise<void> | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -53,18 +70,28 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const fromUrl = new URL(window.location.href).searchParams.get(TOKEN_PARAM);
-    stripTokenFromUrl();
-    (async () => {
-      if (fromUrl) {
-        try {
-          if (!(await login(fromUrl))) setError("That sign-in link is not valid for this install.");
-        } catch {
-          setError("The API server is not reachable.");
+    if (!signIn.current) {
+      const params = new URL(window.location.href).searchParams;
+      const fromUrl = params.get(TOKEN_PARAM);
+      const code = params.get(CODE_PARAM);
+      stripTokenFromUrl();
+      signIn.current = (async () => {
+        if (code) {
+          try {
+            if (!(await redeem(code))) setError("That one-time sign-in link is used or expired. Create a new one.");
+          } catch {
+            setError("The API server is not reachable.");
+          }
+        } else if (fromUrl) {
+          try {
+            if (!(await login(fromUrl))) setError("That sign-in link is not valid for this install.");
+          } catch {
+            setError("The API server is not reachable.");
+          }
         }
-      }
-      await refresh();
-    })();
+      })();
+    }
+    void signIn.current.then(refresh);
   }, [refresh]);
 
   const submit = async (e: React.FormEvent) => {

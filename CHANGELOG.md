@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **One-time sign-in links for automated browser sessions.** `print-login-link.ts` reads the access token locally, sends it only in a request header, and prints a link carrying a single-use code that expires in 60 seconds. An agent driving a browser through tool calls can sign in without the token ever reaching a URL, a tool call, argv or a log. See `docs/api/LOCAL-CLIENT-AUTH.md`. Existing sign-in paths and token semantics are unchanged.
+
+### Fixed
+
+- The sign-in screen no longer checks the session before its own sign-in request finishes, under React StrictMode's double effect run. That race produced a stray 401 and could show the sign-in form despite a valid session.
+
 ## [3.4.1] - 2026-10-07
 
 Security release. **Upgrade if you run the dashboard on a machine reachable from a network.** Details are in the GitHub security advisory for this release.

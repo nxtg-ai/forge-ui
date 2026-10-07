@@ -215,6 +215,108 @@ describe.sequential("API and terminal require authentication (GHSA-rc7c-r55p-923
     expect(res.headers.get("set-cookie")).toBeNull();
   });
 
+  it("mints a one-time sign-in code only for an authenticated caller", async () => {
+    for (const route of ["/api/auth/login-code", "/api/login-code"]) {
+      const res = await fetch(`${base}${route}`, { method: "POST" });
+      expect(res.status).toBe(401);
+      expect((await res.json()).data).toBeUndefined();
+    }
+  });
+
+  it("redeems a one-time code once for a session cookie, then refuses it", async () => {
+    const minted = await fetch(`${base}/api/auth/login-code`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${secret()}` },
+    });
+    expect(minted.status).toBe(200);
+    const { code, expiresIn } = (await minted.json()).data as { code: string; expiresIn: number };
+    expect(code).toMatch(/^[0-9a-f]{64}$/);
+    expect(code).not.toContain(secret());
+    expect(expiresIn).toBe(60_000);
+
+    const redeem = () =>
+      fetch(`${base}/api/auth/redeem`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Origin: "http://localhost:5050" },
+        body: JSON.stringify({ code }),
+      });
+    const first = await redeem();
+    expect(first.status).toBe(200);
+    const cookie = (first.headers.get("set-cookie") ?? "").split(";")[0];
+    expect(cookie).toMatch(/^forge_session=[0-9a-f]{64}$/);
+    expect((await fetch(`${base}/api/auth/session`, { headers: { Cookie: cookie } })).status).toBe(200);
+
+    const second = await redeem();
+    expect(second.status).toBe(401);
+    expect(second.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("refuses a made-up code and a foreign Origin at redeem", async () => {
+    for (const route of ["/api/auth/redeem", "/api/redeem"]) {
+      const res = await fetch(`${base}${route}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: randomBytes(32).toString("hex") }),
+      });
+      expect(res.status).toBe(401);
+    }
+
+    const minted = await fetch(`${base}/api/auth/login-code`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${secret()}` },
+    });
+    const { code } = (await minted.json()).data as { code: string };
+    const foreign = await fetch(`${base}/api/auth/redeem`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "https://evil.example" },
+      body: JSON.stringify({ code }),
+    });
+    expect(foreign.status).toBe(403);
+  });
+
+  it("print-login-link prints a one-time link and never the token", async () => {
+    const result = await new Promise<{ code: number | null; out: string; err: string }>((resolve) => {
+      const cli = spawn("npx", ["tsx", path.join(REPO_ROOT, "src/server/auth/print-login-link.ts")], {
+        cwd: REPO_ROOT,
+        env: { ...process.env, FORGE_UI_SECRET_FILE: secretFile, FORGE_UI_SECRET: "", FORGE_UI_API_URL: base },
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      let out = "";
+      let err = "";
+      cli.stdout?.on("data", (d) => (out += d.toString()));
+      cli.stderr?.on("data", (d) => (err += d.toString()));
+      cli.on("close", (code) => resolve({ code, out, err }));
+    });
+    expect(result.code).toBe(0);
+    expect(result.out).toMatch(/^http:\/\/localhost:5050\/\?forge_login_code=[0-9a-f]{64}\n$/);
+    expect(result.out + result.err).not.toContain(secret());
+
+    const code = new URL(result.out.trim()).searchParams.get("forge_login_code");
+    const res = await fetch(`${base}/api/auth/redeem`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+    expect(res.status).toBe(200);
+    expect(serverLog).not.toContain(secret());
+  }, 30_000);
+
+  it("print-login-link refuses to send the token to a non-loopback API", async () => {
+    const result = await new Promise<{ code: number | null; err: string }>((resolve) => {
+      const cli = spawn("npx", ["tsx", path.join(REPO_ROOT, "src/server/auth/print-login-link.ts")], {
+        cwd: REPO_ROOT,
+        env: { ...process.env, FORGE_UI_SECRET_FILE: secretFile, FORGE_UI_SECRET: "", FORGE_UI_API_URL: "http://example.com:5051" },
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      let err = "";
+      cli.stderr?.on("data", (d) => (err += d.toString()));
+      cli.on("close", (code) => resolve({ code, err }));
+    });
+    expect(result.code).toBe(1);
+    expect(result.err).toContain("must be an http:// loopback address");
+    expect(result.err).not.toContain(secret());
+  }, 30_000);
+
   it("positive control: the signed-in owner gets a terminal that runs input", async () => {
     const cookie = await login();
     expect(cookie).toMatch(/^forge_session=[0-9a-f]{64}$/);
@@ -227,17 +329,21 @@ describe.sequential("API and terminal require authentication (GHSA-rc7c-r55p-923
     const ws = new WebSocket(`ws://127.0.0.1:${port}/terminal?token=${token}`, {
       headers: { Cookie: cookie, Origin: "http://localhost:5050" },
     });
+    // Wait for the PTY's first message rather than a fixed sleep: under a loaded
+    // full-suite run the shell can take well over a second to come up.
+    const firstMessage = new Promise<void>((resolve) => ws.once("message", () => resolve()));
     await new Promise<void>((resolve, reject) => {
       ws.once("open", () => resolve());
       ws.once("unexpected-response", (_r, res) => reject(new Error(`upgrade refused: ${res.statusCode}`)));
       ws.once("error", reject);
     });
-    await new Promise((r) => setTimeout(r, 1500));
+    await Promise.race([firstMessage, new Promise((r) => setTimeout(r, 10_000))]);
+    await new Promise((r) => setTimeout(r, 500));
     ws.send(JSON.stringify({ type: "input", data: `touch ${marker}\r` }));
-    const created = await waitForFile(marker, 10_000);
+    const created = await waitForFile(marker, 20_000);
     ws.terminate();
     expect(created).toBe(true);
-  }, 30_000);
+  }, 45_000);
 
   it("listens on loopback only by default", async () => {
     expect(serverLog).toContain(`running on http://127.0.0.1:${port}`);
