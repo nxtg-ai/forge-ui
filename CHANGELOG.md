@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **License** — Removed the stale MIT `LICENSE` left over from the 3.1.3 transition, so `LICENSE.md` (FSL-1.1-ALv2) is the repo's single license file. The `claude.json` manifest and `SECURITY.md` still claimed MIT and now say FSL-1.1-ALv2. The release workflow copied `LICENSE`, not `LICENSE.md`, into the release archive and skipped it silently if missing; it now copies `LICENSE.md` and fails if the file is missing. Versions up to and including v3.1.2 were published under the MIT License; FSL-1.1-ALv2 applies from v3.1.3 onward.
+
 ### Security
 
 - **esbuild bumped 0.27.3 → 0.28.1** to clear GHSA-g7r4-m6w7-qqqr (low — dev-server arbitrary file read on Windows), which the CI production audit flags. This is the same advisory 3.3.1 *accepted* as unfixable-without-a-major at the time; 0.28.1 is now published, so it is resolved rather than accepted. Pinned via an `overrides` entry because it reaches the production tree transitively through `tsx` and `vite`; the lockfile change is esbuild-only, and `tsx`/`vite` run unchanged against it. `npm audit --omit=dev` is now clean (0 vulnerabilities).

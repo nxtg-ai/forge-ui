@@ -70,3 +70,5 @@ The feed shows tool assignments, task progress, file lock acquisitions and relea
 ## License
 
 Source available under the [Functional Source License 1.1 (FSL-1.1-ALv2)](./LICENSE.md). Converts to Apache License 2.0 on 2028-03-18. See [LICENSE.md](./LICENSE.md).
+
+Versions up to and including v3.1.2 were published under the MIT License; FSL-1.1-ALv2 applies from v3.1.3 onward.
