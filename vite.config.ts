@@ -15,7 +15,9 @@ export default defineConfig({
     },
   },
   server: {
-    host: '0.0.0.0', // Bind to all interfaces for mobile/external access
+    // Loopback unless FORGE_UI_HOST opts in (same variable as the API server).
+    // For phone/LAN access: FORGE_UI_HOST=0.0.0.0 plus ALLOWED_ORIGINS.
+    host: process.env.FORGE_UI_HOST || '127.0.0.1',
     port: 5050, // NXTG-Forge dedicated UI port
     strictPort: true, // FAIL if port in use - do NOT auto-increment
     open: true,

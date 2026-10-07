@@ -119,12 +119,16 @@ function headerValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
+/**
+ * Raw cookie value, NOT URI-decoded: the session value is hex, and decoding an
+ * attacker-supplied value (`%`) throws inside the upgrade handler.
+ */
 function readCookie(header: string | undefined, name: string): string | undefined {
   if (!header) return undefined;
   for (const part of header.split(";")) {
     const idx = part.indexOf("=");
     if (idx === -1) continue;
-    if (part.slice(0, idx).trim() === name) return decodeURIComponent(part.slice(idx + 1).trim());
+    if (part.slice(0, idx).trim() === name) return part.slice(idx + 1).trim();
   }
   return undefined;
 }
@@ -154,7 +158,15 @@ export function authorize(req: IncomingMessage): AuthDecision {
   if (origin !== undefined && !getAllowedOrigins().includes(origin)) {
     return { ok: false, status: 403, reason: "Origin not allowed" };
   }
-  if (!isAuthenticated(req)) {
+  let authenticated = false;
+  try {
+    authenticated = isAuthenticated(req);
+  } catch {
+    // Fail closed: a malformed credential is no credential. Never throw from
+    // here; the upgrade handlers call this outside Express's error handling.
+    authenticated = false;
+  }
+  if (!authenticated) {
     return { ok: false, status: 401, reason: "Authentication required" };
   }
   return { ok: true };

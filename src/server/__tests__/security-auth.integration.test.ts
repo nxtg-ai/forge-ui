@@ -166,6 +166,13 @@ describe.sequential("API and terminal require authentication (GHSA-rc7c-r55p-923
     expect(await tryUpgrade(`ws://127.0.0.1:${port}/ws?token=${token}`)).toBe(401);
   });
 
+  it("survives a malformed session cookie on an upgrade and keeps answering", async () => {
+    expect(await tryUpgrade(`ws://127.0.0.1:${port}/ws`, { Cookie: "forge_session=%" })).toBe(401);
+    expect(await tryUpgrade(`ws://127.0.0.1:${port}/terminal`, { Cookie: "forge_session=%" })).toBe(401);
+    expect((await fetch(`${base}/api/health`, { headers: { Cookie: "forge_session=%" } })).status).toBe(401);
+    expect((await fetch(`${base}/api/health`, { headers: { Authorization: `Bearer ${secret()}` } })).status).toBe(200);
+  });
+
   it("accepts no worker task from an unauthenticated peer", async () => {
     const res = await fetch(`${base}/api/workers/tasks`, {
       method: "POST",

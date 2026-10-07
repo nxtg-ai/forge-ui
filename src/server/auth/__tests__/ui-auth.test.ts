@@ -68,6 +68,11 @@ describe("ui-auth", () => {
       expect(auth.authorize(req({ cookie: `${auth.SESSION_COOKIE}=${"0".repeat(64)}` }))).toMatchObject({ status: 401 });
     });
 
+    it("fails closed on a malformed cookie instead of throwing", () => {
+      expect(() => auth.authorize(req({ cookie: `${auth.SESSION_COOKIE}=%` }))).not.toThrow();
+      expect(auth.authorize(req({ cookie: `${auth.SESSION_COOKIE}=%E0%A4%A` }))).toMatchObject({ status: 401 });
+    });
+
     it("never accepts the raw secret as the cookie value", () => {
       expect(auth.authorize(req({ cookie: `${auth.SESSION_COOKIE}=${SECRET}` }))).toMatchObject({ status: 401 });
     });
