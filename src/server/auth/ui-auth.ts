@@ -70,23 +70,24 @@ export function loadOrCreateSecret(): string {
   }
 
   const file = getSecretFilePath();
-  if (!fs.existsSync(file)) {
-    fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-    const secret = crypto.randomBytes(32).toString("hex");
-    try {
-      // "wx": never overwrite a secret another process created first.
-      fs.writeFileSync(file, secret + "\n", { mode: 0o600, flag: "wx" });
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-    }
+  fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+  try {
+    // "wx" = create-only: never overwrite a secret another process wrote first.
+    fs.writeFileSync(file, crypto.randomBytes(32).toString("hex") + "\n", { mode: 0o600, flag: "wx" });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
   }
 
-  if (process.platform !== "win32") {
-    const mode = fs.statSync(file).mode & 0o777;
-    if (mode & 0o077) fs.chmodSync(file, 0o600);
+  // Check, tighten and read through ONE descriptor, so the file can't be
+  // swapped between the permission check and the read.
+  const fd = fs.openSync(file, "r");
+  let secret: string;
+  try {
+    if (process.platform !== "win32" && fs.fstatSync(fd).mode & 0o077) fs.fchmodSync(fd, 0o600);
+    secret = fs.readFileSync(fd, "utf-8").trim();
+  } finally {
+    fs.closeSync(fd);
   }
-
-  const secret = fs.readFileSync(file, "utf-8").trim();
   if (secret.length < MIN_SECRET_LENGTH) {
     throw new Error(`UI secret in ${file} is shorter than ${MIN_SECRET_LENGTH} characters`);
   }
