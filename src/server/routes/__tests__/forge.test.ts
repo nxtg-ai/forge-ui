@@ -299,6 +299,14 @@ describe("Forge Routes", () => {
       });
     });
 
+    it("reports the version and release stage side by side (DIRECTIVE-NXTG-20261007-11)", async () => {
+      const response = await request(app).get("/api/health");
+      const { appVersion } = await import("../../../services/app-version");
+
+      expect(response.body.version).toBe(appVersion);
+      expect(response.body.stage).toBe("internal");
+    });
+
     it("reports unhealthy orchestrator", async () => {
       mockCtx.orchestrator.isHealthy = vi.fn().mockReturnValue(false);
       app = createTestApp(mockCtx);

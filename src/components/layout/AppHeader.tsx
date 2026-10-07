@@ -29,6 +29,7 @@ import { ConnectionStatus } from "./ConnectionStatus";
 import { EngagementModeSelector } from "./EngagementModeSelector";
 import { PanelToggles } from "./PanelToggles";
 import { MobileDrawer } from "./MobileDrawer";
+import { APP_STAGE } from "../../services/app-stage";
 
 export interface AppHeaderProps {
   // Page identity
@@ -135,6 +136,13 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                 <h1 className="text-xl font-bold text-white">
                   FORGE
                 </h1>
+                <span
+                  data-testid="app-stage-badge"
+                  title="Built for and used inside NXTG. Not yet offered or supported for outside use."
+                  className="px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-300 bg-gray-700/60 rounded border border-gray-600"
+                >
+                  stage: {APP_STAGE}
+                </span>
               </div>
 
               {/* Project Switcher - Desktop */}

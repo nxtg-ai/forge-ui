@@ -19,6 +19,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # README badge/line, CHANGELOG line and the app constant must all match
+      # the root STAGE file (DIRECTIVE-NXTG-20261007-11).
+      - name: Release-stage consistency
+        run: bash .github/scripts/check-stage.sh
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:

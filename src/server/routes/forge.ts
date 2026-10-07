@@ -14,6 +14,8 @@ import { getLogger } from "../../utils/logger";
 import { captureException } from "../../monitoring/sentry";
 import type { InitOptions } from "../../services/init-service";
 import { StatusService } from "../../services/status-service";
+import { appVersion } from "../../services/app-version";
+import { APP_STAGE } from "../../services/app-stage";
 
 const logger = getLogger("forge-routes");
 
@@ -202,6 +204,8 @@ export function createForgeRoutes(ctx: ForgeRouteContext): express.Router {
   router.get("/health", (req, res) => {
     res.json({
       status: "healthy",
+      version: appVersion,
+      stage: APP_STAGE,
       timestamp: new Date().toISOString(),
       services: {
         orchestrator: ctx.orchestrator.isHealthy(),

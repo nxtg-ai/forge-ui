@@ -4,6 +4,10 @@
 
 # forge-ui
 
+![stage: internal](https://img.shields.io/badge/stage-internal-grey)
+
+**Stage: internal.** Built for and used inside NXTG. The source is public, but it is not yet offered or supported for outside use: no SLA, and interfaces may change without notice.
+
 **Full visual platform for multi-tool AI orchestration.**
 
 This is L3: Ship Lord.
