@@ -24,7 +24,7 @@ jobs:
 
     steps:
       - name: CLA Assistant
-        uses: contributor-assistant/github-action@v2
+        uses: contributor-assistant/github-action@v2.6.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PERSONAL_ACCESS_TOKEN: ${{ secrets.CLA_PERSONAL_ACCESS_TOKEN }}
@@ -32,7 +32,7 @@ jobs:
           path-to-signatures: '.github/cla-signatures.json'
           path-to-document: 'https://raw.githubusercontent.com/nxtg-ai/forge-ui/main/CLA.md'
           branch: 'main'
-          allowlist: 'bot*,dependabot[bot],github-actions[bot]'
+          allowlist: 'awaliuddin,bot*,dependabot[bot],github-actions[bot]'
           create-status-check: true
           custom-pr-sign-comment: 'I have read the CLA Document and I hereby sign the CLA'
           custom-allsigned-prcomment: 'All contributors have signed the CLA. Thank you!'

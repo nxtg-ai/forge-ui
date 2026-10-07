@@ -15,6 +15,11 @@ on:
         required: false
         type: boolean
         default: false
+      dry_run:
+        description: 'Build and smoke-test the archives without creating a release'
+        required: false
+        type: boolean
+        default: false
 
 env:
   NODE_VERSION: '22'
@@ -54,16 +59,14 @@ jobs:
       - name: Type safety validation
         run: npx vitest run src/test/quality/type-safety.test.ts
 
-      - name: Security audit
-        run: |
-          npx tsx src/test/reports/security-audit.ts
-          if [ -f .claude/reports/security-audit.json ]; then
-            CRITICAL=$(cat .claude/reports/security-audit.json | jq '.summary.violations.critical')
-            if [ "$CRITICAL" -gt 0 ]; then
-              echo "::error::Found $CRITICAL critical security issues"
-              exit 1
-            fi
-          fi
+      # The script owns the blocking decision (report-only until calibrated or
+      # v3.5.0, see SECURITY_SCAN_BLOCKING_FROM) and exits 1 when it blocks.
+      # Re-reading its JSON here bypassed that decision and failed every tag.
+      - name: Security scan
+        run: npx tsx src/test/reports/security-audit.ts
+
+      - name: Dependency audit (production only)
+        run: npm audit --omit=dev
 
   # ============================================
   # Build Release Artifacts
@@ -115,9 +118,12 @@ jobs:
           VERSION=${{ steps.version.outputs.version }}
           mkdir -p release
 
-          # Copy built files
+          # Copy built files. `npm start` runs dist/server/api-server.js, so the
+          # server must land at dist/, not dist-server/.
           cp -r dist-ui release/
-          cp -r dist release/dist-server 2>/dev/null || true
+          cp -r dist release/dist
+          mkdir -p release/scripts
+          cp scripts/smoke-built-server.mjs release/scripts/
           cp package.json release/
           cp package-lock.json release/
           cp .env.example release/
@@ -148,7 +154,8 @@ jobs:
   # Create GitHub Release
   # ============================================
   release:
-    needs: build
+    needs: [build, smoke-test]
+    if: ${{ !inputs.dry_run }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -207,7 +214,7 @@ jobs:
           echo '```' >> CHANGELOG_RELEASE.md
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.build.outputs.version }}
           name: NXTG-Forge v${{ needs.build.outputs.version }}
@@ -222,10 +229,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # ============================================
-  # Post-Release Smoke Tests
+  # Smoke-test the archive BEFORE it is released
   # ============================================
   smoke-test:
-    needs: [build, release]
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -240,52 +247,24 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Extract and verify
+      - name: Verify checksums and structure
         run: |
           VERSION=${{ needs.build.outputs.version }}
-
-          # Verify checksums
-          echo "Verifying checksums..."
           sha256sum -c nxtg-forge-v${VERSION}.tar.gz.sha256
+          sha256sum -c nxtg-forge-v${VERSION}.zip.sha256
 
-          # Extract
-          tar -xzf nxtg-forge-v${VERSION}.tar.gz
+          mkdir pkg
+          tar -xzf nxtg-forge-v${VERSION}.tar.gz -C pkg
+          for f in package.json package-lock.json LICENSE.md .env.example dist/server/api-server.js scripts/smoke-built-server.mjs; do
+            [ -f "pkg/$f" ] || { echo "::error::Archive is missing $f"; exit 1; }
+          done
+          [ -d pkg/dist-ui ] || { echo "::error::Archive is missing dist-ui/"; exit 1; }
 
-          # Verify structure
-          echo "Verifying release structure..."
-          [ -f package.json ] || (echo "Missing package.json" && exit 1)
-          [ -d dist-ui ] || (echo "Missing dist-ui" && exit 1)
-          [ -f .env.example ] || (echo "Missing .env.example" && exit 1)
-
-          echo "✅ Release structure verified"
-
-      - name: Install and test startup
+      # Boots the archive's own server with production deps only and requires a
+      # shaped /api/forge/status. This replaces `timeout 5 npm start || true`,
+      # which passed whether or not the server could start.
+      - name: Install production deps and boot the archive
+        working-directory: pkg
         run: |
-          npm install --production
-
-          # Quick startup test (run for 5 seconds)
-          timeout 5 npm start || true
-
-          echo "✅ Smoke test passed"
-
-      - name: Notify success
-        if: success()
-        run: |
-          echo "::notice::Release v${{ needs.build.outputs.version }} deployed successfully!"
-
-  # ============================================
-  # Rollback (manual trigger only)
-  # ============================================
-  rollback:
-    if: github.event_name == 'workflow_dispatch' && failure()
-    needs: [release, smoke-test]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Delete failed release
-        run: |
-          VERSION=${{ needs.build.outputs.version }}
-          echo "::warning::Smoke tests failed. Consider deleting release v${VERSION}"
-          echo "Manual rollback: gh release delete v${VERSION} --yes"
+          npm ci --omit=dev
+          node scripts/smoke-built-server.mjs
