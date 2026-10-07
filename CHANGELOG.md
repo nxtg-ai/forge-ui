@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `cla-assistant` pins `contributor-assistant/github-action@v2.6.1` (the floating `@v2` ref no longer resolves) and allowlists the repository owner.
   - `quality-gate` strips ANSI before reading the vitest count (it read 0), fails on a failing test run (`pipefail`; `tee` masked it), and raises the baseline to 4513.
   - `staging-build` no longer runs `src/test/performance/` and `src/test/integration/`, neither of which exists; the full suite already runs in the same job.
+  - CLA signatures are committed to a dedicated `cla-signatures` branch, because the PR-only `main` rejects the action's direct commit.
   - `pr-summary` posts with `GITHUB_TOKEN` (the `NXTG_SENTINEL_TOKEN` secret returns "Bad credentials").
   - PR jobs run on Node 22 like the rest of CI.
 - **License** — Removed the stale MIT `LICENSE` left over from the 3.1.3 transition, so `LICENSE.md` (FSL-1.1-ALv2) is the repo's single license file. The `claude.json` manifest and `SECURITY.md` still claimed MIT and now say FSL-1.1-ALv2. The release workflow copied `LICENSE`, not `LICENSE.md`, into the release archive and skipped it silently if missing; it now copies `LICENSE.md` and fails if the file is missing. Versions up to and including v3.1.2 were published under the MIT License; FSL-1.1-ALv2 applies from v3.1.3 onward.
