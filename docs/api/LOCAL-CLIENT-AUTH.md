@@ -85,9 +85,9 @@ An agent that drives a browser through tool calls (`browser_navigate`, `browser_
 
 2. Navigate the browser to that link (`browser_navigate`). The sign-in screen redeems the code for the normal session cookie and removes it from the address bar. The session then behaves like any signed-in browser.
 
-The code is random, **single-use** and **expires after 60 seconds**. A copy left in a transcript or in browser history is already spent or stale, and it is not the token. Minting requires the token (`POST /api/auth/login-code` sits behind the normal gate); redeeming a used, expired or made-up code returns `401`, and a foreign `Origin` gets `403`. At most 8 unexpired codes can be outstanding (`429` beyond that).
+The code is random, **single-use** and **expires after 60 seconds**. A copy left in a transcript or in browser history is already spent or stale, and it is not the token. The trade-off: for those 60 seconds, anyone who reads the transcript could redeem the code first. The agent would then get "used or expired", so a stolen code is detectable, and the token itself is never exposed. Minting requires the token (`POST /api/auth/login-code` sits behind the normal gate); redeeming a used, expired or made-up code returns `401`, and a foreign `Origin` gets `403`. At most 8 unexpired codes can be outstanding (`429` beyond that).
 
-`src/test/e2e/automated-sign-in.e2e.mjs` checks this path with a real headless browser: it signs in, requires the app header, and fails if the token appears in any navigated URL, any process's argv or the server's output. Run with `MODE=token` as a negative control, and it catches the token in the URL history.
+`src/test/e2e/automated-sign-in.e2e.mjs` checks this path with a real headless browser. It signs in, requires the app header, and fails if the token appears in any navigated URL, in the server's output, or in a process's argv at the end of the session. The argv check is a single scan that catches a lingering process; the link script itself takes no arguments, so it never puts the token on argv. Run it with `MODE=token` as a negative control, and it catches the token in the URL history.
 
 ## 4. What to expect
 

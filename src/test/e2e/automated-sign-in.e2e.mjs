@@ -11,6 +11,14 @@
  *   MODE=token  negative control: sign in through the ?forge_token= link.
  *               The detector must catch the token in the URL history (exit 1).
  *
+ * argv: print-login-link takes no arguments and the token travels by env and
+ * request header, so argv is clean by construction. The /proc scan runs once,
+ * after sign-in, and catches a LINGERING process that holds the token (a
+ * planted one is found). It is not a continuous trace.
+ *
+ * Deliberately outside the vitest include pattern: it needs a running stack
+ * and a real browser.
+ *
  * Needs: a running forge-ui (API + Vite UI), the API's token file in
  * FORGE_UI_SECRET_FILE, SERVER_LOG pointing at the API server's output, and
  * Playwright from outside this repo: PLAYWRIGHT_MODULE=/path/to/node_modules/playwright.

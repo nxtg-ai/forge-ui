@@ -252,12 +252,14 @@ describe.sequential("API and terminal require authentication (GHSA-rc7c-r55p-923
   });
 
   it("refuses a made-up code and a foreign Origin at redeem", async () => {
-    const res = await fetch(`${base}/api/auth/redeem`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: randomBytes(32).toString("hex") }),
-    });
-    expect(res.status).toBe(401);
+    for (const route of ["/api/auth/redeem", "/api/redeem"]) {
+      const res = await fetch(`${base}${route}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: randomBytes(32).toString("hex") }),
+      });
+      expect(res.status).toBe(401);
+    }
 
     const minted = await fetch(`${base}/api/auth/login-code`, {
       method: "POST",
