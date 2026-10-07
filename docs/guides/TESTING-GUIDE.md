@@ -63,14 +63,11 @@ npm run test -- --ui
 ### Specific Test Suites
 
 ```bash
-# Integration tests only
-npx vitest run src/test/integration/
+# Integration tests only (*.integration.test.ts)
+npm run test:integration
 
 # Security tests only
 npx vitest run src/test/security/
-
-# Performance tests only
-npx vitest run src/test/performance/
 
 # Type safety validation
 npx vitest run src/test/quality/type-safety.test.ts
@@ -83,7 +80,7 @@ npx vitest run src/test/quality/error-handling.test.ts
 
 ```bash
 # Run a single test file
-npx vitest run src/test/integration/vision-integration.test.ts
+npx vitest run src/server/__tests__/smoke.integration.test.ts
 
 # Run tests matching a pattern
 npx vitest run --grep "VisionCapture"
@@ -229,15 +226,7 @@ open .claude/reports/quality-dashboard.html
 
 ## Performance Testing
 
-### Running Performance Tests
-
-```bash
-# Run performance suite
-npx vitest run src/test/performance/performance.test.ts
-
-# Run with detailed output
-npx vitest run src/test/performance/performance.test.ts --reporter=verbose
-```
+There is no performance test suite yet. The targets below are goals; nothing in the test suite measures them today.
 
 ### Performance Targets
 
@@ -248,16 +237,6 @@ npx vitest run src/test/performance/performance.test.ts --reporter=verbose
 | Message routing | < 10ms | < 50ms |
 | UI render | 60fps | 30fps |
 | Bootstrap | < 30s | < 60s |
-
-### Performance Benchmarks
-
-```bash
-# Run 1000 operations benchmark
-npx vitest run src/test/performance/ --grep "throughput"
-
-# Memory leak detection
-npx vitest run src/test/performance/ --grep "memory"
-```
 
 ---
 
@@ -359,7 +338,7 @@ gh run download [run-id]
 ### Writing New Tests
 
 ```typescript
-// src/test/integration/my-feature.test.ts
+// src/server/__tests__/my-feature.integration.test.ts
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 
@@ -446,7 +425,7 @@ npx vitest run --reporter=verbose --only-failures
 
 ```bash
 # Run single test in isolation
-npx vitest run --isolate src/test/integration/vision-integration.test.ts
+npx vitest run --isolate src/server/__tests__/smoke.integration.test.ts
 
 # Run without parallel execution
 npx vitest run --no-threads

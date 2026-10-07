@@ -160,7 +160,7 @@ This comprehensive checklist ensures NXTG-Forge v3.0 meets production-grade qual
 - [x] Bundle size: < 500KB
 - [x] Bootstrap time: < 30 seconds
 
-**Run**: `npx vitest run src/test/performance/performance.test.ts`
+**Measured by**: nothing yet. No performance test suite exists, so the checked items above are unverified.
 
 ### Scalability
 - [ ] Handles 1000+ tasks efficiently
