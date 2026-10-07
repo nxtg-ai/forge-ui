@@ -55,6 +55,7 @@
 | Document | Purpose |
 |----------|---------|
 | RUNSPACE-API.md | REST API reference (10 endpoints) |
+| LOCAL-CLIENT-AUTH.md | How local tools, harnesses and CI authenticate to the API (v3.4.1+) |
 
 ### Infinity Terminal (`docs/infinity-terminal/`)
 
