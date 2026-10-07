@@ -81,6 +81,7 @@ describe("ApiClient", () => {
         expect(mockFetch).toHaveBeenCalledWith(
           "/api/test",
           {
+            credentials: "include",
             method: "GET",
             headers: {
               "Content-Type": "application/json",

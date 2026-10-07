@@ -15,22 +15,26 @@ export default defineConfig({
     },
   },
   server: {
-    host: '0.0.0.0', // Bind to all interfaces for mobile/external access
+    // Loopback unless FORGE_UI_HOST opts in (same variable as the API server).
+    // For phone/LAN access: FORGE_UI_HOST=0.0.0.0 plus ALLOWED_ORIGINS.
+    host: process.env.FORGE_UI_HOST || '127.0.0.1',
     port: 5050, // NXTG-Forge dedicated UI port
     strictPort: true, // FAIL if port in use - do NOT auto-increment
     open: true,
     proxy: {
+      // 127.0.0.1, not localhost: the API binds IPv4 loopback only, and
+      // `localhost` can resolve to ::1 first.
       '/api': {
-        target: 'http://localhost:5051',
+        target: 'http://127.0.0.1:5051',
         changeOrigin: true,
       },
       '/ws': {
-        target: 'ws://localhost:5051',
+        target: 'ws://127.0.0.1:5051',
         ws: true,
         changeOrigin: true,
       },
       '/terminal': {
-        target: 'ws://localhost:5051',
+        target: 'ws://127.0.0.1:5051',
         ws: true,
       },
     },

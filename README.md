@@ -23,6 +23,18 @@ npm run dev
 
 Requires the Forge Orchestrator (L2: Pro Builder) running in your project.
 
+### Sign-in and network access
+
+The dashboard asks for this install's access token the first time you open it. On the machine running Forge:
+
+```bash
+npx tsx src/server/auth/print-auth-url.ts      # or: node dist/server/auth/print-auth-url.js
+```
+
+Open the link it prints. The token is created on first run at `~/.config/nxtg-forge/ui-secret` (mode 0600); you can also paste it into the sign-in screen. Tools can send it as `Authorization: Bearer <token>`.
+
+The dashboard (5050) and API server (5051) listen on `127.0.0.1` only. To open the dashboard from another device, set `FORGE_UI_HOST=0.0.0.0` (both servers bind to it, and the API prints a warning) and add the device-facing origin to `ALLOWED_ORIGINS`, e.g. `ALLOWED_ORIGINS=http://192.168.1.206:5050`. Every request still needs the token.
+
 ## The Infinity Terminal
 
 The Infinity Terminal changes how you work with AI tools. Tasks that take hours aren't tied to a terminal window. You start them and walk away. Check in from any device. Pick up where you left off.

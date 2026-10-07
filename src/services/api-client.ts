@@ -93,6 +93,8 @@ export class ApiClient {
   ): Promise<ApiResponse<T>> {
     try {
       const response = await fetch(`${getApiBaseUrl()}${endpoint}`, {
+        // Send the session cookie when the API is on another port (non-dev builds).
+        credentials: "include",
         ...options,
         headers: {
           "Content-Type": "application/json",

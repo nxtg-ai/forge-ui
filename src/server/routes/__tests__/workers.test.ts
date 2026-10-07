@@ -338,10 +338,10 @@ describe("Worker Routes", () => {
       mockWorkerPool.submitTask.mockResolvedValue("task-123");
 
       const task = {
-        type: "build",
+        type: "shell",
         priority: "high",
-        command: "npm run build",
-        args: ["--prod"],
+        command: "codex",
+        args: ["exec", "--prod"],
       };
 
       const res = await request(app)
@@ -353,10 +353,10 @@ describe("Worker Routes", () => {
       expect(res.body.data.taskId).toBe("task-123");
       expect(mockWorkerPool.submitTask).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: "build",
+          type: "shell",
           priority: "high",
-          command: "npm run build",
-          args: ["--prod"],
+          command: "codex",
+          args: ["exec", "--prod"],
         })
       );
     });
@@ -365,11 +365,10 @@ describe("Worker Routes", () => {
       mockWorkerPool.submitTask.mockResolvedValue("task-456");
 
       const task = {
-        type: "test",
-        command: "npm test",
+        type: "shell",
+        command: "claude",
         workstreamId: "ws-1",
         timeout: 5000,
-        env: { NODE_ENV: "test" },
         metadata: { source: "api" },
       };
 
@@ -382,15 +381,47 @@ describe("Worker Routes", () => {
       expect(res.body.data.taskId).toBe("task-456");
       expect(mockWorkerPool.submitTask).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: "test",
-          command: "npm test",
+          type: "shell",
+          command: "claude",
           priority: "medium",
           workstreamId: "ws-1",
           timeout: 5000,
-          env: { NODE_ENV: "test" },
           metadata: { source: "api" },
         })
       );
+      // env is never forwarded from HTTP (GHSA-rc7c-r55p-923j).
+      expect(mockWorkerPool.submitTask.mock.calls[0][0]).not.toHaveProperty("env");
+    });
+
+    it("rejects a free-form shell command and submits nothing", async () => {
+      const res = await request(app)
+        .post("/api/workers/tasks")
+        .send({ type: "shell", command: "touch", args: ["/tmp/forge-marker"] })
+        .expect(400);
+
+      expect(res.body.success).toBe(false);
+      expect(res.body.error).toBe("command for shell tasks must be one of: claude, codex, gemini");
+      expect(mockWorkerPool.submitTask).not.toHaveBeenCalled();
+    });
+
+    it("rejects env over HTTP and submits nothing", async () => {
+      const res = await request(app)
+        .post("/api/workers/tasks")
+        .send({ type: "claude-code", command: "review", env: { NODE_OPTIONS: "--require /tmp/x" } })
+        .expect(400);
+
+      expect(res.body.error).toBe("env is not accepted for tasks submitted over HTTP");
+      expect(mockWorkerPool.submitTask).not.toHaveBeenCalled();
+    });
+
+    it("rejects an unknown task type before checking the pool", async () => {
+      mockCtx.getWorkerPool = vi.fn(() => null);
+      const res = await request(app)
+        .post("/api/workers/tasks")
+        .send({ type: "build", command: "npm run build" })
+        .expect(400);
+
+      expect(res.body.error).toBe("type must be one of: claude-code, agent, shell, script");
     });
 
     it("validates required type field", async () => {
@@ -425,8 +456,8 @@ describe("Worker Routes", () => {
       mockWorkerPool.submitTask.mockRejectedValue(new Error("Queue full"));
 
       const task = {
-        type: "build",
-        command: "npm run build",
+        type: "shell",
+        command: "claude",
       };
 
       const res = await request(app)
@@ -502,8 +533,8 @@ describe("Worker Routes", () => {
       mockWorkerPool.submitTask.mockResolvedValue("task-111");
 
       const task = {
-        type: "build",
-        command: "npm run build",
+        type: "shell",
+        command: "gemini",
       };
 
       await request(app)
@@ -514,7 +545,7 @@ describe("Worker Routes", () => {
       expect(intelligenceInjector.getIntelligenceContext).not.toHaveBeenCalled();
       expect(mockWorkerPool.submitTask).toHaveBeenCalledWith(
         expect.objectContaining({
-          command: "npm run build",
+          command: "gemini",
         })
       );
     });
@@ -949,8 +980,8 @@ describe("Worker Routes", () => {
       mockWorkerPool.submitTask.mockResolvedValue("task-empty-args");
 
       const task = {
-        type: "test",
-        command: "npm test",
+        type: "shell",
+        command: "codex",
         args: [],
       };
 
@@ -971,8 +1002,8 @@ describe("Worker Routes", () => {
       mockWorkerPool.submitTask.mockResolvedValue("task-null-priority");
 
       const task = {
-        type: "build",
-        command: "build",
+        type: "shell",
+        command: "claude",
         priority: null,
       };
 
@@ -993,8 +1024,8 @@ describe("Worker Routes", () => {
       mockWorkerPool.submitTask.mockResolvedValue("task-undef-priority");
 
       const task = {
-        type: "build",
-        command: "build",
+        type: "shell",
+        command: "claude",
       };
 
       const res = await request(app)
@@ -1014,16 +1045,12 @@ describe("Worker Routes", () => {
       mockWorkerPool.submitTask.mockResolvedValue("task-metadata");
 
       const task = {
-        type: "deploy",
-        command: "deploy.sh",
+        type: "shell",
+        command: "codex",
         priority: "critical",
         args: ["--production"],
         workstreamId: "ws-prod-123",
         timeout: 60000,
-        env: {
-          NODE_ENV: "production",
-          API_KEY: "secret",
-        },
         metadata: {
           source: "ci/cd",
           build_id: "build-456",
@@ -1039,16 +1066,12 @@ describe("Worker Routes", () => {
       expect(res.body.success).toBe(true);
       expect(mockWorkerPool.submitTask).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: "deploy",
-          command: "deploy.sh",
+          type: "shell",
+          command: "codex",
           priority: "critical",
           args: ["--production"],
           workstreamId: "ws-prod-123",
           timeout: 60000,
-          env: {
-            NODE_ENV: "production",
-            API_KEY: "secret",
-          },
           metadata: {
             source: "ci/cd",
             build_id: "build-456",

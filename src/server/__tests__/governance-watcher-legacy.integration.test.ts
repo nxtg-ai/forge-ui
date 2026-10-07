@@ -120,6 +120,8 @@ function runServer(
           // Guarantee no orchestrator is reachable, so the run does not depend
           // on a locally installed binary.
           FORGE_BIN: "/nonexistent/definitely-not-forge",
+          // Keep the spawned server off the developer's real ~/.config secret.
+          FORGE_UI_SECRET: "test-secret-0123456789abcdef0123456789abcdef",
         },
         stdio: ["ignore", "pipe", "pipe"],
         detached: true,

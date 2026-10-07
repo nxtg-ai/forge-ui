@@ -13,6 +13,15 @@ import { RunspaceManager } from "../../core/runspace-manager";
 import type { Runspace } from "../../core/runspace";
 import * as crypto from "crypto";
 
+// The /terminal upgrade now requires the per-install secret
+// (DIRECTIVE-NXTG-20261007-10). These tests exercise what happens AFTER that
+// gate, so every client authenticates unless a test says otherwise.
+const TEST_SECRET = vi.hoisted(() => {
+  const s = "p".repeat(64);
+  process.env.FORGE_UI_SECRET = s;
+  return s;
+});
+
 // Mock auth validation — always approve for security tests focused on
 // command filtering and token generation (not WS auth)
 vi.mock("../routes/features", () => ({
@@ -69,7 +78,11 @@ describe("PTY Bridge Security", () => {
 
   /** Create a tracked WebSocket client - auto-cleaned in afterEach */
   function createClient(url: string, options?: Record<string, unknown>): WebSocket {
-    const ws = options ? new WebSocket(url, options as any) : new WebSocket(url);
+    const headers = {
+      authorization: `Bearer ${TEST_SECRET}`,
+      ...((options?.headers as Record<string, string> | undefined) ?? {}),
+    };
+    const ws = new WebSocket(url, { ...(options ?? {}), headers } as any);
     ws.on("error", () => { /* suppress ECONNREFUSED during teardown */ });
     activeClients.push(ws);
     return ws;

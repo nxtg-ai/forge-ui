@@ -16,6 +16,7 @@
  */
 
 import { spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { existsSync } from "node:fs";
 import { createServer } from "node:net";
 import path from "node:path";
@@ -26,6 +27,7 @@ const ENTRY = path.join(ROOT, "dist", "server", "api-server.js");
 
 const BOOT_TIMEOUT_MS = 60_000;
 const POLL_INTERVAL_MS = 500;
+const SECRET = randomBytes(32).toString("hex");
 
 const fail = (msg) => {
   console.error(`smoke-built-server: FAIL — ${msg}`);
@@ -65,7 +67,8 @@ async function main() {
   const port = await freePort();
   const child = spawn(process.execPath, [ENTRY], {
     cwd: ROOT,
-    env: { ...process.env, PORT: String(port), NODE_ENV: "production" },
+    // A throwaway secret: every /api route requires one (GHSA-rc7c-r55p-923j).
+    env: { ...process.env, PORT: String(port), NODE_ENV: "production", FORGE_UI_SECRET: SECRET },
     stdio: ["ignore", "pipe", "pipe"],
   });
 
@@ -91,7 +94,9 @@ async function main() {
     }
 
     try {
-      const res = await fetch(`http://127.0.0.1:${port}/api/forge/status`);
+      const res = await fetch(`http://127.0.0.1:${port}/api/forge/status`, {
+        headers: { Authorization: `Bearer ${SECRET}` },
+      });
       if (res.ok) {
         payload = await res.json();
         break;

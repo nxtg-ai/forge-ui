@@ -7,6 +7,7 @@ import express from "express";
 import type { RouteContext } from "../route-context";
 import { getLogger } from "../../utils/logger";
 import { captureException } from "../../monitoring/sentry";
+import { validateHttpTask } from "../workers/task-policy";
 import {
   getIntelligenceContext,
   injectIntelligence,
@@ -184,14 +185,6 @@ export function createWorkerRoutes(ctx: RouteContext): express.Router {
   // Submit task to worker pool
   router.post("/tasks", async (req, res) => {
     try {
-      const pool = ctx.getWorkerPool();
-      if (!pool) {
-        return res.status(503).json({
-          success: false,
-          error: "Worker pool disabled — use Claude Code Agent Teams instead",
-          timestamp: new Date().toISOString(),
-        });
-      }
       const {
         type,
         priority,
@@ -207,6 +200,25 @@ export function createWorkerRoutes(ctx: RouteContext): express.Router {
         return res.status(400).json({
           success: false,
           error: "type and command are required",
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      // No free-form commands, no env over HTTP. GHSA-rc7c-r55p-923j.
+      const policy = validateHttpTask({ type, command, args, env });
+      if (!policy.ok) {
+        return res.status(400).json({
+          success: false,
+          error: policy.error,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const pool = ctx.getWorkerPool();
+      if (!pool) {
+        return res.status(503).json({
+          success: false,
+          error: "Worker pool disabled — use Claude Code Agent Teams instead",
           timestamp: new Date().toISOString(),
         });
       }
@@ -246,7 +258,6 @@ export function createWorkerRoutes(ctx: RouteContext): express.Router {
         args: enhancedArgs,
         workstreamId,
         timeout,
-        env,
         metadata,
       });
 

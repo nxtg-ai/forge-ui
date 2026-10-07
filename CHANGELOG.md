@@ -7,8 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.4.1] - 2026-10-07
+
+Security release. **Upgrade if you run the dashboard on a machine reachable from a network.** Details are in the GitHub security advisory for this release.
+
+### Security
+
+- **The API and terminal now require authentication.** A per-install access token is created on first run (`~/.config/nxtg-forge/ui-secret`, mode 0600, never logged). Every `/api` route and every WebSocket upgrade (`/ws`, `/terminal`) requires it, either as a header or as an `HttpOnly`, `SameSite=Strict` session cookie set by the new sign-in screen. Requests from origins outside `ALLOWED_ORIGINS` are refused.
+- **The dashboard and API bind `127.0.0.1` by default.** Network access is opt-in with `FORGE_UI_HOST` (used by both the Vite dev server and the API, which prints a warning). The Vite proxy now targets `127.0.0.1`.
+- **Worker tasks no longer accept free-form commands.** `shell`/`script` tasks may run only `claude`, `codex` or `gemini`; `env` is not accepted over HTTP; the worker spawns without a shell and re-checks the allowlist itself.
+- **Production audit clean** (`npm audit --omit=dev` → 0).
+  - `simple-git` 3 → 4.0.2 (GHSA-v5rq-49vh-5v5c; v4 drops the default export, so one import changed).
+  - `argparse` overridden to `^2.0.1` (GHSA-hp3w-g68c-fv3c via `gray-matter` → `js-yaml@3`, whose library code does not import argparse).
+  - `concurrently` moved to devDependencies (only `dev:raw` uses it), and `shell-quote` overridden to `^1.12.0` (GHSA-pqg4-j6r4-53mv).
+  - Remaining dev-only advisory: `@vitest/mocker` ≤ 4.1.10, left for a test-runner upgrade.
+- `package.json` is now `"private": true`. forge-ui ships through GitHub Releases only, and without the flag the release-drift check expected an npm publish (#27).
+- **esbuild bumped 0.27.3 → 0.28.1** to clear GHSA-g7r4-m6w7-qqqr (low — dev-server arbitrary file read on Windows), which the CI production audit flags. This is the same advisory 3.3.1 *accepted* as unfixable-without-a-major at the time; 0.28.1 is now published, so it is resolved rather than accepted. Pinned via an `overrides` entry because it reaches the production tree transitively through `tsx` and `vite`; the lockfile change is esbuild-only, and `tsx`/`vite` run unchanged against it. `npm audit --omit=dev` is now clean (0 vulnerabilities).
+
 ### Changed
 
+- New sign-in screen; `npx tsx src/server/auth/print-auth-url.ts` prints a one-click sign-in link. Tools that call the API directly must send `Authorization: Bearer <token>`.
+- A CORS origin outside the allowlist now gets a 403 from the API instead of a 500.
 - **`main` is PR-only.** Direct pushes are blocked for everyone, admins included (`enforce_admins`). A PR merges only when the required checks are green: `quality-gates`, `quality-gate`, `build-check`, `dependency-audit`, `security-scan`, `staging-build`, `cla-assistant` and `Analyze (javascript-typescript)`. No approval is required, because the repository has one human code owner, who cannot approve their own PR. Independent review is required before a release tag instead. Every `main` commit is therefore a squash merge with Quality Gates green on the PR, and Quality Gates runs again on the push.
 
 ### Fixed
@@ -26,16 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `pr-summary` posts with `GITHUB_TOKEN` (the `NXTG_SENTINEL_TOKEN` secret returns "Bad credentials").
   - PR jobs run on Node 22 like the rest of CI.
 - **License** — Removed the stale MIT `LICENSE` left over from the 3.1.3 transition, so `LICENSE.md` (FSL-1.1-ALv2) is the repo's single license file. The `claude.json` manifest and `SECURITY.md` still claimed MIT and now say FSL-1.1-ALv2. The release workflow copied `LICENSE`, not `LICENSE.md`, into the release archive and skipped it silently if missing; it now copies `LICENSE.md` and fails if the file is missing. Versions up to and including v3.1.2 were published under the MIT License; FSL-1.1-ALv2 applies from v3.1.3 onward.
-
-### Security
-
-- **Production audit clean** (`npm audit --omit=dev` → 0).
-  - `simple-git` 3 → 4.0.2 (GHSA-v5rq-49vh-5v5c; v4 drops the default export, so one import changed).
-  - `argparse` overridden to `^2.0.1` (GHSA-hp3w-g68c-fv3c via `gray-matter` → `js-yaml@3`, whose library code does not import argparse).
-  - `concurrently` moved to devDependencies (only `dev:raw` uses it), and `shell-quote` overridden to `^1.12.0` (GHSA-pqg4-j6r4-53mv).
-  - Remaining dev-only advisory: `@vitest/mocker` ≤ 4.1.10, left for a test-runner upgrade.
-- `package.json` is now `"private": true`. forge-ui ships through GitHub Releases only, and without the flag the release-drift check expected an npm publish (#27).
-- **esbuild bumped 0.27.3 → 0.28.1** to clear GHSA-g7r4-m6w7-qqqr (low — dev-server arbitrary file read on Windows), which the CI production audit flags. This is the same advisory 3.3.1 *accepted* as unfixable-without-a-major at the time; 0.28.1 is now published, so it is resolved rather than accepted. Pinned via an `overrides` entry because it reaches the production tree transitively through `tsx` and `vite`; the lockfile change is esbuild-only, and `tsx`/`vite` run unchanged against it. `npm audit --omit=dev` is now clean (0 vulnerabilities).
 
 ## [3.4.0] - 2026-07-19
 

@@ -29,6 +29,7 @@ export async function applyDiff(filePath: string): Promise<DiffResult> {
   try {
     const response = await fetch(`${getApiBase()}/api/diffs/apply`, {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ filePath, timestamp: new Date().toISOString() }),
     });
@@ -66,6 +67,7 @@ export async function rejectDiff(filePath: string): Promise<DiffResult> {
   try {
     const response = await fetch(`${getApiBase()}/api/diffs/reject`, {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ filePath, timestamp: new Date().toISOString() }),
     });
@@ -104,7 +106,7 @@ export async function getPendingDiffs(): Promise<{
   error?: string;
 }> {
   try {
-    const response = await fetch(`${getApiBase()}/api/diffs/pending`);
+    const response = await fetch(`${getApiBase()}/api/diffs/pending`, { credentials: "include" });
 
     if (!response.ok) {
       const error = await response.json();

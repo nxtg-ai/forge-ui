@@ -6,6 +6,7 @@
 import { spawn, ChildProcess } from "child_process";
 import * as os from "os";
 import { IPCMessage, AgentTask, TaskResult } from "./types";
+import { assertSpawnAllowed } from "./task-policy";
 
 const WORKER_ID = process.env.WORKER_ID || "unknown";
 const WORKER_DIR = process.env.WORKER_DIR || process.cwd();
@@ -61,11 +62,26 @@ async function executeShellCommand(task: AgentTask): Promise<TaskResult> {
     const env = { ...process.env, ...task.env };
     const cwd = task.cwd || WORKER_DIR;
 
-    // Spawn the command
+    try {
+      assertSpawnAllowed(task.command);
+    } catch (error) {
+      resolve({
+        taskId: task.id,
+        success: false,
+        exitCode: 1,
+        stdout: "",
+        stderr: error instanceof Error ? error.message : String(error),
+        duration: 0,
+        error: "COMMAND_NOT_ALLOWED",
+      });
+      return;
+    }
+
+    // Argument array, no shell: args are never re-parsed by /bin/sh.
     const child = spawn(task.command, args, {
       cwd,
       env,
-      shell: true,
+      shell: false,
       stdio: ["pipe", "pipe", "pipe"],
     });
 
