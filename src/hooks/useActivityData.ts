@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { wsManager } from "../services/ws-manager";
 import { logger } from "../utils/browser-logger";
+import { apiBase } from "../services/api-base";
 
 export interface ActivityItem {
   id: string;
@@ -76,9 +77,8 @@ export function useActivityData(maxItems: number, autoScroll: boolean, scrollRef
       setIsLoading(true);
       setError(null);
 
-      const apiUrl = import.meta.env.VITE_API_URL || "/api";
       const response = await fetch(
-        `${apiUrl}/agents/activities?limit=${maxItems}&sortBy=timestamp&sortOrder=desc`,
+        `${apiBase()}/agents/activities?limit=${maxItems}&sortBy=timestamp&sortOrder=desc`,
       );
 
       if (!response.ok) {

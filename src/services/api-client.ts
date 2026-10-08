@@ -16,17 +16,7 @@ import type {
 } from "../components/types";
 import { wsManager } from "./ws-manager";
 import { logger } from "../utils/browser-logger";
-
-// API Configuration
-// In dev mode: use relative URLs (/api) - Vite proxies to localhost:5051
-// In production: use absolute URLs with current hostname
-const getApiBaseUrl = () => {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  if (import.meta.env.DEV) return "/api"; // Vite proxy handles this
-  const host =
-    typeof window !== "undefined" ? window.location.hostname : "localhost";
-  return `http://${host}:5051/api`;
-};
+import { apiBase } from "./api-base";
 
 // Response schemas for type safety
 const ApiResponseSchema = <T extends z.ZodType>(dataSchema: T) =>
@@ -92,9 +82,9 @@ export class ApiClient {
     options: RequestInit = {},
   ): Promise<ApiResponse<T>> {
     try {
-      const response = await fetch(`${getApiBaseUrl()}${endpoint}`, {
-        // Send the session cookie when the API is on another port (non-dev builds).
-        credentials: "include",
+      const response = await fetch(`${apiBase()}${endpoint}`, {
+        // Same origin only: the session cookie never goes to another origin.
+        credentials: "same-origin",
         ...options,
         headers: {
           "Content-Type": "application/json",
