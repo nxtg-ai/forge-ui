@@ -56,12 +56,12 @@ FRONTEND_URL=http://localhost:5050  # Frontend URL for CORS
 
 #### API Client Configuration (Development Only)
 ```bash
-# For multi-device access, DO NOT set these in .env
-# The UI uses relative URLs (/api, /ws) which are proxied by Vite
-# Only set these if you need explicit URL overrides
+# Leave these unset. The UI always uses /api, /ws and /terminal on the origin
+# that served it, proxied to the API server. They accept only another path on
+# the same origin; an absolute URL (another host or port) is ignored.
 
-# VITE_API_URL=http://localhost:5051/api
-# VITE_WS_URL=ws://localhost:5051/ws
+# VITE_API_URL=/api
+# VITE_WS_URL=/ws
 ```
 
 #### Feature Flags

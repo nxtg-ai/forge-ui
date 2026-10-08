@@ -964,24 +964,14 @@ WSL2 Specific:
 
 ### Environment Configuration
 
-**CRITICAL: NO hardcoded URLs in .env**
+**No API or WebSocket URLs in .env.** The browser calls `/api`, `/ws` and `/terminal` on the origin that served the page, and the UI server proxies them. `VITE_API_URL` / `VITE_WS_URL` accept only another path on the same origin; an absolute value (another host or port) is ignored, so the session cookie never goes to another origin.
 
-```bash
-# ❌ WRONG - breaks multi-device access
-VITE_API_URL=http://localhost:5051
-VITE_WS_URL=ws://localhost:5051
-
-# ✅ RIGHT - let proxy handle it
-# .env is empty or uses relative paths
-```
-
-Client code uses relative URLs:
+All client URLs come from one helper:
 ```typescript
-// src/services/api-client.ts
-const getApiBaseUrl = () => {
-  if (import.meta.env.DEV) return '/api';  // Vite proxy
-  return `http://${window.location.hostname}:5051/api`;
-};
+// src/services/api-base.ts
+apiBase();                          // "/api" (or a same-origin VITE_API_URL path)
+wsUrl();                            // ws(s)://<page host:port>/ws
+sameOriginWsUrl(TERMINAL_WS_PATH);  // ws(s)://<page host:port>/terminal
 ```
 
 ---

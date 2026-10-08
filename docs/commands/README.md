@@ -150,14 +150,14 @@ This runs (in sequence):
 
 ```bash
 # Development (automatically loaded from .env)
-VITE_API_URL=http://localhost:5051
-VITE_WS_URL=ws://localhost:5051
 NODE_ENV=development
 
 # Production (set in deployment pipeline)
-VITE_API_URL=https://api.example.com
-VITE_WS_URL=wss://api.example.com
 NODE_ENV=production
+
+# The browser always calls /api, /ws and /terminal on the origin that served
+# the page. VITE_API_URL / VITE_WS_URL accept only another same-origin path
+# (e.g. /forge/api); an absolute URL is ignored.
 ```
 
 ### Docker Commands

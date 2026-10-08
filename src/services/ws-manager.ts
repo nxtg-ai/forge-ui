@@ -5,16 +5,11 @@
  */
 
 import { logger } from "../utils/browser-logger";
+import { wsUrl } from "./api-base";
 
 // --- URL Helper ---
-const getWsUrl = (): string => {
-  if (typeof import.meta !== "undefined" && import.meta.env?.VITE_WS_URL) {
-    return import.meta.env.VITE_WS_URL;
-  }
-  if (typeof window === "undefined") return "ws://localhost:5050/ws";
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${window.location.host}/ws`;
-};
+// Same origin only (see api-base.ts): the handshake carries the session cookie.
+const getWsUrl = (): string => wsUrl();
 
 // --- Types ---
 export type ConnectionStatus =

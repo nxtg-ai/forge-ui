@@ -26,17 +26,12 @@ import { useResponsiveLayout } from "./hooks/useResponsiveLayout";
 
 interface MobileTerminalViewProps {
   projectName?: string;
-  ttydPort?: number;
-  ttydHost?: string;
   onShare?: () => void;
   className?: string;
 }
 
 export const MobileTerminalView: React.FC<MobileTerminalViewProps> = ({
   projectName = "nxtg-forge",
-  // Use current port (5050 in dev) - Vite proxies /terminal to API server
-  ttydPort = typeof window !== 'undefined' ? parseInt(window.location.port) || 5050 : 5050,
-  ttydHost = typeof window !== 'undefined' ? window.location.hostname : "localhost",
   onShare,
   className = "",
 }) => {
@@ -147,8 +142,6 @@ export const MobileTerminalView: React.FC<MobileTerminalViewProps> = ({
       <div className="flex-1 relative">
         <InfinityTerminal
           projectName={projectName}
-          ttydPort={ttydPort}
-          ttydHost={ttydHost}
           onConnectionChange={handleConnectionChange}
           className="h-full"
         />

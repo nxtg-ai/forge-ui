@@ -109,10 +109,10 @@ The page removes `?forge_token=` and `?forge_login_code=` from the address bar b
 
 Vercel Web Analytics is **off** in local installs. A hosted build can turn it on with `VITE_VERCEL_ANALYTICS=1` at build time, and every analytics event then passes through a `beforeSend` that strips both sign-in values.
 
-`index.html` sets `<meta name="referrer" content="strict-origin">` ahead of every asset, so the browser sends only the origin, never the path or query, as `Referer`. In a production build no request carries a sign-in value in `Referer`. Under the Vite dev server, Vite injects its own `/@vite/client` script ahead of that tag, so that one same-origin dev-only request still carries the full URL. Prefer the one-time link (§3) over `?forge_token=` wherever a URL might be recorded.
+`index.html` sets `<meta name="referrer" content="strict-origin">` ahead of every asset, so the browser sends only the origin, never the path or query, as `Referer`. The dev server and `vite preview` also send a `Referrer-Policy: strict-origin` header, because Vite injects its own `/@vite/client` script ahead of that tag. No request carries a sign-in value in `Referer`, in dev or production. Prefer the one-time link (§3) over `?forge_token=` wherever a URL might be recorded.
 
 ## 6. Network
 
 The server listens on `127.0.0.1` unless `FORGE_UI_HOST` is set. Local tools should call `http://127.0.0.1:<port>`. `localhost` can resolve to `::1` first, and the server doesn't listen there.
 
-The dashboard itself, in dev and production builds alike, calls the relative `/api` on the origin that served it, and that origin proxies `/api`, `/ws` and `/terminal` to the API server. It never calls port 5051 directly, and it sends the session cookie only to its own origin (`credentials: "same-origin"`). `VITE_API_URL` may move the API to another path on the same origin; a value that names another origin is ignored.
+The dashboard itself, in dev and production builds alike, calls the relative `/api` on the origin that served it, and that origin proxies `/api`, `/ws` and `/terminal` to the API server. It never calls port 5051 directly, and it sends the session cookie only to its own origin (`credentials: "same-origin"`). WebSockets (`/ws` and the terminal's `/terminal`) open on the page's own host and port too. `VITE_API_URL` and `VITE_WS_URL` may move these to another path on the same origin; a value that names another origin is ignored.
