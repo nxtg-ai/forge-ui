@@ -3,11 +3,7 @@
  * Handles apply/reject diff commands via backend API
  */
 
-// In dev mode, use empty string (relative URL) - Vite proxies /api to localhost:5051
-const getApiBase = () => {
-  if (import.meta.env?.DEV) return '';
-  return `http://${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:5051`;
-};
+import { apiBase } from "../services/api-base";
 
 export interface DiffOperation {
   filePath: string;
@@ -27,9 +23,9 @@ export interface DiffResult {
  */
 export async function applyDiff(filePath: string): Promise<DiffResult> {
   try {
-    const response = await fetch(`${getApiBase()}/api/diffs/apply`, {
+    const response = await fetch(`${apiBase()}/diffs/apply`, {
       method: "POST",
-      credentials: "include",
+      credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ filePath, timestamp: new Date().toISOString() }),
     });
@@ -65,9 +61,9 @@ export async function applyDiff(filePath: string): Promise<DiffResult> {
  */
 export async function rejectDiff(filePath: string): Promise<DiffResult> {
   try {
-    const response = await fetch(`${getApiBase()}/api/diffs/reject`, {
+    const response = await fetch(`${apiBase()}/diffs/reject`, {
       method: "POST",
-      credentials: "include",
+      credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ filePath, timestamp: new Date().toISOString() }),
     });
@@ -106,7 +102,7 @@ export async function getPendingDiffs(): Promise<{
   error?: string;
 }> {
   try {
-    const response = await fetch(`${getApiBase()}/api/diffs/pending`, { credentials: "include" });
+    const response = await fetch(`${apiBase()}/diffs/pending`, { credentials: "same-origin" });
 
     if (!response.ok) {
       const error = await response.json();

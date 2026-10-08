@@ -10,12 +10,10 @@ import type { ForgeStatus, HealthSource } from "../services/status-service";
 import { wsManager } from "../services/ws-manager";
 import { logger } from "../utils/browser-logger";
 import { apiFetch } from "../utils/api-fetch";
+import { apiBase } from "../services/api-base";
 
-// API base URL helper
-const getApiBase = () => {
-  if (import.meta.env?.DEV) return "";
-  return `http://${typeof window !== "undefined" ? window.location.hostname : "localhost"}:5051`;
-};
+// Endpoints are written "/api/..."; resolve them against the same-origin API base.
+const apiUrl = (endpoint: string) => `${apiBase()}${endpoint.replace(/^\/api/, "")}`;
 
 /**
  * Vision data structure from API
@@ -101,7 +99,7 @@ export function useDashboardData(): DashboardData {
     fallback: T,
   ): Promise<T> => {
     try {
-      const response = await apiFetch(`${getApiBase()}${endpoint}`);
+      const response = await apiFetch(apiUrl(endpoint));
       if (!response.ok) {
         logger.debug(`[Dashboard] ${endpoint} returned ${response.status}`);
         return fallback;
