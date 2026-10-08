@@ -960,11 +960,25 @@ describe("useSessionPersistence", () => {
     });
   });
 
-  describe("Branch Coverage — module-level SSR / port fallback (DEFAULT_CONFIG)", () => {
-    // These branches are evaluated once, at module import time, so each
-    // scenario needs a fresh module instance (vi.resetModules + dynamic
-    // import) with `window`/`window.location` mutated BEFORE import.
-    it("falls back to port 5050 and host localhost when window is undefined at import time (SSR guard)", async () => {
+  describe("Same-origin terminal URL (DIRECTIVE-NXTG-20261008-03)", () => {
+    // The terminal WebSocket is always opened on the page's own host:port.
+    // The old DEFAULT_CONFIG captured a host and port at import time, and
+    // InfinityTerminal fell back to port 5050 on a default-port page.
+    function urlAt(location: Partial<Location>): string {
+      const original = window.location;
+      Object.defineProperty(window, "location", {
+        configurable: true,
+        value: { ...original, ...location },
+      });
+      try {
+        const { result } = renderHook(() => useSessionPersistence());
+        return result.current.getWsUrl();
+      } finally {
+        Object.defineProperty(window, "location", { configurable: true, value: original });
+      }
+    }
+
+    it("uses the page origin even when window was undefined at import time (SSR guard)", async () => {
       vi.resetModules();
       const originalWindow = (globalThis as any).window;
       delete (globalThis as any).window;
@@ -975,42 +989,21 @@ describe("useSessionPersistence", () => {
 
       const { result } = renderHook(() => mod.useSessionPersistence());
 
-      expect(result.current.config.wsPort).toBe(5050);
-      expect(result.current.config.wsHost).toBe("localhost");
+      expect(result.current.getWsUrl()).toBe(`ws://${window.location.host}/terminal`);
+      expect(result.current.config).not.toHaveProperty("wsPort");
+      expect(result.current.config).not.toHaveProperty("wsHost");
     });
 
-    it("falls back to port 443 when window.location.port is empty and protocol is https", async () => {
-      vi.resetModules();
-      const original = window.location;
-      Object.defineProperty(window, "location", {
-        configurable: true,
-        value: { ...original, port: "", protocol: "https:" },
-      });
-
-      const mod = await import("../useSessionPersistence");
-
-      Object.defineProperty(window, "location", { configurable: true, value: original });
-
-      const { result } = renderHook(() => mod.useSessionPersistence());
-
-      expect(result.current.config.wsPort).toBe(443);
+    it("an https page on the default port connects to wss://<host>/terminal, no port", () => {
+      expect(urlAt({ protocol: "https:", host: "forge.example", hostname: "forge.example", port: "" })).toBe(
+        "wss://forge.example/terminal",
+      );
     });
 
-    it("falls back to port 80 when window.location.port is empty and protocol is http", async () => {
-      vi.resetModules();
-      const original = window.location;
-      Object.defineProperty(window, "location", {
-        configurable: true,
-        value: { ...original, port: "", protocol: "http:" },
-      });
-
-      const mod = await import("../useSessionPersistence");
-
-      Object.defineProperty(window, "location", { configurable: true, value: original });
-
-      const { result } = renderHook(() => mod.useSessionPersistence());
-
-      expect(result.current.config.wsPort).toBe(80);
+    it("an http page on the default port connects to ws://<host>/terminal, never :5050", () => {
+      expect(urlAt({ protocol: "http:", host: "forge.example", hostname: "forge.example", port: "" })).toBe(
+        "ws://forge.example/terminal",
+      );
     });
   });
 });

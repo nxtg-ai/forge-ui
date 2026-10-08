@@ -21,6 +21,10 @@ export default defineConfig({
     port: 5050, // NXTG-Forge dedicated UI port
     strictPort: true, // FAIL if port in use - do NOT auto-increment
     open: true,
+    // Vite injects /@vite/client ahead of index.html's referrer <meta>, so the
+    // policy must also come as a header (DIRECTIVE-NXTG-20261008-03).
+    // `vite preview` inherits server.headers.
+    headers: { 'Referrer-Policy': 'strict-origin' },
     proxy: {
       // 127.0.0.1, not localhost: the API binds IPv4 loopback only, and
       // `localhost` can resolve to ::1 first.

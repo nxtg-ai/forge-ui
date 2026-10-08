@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { logger } from "../../../utils/browser-logger";
+import { sameOriginWsUrl, TERMINAL_WS_PATH } from "../../../services/api-base";
 
 export interface SessionState {
   sessionId: string;
@@ -20,11 +21,11 @@ export interface SessionState {
 }
 
 export interface SessionConfig {
-  /** WebSocket port for terminal connection */
-  wsPort: number;
-  /** WebSocket host */
-  wsHost: string;
-  /** WebSocket path (e.g., '/terminal' for PTY bridge) */
+  /**
+   * WebSocket path on the page's own origin (e.g. '/terminal' for the PTY
+   * bridge). There is no host or port: the serving origin proxies it, and the
+   * handshake must never go to another origin (DIRECTIVE-NXTG-20261008-03).
+   */
   wsPath: string;
   sessionPrefix: string;
   autoReconnect: boolean;
@@ -33,10 +34,7 @@ export interface SessionConfig {
 }
 
 const DEFAULT_CONFIG: SessionConfig = {
-  // Use Vite's proxy - connects through current host:port which proxies to API server
-  wsPort: typeof window !== 'undefined' ? parseInt(window.location.port) || (window.location.protocol === 'https:' ? 443 : 80) : 5050,
-  wsHost: typeof window !== 'undefined' ? window.location.hostname : 'localhost',
-  wsPath: "/terminal",
+  wsPath: TERMINAL_WS_PATH,
   sessionPrefix: "forge",
   autoReconnect: true,
   maxReconnectAttempts: 3,
@@ -176,8 +174,7 @@ export function useSessionPersistence(
 
   // Get terminal WebSocket URL (with optional sessionId for reconnection)
   const getWsUrl = useCallback((sessionId?: string, authToken?: string) => {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const base = `${protocol}//${config.wsHost}:${config.wsPort}${config.wsPath}`;
+    const base = sameOriginWsUrl(config.wsPath);
     const params = new URLSearchParams();
     if (sessionId) {
       params.set("sessionId", sessionId);
@@ -187,7 +184,7 @@ export function useSessionPersistence(
     }
     const queryString = params.toString();
     return queryString ? `${base}?${queryString}` : base;
-  }, [config.wsHost, config.wsPort, config.wsPath]);
+  }, [config.wsPath]);
 
   // Alias for backward compatibility
   const getTtydUrl = getWsUrl;

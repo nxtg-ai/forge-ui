@@ -37,6 +37,7 @@ import {
   COMMAND_SHORTCUTS,
   DEFAULT_COMMANDS,
 } from "./command";
+import { wsUrl } from "../services/api-base";
 
 // ============= WebSocket Message Type =============
 
@@ -124,7 +125,7 @@ const CommandView: React.FC = () => {
 
   // WebSocket connection
   const { isConnected, sendMessage, messages, clearMessages } = useRealtimeConnection({
-    url: import.meta.env.VITE_WS_URL || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`,
+    url: wsUrl(),
     onOpen: () => {
       toast.success("Connected to Forge", { message: "Real-time updates enabled" });
     },

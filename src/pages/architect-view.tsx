@@ -34,6 +34,7 @@ import {
 } from "./architect";
 import { useArchitectData } from "./architect/useArchitectData";
 import { useKeyboardShortcuts } from "./architect/useKeyboardShortcuts";
+import { wsUrl } from "../services/api-base";
 
 // Architect-specific keyboard shortcuts
 const ARCHITECT_SHORTCUTS: KeyboardShortcut[] = [
@@ -78,7 +79,7 @@ const ArchitectView: React.FC = () => {
 
   // WebSocket connection
   const { isConnected, sendMessage, messages, clearMessages } = useRealtimeConnection({
-    url: import.meta.env.VITE_WS_URL || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`,
+    url: wsUrl(),
     onOpen: () => {
       toast.success("Connected to Forge", { message: "Real-time updates enabled" });
     },

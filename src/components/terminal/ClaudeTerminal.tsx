@@ -19,6 +19,7 @@ import {
   DollarSign,
 } from "lucide-react";
 import { logger } from "../../utils/browser-logger";
+import { sameOriginWsUrl, TERMINAL_WS_PATH } from "../../services/api-base";
 
 interface ClaudeTerminalProps {
   onCommandExecute?: (command: string) => void;
@@ -239,8 +240,7 @@ export const ClaudeTerminal: React.FC<ClaudeTerminalProps> = ({
       return;
     }
 
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${wsProtocol}//${window.location.host}/terminal`);
+    const ws = new WebSocket(sameOriginWsUrl(TERMINAL_WS_PATH));
 
     ws.onopen = () => {
       setIsConnected(true);

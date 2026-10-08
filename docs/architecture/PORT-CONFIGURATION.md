@@ -59,8 +59,8 @@ VITE_PORT=5050         # UI
 
 # URLs
 FRONTEND_URL=http://localhost:5050
-VITE_API_URL=http://localhost:5051/api
-VITE_WS_URL=ws://localhost:5051/ws
+# No VITE_API_URL / VITE_WS_URL: the browser calls /api, /ws and /terminal on
+# the page's own origin, and the UI server proxies them to PORT.
 ```
 
 ---
@@ -69,7 +69,7 @@ VITE_WS_URL=ws://localhost:5051/ws
 
 Need different ports? Update these 3 files:
 
-1. **vite.config.ts**: Change `server.port`
+1. **vite.config.ts**: Change `server.port` and the `server.proxy` targets
 2. **src/server/api-server.ts**: Change `PORT` default
 3. **.env**: Update `PORT` and `VITE_PORT`
 
@@ -79,8 +79,6 @@ Example for ports 6000/6001:
 PORT=6001
 VITE_PORT=6000
 FRONTEND_URL=http://localhost:6000
-VITE_API_URL=http://localhost:6001/api
-VITE_WS_URL=ws://localhost:6001/ws
 ```
 
 ---
@@ -94,8 +92,9 @@ For production, use environment variables:
 export PORT=80
 export VITE_PORT=443
 export FRONTEND_URL=https://forge.yourdomain.com
-export VITE_API_URL=https://api.forge.yourdomain.com
 ```
+
+The browser always calls `/api`, `/ws` and `/terminal` on the origin that served the page, so serve them from that same origin. A separate API origin is not supported: an absolute `VITE_API_URL` or `VITE_WS_URL` is ignored.
 
 Or use a reverse proxy (nginx/caddy):
 ```nginx
