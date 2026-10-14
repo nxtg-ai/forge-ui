@@ -8,8 +8,9 @@
  * For full end-to-end server testing, see smoke.integration.test.ts
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { Request, Response, NextFunction } from "express";
+import { resolveBindHost } from "../auth/ui-auth";
 
 describe("API Server Components", () => {
   describe("Security Headers Middleware", () => {
@@ -690,16 +691,29 @@ describe("API Server Components", () => {
     });
   });
 
+  // NEXUS: DIRECTIVE-NXTG-20261013-17 item 7. The server listens on
+  // resolveBindHost() (api-server.ts); since v3.4.1 that is loopback unless
+  // FORGE_UI_HOST opts into the network.
   describe("Server Binding Configuration", () => {
-    it("binds to 0.0.0.0 for multi-device access", () => {
-      const host = "0.0.0.0";
-      expect(host).toBe("0.0.0.0");
+    let savedHost: string | undefined;
+
+    beforeEach(() => {
+      savedHost = process.env.FORGE_UI_HOST;
+      delete process.env.FORGE_UI_HOST;
     });
 
-    it("does not bind to localhost only", () => {
-      const host = "0.0.0.0";
-      expect(host).not.toBe("127.0.0.1");
-      expect(host).not.toBe("localhost");
+    afterEach(() => {
+      if (savedHost === undefined) delete process.env.FORGE_UI_HOST;
+      else process.env.FORGE_UI_HOST = savedHost;
+    });
+
+    it("binds to 127.0.0.1 when FORGE_UI_HOST is unset", () => {
+      expect(resolveBindHost()).toBe("127.0.0.1");
+    });
+
+    it("binds to the network only when FORGE_UI_HOST opts in", () => {
+      process.env.FORGE_UI_HOST = "0.0.0.0";
+      expect(resolveBindHost()).toBe("0.0.0.0");
     });
   });
 
