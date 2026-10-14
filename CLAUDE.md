@@ -196,8 +196,9 @@ curl -sS -X POST http://100.123.83.34:8880/v1/audio/speech \
 
 @/home/axw/ASIF/standards/claude-team-alignment-wiring.md
 
-- Team alignment id: `forge`.
-- Cross-team room: `/alignment`, written through `~/ASIF/scripts/alignment-say`.
+- Team alignment id: `forge-ui` (label "Forge UI"; split from the retired `forge` id, DIRECTIVE-NXTG-20261013-22).
+- Cross-team room: `/alignment`, written through `~/ASIF/scripts/alignment-say --as forge-ui`.
+- Commit and PR trailers: `python3 ~/ASIF/scripts/lane-identity.py --trailer forge-ui`.
 - If an `[ALIGNMENT ...]` message appears, respond through `alignment-say`; do not answer only in this private TUI.
 - Deterministic state first: typed Dx3/asifctl, `.asif/NEXUS.md`, git/tests/runtime probes. Prose is backup and local steering only.
 <!-- ASIF:TEAM-ALIGNMENT-WIRING:END -->
