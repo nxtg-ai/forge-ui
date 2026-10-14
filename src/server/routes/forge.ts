@@ -15,7 +15,7 @@ import { captureException } from "../../monitoring/sentry";
 import type { InitOptions } from "../../services/init-service";
 import { StatusService } from "../../services/status-service";
 import { appVersion } from "../../services/app-version";
-import { APP_STAGE } from "../../services/app-stage";
+import { APP_DISTRIBUTION, APP_MATURITY, APP_STAGE } from "../../services/app-stage";
 
 const logger = getLogger("forge-routes");
 
@@ -206,6 +206,8 @@ export function createForgeRoutes(ctx: ForgeRouteContext): express.Router {
       status: "healthy",
       version: appVersion,
       stage: APP_STAGE,
+      distribution: APP_DISTRIBUTION,
+      maturity: APP_MATURITY,
       timestamp: new Date().toISOString(),
       services: {
         orchestrator: ctx.orchestrator.isHealthy(),

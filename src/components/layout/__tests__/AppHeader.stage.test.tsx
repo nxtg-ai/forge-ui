@@ -1,6 +1,6 @@
 /**
  * The app header shows the release stage from the one constant.
- * NEXUS: DIRECTIVE-NXTG-20261007-11.
+ * NEXUS: DIRECTIVE-NXTG-20261007-11, DIRECTIVE-NXTG-20261013-17.
  */
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -20,6 +20,9 @@ describe("AppHeader stage badge", () => {
     );
     const badge = screen.getByTestId("app-stage-badge");
     expect(badge).toHaveTextContent(`stage: ${APP_STAGE}`);
-    expect(badge).toHaveTextContent("stage: internal");
+    expect(badge).toHaveTextContent("stage: Public preview");
+    expect(badge).toHaveAttribute("data-distribution", "public");
+    expect(badge).toHaveAttribute("data-maturity", "pre-alpha");
+    expect(badge.getAttribute("title")).not.toMatch(/not yet offered|outside use/i);
   });
 });
