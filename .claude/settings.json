@@ -4,7 +4,7 @@
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
     "ASIF_ROOT": "/home/axw/ASIF",
-    "ALIGNMENT_AGENT": "forge"
+    "ALIGNMENT_AGENT": "forge-ui"
   },
   "editor": {
     "tab_size": 2,
