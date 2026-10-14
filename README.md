@@ -55,7 +55,7 @@ Governance state comes from the Rust orchestrator. The UI reads and displays it.
 
 ## Tool Activity Feed
 
-Watch Claude Code, Codex CLI, and Gemini CLI coordinate in real-time. A tool claiming a task and starting implementation. The guardian agent running quality checks on the output. The planner decomposing a feature into subtasks. A security scan flagging a dependency vulnerability.
+Watch the tools on your repo coordinate in real time: for Claude Code; Codex CLI as a task runner; Gemini CLI support in development (build B1, target 2026-10-27). A tool claiming a task and starting implementation. The guardian agent running quality checks on the output. The planner decomposing a feature into subtasks. A security scan flagging a dependency vulnerability.
 
 The feed shows tool assignments, task progress, file lock acquisitions and releases, knowledge captures, and governance events.
 
@@ -64,7 +64,7 @@ The feed shows tool assignments, task progress, file lock acquisitions and relea
 | Feature | What It Does |
 |---------|-------------|
 | Governance dashboard | Real-time health scores (A/B/C/D/F), 8 quality checks, trend monitoring |
-| Tool activity feed | Watch Claude Code, Codex CLI, Gemini CLI coordinate: task claims, file locks, knowledge captures |
+| Tool activity feed | Task claims, file locks and knowledge captures as tools coordinate: for Claude Code; Codex CLI as a task runner; Gemini CLI support in development (build B1, target 2026-10-27) |
 | Infinity Terminal | Browser-based terminal that survives close, disconnect, and restart |
 | Command center | Execute Forge commands (`forge plan`, `forge status`) from the browser |
 | Multi-device access | Phone, tablet, remote machine. All see the same state. |
