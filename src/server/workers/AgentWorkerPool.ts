@@ -24,6 +24,10 @@ import { getLogger } from "../../utils/logger";
 
 const logger = getLogger('agent-worker-pool');
 
+/** Window and threshold for treating repeated worker crashes as a crash loop. */
+export const CRASH_WINDOW_MS = 5 * 60 * 1000;
+export const CRASH_LOOP_THRESHOLD = 3;
+
 export class AgentWorkerPool extends EventEmitter {
   private config: PoolConfig;
   private workers: Map<string, AgentWorker> = new Map();
@@ -35,6 +39,8 @@ export class AgentWorkerPool extends EventEmitter {
   > = new Map();
 
   private _status: PoolStatus["status"] = "stopped";
+  /** When workers crashed, for the crash-loop check (DIRECTIVE-NXTG-20261014-15 item 4). */
+  private crashTimes: number[] = [];
   private startedAt: Date | null = null;
   private lastScaleOperation: PoolStatus["lastScaleOperation"];
 
@@ -228,6 +234,7 @@ export class AgentWorkerPool extends EventEmitter {
       avgQueueWaitTime: this.taskQueue.getAverageWaitTime(),
       utilization: workers.length > 0 ? activeWorkers / workers.length : 0,
       uptime: this.startedAt ? Date.now() - this.startedAt.getTime() : 0,
+      recentCrashes: this.recentCrashCount(),
     };
   }
 
@@ -435,8 +442,16 @@ export class AgentWorkerPool extends EventEmitter {
     this.dispatchTasks();
   }
 
+  /** Crashes inside the window; older entries are dropped. */
+  private recentCrashCount(): number {
+    const cutoff = Date.now() - CRASH_WINDOW_MS;
+    this.crashTimes = this.crashTimes.filter((t) => t >= cutoff);
+    return this.crashTimes.length;
+  }
+
   private async handleWorkerCrash(workerId: string): Promise<void> {
     logger.info(`[WorkerPool] Worker ${workerId} crashed, respawning...`);
+    this.crashTimes.push(Date.now());
 
     const worker = this.workers.get(workerId);
     if (worker) {
@@ -528,7 +543,11 @@ export class AgentWorkerPool extends EventEmitter {
       (w) => w.status === "error" || w.status === "crashed",
     ).length;
 
-    if (errorCount > this.workers.size * 0.5) {
+    // A crash loop (workers exit and respawn) or an empty pool is not
+    // healthy, even when no worker is in an error state at this instant.
+    const crashLoop = this.recentCrashCount() >= CRASH_LOOP_THRESHOLD;
+    const empty = this.workers.size === 0 && this.config.minWorkers > 0;
+    if (errorCount > this.workers.size * 0.5 || crashLoop || empty) {
       this._status = "degraded";
     } else if (this._status === "degraded") {
       this._status = "running";

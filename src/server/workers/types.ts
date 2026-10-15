@@ -143,6 +143,8 @@ export interface PoolMetrics {
   avgQueueWaitTime: number;
   utilization: number; // 0-1
   uptime: number; // ms
+  /** Worker crashes in the last CRASH_WINDOW_MS. A pool can show 0 errored workers while it respawns in a loop. */
+  recentCrashes: number;
 }
 
 /**
