@@ -1176,8 +1176,10 @@ paths:
   /api/diffs/apply:
     post:
       tags: [System]
-      summary: Apply diff
-      description: Apply a pending diff to a file
+      summary: Accept diff
+      description: >-
+        Records that the user accepted a diff and broadcasts a diff.accepted
+        event. No file is changed; the response carries applied: false.
       requestBody:
         required: true
         content:
@@ -1192,7 +1194,7 @@ paths:
                   type: string
       responses:
         '200':
-          description: Diff applied
+          description: Diff accepted; no file changed
           content:
             application/json:
               schema:

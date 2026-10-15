@@ -67,19 +67,20 @@ export function createForgeRoutes(ctx: ForgeRouteContext): express.Router {
         });
       }
 
-      // Diff application is handled by Claude Code's native file operations.
-      // This endpoint provides UI notification and event broadcasting.
-      logger.info(`📝 Applying diff to: ${filePath}`);
+      // forge-ui does not write the file. Claude Code applies its own edits;
+      // this route records that the user accepted the change and tells the
+      // other dashboard clients, and says so (PRM-CLX9-20261015-06 item b).
+      logger.info(`📝 Diff accepted (no file changed): ${filePath}`);
 
-      // Broadcast diff applied event
-      ctx.broadcast("diff.applied", {
+      ctx.broadcast("diff.accepted", {
         filePath,
         timestamp: timestamp || new Date().toISOString(),
       });
 
       res.json({
         success: true,
-        message: `Successfully applied changes to ${filePath}`,
+        applied: false,
+        message: `No file was changed. forge-ui does not apply diffs; it recorded that the change to ${filePath} was accepted.`,
         timestamp: new Date().toISOString(),
       });
     } catch (error) {

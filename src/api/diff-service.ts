@@ -15,11 +15,14 @@ export interface DiffResult {
   success: boolean;
   filePath: string;
   message: string;
+  /** True only if the server says it changed the file. forge-ui never does. */
+  applied?: boolean;
   error?: string;
 }
 
 /**
- * Apply a diff to a file
+ * Accept a diff. The server records the decision and changes no file; the
+ * result carries the server's own message and its `applied` flag.
  */
 export async function applyDiff(filePath: string): Promise<DiffResult> {
   try {
@@ -44,7 +47,8 @@ export async function applyDiff(filePath: string): Promise<DiffResult> {
     return {
       success: true,
       filePath,
-      message: `Successfully applied changes to ${filePath}`,
+      message: data.message,
+      applied: data.applied === true,
     };
   } catch (error) {
     return {

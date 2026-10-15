@@ -97,29 +97,31 @@ describe("Forge Routes", () => {
   // ============= Diff Endpoints =============
 
   describe("POST /api/diffs/apply", () => {
-    it("applies diff successfully with valid filePath", async () => {
+    // PRM-CLX9-20261015-06 item (b): the route changes no file and says so.
+    it("accepts a diff with valid filePath and says no file was changed", async () => {
       const response = await request(app)
         .post("/api/diffs/apply")
         .send({ filePath: "/test/file.ts" });
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
-      expect(response.body.message).toContain("Successfully applied changes");
+      expect(response.body.applied).toBe(false);
+      expect(response.body.message).toContain("No file was changed");
       expect(response.body.message).toContain("/test/file.ts");
       expect(response.body.timestamp).toBeDefined();
-      expect(mockCtx.broadcast).toHaveBeenCalledWith("diff.applied", expect.objectContaining({
+      expect(mockCtx.broadcast).toHaveBeenCalledWith("diff.accepted", expect.objectContaining({
         filePath: "/test/file.ts",
       }));
     });
 
-    it("applies diff with custom timestamp", async () => {
+    it("accepts a diff with custom timestamp", async () => {
       const customTimestamp = "2026-01-01T00:00:00.000Z";
       const response = await request(app)
         .post("/api/diffs/apply")
         .send({ filePath: "/test/file.ts", timestamp: customTimestamp });
 
       expect(response.status).toBe(200);
-      expect(mockCtx.broadcast).toHaveBeenCalledWith("diff.applied", expect.objectContaining({
+      expect(mockCtx.broadcast).toHaveBeenCalledWith("diff.accepted", expect.objectContaining({
         filePath: "/test/file.ts",
         timestamp: customTimestamp,
       }));
