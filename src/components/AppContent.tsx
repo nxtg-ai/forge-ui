@@ -170,6 +170,7 @@ export const AppContent: React.FC<AppContentProps> = (props) => {
           showConnectionStatus={true}
           showEngagementSelector={true}
           isConnected={forge.isConnected}
+          onFeedbackClick={() => setFeedbackModalOpen(true)}
         />
       )}
 
@@ -282,16 +283,10 @@ export const AppContent: React.FC<AppContentProps> = (props) => {
       {/* Error Display */}
       <ErrorDisplay errors={forge.errors.filter((e): e is string => typeof e === 'string')} />
 
-      {/* Beta Feedback Components */}
-      {feedbackModalOpen && (
-        <BetaFeedback onClose={() => setFeedbackModalOpen(false)} />
-      )}
+      {/* Feedback form: opened from the header or the banner (DIRECTIVE-NXTG-20261014-15) */}
+      <BetaFeedback open={feedbackModalOpen} showTrigger={false} onClose={() => setFeedbackModalOpen(false)} />
       <Changelog isOpen={showChangelog} onClose={() => setShowChangelog(false)} />
 
-      {/* Floating Beta Feedback Button - only show when modal is closed */}
-      {!feedbackModalOpen && currentView !== "infinity-terminal" && currentView !== "marketing" && (
-        <BetaFeedback onClose={() => setFeedbackModalOpen(false)} />
-      )}
 
       {/* Real-time Activity Feed (floating) */}
       {(activities || []).length > 0 && currentView === "dashboard" && (

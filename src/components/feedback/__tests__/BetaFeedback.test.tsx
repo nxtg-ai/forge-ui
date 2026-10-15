@@ -24,13 +24,13 @@ describe("BetaFeedback", () => {
     test("renders floating feedback button", () => {
       render(<BetaFeedback />);
 
-      expect(screen.getByText("Beta Feedback")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Send feedback" })).toBeInTheDocument();
     });
 
     test("opens modal when feedback button is clicked", () => {
       render(<BetaFeedback />);
 
-      const button = screen.getByText("Beta Feedback");
+      const button = screen.getByRole("button", { name: "Send feedback" });
       fireEvent.click(button);
 
       expect(screen.getByText("Help us improve NXTG-Forge by sharing your thoughts")).toBeInTheDocument();
@@ -49,7 +49,7 @@ describe("BetaFeedback", () => {
     test("modal opens when button clicked", () => {
       render(<BetaFeedback />);
 
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       expect(
         screen.getByText("Help us improve NXTG-Forge by sharing your thoughts")
@@ -59,7 +59,7 @@ describe("BetaFeedback", () => {
     test("modal closes when Cancel button clicked", () => {
       render(<BetaFeedback />);
 
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
       expect(screen.getByText("Help us improve NXTG-Forge by sharing your thoughts")).toBeInTheDocument();
 
       fireEvent.click(screen.getByText("Cancel"));
@@ -73,7 +73,7 @@ describe("BetaFeedback", () => {
       const onCloseMock = vi.fn();
       render(<BetaFeedback onClose={onCloseMock} />);
 
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
       fireEvent.click(screen.getByText("Cancel"));
 
       expect(onCloseMock).toHaveBeenCalledOnce();
@@ -83,7 +83,7 @@ describe("BetaFeedback", () => {
   describe("Rating System", () => {
     test("renders 5 star rating buttons", () => {
       render(<BetaFeedback />);
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       // Stars are SVG icons rendered by lucide-react
       const ratingSection = screen.getByText("How would you rate your experience?");
@@ -92,7 +92,7 @@ describe("BetaFeedback", () => {
 
     test("rating persists after hover", () => {
       render(<BetaFeedback />);
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       const ratingSection = screen.getByText("How would you rate your experience?");
       expect(ratingSection).toBeInTheDocument();
@@ -102,7 +102,7 @@ describe("BetaFeedback", () => {
   describe("Category Selection", () => {
     test("renders category dropdown with default value", () => {
       render(<BetaFeedback />);
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       const select = screen.getByDisplayValue("Feature Request");
       expect(select).toBeInTheDocument();
@@ -110,7 +110,7 @@ describe("BetaFeedback", () => {
 
     test("allows selecting different categories", () => {
       render(<BetaFeedback />);
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       const select = screen.getByDisplayValue("Feature Request");
       fireEvent.change(select, { target: { value: "Bug Report" } });
@@ -120,7 +120,7 @@ describe("BetaFeedback", () => {
 
     test("displays all category options", () => {
       render(<BetaFeedback />);
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       const select = screen.getByDisplayValue("Feature Request");
       const options = select.querySelectorAll("option");
@@ -137,7 +137,7 @@ describe("BetaFeedback", () => {
   describe("Description Input", () => {
     test("renders description textarea", () => {
       render(<BetaFeedback />);
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       const textarea = screen.getByPlaceholderText("Tell us what you think...");
       expect(textarea).toBeInTheDocument();
@@ -145,7 +145,7 @@ describe("BetaFeedback", () => {
 
     test("updates description when typing", () => {
       render(<BetaFeedback />);
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       const textarea = screen.getByPlaceholderText("Tell us what you think...");
       fireEvent.change(textarea, { target: { value: "This is my feedback" } });
@@ -155,7 +155,7 @@ describe("BetaFeedback", () => {
 
     test("displays character count", () => {
       render(<BetaFeedback />);
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       const textarea = screen.getByPlaceholderText("Tell us what you think...");
       fireEvent.change(textarea, { target: { value: "Test feedback" } });
@@ -167,14 +167,14 @@ describe("BetaFeedback", () => {
   describe("Screenshot Upload", () => {
     test("renders file upload input", () => {
       render(<BetaFeedback />);
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       expect(screen.getByText("Upload Image")).toBeInTheDocument();
     });
 
     test("displays file name when file is selected", () => {
       render(<BetaFeedback />);
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       const file = new File(["screenshot"], "screenshot.png", {
         type: "image/png",
@@ -193,7 +193,7 @@ describe("BetaFeedback", () => {
 
     test("shows error for files larger than 5MB", () => {
       render(<BetaFeedback />);
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       const largeFile = new File(["x".repeat(6 * 1024 * 1024)], "large.png", {
         type: "image/png",
@@ -216,7 +216,7 @@ describe("BetaFeedback", () => {
 
     test("displays file size in KB", () => {
       render(<BetaFeedback />);
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       const file = new File(["x".repeat(1024 * 2)], "test.png", {
         type: "image/png",
@@ -239,7 +239,7 @@ describe("BetaFeedback", () => {
 
     test("allows removing uploaded file", () => {
       render(<BetaFeedback />);
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       const file = new File(["screenshot"], "test.png", { type: "image/png" });
       const input = screen.getByLabelText(/Upload Image/i) as HTMLInputElement;
@@ -260,7 +260,7 @@ describe("BetaFeedback", () => {
   describe("Form Validation", () => {
     test("submit button is disabled when description is empty", () => {
       render(<BetaFeedback />);
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       const submitButton = screen.getByText("Submit Feedback").closest("button");
       expect(submitButton).toBeDisabled();
@@ -275,7 +275,7 @@ describe("BetaFeedback", () => {
       });
 
       render(<BetaFeedback />);
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       const textarea = screen.getByPlaceholderText("Tell us what you think...");
       fireEvent.change(textarea, { target: { value: "Good work" } });
@@ -308,7 +308,7 @@ describe("BetaFeedback", () => {
       (global.fetch as any).mockRejectedValueOnce(new Error("Network error"));
 
       render(<BetaFeedback />);
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       const textarea = screen.getByPlaceholderText("Tell us what you think...");
       fireEvent.change(textarea, { target: { value: "Feedback content" } });
@@ -345,7 +345,7 @@ describe("BetaFeedback", () => {
       );
 
       render(<BetaFeedback />);
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       const textarea = screen.getByPlaceholderText("Tell us what you think...");
       fireEvent.change(textarea, { target: { value: "Test" } });
@@ -376,13 +376,13 @@ describe("BetaFeedback", () => {
   describe("Modal Reset", () => {
     test("resets form when modal closes", () => {
       render(<BetaFeedback />);
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       const textarea = screen.getByPlaceholderText("Tell us what you think...");
       fireEvent.change(textarea, { target: { value: "Some text" } });
 
       fireEvent.click(screen.getByText("Cancel"));
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       expect(screen.getByDisplayValue("Feature Request")).toBeInTheDocument();
       expect(screen.getByText("0 / 2000 characters")).toBeInTheDocument();
@@ -390,7 +390,7 @@ describe("BetaFeedback", () => {
 
     test("clears error message when reopening modal", () => {
       render(<BetaFeedback />);
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       const file = new File(["x".repeat(6 * 1024 * 1024)], "large.png", {
         type: "image/png",
@@ -410,11 +410,33 @@ describe("BetaFeedback", () => {
       expect(screen.getByText("Screenshot must be less than 5MB")).toBeInTheDocument();
 
       fireEvent.click(screen.getByText("Cancel"));
-      fireEvent.click(screen.getByText("Beta Feedback"));
+      fireEvent.click(screen.getByRole("button", { name: "Send feedback" }));
 
       expect(
         screen.queryByText("Screenshot must be less than 5MB")
       ).not.toBeInTheDocument();
+    });
+  });
+  // NEXUS: DIRECTIVE-NXTG-20261014-15 items 2-3. The header opens the form;
+  // no floating trigger covers page content, and nothing says "beta".
+  describe("Opened from the app header", () => {
+    it("opens when the parent sets open, with no floating trigger", () => {
+      render(<BetaFeedback open showTrigger={false} />);
+
+      expect(screen.getByText("Public preview feedback")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Send feedback" })).not.toBeInTheDocument();
+    });
+
+    it("renders nothing visible when closed and the trigger is hidden", () => {
+      const { container } = render(<BetaFeedback open={false} showTrigger={false} />);
+
+      expect(container.textContent).toBe("");
+    });
+
+    it("says public preview and never beta", () => {
+      render(<BetaFeedback open />);
+
+      expect(document.body.textContent ?? "").not.toMatch(/\bbeta\b/i);
     });
   });
 });

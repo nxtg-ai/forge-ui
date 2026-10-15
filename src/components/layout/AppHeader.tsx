@@ -20,7 +20,7 @@
 
 import React, { useState } from "react";
 
-import { Menu } from "lucide-react";
+import { Menu, MessageSquare } from "lucide-react";
 import { ProjectSwitcher } from "../ProjectSwitcher";
 import type { Runspace } from "../../core/runspace";
 import logoSrc from "../../assets/logo-32.png";
@@ -55,6 +55,8 @@ export interface AppHeaderProps {
   showEngagementSelector?: boolean;
   showPanelToggles?: boolean;
   showConnectionStatus?: boolean;
+  /** Opens the feedback form. The header carries this trigger so it never covers page content. */
+  onFeedbackClick?: () => void;
   showNavigation?: boolean;
   showProjectSwitcher?: boolean;
 
@@ -88,6 +90,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   showEngagementSelector = false,
   showPanelToggles = false,
   showConnectionStatus = false,
+  onFeedbackClick,
   showNavigation = true,
   showProjectSwitcher = true,
   onToggleContextPanel,
@@ -141,7 +144,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                     data-testid="app-stage-badge"
                     data-distribution={APP_DISTRIBUTION}
                     data-maturity={APP_MATURITY}
-                    title="Public: anyone may use it. Maturity below alpha: no SLA, and interfaces may change."
+                    title="Public preview: no SLA, and interfaces may change."
                     className="px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-300 bg-gray-700/60 rounded border border-gray-600"
                   >
                     stage: {APP_STAGE}
@@ -228,6 +231,20 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
                   contextPanelVisible={contextPanelVisible}
                   governancePanelVisible={governancePanelVisible}
                 />
+              )}
+
+              {/* Feedback (was a floating button that covered the right rail) */}
+              {onFeedbackClick && (
+                <button
+                  type="button"
+                  onClick={onFeedbackClick}
+                  data-testid="app-feedback-btn"
+                  aria-label="Send feedback"
+                  title="Send feedback"
+                  className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+                >
+                  <MessageSquare className="w-5 h-5" aria-hidden="true" />
+                </button>
               )}
 
               {/* Connection Status */}

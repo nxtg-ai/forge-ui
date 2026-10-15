@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { logger } from "../../utils/browser-logger";
 import { motion } from "framer-motion";
 import { SafeAnimatePresence as AnimatePresence } from "../ui/SafeAnimatePresence";
@@ -31,13 +31,17 @@ interface FeedbackData {
 
 interface BetaFeedbackProps {
   onClose?: () => void;
+  /** Controlled open state. When set, the parent opens the form (e.g. from the header). */
+  open?: boolean;
+  /** Show the floating trigger button. The app header carries the trigger instead (DIRECTIVE-NXTG-20261014-15). */
+  showTrigger?: boolean;
 }
 
-/** Floating button and modal form for collecting star ratings, categorized feedback, and optional screenshots during beta.
+/** Modal form for collecting star ratings, categorized feedback, and optional screenshots during the public preview.
  * @param props - {@link BetaFeedbackProps}
  */
-export const BetaFeedback: React.FC<BetaFeedbackProps> = ({ onClose }) => {
-  const [isOpen, setIsOpen] = useState(false);
+export const BetaFeedback: React.FC<BetaFeedbackProps> = ({ onClose, open, showTrigger = true }) => {
+  const [isOpen, setIsOpen] = useState(open ?? false);
   const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [category, setCategory] = useState<FeedbackCategory>("Feature Request");
@@ -61,6 +65,13 @@ export const BetaFeedback: React.FC<BetaFeedbackProps> = ({ onClose }) => {
     setIsOpen(true);
     setSubmitStatus("idle");
   }, []);
+
+  // Follow the parent when it controls the open state.
+  useEffect(() => {
+    if (open === undefined) return;
+    setIsOpen(open);
+    if (open) setSubmitStatus("idle");
+  }, [open]);
 
   const handleClose = useCallback(() => {
     setIsOpen(false);
@@ -170,8 +181,10 @@ export const BetaFeedback: React.FC<BetaFeedbackProps> = ({ onClose }) => {
   return (
     <>
       {/* Floating Feedback Button */}
+      {showTrigger && (
       <motion.button
         onClick={handleOpen}
+        aria-label="Send feedback"
         className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full shadow-glow-brand hover:shadow-glow-brand hover:scale-105 transition-all duration-200"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
@@ -180,8 +193,9 @@ export const BetaFeedback: React.FC<BetaFeedbackProps> = ({ onClose }) => {
         transition={{ delay: 1 }}
       >
         <MessageSquare className="w-5 h-5" />
-        <span className="font-medium">Beta Feedback</span>
+        <span className="font-medium">Feedback</span>
       </motion.button>
+      )}
 
       {/* Feedback Modal */}
       <AnimatePresence>
@@ -210,7 +224,7 @@ export const BetaFeedback: React.FC<BetaFeedbackProps> = ({ onClose }) => {
                 <div className="flex items-center justify-between p-6 border-b border-gray-800">
                   <div>
                     <h2 className="text-2xl font-bold text-white">
-                      Beta Feedback
+                      Public preview feedback
                     </h2>
                     <p className="text-sm text-gray-400 mt-1">
                       Help us improve NXTG-Forge by sharing your thoughts

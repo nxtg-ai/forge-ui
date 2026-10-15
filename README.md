@@ -6,7 +6,7 @@
 
 [![stage: public preview](https://img.shields.io/badge/stage-public_preview-blue)](STAGE)
 
-**Stage: Public preview.** forge-ui is public: anyone may install and use it. Its maturity is below alpha (pre-alpha): no SLA, and interfaces may change without notice.
+**Stage: Public preview.** Anyone may install and use forge-ui. No SLA, and interfaces may change without notice.
 
 **Full visual platform for multi-tool AI orchestration.**
 
