@@ -215,6 +215,9 @@ describe.sequential("API and terminal require authentication (GHSA-rc7c-r55p-923
       const read = await fetch(`${base}/api/governance/state`, { headers: { Origin: origin, Cookie: cookie } });
       expect(read.status).toBe(403);
       expect(read.headers.get("access-control-allow-origin")).toBeNull();
+      // Same route as the control below, so the refusal is the origin's doing.
+      const config = await fetch(`${base}/api/governance/config`, { headers: { Origin: origin, Cookie: cookie } });
+      expect(config.status).toBe(403);
       const mint = await fetch(`${base}/api/ws-token`, { method: "POST", headers: { Origin: origin, Cookie: cookie } });
       expect(mint.status).toBe(403);
       expect(mint.headers.get("access-control-allow-origin")).toBeNull();
