@@ -205,6 +205,27 @@ describe.sequential("API and terminal require authentication (GHSA-rc7c-r55p-923
     ).toBe(403);
   });
 
+  // forge-pm security finding al:802d7317c90eb745 (GHSA-rc7c-r55p-923j class).
+  // Ports do not make a different site: a page on another local dev server
+  // (Vite's default :5173) is same-site with :5050, so the SameSite=Strict
+  // session cookie rides along. Only origins forge-ui serves may be allowed.
+  it("refuses another local dev server's origin even with a valid session cookie", async () => {
+    const cookie = await login();
+    for (const origin of ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:4173"]) {
+      const read = await fetch(`${base}/api/governance/state`, { headers: { Origin: origin, Cookie: cookie } });
+      expect(read.status).toBe(403);
+      expect(read.headers.get("access-control-allow-origin")).toBeNull();
+      const mint = await fetch(`${base}/api/ws-token`, { method: "POST", headers: { Origin: origin, Cookie: cookie } });
+      expect(mint.status).toBe(403);
+      expect(mint.headers.get("access-control-allow-origin")).toBeNull();
+      expect(await tryUpgrade(`ws://127.0.0.1:${port}/ws`, { Origin: origin, Cookie: cookie })).toBe(403);
+    }
+    // Control: forge-ui's own UI origin, same cookie, is served and reflected.
+    const own = await fetch(`${base}/api/governance/state`, { headers: { Origin: "http://localhost:5050", Cookie: cookie } });
+    expect(own.status).toBe(200);
+    expect(own.headers.get("access-control-allow-origin")).toBe("http://localhost:5050");
+  });
+
   it("rejects a wrong access token at login and sets no cookie", async () => {
     const res = await fetch(`${base}/api/auth/login`, {
       method: "POST",

@@ -10,7 +10,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { Request, Response, NextFunction } from "express";
-import { resolveBindHost } from "../auth/ui-auth";
+import { resolveBindHost, getAllowedOrigins } from "../auth/ui-auth";
 
 describe("API Server Components", () => {
   describe("Security Headers Middleware", () => {
@@ -427,16 +427,16 @@ describe("API Server Components", () => {
       expect(allowedOrigins[1]).toBe("http://localhost:5173");
     });
 
+    // Real defaults, not a copy (forge-pm security finding al:802d7317c90eb745):
+    // only origins forge-ui serves, never another dev server's port.
     it("uses default origins when not set", () => {
       delete process.env.ALLOWED_ORIGINS;
-      const allowedOrigins = process.env.ALLOWED_ORIGINS
-        ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
-        : ["http://localhost:5050", "http://127.0.0.1:5050", "http://localhost:5173"];
+      const allowedOrigins = getAllowedOrigins();
 
-      expect(allowedOrigins).toHaveLength(3);
+      expect(allowedOrigins).toHaveLength(4);
       expect(allowedOrigins).toContain("http://localhost:5050");
       expect(allowedOrigins).toContain("http://127.0.0.1:5050");
-      expect(allowedOrigins).toContain("http://localhost:5173");
+      expect(allowedOrigins).not.toContain("http://localhost:5173");
     });
   });
 

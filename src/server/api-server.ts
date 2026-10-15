@@ -52,7 +52,7 @@ import { createFeatureRoutes, validateWSAuthToken } from "./routes/features";
 import { createForgeRoutes } from "./routes/forge";
 import {
   authorize,
-  getAllowedOrigins,
+  isAllowedOrigin,
   getSecretFilePath,
   isLoopbackHost,
   loadOrCreateSecret,
@@ -146,7 +146,6 @@ function broadcast(type: string, payload: unknown) {
 }
 
 const isProduction = process.env.NODE_ENV === "production";
-const allowedOrigins = getAllowedOrigins();
 
 // Fail at startup, not on the first request, if the secret can't be loaded.
 loadOrCreateSecret();
@@ -154,7 +153,7 @@ loadOrCreateSecret();
 wss.on("connection", (ws, req) => {
   // Validate origin in all modes
   const origin = req.headers.origin;
-  if (origin && !allowedOrigins.includes(origin)) {
+  if (origin && !isAllowedOrigin(origin)) {
     logger.error(`[Security] Blocked WebSocket from unauthorized origin: ${origin}`);
     ws.send(JSON.stringify({ type: "error", error: "Unauthorized origin" }));
     ws.close();
@@ -261,7 +260,7 @@ app.use(
     origin: (origin, callback) => {
       // Allow same-origin requests (no origin header)
       if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) {
+      if (isAllowedOrigin(origin)) {
         return callback(null, true);
       }
       logger.warn(`[Security] Blocked CORS request from unauthorized origin: ${origin}`);

@@ -35,7 +35,7 @@ Remote Device → http://192.168.1.206:5050/api/* → Vite Proxy → localhost:5
 - `.env` must NOT hardcode `VITE_API_URL` or `VITE_WS_URL`
 - Client code uses relative URLs (`/api/...`) in dev mode
 - Vite proxies `/api`, `/ws`, `/terminal` to `localhost:5051`
-- Windows firewall rule required: `New-NetFirewallRule -DisplayName 'NXTG Forge' -Direction Inbound -LocalPort 5050,5051,5173,8003 -Protocol TCP -Action Allow`
+- Windows firewall rule required: `New-NetFirewallRule -DisplayName 'NXTG Forge' -Direction Inbound -LocalPort 5050,5051,8003 -Protocol TCP -Action Allow`
 
 ### Port Assignments
 
@@ -43,7 +43,6 @@ Remote Device → http://192.168.1.206:5050/api/* → Vite Proxy → localhost:5
 |------|---------|---------|
 | 5050 | Vite UI Dev Server | 0.0.0.0 |
 | 5051 | API Server + WebSocket | 0.0.0.0 |
-| 5173 | Vite (alternate) | 0.0.0.0 |
 | 8003 | Reserved | 0.0.0.0 |
 
 ### Core Principles (from USER-CRITICAL-INSTRUCTIONS.md)

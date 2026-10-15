@@ -3,6 +3,16 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 
+/**
+ * A literal filesystem path as a glob prefix. Every glob character is put in
+ * brackets, so a checkout under a folder such as "John (Work)" cannot turn the
+ * server-source deny rule into a pattern that matches nothing (review seat on
+ * forge-pm security finding al:802d7317c90eb745).
+ */
+export function literalGlobPath(p: string): string {
+  return p.replace(/\\/g, '/').replace(/[()[\]{}*?!+@|]/g, (c) => `[${c}]`);
+}
+
 export default defineConfig({
   plugins: [tailwindcss(), react()],
   resolve: {
@@ -25,6 +35,28 @@ export default defineConfig({
     // policy must also come as a header (DIRECTIVE-NXTG-20261008-03).
     // `vite preview` inherits server.headers.
     headers: { 'Referrer-Policy': 'strict-origin' },
+    // The dev server serves files from the repo root, which in dev is also the
+    // API's working directory. Serve only what the app needs (allow): project
+    // state, logs, build output, docs and scripts at the root are refused
+    // because they are outside it. Inside it, deny server code and project
+    // state. Any client of :5050 could otherwise read them without a
+    // credential (forge-pm security finding al:802d7317c90eb745). Keep the
+    // deny globs narrow: a broad one such as **/dist/** also matches packages
+    // in node_modules, including Vite's own client. The first four deny
+    // entries are Vite's defaults, which this list replaces.
+    fs: {
+      allow: ['src', 'public', 'node_modules', 'index.html'],
+      deny: [
+        '.env',
+        '.env.*',
+        '*.{crt,pem}',
+        '**/.git/**',
+        '**/.claude/**',
+        '**/.forge/**',
+        '**/.asif/**',
+        `${literalGlobPath(path.resolve(__dirname, 'src/server'))}/**`,
+      ],
+    },
     proxy: {
       // 127.0.0.1, not localhost: the API binds IPv4 loopback only, and
       // `localhost` can resolve to ::1 first.
