@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [3.5.0] - 2026-10-14
 
-forge-ui is a **Public preview**: public, maturity below alpha, interfaces may change. This release carries the browser-client and terminal origin hardening on top of the v3.4.1 security fix, one-time sign-in links for automated browser sessions, a security gate that blocks again, and hardening of the MCP suggestion feature. **Upgrade from v3.4.1.**
+forge-ui is a **Public preview**; interfaces may change. This release carries the browser-client and terminal origin hardening on top of the v3.4.1 security fix, one-time sign-in links for automated browser sessions, a security gate that blocks again, and hardening of the MCP suggestion feature. **Upgrade from v3.4.1.**
 
 Includes #53, #54, #56, #57, #58, #59, #60, #62 and #63.
 
@@ -20,7 +20,7 @@ Includes #53, #54, #56, #57, #58, #59, #60, #62 and #63.
 - **One-time sign-in links for automated browser sessions** (#56). `print-login-link.ts` reads the access token locally, sends it only in a request header, and prints a link carrying a single-use code that expires in 60 seconds. An agent driving a browser through tool calls can sign in without the token ever reaching a URL, a tool call, argv or a log. See `docs/api/LOCAL-CLIENT-AUTH.md`. Existing sign-in paths and token semantics are unchanged.
 - `npm run auth:login-link` (#57): the one-time sign-in link, runnable by tools that may only use `npm run`.
 - `docs/api/LOCAL-CLIENT-AUTH.md` (#53): how local tools, harnesses and CI authenticate to the API.
-- **Release stage on every surface** (#54, #60). The app header badge, `/api/health` and the README show the stage from one `STAGE` constant, and a CI check fails if any surface disagrees. `STAGE` records two axes, distribution `public` and maturity `pre-alpha`, and the label shown is **Public preview**.
+- **Release stage on every surface** (#54, #60). The app header badge, `/api/health` and the README show the stage from one `STAGE` constant, and a CI check fails if any surface disagrees. The label shown is **Public preview**.
 
 ### Changed
 
