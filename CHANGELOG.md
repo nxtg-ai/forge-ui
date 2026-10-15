@@ -9,17 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.5.3] - 2026-10-15
+
+forge-ui is a **Public preview**; interfaces may change. This release hardens the worker task API and project init, and `/api/diffs/apply` now reports what it does. **Upgrade from v3.5.2.**
+
+Includes #73, #74, #75, #76, #77 and #78.
+
+### Security
+
+- **Worker tasks submitted over HTTP carry no arguments.** `POST /api/workers/tasks` refuses `args` (400 "args are not accepted for tasks submitted over HTTP") and refuses a `claude-code`/`agent` prompt that starts with `-` or is a single word. Before, only the command was checked. The worker re-checks both before it spawns. The worker task example in docs/infinity-terminal/README.md now uses a request the API accepts.
+- **Worker tasks submitted over HTTP must be prompt tasks.** `POST /api/workers/tasks` refuses `shell` and `script` tasks (400). With `args` refused, they could only start a bare CLI with no input. Submit a `claude-code` or `agent` task with a prompt instead. The worker still runs those types for in-process callers, under the CLI allowlist.
+- **Project init leaves CLAUDE.md alone unless asked.** `POST /api/forge/init` no longer writes CLAUDE.md unless the request asks for it (`claudeMdOption` now defaults to `skip`). `generate` refuses with `CLAUDE_MD_EXISTS` when a CLAUDE.md is already there, unless `forceOverwrite` is set; the refusal happens before init writes anything. `merge` appends the Forge section to the file on disk and keeps its text. The request's `directive` is no longer copied into CLAUDE.md, which coding agents read as instructions; it stays in `.claude/governance.json`. A CLAUDE.md that is a symlink or a folder is refused in every mode (`CLAUDE_MD_NOT_A_FILE`), and the writes open with `O_NOFOLLOW`, so a cloned repo whose CLAUDE.md links to a file outside the project cannot have that file written.
+
 ### Changed
 
-- The public repo no longer tracks internal governance files: `.asif/`, `.claude/settings.json`, `.claude/governance.json`, session state, plans, archives and the root `.mcp.json`. They stay on disk and are listed in `.gitignore`. Product and contributor files under `.claude/` (agents, templates, prompts, skills, workflows, hooks, product config) are still tracked. Machine addresses and home-directory paths in docs, tests and `CLAUDE.md` are replaced with `192.0.2.10`, `<your-lan-ip>` or `~`; behaviour is unchanged.
-- `POST /api/workers/tasks` refuses `shell` and `script` tasks (400). With `args` refused, they could only start a bare CLI with no input. Submit a `claude-code` or `agent` task with a prompt instead. The worker still runs those types for in-process callers, under the CLI allowlist.
-- `POST /api/workers/tasks` refuses `args` (400 "args are not accepted for tasks submitted over HTTP") and refuses a `claude-code`/`agent` prompt that starts with `-` or is a single word (a single token can name a CLI subcommand such as `claude update`). The allow-listed CLIs (`claude`, `codex`, `gemini`) turn flags and subcommands into code execution, and only the command was checked. The worker re-checks both before it spawns. The worker task example in docs/infinity-terminal/README.md now uses a request the API accepts.
 - `POST /api/diffs/apply` now says what it does. It changes no file, and the response used to claim "Successfully applied changes". It now returns `applied: false` with the message "No file was changed", and broadcasts `diff.accepted` instead of `diff.applied`. The client `applyDiff()` passes the server's message on instead of its own success text.
-- The README's install step clones the current release tag (`git clone --branch v3.5.2`), and the stage check fails if that tag and the package version disagree. The stage check also verifies the README stage text word for word and, where the governance registry is readable, that `STAGE` matches forge-ui's own registry row.
+- The public repo no longer tracks internal governance files: `.asif/`, `.claude/settings.json`, `.claude/governance.json`, session state, plans, archives and the root `.mcp.json`. They stay on disk and are listed in `.gitignore`. Product and contributor files under `.claude/` (agents, templates, prompts, skills, workflows, hooks, product config) are still tracked. Machine addresses and home-directory paths in docs, tests and `CLAUDE.md` are replaced with `192.0.2.10`, `<your-lan-ip>` or `~`; behaviour is unchanged.
+- The README's install step clones the current release tag (`git clone --branch v<version>`), and the stage check fails if that tag and the package version disagree. The stage check also verifies the README stage text word for word and, where the governance registry is readable, that `STAGE` matches forge-ui's own registry row.
 
 ### Fixed
 
-- `POST /api/forge/init` no longer writes CLAUDE.md unless the request asks for it (`claudeMdOption` now defaults to `skip`). `generate` refuses with `CLAUDE_MD_EXISTS` when a CLAUDE.md is already there, unless `forceOverwrite` is set; the refusal happens before init writes anything. `merge` appends the Forge section to the file on disk and keeps its text. The request's `directive` is no longer copied into CLAUDE.md, which coding agents read as instructions; it stays in `.claude/governance.json`. A CLAUDE.md that is a symlink or a folder is refused in every mode (`CLAUDE_MD_NOT_A_FILE`), and the writes open with `O_NOFOLLOW`, so a cloned repo whose CLAUDE.md links to a file outside the project cannot have that file written.
+- The stage check no longer fails intermittently when the text it looks for is near the top of a long file (#77).
 
 ## [3.5.2] - 2026-10-15
 
