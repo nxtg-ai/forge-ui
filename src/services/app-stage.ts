@@ -2,8 +2,8 @@
  * The release stage, as surfaces display it (app header, /api/health).
  *
  * NEXUS: DIRECTIVE-NXTG-20261007-11; two axes since DIRECTIVE-NXTG-20261013-17.
- * The root `STAGE` file is the one constant. It records two registry fields
- * (`distribution`, `maturity`); the displayed label is derived from both and
+ * The root `STAGE` file is the one constant. It records two fields of the
+ * ASIF registry's `forge-ui` row (`distribution`, `maturity`); the displayed label is derived from both and
  * never stored (release-stage skill §2). These literals exist because the
  * values are needed in the browser bundle and on the server, and neither build
  * can read a file above `src/`. `.github/scripts/check-stage.sh` (in Quality
