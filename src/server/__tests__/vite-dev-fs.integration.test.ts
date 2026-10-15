@@ -95,6 +95,12 @@ describe("Vite dev server file exposure", () => {
     expect(entry.status).toBe(200);
     expect(await entry.text()).not.toContain("<!DOCTYPE html>");
 
+    // Vite's own client lives in node_modules/vite/dist: a broad deny glob such
+    // as **/dist/** blocks it and the app never boots.
+    // Sent as a browser loads a module script; a plain fetch takes another path.
+    const client = await fetch(`${base}/@vite/client`, { headers: { Accept: "*/*", "Sec-Fetch-Dest": "script" } });
+    expect(client.status).toBe(200);
+
     // public/CHANGELOG.md is fetched by the in-app changelog dialog.
     const changelog = await get("/CHANGELOG.md");
     expect(changelog.status).toBe(200);

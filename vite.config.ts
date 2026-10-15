@@ -26,11 +26,14 @@ export default defineConfig({
     // `vite preview` inherits server.headers.
     headers: { 'Referrer-Policy': 'strict-origin' },
     // The dev server serves files from the repo root, which in dev is also the
-    // API's working directory. Serve only what the app needs (allow), and refuse
-    // project state, logs, build output, docs and server code inside it (deny):
-    // any client of :5050 could read them without a credential (forge-pm
-    // security finding al:802d7317c90eb745). The first four deny entries are
-    // Vite's defaults, which this list replaces.
+    // API's working directory. Serve only what the app needs (allow): project
+    // state, logs, build output, docs and scripts at the root are refused
+    // because they are outside it. Inside it, deny server code and project
+    // state. Any client of :5050 could otherwise read them without a
+    // credential (forge-pm security finding al:802d7317c90eb745). Keep the
+    // deny globs narrow: a broad one such as **/dist/** also matches packages
+    // in node_modules, including Vite's own client. The first four deny
+    // entries are Vite's defaults, which this list replaces.
     fs: {
       allow: ['src', 'public', 'node_modules', 'index.html'],
       deny: [
@@ -41,15 +44,7 @@ export default defineConfig({
         '**/.claude/**',
         '**/.forge/**',
         '**/.asif/**',
-        '**/.github/**',
-        '**/*.md',
-        '**/src/server/**',
-        '**/dist/**',
-        '**/logs/**',
-        '**/data/**',
-        '**/coverage/**',
-        '**/scripts/**',
-        '**/docs/**',
+        `${path.resolve(__dirname, 'src/server').replace(/\\/g, '/')}/**`,
       ],
     },
     proxy: {
