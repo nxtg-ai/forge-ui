@@ -19,7 +19,7 @@ That's the headline. Here's the rest: a real-time governance dashboard with heal
 ## Install
 
 ```bash
-git clone https://github.com/nxtg-ai/forge-ui
+git clone --branch v3.5.2 https://github.com/nxtg-ai/forge-ui
 cd forge-ui
 npm install
 npm run dev

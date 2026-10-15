@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The README's install step clones the current release tag (`git clone --branch v3.5.2`), and the stage check fails if that tag and the package version disagree. The stage check also verifies the README stage text word for word and, where the governance registry is readable, that `STAGE` matches forge-ui's own registry row.
+
 ## [3.5.2] - 2026-10-15
 
 forge-ui is a **Public preview**; interfaces may change. This is a security release for two advisories: GHSA-fmh9-88rc-jwh3 (High: the default origin allowlist trusted another local dev server's port) and GHSA-q5hx-8rpm-fq48 (Medium: the dev server served project files). **Upgrade from v3.5.1.**
