@@ -221,7 +221,9 @@ describe.sequential("API and terminal require authentication (GHSA-rc7c-r55p-923
       expect(await tryUpgrade(`ws://127.0.0.1:${port}/ws`, { Origin: origin, Cookie: cookie })).toBe(403);
     }
     // Control: forge-ui's own UI origin, same cookie, is served and reflected.
-    const own = await fetch(`${base}/api/governance/state`, { headers: { Origin: "http://localhost:5050", Cookie: cookie } });
+    // /config answers 200 on any checkout (it falls back to defaults), so the
+    // control does not depend on this repo carrying a governance.json.
+    const own = await fetch(`${base}/api/governance/config`, { headers: { Origin: "http://localhost:5050", Cookie: cookie } });
     expect(own.status).toBe(200);
     expect(own.headers.get("access-control-allow-origin")).toBe("http://localhost:5050");
   });
