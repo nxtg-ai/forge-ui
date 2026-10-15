@@ -9,6 +9,9 @@
  */
 
 import { spawn } from "child_process";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Logger } from "../utils/logger";
 
 const log = Logger.getInstance("MCPSuggestionEngine");
@@ -18,12 +21,20 @@ const log = Logger.getInstance("MCPSuggestionEngine");
  * model gets no tools and no permission bypass: request text reaches it, and a
  * crafted vision must not be able to drive an agent (DIRECTIVE-NXTG-20260718-17,
  * forge-pm ruling al 00:21Z). Flags checked against `claude --help` 2.1.300:
- * `--tools ""` disables every built-in tool, `--strict-mcp-config` with no
- * `--mcp-config` loads no MCP servers, and `--permission-prompts none` denies
- * anything that would prompt.
+ * - `--safe-mode` and `--setting-sources ""`: no hooks, CLAUDE.md, skills,
+ *   plugins or settings files, so no hook code receives the request text.
+ *   (`--bare` would also do it, but it refuses OAuth sign-in.)
+ * - `--tools ""` disables every built-in tool; `--strict-mcp-config` with no
+ *   `--mcp-config` loads no MCP servers.
+ * - `--permission-prompts none` denies anything that would prompt.
+ * - `--no-session-persistence`: request text is not saved as a transcript.
  */
 export const CLAUDE_SUGGESTION_ARGV: readonly string[] = [
   "-p",
+  "--safe-mode",
+  "--setting-sources",
+  "",
+  "--no-session-persistence",
   "--tools",
   "",
   "--strict-mcp-config",
@@ -37,9 +48,20 @@ export const CLAUDE_SUGGESTION_ARGV: readonly string[] = [
  * it must stay data. It used to be interpolated into `echo "…" | claude`,
  * where shell expansion in the text ran (DIRECTIVE-NXTG-20260718-17).
  */
-function runClaude(prompt: string): Promise<string> {
+async function runClaude(prompt: string): Promise<string> {
+  // An empty working directory: nothing project-specific for the CLI to find.
+  const cwd = await mkdtemp(join(tmpdir(), "forge-mcp-suggest-"));
+  try {
+    return await runClaudeIn(cwd, prompt);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+}
+
+function runClaudeIn(cwd: string, prompt: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn("claude", [...CLAUDE_SUGGESTION_ARGV], {
+      cwd,
       stdio: ["pipe", "pipe", "pipe"],
     });
     let stdout = "";

@@ -23,7 +23,7 @@ const { mockExecAsync, mockSpawn } = vi.hoisted(() => {
       },
     };
   };
-  const mockSpawn = vi.fn((file: string, args: string[]) => {
+  const mockSpawn = vi.fn((file: string, args: string[], _options?: unknown) => {
     const child = {
       ...emitter(),
       stdout: emitter(),
@@ -369,6 +369,19 @@ describe("MCPSuggestionEngine", () => {
       expect(tools).toBeGreaterThanOrEqual(0);
       expect(argv[tools + 1]).toBe("");
       expect(argv).toContain("--strict-mcp-config");
+      // No hooks, CLAUDE.md or settings: hook code must not receive request text.
+      expect(argv).toContain("--safe-mode");
+      const sources = argv.indexOf("--setting-sources");
+      expect(argv[sources + 1]).toBe("");
+      expect(argv).toContain("--no-session-persistence");
+    });
+
+    it("runs claude in an empty temporary directory, not the server's cwd", async () => {
+      await engine.suggestMCPs(mockVisionContext);
+
+      const options = mockSpawn.mock.calls[0][2] as unknown as { cwd: string };
+      expect(options.cwd).not.toBe(process.cwd());
+      expect(options.cwd).toContain("forge-mcp-suggest-");
     });
 
     it("should handle Claude CLI errors", async () => {

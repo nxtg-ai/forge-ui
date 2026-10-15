@@ -47,6 +47,55 @@ const INJECTIONS = [
   "}",
 ];
 
+/**
+ * Shapes the independent review found the first calibration missed (some were
+ * caught by the old rule). Every line marked INJ must be CRITICAL, and only those.
+ */
+const REVIEW_SHAPES = [
+  'import { exec, execSync, execFileSync, spawn, spawnSync } from "child_process";',
+  'import * as cp from "child_process";',
+  'import cp2 = require("child_process");',
+  'import { promisify as pfy } from "util";',
+  'import shell from "shelljs";',
+  'import vm from "node:vm";',
+  "export async function handler(req: any, opts: any) {",
+  '  const a = ["-c", req.body.cmd];',
+  '  spawn("/bin/sh", a); // INJ argv in a variable',
+  '  execFileSync("sh", a); // INJ',
+  '  spawn("bash", ["-lc", req.body.cmd]); // INJ combined flags',
+  '  spawn("bash", ["-ec", req.body.cmd]); // INJ',
+  '  spawn("node", ["-e", req.body.code]); // INJ interpreter flag',
+  '  spawn("cmd.exe", ["/c", req.body.cmd]); // INJ',
+  '  spawn("ls", [req.body.x], { shell }); // INJ shorthand shell',
+  '  spawnSync("ls", [req.body.x], opts); // INJ options not visible',
+  '  spawn("ls", [req.body.x], { "shell": true }); // INJ quoted key',
+  '  spawn("ls", [req.body.x], { ...opts }); // INJ spread options',
+  "  const e = exec;",
+  "  e(req.body.cmd); // INJ alias",
+  "  const { execSync: go } = cp;",
+  "  go(req.body.cmd); // INJ destructured from a namespace",
+  "  const run2 = cp.execSync;",
+  "  run2(req.body.cmd); // INJ",
+  "  cp2.exec(req.body.cmd); // INJ import = require",
+  "  const r = pfy(exec);",
+  "  r(req.body.cmd); // INJ promisify under another name",
+  '  cp["exec"](req.body.cmd); // INJ bracket access',
+  "  (0, cp.exec)(req.body.cmd); // INJ indirect call",
+  "  (0, eval)(req.body.code); // INJ indirect eval",
+  "  globalThis.eval(req.body.code); // INJ",
+  "  eval?.(req.body.code); // INJ",
+  '  const cp3 = await import("child_process");',
+  "  cp3.exec(req.body.cmd); // INJ dynamic import",
+  "  shell.exec(req.body.cmd); // INJ shelljs",
+  "  new Function(req.body.code); // INJ",
+  "  vm.runInNewContext(req.body.code); // INJ",
+  "  new vm.Script(req.body.code); // INJ",
+  '  spawn("ls", ["-la"], { shell: true }); // literal command with a shell: clear',
+  '  spawn("git", ["-c", "core.pager=cat", "log"]); // -c with a literal: clear',
+  '  new Function("return 1"); // literal: clear',
+  "}",
+];
+
 /** Lines that must NOT be CRITICAL: the false-positive classes from the triage. */
 const CLEAN = [
   'import { execSync, spawn } from "child_process";',
@@ -71,6 +120,7 @@ beforeAll(() => {
   fs.mkdirSync(path.join(root, "src"));
   fs.writeFileSync(path.join(root, "src", "inject.ts"), INJECTIONS.join("\n"));
   fs.writeFileSync(path.join(root, "src", "clean.ts"), CLEAN.join("\n"));
+  fs.writeFileSync(path.join(root, "src", "review.ts"), REVIEW_SHAPES.join("\n"));
   fs.writeFileSync(
     path.join(root, "src", "sql.ts"),
     ['const q = "SELECT * FROM users WHERE id = " + id;', "interface Row { updatedAt?: string; }"].join("\n"),
@@ -96,6 +146,13 @@ describe("command-injection rule (red control ii)", () => {
     expected.push(INJECTIONS.indexOf("  execSync(") + 1);
     expect(criticalLines(report, "inject.ts")).toEqual([...new Set(expected)].sort((a, b) => a - b));
     expect(expected.length).toBe(10);
+  });
+
+  it("flags the shapes the independent review found, and only those", async () => {
+    const report = await new SecurityAuditor().runAudit(root, { waivers: [] });
+    const expected = REVIEW_SHAPES.flatMap((line, i) => (line.includes("// INJ") ? [i + 1] : []));
+    expect(expected.length).toBe(25);
+    expect(criticalLines(report, "review.ts")).toEqual(expected);
   });
 
   it("does not flag literal commands, argument arrays, RegExp.exec, method names or comments", async () => {
@@ -209,6 +266,21 @@ describe("waivers are keyed to one symbol", () => {
 
   it("finds a symbol's body by brace matching", () => {
     expect(symbolLineRange(two, "runA")).toEqual([3, 5]);
+    // Braces in strings, templates and comments do not count (review finding:
+    // a "{" literal stretched a waiver into the next method).
+    const tricky = [
+      "class R {",
+      "  runA() {",
+      '    const m = "{";',
+      "    const t = `${'{'}{`;",
+      "    // }",
+      "    /* { */",
+      "  }",
+      "  runB() {",
+      "  }",
+      "}",
+    ];
+    expect(symbolLineRange(tricky, "runA")).toEqual([2, 7]);
     expect(symbolLineRange(two, "runB")).toEqual([6, 8]);
     expect(symbolLineRange(two, "runC")).toBeNull();
   });
