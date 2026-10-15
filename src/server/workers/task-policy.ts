@@ -7,8 +7,10 @@
  * able to choose an arbitrary program. Rules:
  *   - "claude-code" / "agent" tasks: `command` is a PROMPT, passed as an
  *     argument to the `claude` CLI (argument array, no shell).
- *   - "shell" / "script" tasks: `command` must be one of the agent CLIs below,
- *     by bare name.
+ *   - "shell" / "script" tasks are not accepted over HTTP. With args refused
+ *     they could only start a bare CLI with no input (forge-pm
+ *     al:1e8b0762ef802d95). The worker still runs them for in-process
+ *     callers, held to the CLI allowlist below by assertSpawnAllowed().
  *   - `env` is not accepted over HTTP (NODE_OPTIONS, PATH, BASH_ENV etc. would
  *     re-open execution through an allow-listed binary).
  *   - `args` are not accepted over HTTP. An agent prompt may not start with
@@ -32,6 +34,8 @@ export const ALLOWED_WORKER_COMMANDS: readonly string[] = ["claude", "codex", "g
 export type TaskPolicyResult = { ok: true } | { ok: false; error: string };
 
 const ARGS_NOT_ACCEPTED = "args are not accepted for tasks submitted over HTTP";
+const SHELL_NOT_ACCEPTED =
+  "shell and script tasks are not accepted over HTTP; submit a claude-code or agent task with a prompt";
 
 function isPromptType(type: unknown): boolean {
   return type === "claude-code" || type === "agent";
@@ -63,6 +67,9 @@ export function validateHttpTask(body: {
   if (typeof type !== "string" || !ALLOWED_TASK_TYPES.includes(type as TaskType)) {
     return { ok: false, error: `type must be one of: ${ALLOWED_TASK_TYPES.join(", ")}` };
   }
+  if (!isPromptType(type)) {
+    return { ok: false, error: SHELL_NOT_ACCEPTED };
+  }
   if (typeof command !== "string" || command.length === 0) {
     return { ok: false, error: "command is required" };
   }
@@ -72,18 +79,12 @@ export function validateHttpTask(body: {
   if (Array.isArray(args) && args.length > 0) {
     return { ok: false, error: ARGS_NOT_ACCEPTED };
   }
-  const promptError = isPromptType(type) ? promptArgvError(type, command) : null;
+  const promptError = promptArgvError(type, command);
   if (promptError) {
     return { ok: false, error: promptError };
   }
   if (env !== undefined && env !== null && (typeof env !== "object" || Object.keys(env).length > 0)) {
     return { ok: false, error: "env is not accepted for tasks submitted over HTTP" };
-  }
-  if ((type === "shell" || type === "script") && !isAllowedWorkerCommand(command)) {
-    return {
-      ok: false,
-      error: `command for ${type} tasks must be one of: ${ALLOWED_WORKER_COMMANDS.join(", ")}`,
-    };
   }
   return { ok: true };
 }

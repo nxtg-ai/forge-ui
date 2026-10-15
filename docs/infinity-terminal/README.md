@@ -242,8 +242,8 @@ curl -X POST http://localhost:5050/api/workers/tasks \
 
 For `claude-code` and `agent` tasks, `command` is the prompt. It may not start
 with `-` and must be more than one word, so the CLI cannot read it as a flag or
-a subcommand. `shell` and `script` tasks accept only `claude`, `codex` or `gemini`
-as `command`. `args` and `env` are refused for tasks submitted over HTTP.
+a subcommand. `shell` and `script` tasks, `args` and `env` are refused for tasks
+submitted over HTTP.
 
 ---
 
