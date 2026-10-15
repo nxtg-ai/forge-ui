@@ -36,7 +36,10 @@ ALL='Public preview|Alpha|Beta|Release candidate|GA|internal|dogfood|rc|ga'
 OTHERS=$(echo "$ALL" | tr '|' '\n' | grep -vxiF "$L" | paste -sd'|')
 OTHER_SLUGS=$(echo "$OTHERS" | tr 'A-Z ' 'a-z_')
 
-has()  { if tr -d '\r' < "$1" | grep -qF -- "$2"; then ok "$3"; else bad "$3 (missing: $2)"; fi; }
+# Read the file first, then search the text. A pipe into `grep -q` lets grep exit at the
+# match while tr is still writing; tr then dies of SIGPIPE and pipefail turns a found
+# string red (intermittent on README, which is just over one write buffer).
+has()  { local text; text=$(tr -d '\r' < "$1"); if grep -qF -- "$2" <<< "$text"; then ok "$3"; else bad "$3 (missing: $2)"; fi; }
 none() { local hits; hits=$(tr -d '\r' < "$1" | grep -niE -- "$2" || true); if [ -z "$hits" ]; then ok "$3"; else bad "$3: $hits"; fi; }
 
 # STAGE must equal forge-ui's own registry row (dx3-pm, GoPMO 1.18.7.5.88). The registry
@@ -68,7 +71,8 @@ has  "$README" "**Stage: $L.**"                            "README stage line"
 none "$README" "\*\*Stage: ($OTHERS)\.\*\*"                "README has no other stage line"
 none "$README" "not yet offered or supported for outside use|internal use only" "README does not say a public product is not offered outward"
 
-if head -n 5 CHANGELOG.md | tr -d '\r' | grep -qxF "Stage: $L (see STAGE)"; then ok "CHANGELOG top line"; else bad "CHANGELOG top line (want 'Stage: $L (see STAGE)' in first 5 lines)"; fi
+TOP=$(head -n 5 CHANGELOG.md | tr -d '\r')
+if grep -qxF "Stage: $L (see STAGE)" <<< "$TOP"; then ok "CHANGELOG top line"; else bad "CHANGELOG top line (want 'Stage: $L (see STAGE)' in first 5 lines)"; fi
 none CHANGELOG.md "^Stage: ($OTHERS) "                     "CHANGELOG has no other stage line"
 
 # The constants the app header and /api/health render.
