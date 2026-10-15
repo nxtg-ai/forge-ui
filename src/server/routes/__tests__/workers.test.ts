@@ -426,7 +426,7 @@ describe("Worker Routes", () => {
     it("rejects env over HTTP and submits nothing", async () => {
       const res = await request(app)
         .post("/api/workers/tasks")
-        .send({ type: "claude-code", command: "review", env: { NODE_OPTIONS: "--require /tmp/x" } })
+        .send({ type: "claude-code", command: "review the diff", env: { NODE_OPTIONS: "--require /tmp/x" } })
         .expect(400);
 
       expect(res.body.error).toBe("env is not accepted for tasks submitted over HTTP");
@@ -1127,7 +1127,7 @@ describe("Worker Routes", () => {
       const mockIntelligence = "[INTELLIGENCE]\n- RULE: Test [high]\n[/INTELLIGENCE]";
       vi.mocked(intelligenceInjector.getIntelligenceContext).mockResolvedValue(mockIntelligence);
       vi.mocked(intelligenceInjector.injectIntelligence).mockReturnValue({
-        command: `${mockIntelligence}\n\nOriginal`,
+        command: `${mockIntelligence}\n\nOriginal prompt`,
         args: undefined,
       });
 
@@ -1135,7 +1135,7 @@ describe("Worker Routes", () => {
 
       const task = {
         type: "agent",
-        command: "Original",
+        command: "Original prompt",
       };
 
       const res = await request(app)
@@ -1145,7 +1145,7 @@ describe("Worker Routes", () => {
 
       expect(res.body.success).toBe(true);
       expect(intelligenceInjector.injectIntelligence).toHaveBeenCalledWith(
-        "Original",
+        "Original prompt",
         undefined,
         mockIntelligence
       );
@@ -1154,7 +1154,7 @@ describe("Worker Routes", () => {
     it("handles empty intelligence context gracefully", async () => {
       vi.mocked(intelligenceInjector.getIntelligenceContext).mockResolvedValue("");
       vi.mocked(intelligenceInjector.injectIntelligence).mockReturnValue({
-        command: "Original",
+        command: "Original prompt",
         args: undefined,
       });
 
@@ -1162,7 +1162,7 @@ describe("Worker Routes", () => {
 
       const task = {
         type: "agent",
-        command: "Original",
+        command: "Original prompt",
       };
 
       const res = await request(app)
@@ -1173,7 +1173,7 @@ describe("Worker Routes", () => {
       expect(res.body.success).toBe(true);
       expect(mockWorkerPool.submitTask).toHaveBeenCalledWith(
         expect.objectContaining({
-          command: "Original",
+          command: "Original prompt",
         })
       );
     });

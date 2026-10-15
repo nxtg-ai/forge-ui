@@ -28,7 +28,7 @@ describe("validateHttpTask", () => {
   });
 
   it("rejects env over HTTP", () => {
-    expect(validateHttpTask({ type: "claude-code", command: "review", env: { NODE_OPTIONS: "--require /tmp/x" } })).toEqual({
+    expect(validateHttpTask({ type: "claude-code", command: "review the diff", env: { NODE_OPTIONS: "--require /tmp/x" } })).toEqual({
       ok: false,
       error: "env is not accepted for tasks submitted over HTTP",
     });
@@ -78,6 +78,18 @@ describe("validateHttpTask args", () => {
     expect(validateHttpTask({ type: "agent", command: "-p" })).toMatchObject({ ok: false });
   });
 
+  // Codex review of #75: `claude install` / `claude update` run those
+  // subcommands, so a one-word prompt is refused.
+  it("rejects a one-word prompt, which the CLI could read as a subcommand", () => {
+    for (const word of ["install", "update", "doctor", "mcp", "  update\n"]) {
+      expect(validateHttpTask({ type: "claude-code", command: word })).toEqual({
+        ok: false,
+        error: "the prompt for claude-code tasks must be more than one word",
+      });
+    }
+    expect(validateHttpTask({ type: "agent", command: "logout" })).toMatchObject({ ok: false });
+  });
+
   it("still accepts an empty args array", () => {
     expect(validateHttpTask({ type: "claude-code", command: "Review src/", args: [] })).toEqual({ ok: true });
   });
@@ -95,6 +107,7 @@ describe("assertTaskArgvAllowed (worker re-check)", () => {
       assertTaskArgvAllowed({ type: "claude-code", command: "hi", args: ["--settings", "{}"] }),
     ).toThrow(/args are not accepted/);
     expect(() => assertTaskArgvAllowed({ type: "agent", command: "--version" })).toThrow(/must not start with/);
+    expect(() => assertTaskArgvAllowed({ type: "claude-code", command: "install" })).toThrow(/more than one word/);
   });
 
   it("allows a plain prompt and a bare CLI", () => {

@@ -564,7 +564,7 @@ describe("worker-process", () => {
       it("should handle agent task type", async () => {
         const task = createMockTask({
           type: "agent",
-          command: "review",
+          command: "review the diff",
         });
 
         emitProcessEvent("message", {
@@ -578,7 +578,7 @@ describe("worker-process", () => {
 
         expect(mockSpawn).toHaveBeenCalledWith(
           "claude",
-          ["review"],
+          ["review the diff"],
           expect.any(Object)
         );
       });

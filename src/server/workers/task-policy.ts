@@ -11,10 +11,13 @@
  *     by bare name.
  *   - `env` is not accepted over HTTP (NODE_OPTIONS, PATH, BASH_ENV etc. would
  *     re-open execution through an allow-listed binary).
- *   - `args` are not accepted over HTTP, and an agent prompt may not start
- *     with "-". Each allow-listed CLI turns a flag or a subcommand into code
- *     execution (claude --settings hooks, claude mcp add, codex -c, gemini
- *     --yolo). PRM-CLX9-20261015-06 item (c).
+ *   - `args` are not accepted over HTTP. An agent prompt may not start with
+ *     "-" (the CLI would read a flag) and must contain whitespace (a single
+ *     token can match a subcommand such as `claude update` or `claude
+ *     install`; a token with a space in it cannot). Each allow-listed CLI
+ *     turns a flag or a subcommand into code execution (claude --settings
+ *     hooks, claude mcp add, codex -c, gemini --yolo).
+ *     PRM-CLX9-20261015-06 item (c).
  *
  * The worker process re-checks the final command with assertSpawnAllowed()
  * and the task's argv with assertTaskArgvAllowed(), so a task that reaches it
@@ -34,8 +37,15 @@ function isPromptType(type: unknown): boolean {
   return type === "claude-code" || type === "agent";
 }
 
-function flagPromptError(type: string): string {
-  return `the prompt for ${type} tasks must not start with "-"`;
+/** Why an agent prompt cannot be passed as the CLI's argument, or null if it can. */
+function promptArgvError(type: string, prompt: string): string | null {
+  if (prompt.startsWith("-")) {
+    return `the prompt for ${type} tasks must not start with "-"`;
+  }
+  if (!/\s/.test(prompt.trim())) {
+    return `the prompt for ${type} tasks must be more than one word`;
+  }
+  return null;
 }
 
 export function isAllowedWorkerCommand(command: unknown): boolean {
@@ -62,8 +72,9 @@ export function validateHttpTask(body: {
   if (Array.isArray(args) && args.length > 0) {
     return { ok: false, error: ARGS_NOT_ACCEPTED };
   }
-  if (isPromptType(type) && command.startsWith("-")) {
-    return { ok: false, error: flagPromptError(type) };
+  const promptError = isPromptType(type) ? promptArgvError(type, command) : null;
+  if (promptError) {
+    return { ok: false, error: promptError };
   }
   if (env !== undefined && env !== null && (typeof env !== "object" || Object.keys(env).length > 0)) {
     return { ok: false, error: "env is not accepted for tasks submitted over HTTP" };
@@ -86,13 +97,15 @@ export function assertSpawnAllowed(command: string): void {
 
 /**
  * Defense in depth for the worker process: the task carries no args, and an
- * agent prompt (which becomes the CLI's first argument) is not a flag.
+ * agent prompt (which becomes the CLI's first argument) is neither a flag nor
+ * a single token that could name a subcommand.
  */
 export function assertTaskArgvAllowed(task: { type: string; command: string; args?: string[] }): void {
   if (task.args && task.args.length > 0) {
     throw new Error(`Refusing to run task: ${ARGS_NOT_ACCEPTED}`);
   }
-  if (isPromptType(task.type) && task.command.startsWith("-")) {
-    throw new Error(`Refusing to run task: ${flagPromptError(task.type)}`);
+  const promptError = isPromptType(task.type) ? promptArgvError(task.type, task.command) : null;
+  if (promptError) {
+    throw new Error(`Refusing to run task: ${promptError}`);
   }
 }
