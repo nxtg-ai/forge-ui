@@ -8,13 +8,11 @@
 
 **Stage: Public preview.** The Forge plugin and orchestrator are in alpha. This dashboard, forge-ui, was not part of the pre-registered core-job test behind that stage and is still a public preview.
 
-**Full visual platform for multi-tool AI orchestration.**
+**A browser dashboard for Forge.**
 
 This is L3: Ship Lord.
 
-Sessions survive everything. Start a long-running task on your desktop. Close the browser tab. Open it on your phone during lunch. The session is still there, still running. Close your phone. Open your laptop at a coffee shop. Same session. Same progress. The Infinity Terminal is built on top of the orchestrator's file-based state layer. Session state is files. Files persist. Sessions persist.
-
-That's the headline. Here's the rest: a real-time governance dashboard with health scores, a feed showing your tools coordinate in real-time, and a command center for executing Forge commands from the browser.
+forge-ui gives you a terminal in the browser (the Infinity Terminal), a governance dashboard with a health score, and a command center that runs a fixed set of project commands from the browser. An agent activity feed is planned.
 
 ## Install
 
@@ -25,7 +23,7 @@ npm install
 npm run dev
 ```
 
-Requires the Forge Orchestrator (L2: Pro Builder) running in your project.
+Runs on its own. With the [Forge Orchestrator](https://github.com/nxtg-ai/forge-orchestrator) (L2: Pro Builder) installed, the health score comes from the orchestrator.
 
 ### Sign-in and network access
 
@@ -37,44 +35,31 @@ npx tsx src/server/auth/print-auth-url.ts      # or: node dist/server/auth/print
 
 Open the link it prints. The token is created on first run at `~/.config/nxtg-forge/ui-secret` (mode 0600); you can also paste it into the sign-in screen. Tools can send it as `Authorization: Bearer <token>`.
 
-The dashboard (5050) and API server (5051) listen on `127.0.0.1` only. To open the dashboard from another device, set `FORGE_UI_HOST=0.0.0.0` (both servers bind to it, and the API prints a warning) and add the device-facing origin to `ALLOWED_ORIGINS`, e.g. `ALLOWED_ORIGINS=http://192.168.1.206:5050`. Every request still needs the token.
+The dashboard (5050) and API server (5051) listen on `127.0.0.1` only. To open the dashboard from another device, set `FORGE_UI_HOST=0.0.0.0` (both servers bind to it, and the API prints a warning) and set `ALLOWED_ORIGINS` to the full list of origins you will open it from, e.g. `ALLOWED_ORIGINS=http://localhost:5050,http://127.0.0.1:5050,http://192.168.1.206:5050`. `ALLOWED_ORIGINS` replaces the defaults, so include the local origins you still use. Every request still needs the token.
 
 ## The Infinity Terminal
 
-The Infinity Terminal changes how you work with AI tools. Tasks that take hours aren't tied to a terminal window. You start them and walk away. Check in from any device. Pick up where you left off.
-
-There is no socket connection to maintain. No server process that needs to stay alive. The terminal reconnects to state, not to a process. Network drops, browser restarts, device switches. It doesn't matter. The session is the state, and the state is files.
+A shell on the machine running forge-ui, in your browser. Browser tabs on the same project share one shell. If you close the tab or lose the network, the shell keeps running: reopen the page within 5 minutes and you are back in the same shell, though output from while you were away is not replayed. Restarting the forge-ui server ends the shell. Sessions that survive a server restart are planned.
 
 ## Governance Dashboard
 
-The dashboard shows your project's health at a glance. Health score from A through F, computed across 8 quality dimensions: test coverage, documentation, security, code style, dependency health, API consistency, error handling, and type safety.
+The dashboard shows a health score from 0 to 100 for the folder forge-ui runs from; run as installed (`npm run dev` in the clone), that is the forge-ui checkout itself. The score comes from the Forge Orchestrator when that is installed, otherwise from the Forge plugin's governance health, otherwise from a local estimate that is labelled as one. A letter grade is planned.
 
-Trend monitoring tracks score changes over time and fires regression alerts. Tool orchestration shows which tools are active, which files are locked, and which tasks are in progress.
-
-Governance state comes from the Rust orchestrator. The UI reads and displays it. Policy decisions are made in the core, not in the frontend.
-
-## Tool Activity Feed
-
-Watch Claude Code, Codex CLI, and Gemini CLI coordinate in real-time. A tool claiming a task and starting implementation. The guardian agent running quality checks on the output. The planner decomposing a feature into subtasks. A security scan flagging a dependency vulnerability.
-
-The feed shows tool assignments, task progress, file lock acquisitions and releases, knowledge captures, and governance events.
+Governance state is read from `.claude/governance.json` in the folder forge-ui runs from. Pointing it at another project is planned. The UI displays it; policy decisions are made by Forge's other tools, not in the frontend.
 
 ## What You Get
 
 | Feature | What It Does |
 |---------|-------------|
-| Governance dashboard | Real-time health scores (A/B/C/D/F), 8 quality checks, trend monitoring |
-| Tool activity feed | Watch Claude Code, Codex CLI, Gemini CLI coordinate: task claims, file locks, knowledge captures |
-| Infinity Terminal | Browser-based terminal that survives close, disconnect, and restart |
-| Command center | Execute Forge commands (`forge plan`, `forge status`) from the browser |
-| Multi-device access | Phone, tablet, remote machine. All see the same state. |
-
-58 React components. 4,165 tests. 87% coverage.
+| Governance dashboard | A 0-100 health score and the governance state of the folder forge-ui runs from |
+| Infinity Terminal | A browser terminal on a shared shell that survives a closed tab or a network drop, not a server restart |
+| Command center | Runs project status, tests, a type-check and build pre-flight, and a gap analysis from the browser |
+| Multi-device access | Open the dashboard from another device on your network (`FORGE_UI_HOST` plus `ALLOWED_ORIGINS`, see above) |
 
 ## Prerequisites
 
-- [Forge Orchestrator](https://github.com/nxtg-ai/forge-orchestrator) running in your project (`forge init && forge status`)
-- Node.js 18+
+- Node.js 22.12 or later (Vite 7 needs `^20.19 || >=22.12`; `package.json` asks for Node 22)
+- Optional: the [Forge Orchestrator](https://github.com/nxtg-ai/forge-orchestrator) installed as `forge` on your PATH (or `FORGE_BIN`), which supplies the health score
 
 ## Links
 
