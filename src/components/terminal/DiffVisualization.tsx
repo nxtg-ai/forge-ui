@@ -239,7 +239,7 @@ export const DiffVisualization: React.FC<DiffVisualizationProps> = ({
         <div className="px-4 py-3 border-t border-gray-800 flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <AlertCircle className="w-4 h-4" />
-            <span>Review changes carefully before applying</span>
+            <span>Accepting records your decision. It does not change the file.</span>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -254,7 +254,7 @@ export const DiffVisualization: React.FC<DiffVisualizationProps> = ({
               className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-all"
             >
               <Check className="w-4 h-4" />
-              Apply Changes
+              Accept
             </button>
           </div>
         </div>

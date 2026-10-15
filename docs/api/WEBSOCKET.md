@@ -187,7 +187,7 @@ Response:
 
 ```json
 {
-  "type": "diff.applied",
+  "type": "diff.accepted",
   "payload": {
     "filePath": "src/index.ts",
     "timestamp": "2026-02-03T00:00:00Z"
