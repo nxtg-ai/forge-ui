@@ -9,22 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.5.0] - 2026-10-14
+
+forge-ui is a **Public preview**: public, maturity below alpha, interfaces may change. This release carries the browser-client and terminal origin hardening on top of the v3.4.1 security fix, one-time sign-in links for automated browser sessions, a security gate that blocks again, and hardening of the MCP suggestion feature. **Upgrade from v3.4.1.**
+
+Includes #53, #54, #56, #57, #58, #59, #60, #62 and #63.
+
 ### Added
 
-- **One-time sign-in links for automated browser sessions.** `print-login-link.ts` reads the access token locally, sends it only in a request header, and prints a link carrying a single-use code that expires in 60 seconds. An agent driving a browser through tool calls can sign in without the token ever reaching a URL, a tool call, argv or a log. See `docs/api/LOCAL-CLIENT-AUTH.md`. Existing sign-in paths and token semantics are unchanged.
-- `npm run auth:login-link`: the one-time sign-in link, runnable by tools that may only use `npm run`.
+- **One-time sign-in links for automated browser sessions** (#56). `print-login-link.ts` reads the access token locally, sends it only in a request header, and prints a link carrying a single-use code that expires in 60 seconds. An agent driving a browser through tool calls can sign in without the token ever reaching a URL, a tool call, argv or a log. See `docs/api/LOCAL-CLIENT-AUTH.md`. Existing sign-in paths and token semantics are unchanged.
+- `npm run auth:login-link` (#57): the one-time sign-in link, runnable by tools that may only use `npm run`.
+- `docs/api/LOCAL-CLIENT-AUTH.md` (#53): how local tools, harnesses and CI authenticate to the API.
+- **Release stage on every surface** (#54, #60). The app header badge, `/api/health` and the README show the stage from one `STAGE` constant, and a CI check fails if any surface disagrees. `STAGE` records two axes, distribution `public` and maturity `pre-alpha`, and the label shown is **Public preview**.
 
 ### Changed
 
-- **Vercel Web Analytics is off in local installs.** forge-ui is a local-first tool, and Vercel Analytics only reports on a Vercel deployment. A hosted build opts in with `VITE_VERCEL_ANALYTICS=1`. It was also being injected twice (`inject()` plus `<Analytics />`); it is now injected once.
+- **`/api/health` stage fields** (#60). `stage` is now the displayed label (`"Public preview"`), and new `distribution` and `maturity` fields carry the two axes. Clients that compared `stage` with `"internal"` need updating.
+- **Vercel Web Analytics is off in local installs** (#57). forge-ui is a local-first tool, and Vercel Analytics only reports on a Vercel deployment. A hosted build opts in with `VITE_VERCEL_ANALYTICS=1`. It was also being injected twice (`inject()` plus `<Analytics />`); it is now injected once.
+- `.env.example` no longer sets `VITE_API_URL` / `VITE_WS_URL`, and the port, deployment, architecture and command docs no longer show cross-origin values for them (#59). Both now accept only a path on the same origin.
+- `InfinityTerminal` and `MobileTerminalView` drop their `ttydHost` / `ttydPort` props, and `useSessionPersistence`'s config drops `wsHost` / `wsPort` (#59): the terminal always connects to `/terminal` on the page's own origin.
+- **The security scanner is calibrated and blocks again** (#63). It was report-only because its rules flagged hundreds of non-issues. It now reports command injection only where a shell or interpreter can parse a string that is not a literal, groups its SQL pattern, and skips its own file. The release workflow fails on any critical finding. The few functions whose contract is to run a shell command, none reachable from the server, are waived by name with a reason and printed on every run, and a test fails if one of them becomes reachable.
 
 ### Security
 
-- The page takes `?forge_token=` / `?forge_login_code=` out of the URL before analytics or the app load, and analytics events (when enabled) are scrubbed of both. On a Vercel-hosted build, the token could otherwise have reached Vercel in the analytics script request's `Referer` and in its pageview URL.
+- **The browser talks only to the origin that served it** (#58). A production build called `http://<host>:5051/api` with `credentials: "include"`, so its requests, and the session cookie (cookies are not port-scoped), went to whatever process held port 5051 on that machine. All API clients now call the relative `/api`, which the serving origin proxies, with `credentials: "same-origin"`. An absolute `VITE_API_URL` is ignored.
+- **WebSockets too** (#59). `/ws` and `/terminal` open on the page's own host and port, and an absolute `VITE_WS_URL` (as `.env.example` used to ship) is ignored. With that value, the `/ws` bootstrap token went to port 5051 in the URL. The terminal no longer falls back to port 5050 on a page served from a default port.
+- **Referrer policy `strict-origin`** (#58, #59). It is set in `index.html` ahead of every asset, and as a header from the dev and preview servers, so a sign-in URL's query no longer appears in the `Referer` of the page's own asset requests.
+- **Sign-in values stay out of analytics** (#57). The page takes `?forge_token=` / `?forge_login_code=` out of the URL before analytics or the app load, and analytics events (when enabled) are scrubbed of both. On a Vercel-hosted build, the token could otherwise have reached Vercel in the analytics script request's `Referer` and in its pageview URL.
+- **MCP suggestions: request text no longer reaches a shell or an agent with tools** (#63). The suggestion feature now runs the Claude CLI without a shell, with the prompt on standard input, with no tools, no permission bypass, and no hooks, plugins or settings files, in an empty temporary directory. The route already required this install's access token.
+- **Disk checks run `df` without a shell** (#63). The project path is passed as an argument, not inside a shell string.
 
 ### Fixed
 
-- The sign-in screen no longer checks the session before its own sign-in request finishes, under React StrictMode's double effect run. That race produced a stray 401 and could show the sign-in form despite a valid session.
+- The sign-in screen no longer checks the session before its own sign-in request finishes, under React StrictMode's double effect run (#56). That race produced a stray 401 and could show the sign-in form despite a valid session.
+
+### Internal
+
+- The repository's `/alignment` identity is `forge-ui` (#62).
 
 ## [3.4.1] - 2026-10-07
 
