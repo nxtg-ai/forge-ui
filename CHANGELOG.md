@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `POST /api/forge/init` no longer writes CLAUDE.md unless the request asks for it (`claudeMdOption` now defaults to `skip`). `generate` refuses with `CLAUDE_MD_EXISTS` when a CLAUDE.md is already there, unless `forceOverwrite` is set; the refusal happens before init writes anything. `merge` appends the Forge section to the file on disk and keeps its text. The request's `directive` is no longer copied into CLAUDE.md, which coding agents read as instructions; it stays in `.claude/governance.json`.
+
 ### Changed
 
 - `POST /api/diffs/apply` now says what it does. It changes no file, and the response used to claim "Successfully applied changes". It now returns `applied: false` with the message "No file was changed", and broadcasts `diff.accepted` instead of `diff.applied`. The client `applyDiff()` passes the server's message on instead of its own success text.

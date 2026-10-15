@@ -256,38 +256,52 @@ export class InitService extends BaseService {
   }
 
   /**
-   * Generate or merge CLAUDE.md
+   * Write the Forge section of CLAUDE.md.
+   *
+   * CLAUDE.md is read by coding agents as instructions, so this never puts
+   * request text in it (the directive stays in .claude/governance.json) and
+   * never replaces an existing file unless forceOverwrite is set:
+   * - "skip" (the default) writes nothing.
+   * - "generate" creates the file, and refuses with CLAUDE_MD_EXISTS if one is
+   *   already there. The refusal is the exclusive-create flag on the write
+   *   itself, so it holds even if an earlier existence check failed.
+   * - "merge" appends the Forge section to the file on disk, or creates the
+   *   file if there is none. Existing text is kept.
+   * PRM-CLX9-20261015-06 item (a).
    */
   async generateClaudeMd(
-    vision: string,
     projectType: ProjectType,
-    option: "generate" | "merge" | "skip" = "generate",
-    existingContent?: string,
+    option: "generate" | "merge" | "skip" = "skip",
+    { forceOverwrite = false }: { forceOverwrite?: boolean } = {},
   ): Promise<Result<void, IntegrationError>> {
     if (option === "skip") {
       return Result.ok(undefined);
     }
 
+    const claudeMdPath = path.join(this.projectRoot, "CLAUDE.md");
     try {
-      const claudeMdPath = path.join(this.projectRoot, "CLAUDE.md");
-      let content = "";
-
-      if (option === "merge" && existingContent) {
-        // Merge forge section at bottom
-        content = existingContent;
-        if (!content.endsWith("\n\n")) {
-          content += "\n\n";
+      if (option === "merge") {
+        const existing = await readIfExists(claudeMdPath);
+        if (existing !== null) {
+          const separator = existing.endsWith("\n\n") ? "" : "\n\n";
+          await fs.appendFile(
+            claudeMdPath,
+            separator + "---\n\n" + generateForgeSection(projectType),
+            "utf-8",
+          );
+          return Result.ok(undefined);
         }
-        content += "---\n\n";
-        content += generateForgeSection(vision, projectType);
-      } else {
-        // Generate new CLAUDE.md
-        content = generateCompleteClaude(vision, projectType);
       }
 
-      await fs.writeFile(claudeMdPath, content, "utf-8");
+      await fs.writeFile(claudeMdPath, generateCompleteClaude(projectType), {
+        encoding: "utf-8",
+        flag: forceOverwrite ? "w" : "wx",
+      });
       return Result.ok(undefined);
     } catch (error) {
+      if (isErrnoCode(error, "EEXIST")) {
+        return Result.err(claudeMdExistsError());
+      }
       return Result.err(
         new IntegrationError(
           `Failed to generate CLAUDE.md: ${error instanceof Error ? error.message : String(error)}`,
@@ -324,6 +338,18 @@ export class InitService extends BaseService {
         projectType = detectionResult.unwrap().projectType;
       }
 
+      // Refuse before writing anything if CLAUDE.md would be replaced, so a
+      // refused init leaves the project as it was.
+      const claudeMdOption = validOptions.claudeMdOption ?? "skip";
+      const forceOverwrite = validOptions.forceOverwrite === true;
+      if (
+        claudeMdOption === "generate" &&
+        !forceOverwrite &&
+        (await pathExists(path.join(this.projectRoot, "CLAUDE.md")))
+      ) {
+        return Result.err(claudeMdExistsError());
+      }
+
       // Step 2: Scaffold harness
       const scaffoldResult = await this.scaffoldHarness(projectType);
       if (scaffoldResult.isErr()) {
@@ -348,18 +374,11 @@ export class InitService extends BaseService {
       }
       created.push(".claude/governance.json");
 
-      // Step 5: Generate CLAUDE.md
-      const existingSetup = await this.checkExistingSetup();
-      const claudeMdOption = validOptions.claudeMdOption || "generate";
-      const existingContent = existingSetup.isOk()
-        ? existingSetup.unwrap().claudeMdContent
-        : "";
-
+      // Step 5: Write CLAUDE.md (skipped unless the caller asked for it)
       const claudeMdResult = await this.generateClaudeMd(
-        validOptions.directive,
         projectType,
         claudeMdOption,
-        existingContent,
+        { forceOverwrite },
       );
       if (claudeMdResult.isErr()) {
         return Result.err(claudeMdResult.error);
@@ -421,5 +440,45 @@ export class InitService extends BaseService {
       AGENT_TEMPLATES.fullstack,
       "utf-8",
     );
+  }
+}
+
+function claudeMdExistsError(): IntegrationError {
+  return new IntegrationError(
+    "CLAUDE.md already exists. Use claudeMdOption \"merge\" to append the Forge section, or set forceOverwrite to replace the file.",
+    "CLAUDE_MD_EXISTS",
+  );
+}
+
+function isErrnoCode(error: unknown, code: string): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as NodeJS.ErrnoException).code === code
+  );
+}
+
+/** True if anything (file, folder or link) is at the path. */
+async function pathExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.lstat(filePath);
+    return true;
+  } catch (error) {
+    if (isErrnoCode(error, "ENOENT")) {
+      return false;
+    }
+    throw error;
+  }
+}
+
+/** File contents, or null if there is no file. Other read errors throw. */
+async function readIfExists(filePath: string): Promise<string | null> {
+  try {
+    return await fs.readFile(filePath, "utf-8");
+  } catch (error) {
+    if (isErrnoCode(error, "ENOENT")) {
+      return null;
+    }
+    throw error;
   }
 }

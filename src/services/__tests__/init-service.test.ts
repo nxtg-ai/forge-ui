@@ -237,13 +237,9 @@ describe("InitService", () => {
   });
 
   describe("generateClaudeMd", () => {
+    // PRM-CLX9-20261015-06 item (a): CLAUDE.md carries no request text.
     it("should generate new CLAUDE.md", async () => {
-      const vision = "Build a React dashboard";
-      const result = await initService.generateClaudeMd(
-        vision,
-        "react",
-        "generate",
-      );
+      const result = await initService.generateClaudeMd("react", "generate");
 
       expect(result.isOk()).toBe(true);
 
@@ -251,21 +247,16 @@ describe("InitService", () => {
         path.join(testDir, "CLAUDE.md"),
         "utf-8",
       );
-      expect(claudeMd).toContain(vision);
       expect(claudeMd).toContain("react");
       expect(claudeMd).toContain("NXTG-Forge Integration");
+      expect(claudeMd).toContain(".claude/governance.json");
     });
 
     it("should merge with existing CLAUDE.md", async () => {
       const existingContent = "# My Project\n\nExisting documentation.";
-      const vision = "Build a React dashboard";
+      await fs.writeFile(path.join(testDir, "CLAUDE.md"), existingContent);
 
-      const result = await initService.generateClaudeMd(
-        vision,
-        "react",
-        "merge",
-        existingContent,
-      );
+      const result = await initService.generateClaudeMd("react", "merge");
 
       expect(result.isOk()).toBe(true);
 
@@ -273,17 +264,12 @@ describe("InitService", () => {
         path.join(testDir, "CLAUDE.md"),
         "utf-8",
       );
-      expect(claudeMd).toContain("Existing documentation");
+      expect(claudeMd.startsWith(existingContent)).toBe(true);
       expect(claudeMd).toContain("NXTG-Forge Integration");
-      expect(claudeMd).toContain(vision);
     });
 
     it("should skip CLAUDE.md when option is skip", async () => {
-      const result = await initService.generateClaudeMd(
-        "Test",
-        "react",
-        "skip",
-      );
+      const result = await initService.generateClaudeMd("react", "skip");
 
       expect(result.isOk()).toBe(true);
 
@@ -510,14 +496,9 @@ describe("InitService", () => {
   describe("generateClaudeMd - additional branches", () => {
     it("does not insert an extra blank line when the existing content already ends with two newlines", async () => {
       const existingContent = "# My Project\n\nAlready spaced.\n\n";
-      const vision = "Build a dashboard";
+      await fs.writeFile(path.join(testDir, "CLAUDE.md"), existingContent);
 
-      const result = await initService.generateClaudeMd(
-        vision,
-        "react",
-        "merge",
-        existingContent,
-      );
+      const result = await initService.generateClaudeMd("react", "merge");
 
       expect(result.isOk()).toBe(true);
 
@@ -533,7 +514,7 @@ describe("InitService", () => {
         s.replace(/\*\*Initialized\*\*: [^\n]+/, "**Initialized**: <ts>");
       expect(stripTimestamp(claudeMd)).toBe(
         stripTimestamp(
-          existingContent + "---\n\n" + generateForgeSection(vision, "react"),
+          existingContent + "---\n\n" + generateForgeSection("react"),
         ),
       );
     });
@@ -543,11 +524,7 @@ describe("InitService", () => {
         new Error("EACCES: permission denied"),
       );
 
-      const result = await initService.generateClaudeMd(
-        "Vision",
-        "react",
-        "generate",
-      );
+      const result = await initService.generateClaudeMd("react", "generate");
 
       expect(result.isErr()).toBe(true);
       if (result.isErr()) {
@@ -561,11 +538,7 @@ describe("InitService", () => {
     it("returns a CLAUDE_MD_ERROR with a stringified message when the write throws a non-Error value", async () => {
       vi.mocked(fs.writeFile).mockRejectedValueOnce("write-failed");
 
-      const result = await initService.generateClaudeMd(
-        "Vision",
-        "react",
-        "generate",
-      );
+      const result = await initService.generateClaudeMd("react", "generate");
 
       expect(result.isErr()).toBe(true);
       if (result.isErr()) {
@@ -693,13 +666,14 @@ describe("InitService", () => {
 
     it("propagates the CLAUDE.md error after scaffold, agent-copy and governance all succeed", async () => {
       // A DIRECTORY at the exact CLAUDE.md path makes the final write fail
-      // with EISDIR.
+      // with EISDIR. forceOverwrite gets it past the up-front refusal.
       await fs.mkdir(path.join(testDir, "CLAUDE.md"), { recursive: true });
 
       const result = await initService.initializeProject({
         directive: "Build something great",
         projectType: "react",
         claudeMdOption: "generate",
+        forceOverwrite: true,
       });
 
       expect(result.isErr()).toBe(true);
@@ -723,7 +697,8 @@ describe("InitService", () => {
       );
     });
 
-    it("defaults claudeMdOption to 'generate' when the caller omits it", async () => {
+    // PRM-CLX9-20261015-06 item (a): no CLAUDE.md write unless asked for.
+    it("defaults claudeMdOption to 'skip' when the caller omits it", async () => {
       const result = await initService.initializeProject({
         directive: "Build something great",
         projectType: "react",
@@ -731,16 +706,20 @@ describe("InitService", () => {
       });
 
       expect(result.isOk()).toBe(true);
-      expect(result.unwrap().created).toContain("CLAUDE.md");
+      expect(result.unwrap().created).not.toContain("CLAUDE.md");
 
-      const claudeMd = await fs.readFile(
-        path.join(testDir, "CLAUDE.md"),
-        "utf-8",
-      );
-      expect(claudeMd).toContain("# Project Knowledge Base");
+      const claudeMdExists = await fs
+        .access(path.join(testDir, "CLAUDE.md"))
+        .then(() => true)
+        .catch(() => false);
+      expect(claudeMdExists).toBe(false);
     });
 
-    it("falls back to empty existing content when checkExistingSetup itself fails", async () => {
+    // PRM-CLX9-20261015-06 item (a). Before the fix, a failed existing-setup
+    // check made "merge" replace the whole file with the template.
+    it("merge keeps existing CLAUDE.md text even when checkExistingSetup fails", async () => {
+      const existingContent = "# Mine\n\nKeep this.\n";
+      await fs.writeFile(path.join(testDir, "CLAUDE.md"), existingContent);
       vi.spyOn(initService, "checkExistingSetup").mockResolvedValueOnce(
         Result.err(
           new IntegrationError("boom", "SETUP_CHECK_ERROR"),
@@ -759,19 +738,30 @@ describe("InitService", () => {
         path.join(testDir, "CLAUDE.md"),
         "utf-8",
       );
-      // With existingSetup.isErr(), existingContent falls back to "". Since
-      // `option === "merge" && existingContent` is then false (empty string
-      // is falsy), generateClaudeMd takes its non-merge branch and emits the
-      // full fresh template — proving the fallback empty string actually
-      // flowed through rather than initializeProject throwing or hanging.
+      expect(claudeMd.startsWith(existingContent)).toBe(true);
+      expect(claudeMd).toContain("NXTG-Forge Integration");
+      expect(claudeMd).not.toContain("Build something great");
+    });
+
+    it("merge with no CLAUDE.md writes the full template", async () => {
+      const result = await initService.initializeProject({
+        directive: "Build something great",
+        projectType: "react",
+        claudeMdOption: "merge",
+      });
+
+      expect(result.isOk()).toBe(true);
+
+      const claudeMd = await fs.readFile(
+        path.join(testDir, "CLAUDE.md"),
+        "utf-8",
+      );
       // The "Initialized" timestamp is stripped before comparing since it's
       // generated independently by the assertion's own call.
       const stripTimestamp = (s: string) =>
         s.replace(/\*\*Initialized\*\*: [^\n]+/, "**Initialized**: <ts>");
       expect(stripTimestamp(claudeMd)).toBe(
-        stripTimestamp(
-          generateCompleteClaude("Build something great", "react"),
-        ),
+        stripTimestamp(generateCompleteClaude("react")),
       );
     });
 
