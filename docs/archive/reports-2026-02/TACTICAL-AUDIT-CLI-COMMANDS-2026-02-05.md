@@ -249,22 +249,22 @@ Missing:
 ## Files Referenced in Audit
 
 ### Command Specifications:
-- /home/axw/projects/NXTG-Forge/v3/.claude/commands/[FRG]-init.md (314 lines)
-- /home/axw/projects/NXTG-Forge/v3/.claude/commands/[FRG]-status.md (170 lines)
-- /home/axw/projects/NXTG-Forge/v3/.claude/commands/[FRG]-status-enhanced.md (314 lines)
-- /home/axw/projects/NXTG-Forge/v3/.claude/commands/[FRG]-test.md (32 lines)
-- /home/axw/projects/NXTG-Forge/v3/.claude/commands/[FRG]-deploy.md (368 lines)
-- /home/axw/projects/NXTG-Forge/v3/.claude/commands/[FRG]-checkpoint.md (182 lines)
-- /home/axw/projects/NXTG-Forge/v3/.claude/commands/[FRG]-gap-analysis.md (551 lines)
-- /home/axw/projects/NXTG-Forge/v3/.claude/commands/[FRG]-feature.md (141 lines)
-- /home/axw/projects/NXTG-Forge/v3/.claude/commands/[FRG]-report.md (287 lines)
-- /home/axw/projects/NXTG-Forge/v3/.claude/commands/[FRG]-restore.md (90 lines)
+- ~/projects/NXTG-Forge/v3/.claude/commands/[FRG]-init.md (314 lines)
+- ~/projects/NXTG-Forge/v3/.claude/commands/[FRG]-status.md (170 lines)
+- ~/projects/NXTG-Forge/v3/.claude/commands/[FRG]-status-enhanced.md (314 lines)
+- ~/projects/NXTG-Forge/v3/.claude/commands/[FRG]-test.md (32 lines)
+- ~/projects/NXTG-Forge/v3/.claude/commands/[FRG]-deploy.md (368 lines)
+- ~/projects/NXTG-Forge/v3/.claude/commands/[FRG]-checkpoint.md (182 lines)
+- ~/projects/NXTG-Forge/v3/.claude/commands/[FRG]-gap-analysis.md (551 lines)
+- ~/projects/NXTG-Forge/v3/.claude/commands/[FRG]-feature.md (141 lines)
+- ~/projects/NXTG-Forge/v3/.claude/commands/[FRG]-report.md (287 lines)
+- ~/projects/NXTG-Forge/v3/.claude/commands/[FRG]-restore.md (90 lines)
 
 ### Backend Implementation Files:
-- /home/axw/projects/NXTG-Forge/v3/src/services/init-service.ts (865 lines)
-- /home/axw/projects/NXTG-Forge/v3/src/core/state.ts (749 lines)
-- /home/axw/projects/NXTG-Forge/v3/src/core/checkpoint-manager.ts (276 lines)
-- /home/axw/projects/NXTG-Forge/v3/src/server/api-server.ts (2,218 lines total, 69 endpoints defined)
+- ~/projects/NXTG-Forge/v3/src/services/init-service.ts (865 lines)
+- ~/projects/NXTG-Forge/v3/src/core/state.ts (749 lines)
+- ~/projects/NXTG-Forge/v3/src/core/checkpoint-manager.ts (276 lines)
+- ~/projects/NXTG-Forge/v3/src/server/api-server.ts (2,218 lines total, 69 endpoints defined)
 
 ---
 

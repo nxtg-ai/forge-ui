@@ -30,7 +30,7 @@ If it still doesn't work, look for one of these messages in the backend terminal
 **Good Signs:**
 ```
 [PTY Bridge] New terminal connection
-[PTY Bridge] Spawning shell: /bin/bash in /home/axw/projects/NXTG-Forge/v3
+[PTY Bridge] Spawning shell: /bin/bash in ~/projects/NXTG-Forge/v3
 ```
 
 **Bad Signs (will tell us what's wrong):**

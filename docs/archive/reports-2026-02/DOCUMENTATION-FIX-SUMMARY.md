@@ -40,7 +40,7 @@ Comprehensive review of NXTG-Forge v3 documentation for open-source release read
 
 ### 1. Documentation Completeness Audit Report
 
-**File:** `/home/axw/projects/NXTG-Forge/v3/DOCUMENTATION-COMPLETENESS-AUDIT-2026-02-05.md`
+**File:** `~/projects/NXTG-Forge/v3/DOCUMENTATION-COMPLETENESS-AUDIT-2026-02-05.md`
 
 **Content:**
 - Executive summary with coverage metrics
@@ -56,7 +56,7 @@ Comprehensive review of NXTG-Forge v3 documentation for open-source release read
 
 ### 2. Best Practices Guide
 
-**File:** `/home/axw/projects/NXTG-Forge/v3/docs/best-practices/README.md`
+**File:** `~/projects/NXTG-Forge/v3/docs/best-practices/README.md`
 
 **Content:**
 - Core principles (code as craft, quality non-negotiable, simplicity, automation)
@@ -80,7 +80,7 @@ Comprehensive review of NXTG-Forge v3 documentation for open-source release read
 
 ### 3. Commands Reference
 
-**File:** `/home/axw/projects/NXTG-Forge/v3/docs/commands/README.md`
+**File:** `~/projects/NXTG-Forge/v3/docs/commands/README.md`
 
 **Content:**
 - All npm commands documented (npm run dev, test, build, etc.)
@@ -104,7 +104,7 @@ Comprehensive review of NXTG-Forge v3 documentation for open-source release read
 
 ### 4. Custom React Hooks Reference
 
-**File:** `/home/axw/projects/NXTG-Forge/v3/docs/hooks/README.md`
+**File:** `~/projects/NXTG-Forge/v3/docs/hooks/README.md`
 
 **Content:**
 - Session & terminal hooks (useSessionPersistence)

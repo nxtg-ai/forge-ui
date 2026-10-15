@@ -1,6 +1,6 @@
 # AppHeader Component
 
-**Location:** `/home/axw/projects/NXTG-Forge/v3/src/components/layout/AppHeader.tsx`
+**Location:** `src/components/layout/AppHeader.tsx`
 
 ## Overview
 

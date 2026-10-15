@@ -78,8 +78,8 @@ describe("ui-auth", () => {
     });
 
     it("honours ALLOWED_ORIGINS", () => {
-      process.env.ALLOWED_ORIGINS = "http://192.168.1.206:5050";
-      const lan = req({ origin: "http://192.168.1.206:5050", authorization: `Bearer ${SECRET}` });
+      process.env.ALLOWED_ORIGINS = "http://192.0.2.10:5050";
+      const lan = req({ origin: "http://192.0.2.10:5050", authorization: `Bearer ${SECRET}` });
       expect(auth.authorize(lan)).toEqual({ ok: true });
       expect(auth.authorize(req({ origin: "http://localhost:5050", authorization: `Bearer ${SECRET}` }))).toMatchObject({
         status: 403,

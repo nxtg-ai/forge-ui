@@ -27,7 +27,7 @@ NXTG-Forge v3 has **good foundational documentation** with 90 markdown files acr
 
 ### 1.1 README.md - ✅ STRONG
 
-**Location:** `/home/axw/projects/NXTG-Forge/v3/README.md`
+**Location:** `~/projects/NXTG-Forge/v3/README.md`
 **Status:** Production-ready with minor updates needed
 **Last Updated:** Jan 30, 2026
 
@@ -81,7 +81,7 @@ NXTG-Forge v3 has **good foundational documentation** with 90 markdown files acr
 
 ### 1.2 CONTRIBUTING.md - ✅ EXCELLENT
 
-**Location:** `/home/axw/projects/NXTG-Forge/v3/CONTRIBUTING.md`
+**Location:** `~/projects/NXTG-Forge/v3/CONTRIBUTING.md`
 **Status:** Complete and production-ready
 **Last Updated:** Feb 3, 2026
 
@@ -123,7 +123,7 @@ All statements match actual implementation:
 
 ### 1.3 LICENSE - ✅ COMPLETE
 
-**Location:** `/home/axw/projects/NXTG-Forge/v3/LICENSE`
+**Location:** `~/projects/NXTG-Forge/v3/LICENSE`
 **Status:** MIT License (standard open-source)
 
 No changes needed.
@@ -188,7 +188,7 @@ EMPTY: 4 directories (best-practices/, commands/, hooks/, skills/, tutorials/)
 
 ### 3.1 REST API Documentation
 
-**Location:** `/home/axw/projects/NXTG-Forge/v3/docs/api/RUNSPACE-API.md`
+**Location:** `~/projects/NXTG-Forge/v3/docs/api/RUNSPACE-API.md`
 
 #### Coverage: 60% (Partial)
 
@@ -223,7 +223,7 @@ app.ws('/terminal', ...)             // ✅ In WEBSOCKET.md (mostly)
 
 #### OpenAPI Spec: ⚠️ OUTDATED
 
-**Location:** `/home/axw/projects/NXTG-Forge/v3/docs/api/openapi.yaml`
+**Location:** `~/projects/NXTG-Forge/v3/docs/api/openapi.yaml`
 
 - File size: 39KB
 - Last updated: Feb 2, 2026
@@ -235,7 +235,7 @@ app.ws('/terminal', ...)             // ✅ In WEBSOCKET.md (mostly)
 
 ### 3.2 WebSocket Documentation
 
-**Location:** `/home/axw/projects/NXTG-Forge/v3/docs/api/WEBSOCKET.md`
+**Location:** `~/projects/NXTG-Forge/v3/docs/api/WEBSOCKET.md`
 
 #### Coverage: 70% (Good but incomplete)
 
@@ -260,7 +260,7 @@ app.ws('/terminal', ...)             // ✅ In WEBSOCKET.md (mostly)
 
 ### 4.1 GETTING-STARTED.md - ⚠️ OUTDATED
 
-**Location:** `/home/axw/projects/NXTG-Forge/v3/docs/GETTING-STARTED.md`
+**Location:** `~/projects/NXTG-Forge/v3/docs/GETTING-STARTED.md`
 **Last Updated:** Appears to be from early v3 phase
 
 #### Issues Found
@@ -287,7 +287,7 @@ Update to match current feature set from multi-project documentation.
 
 ### 4.2 Guides Directory - ✅ GOOD OVERALL
 
-**Location:** `/home/axw/projects/NXTG-Forge/v3/docs/guides/`
+**Location:** `~/projects/NXTG-Forge/v3/docs/guides/`
 
 **Contents:**
 - ✅ DOG-FOOD-README.md (Dog-fooding program)
@@ -306,7 +306,7 @@ Update to match current feature set from multi-project documentation.
 
 ### 5.1 Architecture Directory - ✅ STRONG
 
-**Location:** `/home/axw/projects/NXTG-Forge/v3/docs/architecture/`
+**Location:** `~/projects/NXTG-Forge/v3/docs/architecture/`
 
 **Quality Verification:**
 
@@ -336,7 +336,7 @@ Update to match current feature set from multi-project documentation.
 
 ### 5.2 Component Documentation - ✅ ADEQUATE
 
-**Location:** `/home/axw/projects/NXTG-Forge/v3/docs/components/`
+**Location:** `~/projects/NXTG-Forge/v3/docs/components/`
 
 **Files:**
 - ✅ AppHeader.md (404 lines, very detailed)
@@ -582,4 +582,4 @@ Key gaps:
 
 **Audit Performed By:** Forge Docs Agent
 **Date:** 2026-02-05
-**Repository:** /home/axw/projects/NXTG-Forge/v3
+**Repository:** ~/projects/NXTG-Forge/v3

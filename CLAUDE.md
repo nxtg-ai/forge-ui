@@ -28,7 +28,7 @@ Browser (xterm.js) → WebSocket → PTY Bridge (api-server.ts) → Shell
 The UI uses **Vite's proxy** for multi-device access:
 
 ```
-Remote Device → http://192.168.1.206:5050/api/* → Vite Proxy → localhost:5051
+Remote Device → http://<your-lan-ip>:5050/api/* → Vite Proxy → localhost:5051
 ```
 
 **Critical configuration:**
@@ -45,7 +45,7 @@ Remote Device → http://192.168.1.206:5050/api/* → Vite Proxy → localhost:5
 | 5051 | API Server + WebSocket | 0.0.0.0 |
 | 8003 | Reserved | 0.0.0.0 |
 
-### Core Principles (from USER-CRITICAL-INSTRUCTIONS.md)
+### Core Principles
 
 1. **Dog-Food or Die** - Use Claude Code's native capabilities, not TypeScript meta-services
 2. **Agent Teams First** - For multi-file features, reviews, and debugging: spawn agent teams with specialized teammates, not sequential subagents. Teams talk to each other, challenge findings, and self-coordinate
@@ -55,7 +55,7 @@ Remote Device → http://192.168.1.206:5050/api/* → Vite Proxy → localhost:5
 
 ### Agent Teams (Always Active)
 
-NXTG-Forge has Agent Teams permanently enabled (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in `.claude/settings.json`). This is a super-human capability — use it aggressively.
+Agent Teams are enabled with `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in your Claude Code settings (for example `.claude/settings.local.json`). This is a super-human capability — use it aggressively.
 
 **When to spawn a team (default for non-trivial work):**
 - Features touching 3+ files → builder + tester + reviewer teammates
@@ -94,7 +94,7 @@ NXTG-Forge has Agent Teams permanently enabled (`CLAUDE_CODE_EXPERIMENTAL_AGENT_
 
 ## CRUCIBLE Protocol (Test Quality — Mandatory)
 
-CRUCIBLE = Code Review Under Conditions Inducing Bug Latency Exposure. All ASIF projects must pass all 8 gates before any release. Reference: `~/ASIF/standards/crucible-protocol.md`.
+CRUCIBLE = Code Review Under Conditions Inducing Bug Latency Exposure. This project must pass all 8 gates before any release.
 
 ### The 8 Gates
 
@@ -117,87 +117,13 @@ CRUCIBLE = Code Review Under Conditions Inducing Bug Latency Exposure. All ASIF 
 - **New integration tests** must cite a NEXUS initiative ID in a comment.
 - **Mutation score target**: 40% minimum per module. Run: `npx stryker run /tmp/stryker.config.json`
 
-### Last CRUCIBLE Audit
-Completed: 2026-03-08 | Directive: DIRECTIVE-FPL-20260307-01 | Verdict: FAIL
-Remediations due: Gate 6 (mutation score), Gate 5 (bootstrap.ts silent catches), Gate 4 (restore 6 tests)
-
 ---
 
-## ASIF Governance
+## Release
 
-This project is part of NXTG-Forge (P-03) in the ASIF portfolio (Developer Tools vertical).
-
-On every session (check BOTH your own NEXUS and the program NEXUS):
-1. Read `.asif/NEXUS.md` (your own) — check for `## CoS Directives` section
-1a. ALSO read `../.asif/NEXUS.md` (program-level) — check for directives targeting this repo
-2. Execute any PENDING directives before other work (unless Asif overrides)
-3. Write your response inline under each directive
-4. Update initiative statuses in NEXUS if your work changes them
-5. If you have questions for the CoS, add them under `## Team Questions` in NEXUS
-
----
-*Last updated: 2026-02-18 - ASIF governance + multi-device access*
-
-
-## Release Protocol Enforcement (ASIF Standard, ADR-036)
-
-This repo is currently NOT registered as a public-package distribution target, so the release-protocol gate skips on every push. Pre-push hook (Layer 1, `.git/hooks/pre-push`) and daily drift workflow (Layer 2) are installed and benign.
-
-If this repo later publishes to a registry (npm, PyPI, crates.io, GitHub Packages, etc.), add `.asif-ci` at the repo root:
-
-```
-release_protocol_enabled: true
-release_protocol_manifest: <path-to-published-manifest>
-```
-
-Then on each version bump in that manifest:
-1. **Tag**: `git tag vX.Y.Z && git push origin vX.Y.Z`
-2. **GH Release**: `gh release create vX.Y.Z --notes-from-tag`
-3. **Publish**: `<registry-specific publish command>`
-4. **CHANGELOG**: roll `[Unreleased]` → `[vX.Y.Z] — YYYY-MM-DD` in CHANGELOG.md
+Release steps for a user-facing change:
+1. **CHANGELOG**: roll `[Unreleased]` → `[vX.Y.Z] — YYYY-MM-DD` in CHANGELOG.md
+2. **Version**: bump `package.json`
+3. **Tag**: `git tag vX.Y.Z && git push origin vX.Y.Z`
+4. **GH Release**: `gh release create vX.Y.Z --notes-from-tag`
 5. **Docs**: update any pinned version references in README.md / docs
-
-Wolf's nightly sense pass surfaces drift portfolio-wide via `===SECTION:RELEASE_DRIFT===` once enabled.
-
-**Bypass (EMERGENCY ONLY)**: `git push --no-verify` — and document the bypass in NEXUS or HANDOFF.
-## Dx3 Brain Integration
-On every session start, recall relevant context from Dx3 before starting work:
-- Use recall() to check for prior decisions, lessons, and patterns related to your current task
-- After shipping work, use remember() to store what you learned
-- The brain at dx3-cognitive MCP has context from ALL projects — use it
-
-This is how the portfolio compounds intelligence. Your work benefits from every other team's learning.
-
-## Voice Identity
-**Voice**: `af_sarah`
-**Service**: http://100.123.83.34:8880/v1/audio/speech
-**Registry**: ~/ASIF/standards/voice-registry.md (canonical; `portfolio-voice-registry.md` redirects here)
-**Claim**: commit `a58781b` (2026-04-19), P-03a forge-ui
-**Use**: every cycle-complete, every P0/P1 completion, every directive response, every blocker/escalation.
-
-Wrapper (preferred):
-```bash
-~/ASIF/scripts/cos-speak-remote --voice af_sarah "Your message here."
-```
-
-Direct call (if wrapper unreachable):
-```bash
-curl -sS -X POST http://100.123.83.34:8880/v1/audio/speech \
-  -H "Content-Type: application/json" \
-  -d '{"model":"kokoro","input":"Your message here.","voice":"af_sarah","response_format":"wav"}' \
-  -o /tmp/voice.wav && aplay /tmp/voice.wav
-```
-
-**Rule**: no duplicates portfolio-wide. Do not silently complete directives — always speak.
-
-<!-- ASIF:TEAM-ALIGNMENT-WIRING:START -->
-## ASIF Alignment Wiring
-
-@/home/axw/ASIF/standards/claude-team-alignment-wiring.md
-
-- Team alignment id: `forge-ui` (label "Forge UI"; split from the retired `forge` id, DIRECTIVE-NXTG-20261013-22).
-- Cross-team room: `/alignment`, written through `~/ASIF/scripts/alignment-say --as forge-ui`.
-- Commit and PR trailers: `python3 ~/ASIF/scripts/lane-identity.py --trailer forge-ui`.
-- If an `[ALIGNMENT ...]` message appears, respond through `alignment-say`; do not answer only in this private TUI.
-- Deterministic state first: typed Dx3/asifctl, `.asif/NEXUS.md`, git/tests/runtime probes. Prose is backup and local steering only.
-<!-- ASIF:TEAM-ALIGNMENT-WIRING:END -->

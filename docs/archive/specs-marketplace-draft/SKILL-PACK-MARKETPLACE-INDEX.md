@@ -21,7 +21,7 @@ Comprehensive specification for a three-tiered marketplace system that distribut
 ## Core Specifications (5 Documents)
 
 ### 1. Skill-Pack Format Specification
-**File:** `/home/axw/projects/NXTG-Forge/v3/docs/specs/SKILL-PACK-FORMAT.md`  
+**File:** `~/projects/NXTG-Forge/v3/docs/specs/SKILL-PACK-FORMAT.md`  
 **Size:** 470 lines
 
 **Contents:**
@@ -48,7 +48,7 @@ Comprehensive specification for a three-tiered marketplace system that distribut
 ---
 
 ### 2. Marketplace Specification
-**File:** `/home/axw/projects/NXTG-Forge/v3/docs/specs/MARKETPLACE-SPEC.md`  
+**File:** `~/projects/NXTG-Forge/v3/docs/specs/MARKETPLACE-SPEC.md`  
 **Size:** 623 lines
 
 **Contents:**
@@ -78,7 +78,7 @@ Comprehensive specification for a three-tiered marketplace system that distribut
 ---
 
 ### 3. CLI Commands Specification
-**File:** `/home/axw/projects/NXTG-Forge/v3/docs/specs/MARKETPLACE-COMMANDS.md`  
+**File:** `~/projects/NXTG-Forge/v3/docs/specs/MARKETPLACE-COMMANDS.md`  
 **Size:** 684 lines
 
 **Commands Specified:**
@@ -104,7 +104,7 @@ Comprehensive specification for a three-tiered marketplace system that distribut
 ---
 
 ### 4. Tier Boundaries Specification
-**File:** `/home/axw/projects/NXTG-Forge/v3/docs/specs/SKILL-PACK-TIERS.md`  
+**File:** `~/projects/NXTG-Forge/v3/docs/specs/SKILL-PACK-TIERS.md`  
 **Size:** 602 lines
 
 **Tier Comparison:**
@@ -142,7 +142,7 @@ Comprehensive specification for a three-tiered marketplace system that distribut
 ---
 
 ### 5. Installation Flow Specification
-**File:** `/home/axw/projects/NXTG-Forge/v3/docs/specs/INSTALLATION-FLOW.md`  
+**File:** `~/projects/NXTG-Forge/v3/docs/specs/INSTALLATION-FLOW.md`  
 **Size:** 739 lines
 
 **8-Phase Installation Process:**
@@ -203,7 +203,7 @@ Comprehensive specification for a three-tiered marketplace system that distribut
 ## Supporting Documentation (3 Documents)
 
 ### 6. Specification Index
-**File:** `/home/axw/projects/NXTG-Forge/v3/docs/specs/README.md`  
+**File:** `~/projects/NXTG-Forge/v3/docs/specs/README.md`  
 **Size:** ~150 lines
 
 - Overview of all specifications
@@ -212,7 +212,7 @@ Comprehensive specification for a three-tiered marketplace system that distribut
 - Common commands
 
 ### 7. Marketplace Summary
-**File:** `/home/axw/projects/NXTG-Forge/v3/docs/SKILL-PACK-MARKETPLACE-SUMMARY.md`  
+**File:** `~/projects/NXTG-Forge/v3/docs/SKILL-PACK-MARKETPLACE-SUMMARY.md`  
 **Size:** ~300 lines
 
 - Executive summary
@@ -222,7 +222,7 @@ Comprehensive specification for a three-tiered marketplace system that distribut
 - Success criteria
 
 ### 8. Architecture Diagrams
-**File:** `/home/axw/projects/NXTG-Forge/v3/docs/diagrams/MARKETPLACE-ARCHITECTURE.md`  
+**File:** `~/projects/NXTG-Forge/v3/docs/diagrams/MARKETPLACE-ARCHITECTURE.md`  
 **Size:** ~150 lines
 
 - System overview diagram
@@ -235,7 +235,7 @@ Comprehensive specification for a three-tiered marketplace system that distribut
 
 ## Implementation Plan
 
-**File:** `/home/axw/projects/NXTG-Forge/v3/.claude/plans/skill-pack-marketplace.md`  
+**File:** `~/projects/NXTG-Forge/v3/.claude/plans/skill-pack-marketplace.md`  
 **Size:** 429 lines
 
 ### Tasks Breakdown
@@ -299,7 +299,7 @@ Comprehensive specification for a three-tiered marketplace system that distribut
 
 ## File Locations
 
-All files are located in `/home/axw/projects/NXTG-Forge/v3/`:
+All files are located in `~/projects/NXTG-Forge/v3/`:
 
 ### Specifications
 ```
@@ -408,7 +408,7 @@ SKILL-PACK-MARKETPLACE-INDEX.md    (this file)
 For questions about this design package:
 - Design Owner: NXTG-Forge Planning Agent
 - Date: 2026-02-04
-- Location: /home/axw/projects/NXTG-Forge/v3/
+- Location: ~/projects/NXTG-Forge/v3/
 
 ---
 

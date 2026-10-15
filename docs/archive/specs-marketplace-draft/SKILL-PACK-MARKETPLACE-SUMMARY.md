@@ -278,12 +278,12 @@ Assuming 10,000 total users:
 
 ## Quick Links
 
-- [Skill-Pack Format](/home/axw/projects/NXTG-Forge/v3/docs/specs/SKILL-PACK-FORMAT.md)
-- [Marketplace Spec](/home/axw/projects/NXTG-Forge/v3/docs/specs/MARKETPLACE-SPEC.md)
-- [CLI Commands](/home/axw/projects/NXTG-Forge/v3/docs/specs/MARKETPLACE-COMMANDS.md)
-- [Tier Boundaries](/home/axw/projects/NXTG-Forge/v3/docs/specs/SKILL-PACK-TIERS.md)
-- [Installation Flow](/home/axw/projects/NXTG-Forge/v3/docs/specs/INSTALLATION-FLOW.md)
-- [Implementation Plan](/home/axw/projects/NXTG-Forge/v3/.claude/plans/skill-pack-marketplace.md)
+- [Skill-Pack Format](~/projects/NXTG-Forge/v3/docs/specs/SKILL-PACK-FORMAT.md)
+- [Marketplace Spec](~/projects/NXTG-Forge/v3/docs/specs/MARKETPLACE-SPEC.md)
+- [CLI Commands](~/projects/NXTG-Forge/v3/docs/specs/MARKETPLACE-COMMANDS.md)
+- [Tier Boundaries](~/projects/NXTG-Forge/v3/docs/specs/SKILL-PACK-TIERS.md)
+- [Installation Flow](~/projects/NXTG-Forge/v3/docs/specs/INSTALLATION-FLOW.md)
+- [Implementation Plan](~/projects/NXTG-Forge/v3/.claude/plans/skill-pack-marketplace.md)
 
 ---
 

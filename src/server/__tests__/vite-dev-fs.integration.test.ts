@@ -24,10 +24,13 @@ const REPO_ROOT = path.resolve(__dirname, "../../..");
 let server: ViteDevServer | null = null;
 let base = "";
 
-// Runtime and build output that may or may not exist on a given machine.
-// Each gets a probe file, so the check does not depend on the machine's state.
+// Project state, runtime and build output that may or may not exist on a
+// given machine. Each gets a probe file, so the check does not depend on the
+// machine's state. A fresh clone carries no .claude/governance.json (it is not
+// tracked), and a missing file falls through to the SPA's index.html with 200,
+// so .claude/ is probed with a file of its own.
 const PROBE = "__vite_fs_probe__";
-const FIXTURES = ["dist/server", "logs", "data", "coverage"].map((dir) => ({
+const FIXTURES = [".claude", "dist/server", "logs", "data", "coverage"].map((dir) => ({
   dir: path.join(REPO_ROOT, dir),
   file: path.join(REPO_ROOT, dir, `${PROBE}.txt`),
   url: `/${dir}/${PROBE}.txt`,
@@ -78,7 +81,6 @@ const get = (p: string) => fetch(`${base}${p}`);
 
 describe("Vite dev server file exposure", () => {
   it.each([
-    "/.claude/governance.json",
     "/CLAUDE.md",
     "/README.md",
     "/src/server/auth/ui-auth.ts?raw",

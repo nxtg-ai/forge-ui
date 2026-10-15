@@ -215,13 +215,18 @@ describe.sequential("API and terminal require authentication (GHSA-rc7c-r55p-923
       const read = await fetch(`${base}/api/governance/state`, { headers: { Origin: origin, Cookie: cookie } });
       expect(read.status).toBe(403);
       expect(read.headers.get("access-control-allow-origin")).toBeNull();
+      // Same route as the control below, so the refusal is the origin's doing.
+      const config = await fetch(`${base}/api/governance/config`, { headers: { Origin: origin, Cookie: cookie } });
+      expect(config.status).toBe(403);
       const mint = await fetch(`${base}/api/ws-token`, { method: "POST", headers: { Origin: origin, Cookie: cookie } });
       expect(mint.status).toBe(403);
       expect(mint.headers.get("access-control-allow-origin")).toBeNull();
       expect(await tryUpgrade(`ws://127.0.0.1:${port}/ws`, { Origin: origin, Cookie: cookie })).toBe(403);
     }
     // Control: forge-ui's own UI origin, same cookie, is served and reflected.
-    const own = await fetch(`${base}/api/governance/state`, { headers: { Origin: "http://localhost:5050", Cookie: cookie } });
+    // /config answers 200 on any checkout (it falls back to defaults), so the
+    // control does not depend on this repo carrying a governance.json.
+    const own = await fetch(`${base}/api/governance/config`, { headers: { Origin: "http://localhost:5050", Cookie: cookie } });
     expect(own.status).toBe(200);
     expect(own.headers.get("access-control-allow-origin")).toBe("http://localhost:5050");
   });

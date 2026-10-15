@@ -170,7 +170,7 @@
 ### Audit Documents
 
 ```
-/home/axw/projects/NXTG-Forge/v3/
+forge-ui/
 ├── DOCUMENTATION-COMPLETENESS-AUDIT-2026-02-05.md    (2,500+ lines) ✅ CREATED
 ├── DOCUMENTATION-FIX-SUMMARY.md                       (800+ lines)  ✅ CREATED
 ├── PRIORITY-1-FIXES-GUIDE.md                          (700+ lines)  ✅ CREATED
@@ -180,7 +180,7 @@
 ### New Documentation
 
 ```
-/home/axw/projects/NXTG-Forge/v3/docs/
+forge-ui/docs/
 ├── best-practices/
 │   └── README.md                                      (500+ lines)  ✅ CREATED
 ├── commands/

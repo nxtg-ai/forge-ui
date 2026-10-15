@@ -101,7 +101,7 @@ curl -X POST http://localhost:5051/api/runspaces \
   -d '{
     "name": "nxtg-forge-v3",
     "displayName": "NXTG-Forge v3",
-    "path": "/home/axw/projects/NXTG-Forge/v3",
+    "path": "/home/user/projects/forge-ui",
     "backendType": "wsl",
     "tags": ["meta-orchestration", "typescript"],
     "color": "#8B5CF6",
@@ -122,7 +122,7 @@ curl -X POST http://localhost:5051/api/runspaces \
     "id": "<uuid>",
     "name": "nxtg-forge-v3",
     "displayName": "NXTG-Forge v3",
-    "path": "/home/axw/projects/NXTG-Forge/v3",
+    "path": "/home/user/projects/forge-ui",
     "backendType": "wsl",
     "status": "stopped",
     "createdAt": "2026-01-27T...",
@@ -187,7 +187,7 @@ curl -X POST http://localhost:5051/api/runspaces \
   -d '{
     "name": "test-project",
     "displayName": "Test Project",
-    "path": "/home/axw/test-project",
+    "path": "/home/user/test-project",
     "backendType": "wsl",
     "tags": ["test"],
     "icon": "🧪"

@@ -156,15 +156,15 @@ npm run build
 ## Documentation Created
 
 1. **Technical Fix Documentation**
-   - `/home/axw/projects/NXTG-Forge/v3/docs/infinity-terminal/panel-resize-fix.md`
+   - `docs/infinity-terminal/panel-resize-fix.md`
    - Comprehensive explanation of problem, solution, and implementation
 
 2. **Integration Test Plan**
-   - `/home/axw/projects/NXTG-Forge/v3/src/components/infinity-terminal/__tests__/panel-resize-integration.test.md`
+   - `src/components/infinity-terminal/__tests__/panel-resize-integration.test.md`
    - Manual testing steps and verification checklist
 
 3. **This Summary**
-   - `/home/axw/projects/NXTG-Forge/v3/INFINITY-TERMINAL-RESIZE-FIX.md`
+   - `INFINITY-TERMINAL-RESIZE-FIX.md`
    - Executive summary for quick reference
 
 ## Success Metrics

@@ -149,4 +149,4 @@ The difference is not incremental—it's architectural. v2 represents a producti
 
 ---
 
-**See full analysis**: `/home/axw/projects/NXTG-Forge/v3/docs/architecture/agent-system-comparison.md`
+**See full analysis**: `~/projects/NXTG-Forge/v3/docs/architecture/agent-system-comparison.md`

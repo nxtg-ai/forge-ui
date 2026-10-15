@@ -84,7 +84,7 @@
 ## Document Locations
 
 ```
-/home/axw/projects/NXTG-Forge/v3/
+~/projects/NXTG-Forge/v3/
 ├── TESTING-AUDIT-SUMMARY.md           ← Start here
 ├── HONEST-TEST-STATUS.md              ← Then read this
 ├── START-TESTING-PLAN.md              ← Then plan execution

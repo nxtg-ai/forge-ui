@@ -4,12 +4,12 @@
 
 **Mission Status: ACCOMPLISHED**
 
-The NXTG-Forge v3.0 has been successfully implemented at `/home/axw/projects/NXTG-Forge/v3` with a comprehensive, state-of-the-art development orchestration system combining the best elements from both repositories.
+The NXTG-Forge v3.0 has been successfully implemented at `~/projects/NXTG-Forge/v3` with a comprehensive, state-of-the-art development orchestration system combining the best elements from both repositories.
 
 ## Implementation Details
 
 ### Repository Location
-- **Path**: `/home/axw/projects/NXTG-Forge/v3`
+- **Path**: `~/projects/NXTG-Forge/v3`
 - **Status**: Production Ready
 - **Version**: 3.0.0
 
@@ -124,7 +124,7 @@ The NXTG-Forge v3.0 has been successfully implemented at `/home/axw/projects/NXT
 
 ### Quick Start
 ```bash
-cd /home/axw/projects/NXTG-Forge/v3
+cd ~/projects/NXTG-Forge/v3
 ./init.sh
 ```
 
@@ -167,5 +167,5 @@ NXTG-Forge v3.0 is successfully implemented with:
 
 ---
 *Implemented: January 24, 2026*
-*Location: /home/axw/projects/NXTG-Forge/v3*
+*Location: ~/projects/NXTG-Forge/v3*
 *Version: 3.0.0*

@@ -27,7 +27,7 @@ Comprehensive test coverage audit revealing:
 - Success criteria
 - File overview
 
-**Location:** `/home/axw/projects/NXTG-Forge/v3/TESTING-AUDIT-SUMMARY.md`
+**Location:** `~/projects/NXTG-Forge/v3/TESTING-AUDIT-SUMMARY.md`
 
 #### HONEST-TEST-STATUS.md (10 min read)
 **Purpose:** Unfiltered reality assessment
@@ -37,7 +37,7 @@ Comprehensive test coverage audit revealing:
 - Why this matters
 - Risk levels
 
-**Location:** `/home/axw/projects/NXTG-Forge/v3/HONEST-TEST-STATUS.md`
+**Location:** `~/projects/NXTG-Forge/v3/HONEST-TEST-STATUS.md`
 
 ---
 
@@ -52,7 +52,7 @@ Comprehensive test coverage audit revealing:
 - Success metrics
 - Troubleshooting
 
-**Location:** `/home/axw/projects/NXTG-Forge/v3/START-TESTING-PLAN.md`
+**Location:** `~/projects/NXTG-Forge/v3/START-TESTING-PLAN.md`
 
 **Key Sections:**
 - Week 1: Critical infrastructure (days 1-5)
@@ -69,7 +69,7 @@ Comprehensive test coverage audit revealing:
 - Testing strategy by system
 - Coverage timeline
 
-**Location:** `/home/axw/projects/NXTG-Forge/v3/TEST-GENERATION-ROADMAP.md`
+**Location:** `~/projects/NXTG-Forge/v3/TEST-GENERATION-ROADMAP.md`
 
 ---
 
@@ -89,7 +89,7 @@ Comprehensive test coverage audit revealing:
 - Recommendations
 - 25+ pages of detail
 
-**Location:** `/home/axw/projects/NXTG-Forge/v3/docs/reports/TEST-COVERAGE-AUDIT-2026-02-05.md`
+**Location:** `~/projects/NXTG-Forge/v3/docs/reports/TEST-COVERAGE-AUDIT-2026-02-05.md`
 
 **Sections:**
 1. Executive summary
@@ -120,7 +120,7 @@ Comprehensive test coverage audit revealing:
 - Terminal control tests
 - Detailed comments explaining what to test
 
-**Location:** `/home/axw/projects/NXTG-Forge/v3/src/server/__tests__/pty-bridge.test.example.ts`
+**Location:** `~/projects/NXTG-Forge/v3/src/server/__tests__/pty-bridge.test.example.ts`
 
 **Key Insight:** Shows how to test real integration instead of just mocking
 

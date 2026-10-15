@@ -26,7 +26,7 @@ I have implemented a comprehensive quality gates and testing framework for the N
 
 ### 1. Test Suite Configuration
 
-**File**: `/home/axw/projects/NXTG-Forge/v3/vitest.config.ts`
+**File**: `~/projects/NXTG-Forge/v3/vitest.config.ts`
 
 ```typescript
 // Configured with:
@@ -37,7 +37,7 @@ I have implemented a comprehensive quality gates and testing framework for the N
 - Isolated test execution
 ```
 
-**File**: `/home/axw/projects/NXTG-Forge/v3/src/test/setup.ts`
+**File**: `~/projects/NXTG-Forge/v3/src/test/setup.ts`
 
 Global test utilities including:
 - Automatic cleanup after each test
@@ -50,7 +50,7 @@ Global test utilities including:
 ### 2. Integration Tests
 
 #### Vision Integration Tests
-**File**: `/home/axw/projects/NXTG-Forge/v3/src/test/integration/vision-integration.test.ts`
+**File**: `~/projects/NXTG-Forge/v3/src/test/integration/vision-integration.test.ts`
 
 Tests complete workflow:
 - VisionCapture UI → VisionManager → .claude/VISION.md
@@ -70,7 +70,7 @@ Tests complete workflow:
 - Alignment validation
 
 #### State Integration Tests
-**File**: `/home/axw/projects/NXTG-Forge/v3/src/test/integration/state-integration.test.ts`
+**File**: `~/projects/NXTG-Forge/v3/src/test/integration/state-integration.test.ts`
 
 Tests state management:
 - Dashboard → StateManager → File persistence
@@ -94,7 +94,7 @@ Tests state management:
 ### 3. Security Validation Suite
 
 #### Input Validation Tests
-**File**: `/home/axw/projects/NXTG-Forge/v3/src/test/security/input-validation.test.ts`
+**File**: `~/projects/NXTG-Forge/v3/src/test/security/input-validation.test.ts`
 
 Comprehensive security testing:
 
@@ -125,7 +125,7 @@ Comprehensive security testing:
 **Coverage**: 50+ security test cases
 
 #### Security Audit Report Generator
-**File**: `/home/axw/projects/NXTG-Forge/v3/src/test/reports/security-audit.ts`
+**File**: `~/projects/NXTG-Forge/v3/src/test/reports/security-audit.ts`
 
 Automated security scanning:
 - Scans all TypeScript files
@@ -153,7 +153,7 @@ open .claude/reports/security-audit.md
 
 ### 4. Performance Testing Framework
 
-**File**: `/home/axw/projects/NXTG-Forge/v3/src/test/performance/performance.test.ts`
+**File**: `~/projects/NXTG-Forge/v3/src/test/performance/performance.test.ts`
 
 Performance benchmarks for:
 
@@ -193,7 +193,7 @@ Performance benchmarks for:
 
 ### 5. Type Safety Validation
 
-**File**: `/home/axw/projects/NXTG-Forge/v3/src/test/quality/type-safety.test.ts`
+**File**: `~/projects/NXTG-Forge/v3/src/test/quality/type-safety.test.ts`
 
 Type safety enforcement:
 
@@ -223,7 +223,7 @@ Type safety enforcement:
 
 ### 6. Error Handling Coverage
 
-**File**: `/home/axw/projects/NXTG-Forge/v3/src/test/quality/error-handling.test.ts`
+**File**: `~/projects/NXTG-Forge/v3/src/test/quality/error-handling.test.ts`
 
 Comprehensive error testing:
 
@@ -264,7 +264,7 @@ Comprehensive error testing:
 
 ### 7. Quality Metrics Dashboard
 
-**File**: `/home/axw/projects/NXTG-Forge/v3/src/test/reports/quality-dashboard.ts`
+**File**: `~/projects/NXTG-Forge/v3/src/test/reports/quality-dashboard.ts`
 
 Real-time quality dashboard:
 
@@ -297,7 +297,7 @@ open .claude/reports/quality-dashboard.html
 
 ### 8. CI/CD Quality Gates
 
-**File**: `/home/axw/projects/NXTG-Forge/v3/.github/workflows/quality-gates.yml`
+**File**: `~/projects/NXTG-Forge/v3/.github/workflows/quality-gates.yml`
 
 GitHub Actions workflow with:
 
@@ -330,7 +330,7 @@ GitHub Actions workflow with:
 ### 9. Documentation
 
 #### Testing Guide
-**File**: `/home/axw/projects/NXTG-Forge/v3/TESTING-GUIDE.md`
+**File**: `~/projects/NXTG-Forge/v3/TESTING-GUIDE.md`
 
 Complete testing documentation:
 - Quick start guide
@@ -346,7 +346,7 @@ Complete testing documentation:
 - Troubleshooting
 
 #### Production Readiness Checklist
-**File**: `/home/axw/projects/NXTG-Forge/v3/PRODUCTION-READINESS.md`
+**File**: `~/projects/NXTG-Forge/v3/PRODUCTION-READINESS.md`
 
 Comprehensive checklist covering:
 - Testing requirements (unit, integration, performance)
@@ -384,7 +384,7 @@ Comprehensive checklist covering:
 ## File Structure
 
 ```
-/home/axw/projects/NXTG-Forge/v3/
+~/projects/NXTG-Forge/v3/
 ├── vitest.config.ts                              # Vitest configuration
 ├── TESTING-GUIDE.md                              # Complete testing guide
 ├── PRODUCTION-READINESS.md                       # Production checklist

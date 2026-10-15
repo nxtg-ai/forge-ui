@@ -433,6 +433,6 @@ If using a custom router, you may need to manually reset the boundary.
 
 ---
 
-**Component Location**: `/home/axw/projects/NXTG-Forge/v3/src/components/ErrorBoundary.tsx`
+**Component Location**: `src/components/ErrorBoundary.tsx`
 
 **Last Updated**: 2026-01-31

@@ -74,7 +74,7 @@ export default defineConfig({
 ### Why This Works
 
 1. **Relative URLs** (`/api/...`) are relative to `window.location.host`
-2. When accessed via `http://192.168.1.206:5050`, requests go to `http://192.168.1.206:5050/api/...`
+2. When accessed via `http://<your-lan-ip>:5050`, requests go to `http://<your-lan-ip>:5050/api/...`
 3. **Vite's proxy** intercepts these and forwards to `localhost:5051`
 4. No CORS issues because browser sees same-origin requests
 
