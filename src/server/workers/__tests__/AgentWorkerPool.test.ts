@@ -1058,6 +1058,42 @@ describe("AgentWorkerPool", () => {
       expect(pool["_status"]).toBe("degraded");
     });
 
+    // NEXUS: DIRECTIVE-NXTG-20261014-15 item 4. Workers that exit and respawn
+    // left 0 errored workers, so the pool reported healthy during a crash loop.
+    it("counts recent crashes and is degraded during a crash loop", async () => {
+      const workerId = Array.from(pool["workers"].keys())[0];
+      for (let i = 0; i < 3; i += 1) await pool["handleWorkerCrash"](workerId);
+
+      expect(pool.getMetrics().recentCrashes).toBe(3);
+      await pool["checkHealth"]();
+      expect(pool["_status"]).toBe("degraded");
+    });
+
+    it("stays degraded when it scales during a crash loop", async () => {
+      const workerId = Array.from(pool["workers"].keys())[0];
+      for (let i = 0; i < 3; i += 1) await pool["handleWorkerCrash"](workerId);
+
+      await pool.scaleUp(1);
+
+      expect(pool.getStatus().status).toBe("degraded");
+    });
+
+    it("forgets crashes older than the crash window", async () => {
+      const workerId = Array.from(pool["workers"].keys())[0];
+      await pool["handleWorkerCrash"](workerId);
+      pool["crashTimes"] = pool["crashTimes"].map((t: number) => t - 6 * 60 * 1000);
+
+      expect(pool.getMetrics().recentCrashes).toBe(0);
+    });
+
+    it("is degraded with no workers when the minimum is above zero", async () => {
+      pool["workers"].clear();
+
+      await pool["checkHealth"]();
+
+      expect(pool["_status"]).toBe("degraded");
+    });
+
     it("recovers from degraded state when healthy", async () => {
       pool["_status"] = "degraded";
       const workers = Array.from(pool["workers"].values());

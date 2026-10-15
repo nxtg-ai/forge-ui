@@ -11,17 +11,32 @@ import * as crypto from "crypto";
 import type { RunspaceManager } from "../core/runspace-manager";
 import type { Runspace } from "../core/runspace";
 import { WSLBackend } from "../core/backends/wsl-backend";
-import { validateWSAuthToken } from "./routes/features";
+import { consumeWSAuthToken } from "./routes/features";
 import { authorize } from "./auth/ui-auth";
 import { getLogger } from "../utils/logger";
 
 const logger = getLogger('pty-bridge');
 
+/** node-pty's IDisposable: what onData/onExit return. */
+interface Disposable { dispose(): void }
+
+interface PtyHandle {
+  pty: {
+    onData: (cb: (data: string) => void) => Disposable;
+    onExit: (cb: (info: { exitCode: number; signal?: number }) => void) => Disposable;
+    write: (data: string) => void;
+    resize: (cols: number, rows: number) => void;
+    kill: () => void;
+  };
+}
+
 interface TerminalSession {
   runspaceId: string;
   sessionId: string;
   ws: WebSocket | null;
-  pty: { pty: { onData: (cb: (data: string) => void) => void; onExit: (cb: (info: { exitCode: number; signal?: number }) => void) => void; write: (data: string) => void; resize: (cols: number, rows: number) => void; kill: () => void } };
+  pty: PtyHandle;
+  /** This session's onData/onExit registrations on a PTY other sessions may share. */
+  ptyListeners: Disposable[];
   commandBuffer: string;
   cleanupTimer: ReturnType<typeof setTimeout> | null;
   scrollbackBuffer: string[];
@@ -30,7 +45,8 @@ interface TerminalSession {
 }
 
 // How long to keep a PTY alive after WebSocket disconnects (5 minutes)
-const SESSION_KEEPALIVE_MS = 5 * 60 * 1000;
+// Overridable for tests only (FORGE_TERMINAL_KEEPALIVE_MS); 5 minutes otherwise.
+const SESSION_KEEPALIVE_MS = Number(process.env.FORGE_TERMINAL_KEEPALIVE_MS) || 5 * 60 * 1000;
 // Max scrollback buffer size in bytes (~100KB)
 const MAX_SCROLLBACK_SIZE = 100 * 1024;
 
@@ -171,6 +187,21 @@ export function createPTYBridge(
   });
 
   /**
+   * Forget a session: cancel its timer, drop it from the map, and remove its
+   * listeners from the PTY. Sessions can share one PTY, so a session's
+   * listeners (and the scrollback their closures hold) would otherwise live as
+   * long as the shared PTY (DIRECTIVE-NXTG-20261014-15, forge-pm F2).
+   */
+  function releaseSession(session: TerminalSession) {
+    if (session.cleanupTimer) {
+      clearTimeout(session.cleanupTimer);
+      session.cleanupTimer = null;
+    }
+    if (sessions.get(session.sessionId) === session) sessions.delete(session.sessionId);
+    for (const listener of session.ptyListeners.splice(0)) listener.dispose();
+  }
+
+  /**
    * Wire a WebSocket to a session: message forwarding, close/error handling.
    * Does NOT register PTY onData/onExit — those are registered once at session creation
    * and read from session.ws which gets swapped on reattach.
@@ -233,17 +264,24 @@ export function createPTYBridge(
 
       session.cleanupTimer = setTimeout(() => {
         logger.info(`[PTY Bridge] Session ${session.sessionId} timed out, cleaning up`);
-        session.pty.pty.kill();
-        sessions.delete(session.sessionId);
-        wslBackend.removeSession(session.runspaceId);
+        releaseSession(session);
+        // Default-shell and runspace sessions can share one PTY. Killing it here
+        // would end every other tab's live terminal 5 minutes after a reload
+        // (DIRECTIVE-NXTG-20261014-15 review). Kill only the last user's PTY.
+        const shared = [...sessions.values()].some((s) => s.pty === session.pty);
+        if (!shared) {
+          session.pty.pty.kill();
+          wslBackend.removeSession(session.runspaceId);
+        }
       }, SESSION_KEEPALIVE_MS);
     });
 
+    // ws always emits "close" after "error", and the close handler starts the
+    // keepalive timer. Clearing session.ws here made that close look stale, so
+    // no timer was set and the session (and a shared PTY) lived forever
+    // (DIRECTIVE-NXTG-20261014-15, forge-pm F3).
     ws.on("error", (error) => {
       logger.error(`[PTY Bridge] WebSocket error for session ${session.sessionId}:`, error);
-      if (session.ws === ws) {
-        session.ws = null;
-      }
     });
   }
 
@@ -278,28 +316,38 @@ export function createPTYBridge(
       const requestedSessionId = url.searchParams.get("sessionId");
       const authToken = url.searchParams.get("token");
 
-      // Security: Validate auth token for session reattachment
-      if (requestedSessionId && authToken) {
-        const tokenData = authTokens.get(authToken);
-        if (!tokenData) {
-          logger.error(`[PTY Bridge] Invalid or expired auth token`);
-          ws.send(JSON.stringify({ type: "error", data: "Invalid or expired token" }));
-          ws.close();
-          return;
-        }
-
-        if (tokenData.sessionId !== requestedSessionId) {
+      // Security: which token a connection needs depends on whether its
+      // session exists (DIRECTIVE-NXTG-20261014-15). The upgrade itself already
+      // required the per-install secret (authorize() above).
+      // - An existing session takes its own reattach token, or a fresh
+      //   bootstrap token from POST /api/ws-token: both are issued only to a
+      //   client holding the install secret.
+      //   Trust boundary: a fresh bootstrap token can therefore reattach to,
+      //   and take over, any existing session id. That is by design (forge-pm
+      //   ruling on the -15 review, item 1): getting a bootstrap token takes
+      //   the install secret, and the install secret is full trust (the
+      //   v3.4.1 model). Do not treat the session id as a secret.
+      // - A new session takes a bootstrap token (checked below).
+      // A bootstrap token opens one terminal connection, then it is spent.
+      // The reattach check used to run first for ANY sessionId + token, so a
+      // first visit (client-generated sessionId + bootstrap token) was always
+      // rejected as "Invalid or expired auth token".
+      if (requestedSessionId && sessions.has(requestedSessionId)) {
+        const tokenData = authToken ? authTokens.get(authToken) : undefined;
+        const reattachTokenOk =
+          tokenData !== undefined &&
+          tokenData.sessionId === requestedSessionId &&
+          Date.now() - tokenData.createdAt <= TOKEN_EXPIRY_MS;
+        if (tokenData && tokenData.sessionId !== requestedSessionId) {
           logger.error(`[PTY Bridge] Token/session mismatch`);
           ws.send(JSON.stringify({ type: "error", data: "Token does not match session" }));
           ws.close();
           return;
         }
-
-        // Check token expiry
-        if (Date.now() - tokenData.createdAt > TOKEN_EXPIRY_MS) {
-          logger.error(`[PTY Bridge] Expired auth token`);
-          authTokens.delete(authToken);
-          ws.send(JSON.stringify({ type: "error", data: "Token expired" }));
+        if (!reattachTokenOk && !consumeWSAuthToken(authToken ?? undefined)) {
+          if (tokenData) authTokens.delete(authToken!);
+          logger.error(`[PTY Bridge] Reattach rejected: missing, invalid or expired token`);
+          ws.send(JSON.stringify({ type: "error", data: "Invalid or expired token" }));
           ws.close();
           return;
         }
@@ -350,7 +398,7 @@ export function createPTYBridge(
 
       // --- NEW session ---
       // Security: Require a valid auth token to create new PTY sessions
-      if (!authToken || !validateWSAuthToken(authToken)) {
+      if (!authToken || !consumeWSAuthToken(authToken)) {
         logger.error("[PTY Bridge] New session rejected: missing or invalid auth token");
         ws.send(JSON.stringify({ type: "error", data: "Authentication required. Obtain a token via POST /api/ws-token" }));
         ws.close();
@@ -376,7 +424,7 @@ export function createPTYBridge(
         }
       }
 
-      let ptySession: { pty: { onData: (cb: (data: string) => void) => void; onExit: (cb: (info: { exitCode: number; signal?: number }) => void) => void; write: (data: string) => void; kill: () => void; resize: (cols: number, rows: number) => void } };
+      let ptySession: PtyHandle;
 
       if (useDefaultShell) {
         logger.info("[PTY Bridge] Creating default PTY session");
@@ -386,7 +434,10 @@ export function createPTYBridge(
         ptySession = await wslBackend.attachPTY(runspace!);
       }
 
-      // Security: Generate cryptographically secure session ID
+      // A server-generated session id is cryptographically random. A client-
+      // supplied one is not: the browser makes it with Math.random
+      // (useSessionPersistence.ts). It is not a secret; access is gated by the
+      // install secret on the upgrade plus the tokens checked above.
       const sessionId = requestedSessionId || generateSessionId();
 
       // Security: Generate auth token for this session
@@ -403,6 +454,7 @@ export function createPTYBridge(
         scrollbackBuffer: [],
         scrollbackSize: 0,
         authToken: newAuthToken,
+        ptyListeners: [],
       };
       sessions.set(sessionId, session);
 
@@ -410,7 +462,7 @@ export function createPTYBridge(
       ws.send(JSON.stringify({ type: "session", sessionId, token: newAuthToken, restored: false }));
 
       // PTY output → active WebSocket (registered ONCE, reads session.ws on each call)
-      ptySession.pty.onData((data: string) => {
+      session.ptyListeners.push(ptySession.pty.onData((data: string) => {
         // Always buffer for scrollback replay
         appendScrollback(session, data);
 
@@ -419,10 +471,10 @@ export function createPTYBridge(
           const enrichedData = interceptOutput(data, currentWs);
           currentWs.send(JSON.stringify({ type: "output", data: enrichedData }));
         }
-      });
+      }));
 
       // PTY exit → cleanup
-      ptySession.pty.onExit(({ exitCode, signal }: { exitCode: number; signal?: number }) => {
+      session.ptyListeners.push(ptySession.pty.onExit(({ exitCode, signal }: { exitCode: number; signal?: number }) => {
         logger.info(`[PTY Bridge] PTY exited: code=${exitCode}, signal=${signal ?? 'none'}`);
         const currentWs = session.ws;
         if (currentWs && currentWs.readyState === WebSocket.OPEN) {
@@ -432,14 +484,11 @@ export function createPTYBridge(
           }));
           currentWs.close();
         }
-        if (session.cleanupTimer) {
-          clearTimeout(session.cleanupTimer);
-        }
-        sessions.delete(sessionId);
+        releaseSession(session);
         if (runspace) {
           wslBackend.removeSession(runspace.id);
         }
-      });
+      }));
 
       // Wire WebSocket (message forwarding + close/error handlers)
       wireWebSocket(ws, session);
@@ -588,6 +637,7 @@ export function cleanupPTYBridge() {
     if (session.ws && session.ws.readyState === WebSocket.OPEN) {
       session.ws.close();
     }
+    for (const listener of session.ptyListeners.splice(0)) listener.dispose();
     // Remove runspace session from backend
     wslBackend.removeSession(session.runspaceId);
   });

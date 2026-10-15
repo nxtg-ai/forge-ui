@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The Infinity Terminal connects in a new browser session.** The terminal bridge checked a reconnect token before checking whether the session existed, so every first visit was refused (also in v3.4.1). A new session now takes the sign-in token the page already fetches. A token for another session is still refused, and each sign-in token opens one terminal connection.
+- **The terminal no longer dies 5 minutes after a page reload.** Sessions share one shell, and cleaning up the abandoned session killed it for the open tab too.
+- When the terminal refuses a connection, the page shows the reason and no longer tells you to restart the server.
+- The Worker Pool panel no longer reports "healthy" while workers crash and restart, or when no worker is running.
+- Removing idle workers and stopping the pool no longer count as worker crashes, so a healthy pool that scales down reads healthy.
+- Terminal sessions that time out now release their memory (including up to 100 KB of scrollback) while other tabs keep the shared shell. A session whose connection failed with an error now times out too, instead of staying open forever.
+- The floating feedback button no longer covers the right-hand panel; feedback opens from a button in the header.
+
+### Changed
+
+- The banner and feedback form say "public preview" instead of "Beta".
+
+### Added
+
+- A browser test in CI (Terminal E2E) opens the Infinity Terminal, types a command and checks the shell's output.
+
 ## [3.5.0] - 2026-10-14
 
 forge-ui is a **Public preview**; interfaces may change. This release carries the browser-client and terminal origin hardening on top of the v3.4.1 security fix, one-time sign-in links for automated browser sessions, a security gate that blocks again, and hardening of the MCP suggestion feature. **Upgrade from v3.4.1.**

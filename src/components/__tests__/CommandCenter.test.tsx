@@ -108,6 +108,23 @@ describe("CommandCenter", () => {
       expect(screen.getByTestId("command-center-trigger-btn")).toBeInTheDocument();
     });
 
+    // NEXUS: DIRECTIVE-NXTG-20261014-15 item 3. No floating button over the right rail.
+    test("puts the trigger in the quick actions bar, not a floating corner button", () => {
+      render(
+        <CommandCenter
+          onCommandExecute={mockOnCommandExecute as unknown as (command: string) => void}
+          availableCommands={mockCommands}
+          projectContext={mockProjectContext}
+          isExecuting={false}
+        />
+      );
+
+      const trigger = screen.getByTestId("command-center-trigger-btn");
+      expect(screen.getByTestId("command-center-quick-actions")).toContainElement(trigger);
+      expect(trigger).toHaveAccessibleName("Open the command center (⌘K)");
+      expect(document.querySelector(".fixed.bottom-6.right-6")).toBeNull();
+    });
+
     test("shows active agents indicator when agents > 0", () => {
       render(
         <CommandCenter

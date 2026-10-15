@@ -1,0 +1,47 @@
+name: Terminal E2E
+
+# A real browser opens the Infinity Terminal, types into it and reads the
+# shell's echo (DIRECTIVE-NXTG-20261014-15). The terminal shipped broken for
+# new sessions because nothing in CI ever opened it.
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  terminal-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Terminal round trip in a browser
+        env:
+          E2E_LOG: ${{ runner.temp }}/terminal-e2e-dev.log
+        run: node src/test/e2e/terminal-roundtrip.e2e.mjs
+
+      - name: Upload the dev-stack log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: terminal-e2e-dev-log
+          path: ${{ runner.temp }}/terminal-e2e-dev.log
+          if-no-files-found: ignore

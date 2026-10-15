@@ -26,6 +26,7 @@ const TEST_SECRET = vi.hoisted(() => {
 // command filtering and token generation (not WS auth)
 vi.mock("../routes/features", () => ({
   validateWSAuthToken: () => true,
+  consumeWSAuthToken: () => true,
 }));
 
 // Mock node-pty
@@ -38,9 +39,11 @@ vi.mock("node-pty", () => ({
     emitter.pid = 12345;
     emitter.onData = (cb: (data: string) => void) => {
       emitter.on("data", cb);
+      return { dispose: () => emitter.off("data", cb) };
     };
     emitter.onExit = (cb: (info: { exitCode: number; signal: number }) => void) => {
       emitter.on("exit", cb);
+      return { dispose: () => emitter.off("exit", cb) };
     };
     return emitter;
   }),

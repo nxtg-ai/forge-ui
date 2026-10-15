@@ -13,8 +13,9 @@ describe("BetaBanner", () => {
     test("renders banner on first visit", () => {
       render(<BetaBanner />);
 
-      expect(screen.getByText("You're using NXTG-Forge Beta!")).toBeInTheDocument();
-      expect(screen.getByText("Beta")).toBeInTheDocument();
+      expect(screen.getByText("You're using the NXTG-Forge public preview")).toBeInTheDocument();
+      expect(screen.getByText("Public preview")).toBeInTheDocument();
+      expect(document.body.textContent ?? "").not.toMatch(/\bbeta\b/i);
       expect(
         screen.getByText(
           "Help shape the future of development orchestration - we'd love your feedback"
@@ -28,7 +29,7 @@ describe("BetaBanner", () => {
       render(<BetaBanner />);
 
       expect(
-        screen.queryByText("You're using NXTG-Forge Beta!")
+        screen.queryByText("You're using the NXTG-Forge public preview")
       ).not.toBeInTheDocument();
     });
 
@@ -38,7 +39,7 @@ describe("BetaBanner", () => {
       render(<BetaBanner />);
 
       expect(
-        screen.queryByText("You're using NXTG-Forge Beta!")
+        screen.queryByText("You're using the NXTG-Forge public preview")
       ).not.toBeInTheDocument();
     });
 
@@ -53,13 +54,13 @@ describe("BetaBanner", () => {
     test("hides banner when dismiss button is clicked", () => {
       render(<BetaBanner />);
 
-      expect(screen.getByText("You're using NXTG-Forge Beta!")).toBeInTheDocument();
+      expect(screen.getByText("You're using the NXTG-Forge public preview")).toBeInTheDocument();
 
       const dismissButton = screen.getByLabelText("Dismiss banner");
       fireEvent.click(dismissButton);
 
       expect(
-        screen.queryByText("You're using NXTG-Forge Beta!")
+        screen.queryByText("You're using the NXTG-Forge public preview")
       ).not.toBeInTheDocument();
     });
 
@@ -81,7 +82,7 @@ describe("BetaBanner", () => {
       rerender(<BetaBanner />);
 
       expect(
-        screen.queryByText("You're using NXTG-Forge Beta!")
+        screen.queryByText("You're using the NXTG-Forge public preview")
       ).not.toBeInTheDocument();
     });
   });
@@ -114,13 +115,13 @@ describe("BetaBanner", () => {
       const onFeedbackClick = vi.fn();
       render(<BetaBanner onFeedbackClick={onFeedbackClick} />);
 
-      expect(screen.getByText("You're using NXTG-Forge Beta!")).toBeInTheDocument();
+      expect(screen.getByText("You're using the NXTG-Forge public preview")).toBeInTheDocument();
 
       const feedbackButton = screen.getByText("Share Feedback");
       fireEvent.click(feedbackButton);
 
       expect(
-        screen.queryByText("You're using NXTG-Forge Beta!")
+        screen.queryByText("You're using the NXTG-Forge public preview")
       ).not.toBeInTheDocument();
     });
 
@@ -143,7 +144,7 @@ describe("BetaBanner", () => {
 
       // Should just hide banner without error
       expect(
-        screen.queryByText("You're using NXTG-Forge Beta!")
+        screen.queryByText("You're using the NXTG-Forge public preview")
       ).not.toBeInTheDocument();
     });
   });
@@ -180,10 +181,10 @@ describe("BetaBanner", () => {
   });
 
   describe("Beta Badge", () => {
-    test("renders beta badge with correct styling", () => {
+    test("renders the public preview badge with correct styling", () => {
       render(<BetaBanner />);
 
-      const betaBadge = screen.getByText("Beta");
+      const betaBadge = screen.getByText("Public preview");
       expect(betaBadge).toBeInTheDocument();
       expect(betaBadge).toHaveClass("px-2");
       expect(betaBadge).toHaveClass("py-0.5");
@@ -198,7 +199,7 @@ describe("BetaBanner", () => {
       render(<BetaBanner />);
 
       const container = screen
-        .getByText("You're using NXTG-Forge Beta!")
+        .getByText("You're using the NXTG-Forge public preview")
         .closest(".max-w-7xl");
       expect(container).toBeInTheDocument();
     });
@@ -207,7 +208,7 @@ describe("BetaBanner", () => {
       render(<BetaBanner />);
 
       const container = screen
-        .getByText("You're using NXTG-Forge Beta!")
+        .getByText("You're using the NXTG-Forge public preview")
         .closest(".max-w-7xl");
       expect(container).toHaveClass("px-4");
       expect(container).toHaveClass("sm:px-6");
@@ -219,7 +220,7 @@ describe("BetaBanner", () => {
     test("displays main heading", () => {
       render(<BetaBanner />);
 
-      const heading = screen.getByText("You're using NXTG-Forge Beta!");
+      const heading = screen.getByText("You're using the NXTG-Forge public preview");
       expect(heading).toHaveClass("text-sm");
       expect(heading).toHaveClass("font-semibold");
       expect(heading).toHaveClass("text-white");
@@ -241,7 +242,7 @@ describe("BetaBanner", () => {
     test("banner appears on first page load", () => {
       render(<BetaBanner />);
 
-      expect(screen.getByText("You're using NXTG-Forge Beta!")).toBeInTheDocument();
+      expect(screen.getByText("You're using the NXTG-Forge public preview")).toBeInTheDocument();
       expect(sessionStorage.getItem("nxtg-beta-banner-session")).toBe("true");
     });
 
@@ -251,7 +252,7 @@ describe("BetaBanner", () => {
       render(<BetaBanner />);
 
       expect(
-        screen.queryByText("You're using NXTG-Forge Beta!")
+        screen.queryByText("You're using the NXTG-Forge public preview")
       ).not.toBeInTheDocument();
     });
 
@@ -271,7 +272,7 @@ describe("BetaBanner", () => {
       render(<BetaBanner />);
 
       expect(
-        screen.queryByText("You're using NXTG-Forge Beta!")
+        screen.queryByText("You're using the NXTG-Forge public preview")
       ).not.toBeInTheDocument();
     });
   });
@@ -301,7 +302,7 @@ describe("BetaBanner", () => {
 
       render(<BetaBanner />);
 
-      expect(screen.getByText("You're using NXTG-Forge Beta!")).toBeInTheDocument();
+      expect(screen.getByText("You're using the NXTG-Forge public preview")).toBeInTheDocument();
 
       sessionStorageGetSpy.mockRestore();
     });

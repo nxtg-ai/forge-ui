@@ -29,6 +29,12 @@ const logger = getLogger('agent-worker');
 export class AgentWorker extends EventEmitter {
   readonly id: string;
   private process: ChildProcess | null = null;
+  /**
+   * Processes this worker stopped on purpose (terminate, restart). Their exit is
+   * not a crash, so it must not feed the pool's crash-loop count
+   * (DIRECTIVE-NXTG-20261014-15, forge-pm F1).
+   */
+  private plannedExits = new WeakSet<ChildProcess>();
   private _status: WorkerStatus = "idle";
   private _currentTask: AgentTask | null = null;
   private _metrics: WorkerMetrics;
@@ -198,6 +204,7 @@ export class AgentWorker extends EventEmitter {
     this.clearTaskTimeout();
 
     if (this.process) {
+      this.plannedExits.add(this.process);
       // Send graceful shutdown signal
       this.sendMessage({
         type: "control",
@@ -400,8 +407,10 @@ export class AgentWorker extends EventEmitter {
       });
     }
 
+    const proc = this.process;
     this.process.on("exit", (code, signal) => {
       logger.info(`Worker ${this.id} exited: code=${code}, signal=${signal}`);
+      if (this.plannedExits.has(proc)) return;
       this._status = "crashed";
       this.emit("status", this._status);
       this.emit("crashed", { code, signal });

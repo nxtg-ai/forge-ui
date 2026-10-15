@@ -172,35 +172,6 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
 
   return (
     <>
-      {/* Floating Command Button */}
-      <motion.button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-40 group"
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        data-testid="command-center-trigger-btn"
-      >
-        <div className="relative">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-lg">
-            <Command className="w-6 h-6 text-white" />
-          </div>
-
-          {/* Status Indicator */}
-          {projectContext.activeAgents > 0 && (
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full animate-pulse border-2 border-gray-950" />
-          )}
-
-          {/* Tooltip */}
-          <div className="absolute bottom-full right-0 mb-2 px-3 py-1.5 bg-gray-900 rounded-lg text-xs text-gray-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-            <div className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-xs">⌘</kbd>
-              <span>+</span>
-              <kbd className="px-1.5 py-0.5 bg-gray-800 rounded text-xs">K</kbd>
-            </div>
-          </div>
-        </div>
-      </motion.button>
-
       {/* Quick Actions Bar */}
       {showQuickActions && !isOpen && (
         <motion.div
@@ -210,6 +181,21 @@ export const CommandCenter: React.FC<CommandCenterProps> = ({
           data-testid="command-center-quick-actions"
         >
           <div className="flex items-center gap-2 px-4 py-3 bg-gray-900/90 backdrop-blur-sm rounded-2xl border border-gray-800">
+            {/* Command palette trigger. It used to float at the bottom right,
+                over the right rail (DIRECTIVE-NXTG-20261014-15 item 3). */}
+            <button
+              type="button"
+              onClick={() => setIsOpen(true)}
+              data-testid="command-center-trigger-btn"
+              aria-label="Open the command center (⌘K)"
+              title="Command center (⌘K)"
+              className="relative flex items-center justify-center w-8 h-8 mr-1 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 hover:opacity-90 active:scale-95 transition-all"
+            >
+              <Command className="w-4 h-4 text-white" aria-hidden="true" />
+              {projectContext.activeAgents > 0 && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse border-2 border-gray-950" />
+              )}
+            </button>
             <div className="text-xs text-gray-500 mr-2">Quick:</div>
             {quickActions.map((action) => (
               <button

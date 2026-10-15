@@ -8,6 +8,7 @@ import type { RouteContext } from "../route-context";
 import { getLogger } from "../../utils/logger";
 import { captureException } from "../../monitoring/sentry";
 import { validateHttpTask } from "../workers/task-policy";
+import { CRASH_LOOP_THRESHOLD } from "../workers/AgentWorkerPool";
 import {
   getIntelligenceContext,
   injectIntelligence,
@@ -120,12 +121,17 @@ export function createWorkerRoutes(ctx: RouteContext): express.Router {
       res.json({
         success: true,
         data: {
+          // A crash loop or an empty pool is not healthy, even with no worker
+          // in an error state right now (DIRECTIVE-NXTG-20261014-15).
           status:
-            metrics.errorWorkers > metrics.totalWorkers * 0.5
+            (metrics.recentCrashes ?? 0) >= CRASH_LOOP_THRESHOLD ||
+            metrics.errorWorkers > metrics.totalWorkers * 0.5 ||
+            (metrics.totalWorkers === 0 && status.status !== "starting")
               ? "unhealthy"
-              : metrics.errorWorkers > 0
+              : metrics.errorWorkers > 0 || (metrics.recentCrashes ?? 0) > 0 || status.status === "degraded"
                 ? "degraded"
                 : "healthy",
+          recentCrashes: metrics.recentCrashes ?? 0,
           workers: {
             total: metrics.totalWorkers,
             active: metrics.activeWorkers,

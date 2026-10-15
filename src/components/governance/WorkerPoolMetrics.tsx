@@ -35,6 +35,8 @@ interface PoolMetrics {
   avgQueueWaitTime: number;
   utilization: number;
   uptime: number;
+  /** Worker crashes in the last few minutes (older servers omit it). */
+  recentCrashes?: number;
 }
 
 interface WorkerPoolMetricsProps {
@@ -136,6 +138,16 @@ export const WorkerPoolMetrics: React.FC<WorkerPoolMetricsProps> = ({
 
   const getHealthStatus = () => {
     if (!metrics) return { status: "unknown", color: "text-gray-400" };
+    // Workers that crash and respawn, or no workers at all, are not healthy
+    // even when none is in an error state right now (DIRECTIVE-NXTG-20261014-15).
+    const crashes = metrics.recentCrashes ?? 0;
+    if (crashes >= 3) return { status: "unhealthy: workers keep crashing", color: "text-red-400" };
+    if (metrics.totalWorkers === 0) {
+      return poolStatus === "starting"
+        ? { status: "starting", color: "text-gray-400" }
+        : { status: "no workers running", color: "text-red-400" };
+    }
+    if (crashes > 0) return { status: "degraded", color: "text-yellow-400" };
     const errorRate =
       metrics.totalWorkers > 0
         ? metrics.errorWorkers / metrics.totalWorkers

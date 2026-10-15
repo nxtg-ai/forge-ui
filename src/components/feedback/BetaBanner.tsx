@@ -61,10 +61,10 @@ export const BetaBanner: React.FC<BetaBannerProps> = ({ onFeedbackClick }) => {
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <h3 className="text-sm font-semibold text-white">
-                      You're using NXTG-Forge Beta!
+                      You're using the NXTG-Forge public preview
                     </h3>
                     <span className="px-2 py-0.5 bg-purple-500/30 border border-purple-400/50 rounded-full text-xs font-medium text-purple-200">
-                      Beta
+                      Public preview
                     </span>
                   </div>
                   <p className="text-xs text-gray-300 mt-1">

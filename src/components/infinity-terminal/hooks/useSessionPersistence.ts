@@ -103,6 +103,8 @@ export function useSessionPersistence(
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const stabilityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
+  // The bridge's last {type:"error"} reason, shown if the connection then fails.
+  const serverErrorRef = useRef<string | null>(null);
   const isManualDisconnectRef = useRef(false);
 
   // Generate session name from project
@@ -256,6 +258,21 @@ export function useSessionPersistence(
         const ws = new WebSocket(url);
 
         ws.binaryType = "arraybuffer";
+        serverErrorRef.current = null;
+
+        // The bridge explains a refusal in a {type:"error"} message before it
+        // closes; keep the reason so the user sees it (DIRECTIVE-NXTG-20261014-15).
+        ws.onmessage = (event: MessageEvent) => {
+          if (typeof event.data !== "string") return;
+          try {
+            const message = JSON.parse(event.data);
+            if (message?.type === "error" && typeof message.data === "string") {
+              serverErrorRef.current = message.data;
+            }
+          } catch {
+            // Not JSON: terminal output, handled by the component.
+          }
+        };
 
         ws.onopen = () => {
           // Don't reset reconnect counter immediately — wait for connection to be stable.
@@ -313,9 +330,14 @@ export function useSessionPersistence(
               connect();
             }, delay);
           } else {
-            const errorMsg = event.code === 1005
-              ? "Terminal connection rejected. Restart the API server."
-              : "Terminal service unavailable. Is the API server running? (npm run dev)";
+            // A refusal is about this browser's sign-in or session, not the
+            // server process, so do not tell the user to restart the server.
+            const reason = serverErrorRef.current;
+            const errorMsg = reason
+              ? `Terminal connection refused: ${reason}. Reload the page; if it happens again, sign in again.`
+              : event.code === 1005
+                ? "Terminal connection refused. Reload the page; if it happens again, sign in again."
+                : "Terminal service unavailable. Is the API server running? (npm run dev)";
             setState((prev) => ({ ...prev, error: errorMsg }));
           }
         };
