@@ -112,7 +112,7 @@ describe("CommandCenter", () => {
     test("puts the trigger in the quick actions bar, not a floating corner button", () => {
       render(
         <CommandCenter
-          onCommandExecute={mockOnCommandExecute}
+          onCommandExecute={mockOnCommandExecute as unknown as (command: string) => void}
           availableCommands={mockCommands}
           projectContext={mockProjectContext}
           isExecuting={false}
