@@ -64,7 +64,9 @@ describe("scan enforcement", () => {
     // Bumping this constant should be a visible, reviewed change — not a quiet
     // slide of the deadline.
     expect(SECURITY_SCAN_BLOCKING_FROM).toBe("3.5.0");
-    expect(SECURITY_SCAN_CALIBRATED).toBe(false);
+    // Calibrated by DIRECTIVE-NXTG-20260718-17 (forge-pm ruling 65402e5e), so
+    // the scanner blocks on CRITICAL at every version, not only from 3.5.0.
+    expect(SECURITY_SCAN_CALIBRATED).toBe(true);
   });
 });
 
