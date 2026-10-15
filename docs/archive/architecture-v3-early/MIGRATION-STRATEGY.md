@@ -8,7 +8,7 @@
 
 ### Step 1: Backup Current v3 Agents (5 minutes)
 ```bash
-cd /home/axw/projects/NXTG-Forge/v3
+cd ~/projects/NXTG-Forge/v3
 mkdir -p .claude/agents-v3-backup
 cp .claude/agents/*.md .claude/agents-v3-backup/
 ```
@@ -16,7 +16,7 @@ cp .claude/agents/*.md .claude/agents-v3-backup/
 ### Step 2: Migrate v2 Agents (10 minutes)
 ```bash
 # Copy all v2 agents
-cp /home/axw/projects/threedb/.claude/agents/agent-forge-*.md \
+cp ~/projects/threedb/.claude/agents/agent-forge-*.md \
    .claude/agents/
 
 # Preserve v3's DevOps agent (it's good)
@@ -213,7 +213,7 @@ graph TD
 If issues arise:
 ```bash
 # Restore v3 agents
-cd /home/axw/projects/NXTG-Forge/v3
+cd ~/projects/NXTG-Forge/v3
 rm .claude/agents/*.md
 cp .claude/agents-v3-backup/*.md .claude/agents/
 

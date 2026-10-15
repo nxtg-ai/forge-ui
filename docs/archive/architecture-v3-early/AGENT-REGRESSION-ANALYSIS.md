@@ -126,12 +126,12 @@ Phase 4: Delivery (final moments)
 #### Option A: Full v2 Migration (RECOMMENDED)
 ```bash
 # 1. Migrate all v2 agents
-cp /home/axw/projects/threedb/.claude/agents/*.md \
-   /home/axw/projects/NXTG-Forge/v3/.claude/agents/
+cp ~/projects/threedb/.claude/agents/*.md \
+   ~/projects/NXTG-Forge/v3/.claude/agents/
 
 # 2. Preserve v3's DevOps agent (good addition)
-mv /home/axw/projects/NXTG-Forge/v3/.claude/agents/devops.md \
-   /home/axw/projects/NXTG-Forge/v3/.claude/agents/forge-devops.md
+mv ~/projects/NXTG-Forge/v3/.claude/agents/devops.md \
+   ~/projects/NXTG-Forge/v3/.claude/agents/forge-devops.md
 
 # 3. Update naming for [FRG]- structure
 # Update agent references in commands

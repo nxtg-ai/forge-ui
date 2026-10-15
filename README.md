@@ -35,7 +35,7 @@ npx tsx src/server/auth/print-auth-url.ts      # or: node dist/server/auth/print
 
 Open the link it prints. The token is created on first run at `~/.config/nxtg-forge/ui-secret` (mode 0600); you can also paste it into the sign-in screen. Tools can send it as `Authorization: Bearer <token>`.
 
-The dashboard (5050) and API server (5051) listen on `127.0.0.1` only. To open the dashboard from another device, set `FORGE_UI_HOST=0.0.0.0` (both servers bind to it, and the API prints a warning) and set `ALLOWED_ORIGINS` to the full list of origins you will open it from, e.g. `ALLOWED_ORIGINS=http://localhost:5050,http://127.0.0.1:5050,http://192.168.1.206:5050`. `ALLOWED_ORIGINS` replaces the defaults, so include the local origins you still use. Every request still needs the token.
+The dashboard (5050) and API server (5051) listen on `127.0.0.1` only. To open the dashboard from another device, set `FORGE_UI_HOST=0.0.0.0` (both servers bind to it, and the API prints a warning) and set `ALLOWED_ORIGINS` to the full list of origins you will open it from, e.g. `ALLOWED_ORIGINS=http://localhost:5050,http://127.0.0.1:5050,http://192.0.2.10:5050`. `ALLOWED_ORIGINS` replaces the defaults, so include the local origins you still use. Every request still needs the token.
 
 ## The Infinity Terminal
 

@@ -163,10 +163,10 @@ To access the UI from mobile devices on your local network:
 
 3. **Access from mobile device**
    ```
-   http://192.168.1.206:5050
+   http://<your-lan-ip>:5050
    ```
 
-   Replace `192.168.1.206` with your actual WSL2 IP address.
+   Replace `<your-lan-ip>` with your actual WSL2 IP address.
 
 **How it works:**
 - Vite proxy forwards `/api/*` and `/ws/*` to `localhost:5051`

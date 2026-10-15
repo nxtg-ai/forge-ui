@@ -53,7 +53,7 @@ NXTG-Forge is a next-generation AI-orchestrated development system designed for 
 
 **Finding:**
 ```
-Location: /home/axw/projects/NXTG-Forge/v3
+Location: repository root
 Files Checked: All .ts/.tsx files in src/
 Result: NO hardcoded secrets detected
 ```
@@ -106,7 +106,7 @@ wss.on("connection", async (ws: WebSocket, request: http.IncomingMessage) => {
 **Attack Scenario:**
 ```javascript
 // Attacker on same network can:
-const ws = new WebSocket('ws://192.168.1.206:5051/terminal');
+const ws = new WebSocket('ws://192.0.2.10:5051/terminal');
 ws.onopen = () => {
   ws.send(JSON.stringify({
     type: 'execute',

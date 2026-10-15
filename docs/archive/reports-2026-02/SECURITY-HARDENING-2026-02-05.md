@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-Conducted comprehensive security audit of `/home/axw/projects/NXTG-Forge/v3/src/server/api-server.ts` and related server files. Identified **6 CRITICAL** and **4 HIGH** severity vulnerabilities. All findings have been remediated with code fixes.
+Conducted comprehensive security audit of `~/projects/NXTG-Forge/v3/src/server/api-server.ts` and related server files. Identified **6 CRITICAL** and **4 HIGH** severity vulnerabilities. All findings have been remediated with code fixes.
 
 **Status:** ✅ HARDENED - All critical vulnerabilities patched
 
@@ -271,7 +271,7 @@ const ws = new WebSocket(`ws://localhost:5051/ws?token=${token}`);
 **Action Required:** Install `helmet` and `express-rate-limit` for production
 
 ### Files Modified
-1. `/home/axw/projects/NXTG-Forge/v3/src/server/api-server.ts` (PRIMARY)
+1. `~/projects/NXTG-Forge/v3/src/server/api-server.ts` (PRIMARY)
    - Added: 200+ lines of security code
    - Rate limiting classes and middleware
    - WebSocket authentication

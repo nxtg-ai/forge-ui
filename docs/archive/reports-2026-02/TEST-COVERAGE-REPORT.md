@@ -8,8 +8,8 @@
 
 Created comprehensive test suites for two critical, previously untested components:
 
-1. **PTY Bridge** - `/home/axw/projects/NXTG-Forge/v3/src/server/__tests__/pty-bridge.test.ts`
-2. **Meta-Orchestrator** - `/home/axw/projects/NXTG-Forge/v3/src/core/__tests__/orchestrator.test.ts`
+1. **PTY Bridge** - `~/projects/NXTG-Forge/v3/src/server/__tests__/pty-bridge.test.ts`
+2. **Meta-Orchestrator** - `~/projects/NXTG-Forge/v3/src/core/__tests__/orchestrator.test.ts`
 
 ## Test Files Created
 
@@ -237,9 +237,9 @@ Created comprehensive test suites for two critical, previously untested componen
 
 ## Files Modified
 
-- ✅ `/home/axw/projects/NXTG-Forge/v3/src/server/__tests__/pty-bridge.test.ts` (NEW)
-- ✅ `/home/axw/projects/NXTG-Forge/v3/src/core/__tests__/orchestrator.test.ts` (NEW)
-- 📝 `/home/axw/projects/NXTG-Forge/v3/TEST-COVERAGE-REPORT.md` (THIS FILE)
+- ✅ `~/projects/NXTG-Forge/v3/src/server/__tests__/pty-bridge.test.ts` (NEW)
+- ✅ `~/projects/NXTG-Forge/v3/src/core/__tests__/orchestrator.test.ts` (NEW)
+- 📝 `~/projects/NXTG-Forge/v3/TEST-COVERAGE-REPORT.md` (THIS FILE)
 
 ## Conclusion
 

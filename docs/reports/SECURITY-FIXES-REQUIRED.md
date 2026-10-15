@@ -27,7 +27,7 @@
 
 ## Issue #1: PTY Bridge Authentication (CRITICAL)
 
-**File:** `/home/axw/projects/NXTG-Forge/v3/src/server/pty-bridge.ts`
+**File:** `src/server/pty-bridge.ts`
 **Current Lines:** 131-183
 
 ### Current Code (VULNERABLE)
@@ -112,7 +112,7 @@ ws://localhost:5051/terminal?runspace=...&token=abc123def456
 
 ## Issue #2: Weak Session IDs (HIGH)
 
-**File:** `/home/axw/projects/NXTG-Forge/v3/src/server/pty-bridge.ts`
+**File:** `src/server/pty-bridge.ts`
 **Current Line:** 211
 
 ### Current Code (WEAK)
@@ -167,7 +167,7 @@ sessions.set(sessionId, session);
 
 ## Issue #3: No Command Filtering (CRITICAL)
 
-**File:** `/home/axw/projects/NXTG-Forge/v3/src/server/pty-bridge.ts`
+**File:** `src/server/pty-bridge.ts`
 **Current Lines:** 70-78, 365-375
 
 ### Current Code (DANGEROUS)
@@ -269,7 +269,7 @@ ws.on("message", (message: Buffer) => {
 
 ## Issue #4: Origin Not Verified (HIGH)
 
-**File:** `/home/axw/projects/NXTG-Forge/v3/src/server/pty-bridge.ts`
+**File:** `src/server/pty-bridge.ts`
 **Current Lines:** 44-52
 
 ### Current Code (UNVERIFIED)
@@ -340,7 +340,7 @@ This will update `@isaacs/brace-expansion` to a patched version.
 
 ## Issue #6: WebSocket API No Authentication
 
-**File:** `/home/axw/projects/NXTG-Forge/v3/src/server/api-server.ts`
+**File:** `src/server/api-server.ts`
 **Current Lines:** 119-150
 
 ### Current Code
@@ -454,7 +454,7 @@ wss.on("connection", (ws) => {
 
 ## Issue #7: CORS Allow-All (MEDIUM)
 
-**File:** `/home/axw/projects/NXTG-Forge/v3/src/server/api-server.ts`
+**File:** `src/server/api-server.ts`
 **Current Lines:** 91-96
 
 ### Current Code
@@ -503,7 +503,7 @@ app.use(
 
 ## Issue #8: Feedback API No Validation (MEDIUM)
 
-**File:** `/home/axw/projects/NXTG-Forge/v3/src/server/api-server.ts`
+**File:** `src/server/api-server.ts`
 **Current Lines:** 2003-2040
 
 ### Current Code
@@ -631,7 +631,7 @@ app.post("/api/feedback", async (req, res) => {
 
 ## Issue #9: No Rate Limiting (MEDIUM)
 
-**File:** `/home/axw/projects/NXTG-Forge/v3/src/server/api-server.ts`
+**File:** `src/server/api-server.ts`
 **Need to add:** Rate limiting middleware
 
 ### Installation

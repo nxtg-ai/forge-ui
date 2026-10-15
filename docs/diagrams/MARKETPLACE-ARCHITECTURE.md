@@ -108,6 +108,6 @@
 ---
 
 **See Also:**
-- [Marketplace Specification](/home/axw/projects/NXTG-Forge/v3/docs/specs/MARKETPLACE-SPEC.md)
-- [Installation Flow](/home/axw/projects/NXTG-Forge/v3/docs/specs/INSTALLATION-FLOW.md)
-- [Implementation Plan](/home/axw/projects/NXTG-Forge/v3/.claude/plans/skill-pack-marketplace.md)
+- [Marketplace Specification](../specs/MARKETPLACE-SPEC.md)
+- [Installation Flow](../specs/INSTALLATION-FLOW.md)
+- Implementation Plan: kept in the maintainers' internal notes (not published)

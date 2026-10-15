@@ -284,7 +284,7 @@ const easing = {
 ### Data Hierarchy
 
 ```
-/home/axw/projects/NXTG-Forge/v3/
+forge-ui/
 ├── .claude/
 │   ├── VISION.md           # Canonical vision document
 │   ├── agents/             # Agent definitions
