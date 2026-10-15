@@ -423,6 +423,13 @@ export class AgentWorker extends EventEmitter {
       this.emit("error", error);
     });
 
+    // A write to a worker that has gone away (shutdown or restart after a
+    // crash) fails with EPIPE on stdin. Without a listener that is an uncaught
+    // exception in the API server; the exit handler already reports the exit.
+    this.process.stdin?.on("error", (error) => {
+      logger.warn(`Worker ${this.id} stdin error: ${error.message}`);
+    });
+
     this.process.stderr?.on("data", (data) => {
       this.emit("stderr", data.toString());
     });
