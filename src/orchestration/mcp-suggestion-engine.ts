@@ -8,13 +8,78 @@
  * 4. Auto-configures selected servers
  */
 
-import { exec } from "child_process";
-import { promisify } from "util";
+import { spawn } from "child_process";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Logger } from "../utils/logger";
 
 const log = Logger.getInstance("MCPSuggestionEngine");
 
-const execAsync = promisify(exec);
+/**
+ * Arguments for the Claude Code CLI. This job only needs JSON text back, so the
+ * model gets no tools and no permission bypass: request text reaches it, and a
+ * crafted vision must not be able to drive an agent (DIRECTIVE-NXTG-20260718-17,
+ * forge-pm ruling al 00:21Z). Flags checked against `claude --help` 2.1.300:
+ * - `--safe-mode` and `--setting-sources ""`: no hooks, CLAUDE.md, skills,
+ *   plugins or settings files, so no hook code receives the request text.
+ *   (`--bare` would also do it, but it refuses OAuth sign-in.)
+ * - `--tools ""` disables every built-in tool; `--strict-mcp-config` with no
+ *   `--mcp-config` loads no MCP servers.
+ * - `--permission-prompts none` denies anything that would prompt.
+ * - `--no-session-persistence`: request text is not saved as a transcript.
+ */
+export const CLAUDE_SUGGESTION_ARGV: readonly string[] = [
+  "-p",
+  "--safe-mode",
+  "--setting-sources",
+  "",
+  "--no-session-persistence",
+  "--tools",
+  "",
+  "--strict-mcp-config",
+  "--permission-prompts",
+  "none",
+];
+
+/**
+ * Runs the Claude Code CLI with the prompt on stdin. No shell is involved: the
+ * prompt carries request text (the vision from POST /api/mcp/suggestions), so
+ * it must stay data. It used to be interpolated into `echo "…" | claude`,
+ * where shell expansion in the text ran (DIRECTIVE-NXTG-20260718-17).
+ */
+async function runClaude(prompt: string): Promise<string> {
+  // An empty working directory: nothing project-specific for the CLI to find.
+  const cwd = await mkdtemp(join(tmpdir(), "forge-mcp-suggest-"));
+  try {
+    return await runClaudeIn(cwd, prompt);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+}
+
+function runClaudeIn(cwd: string, prompt: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("claude", [...CLAUDE_SUGGESTION_ARGV], {
+      cwd,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => {
+      stdout += String(chunk);
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += String(chunk);
+    });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      if (code === 0) resolve(stdout);
+      else reject(new Error(`claude exited with code ${code}: ${stderr.trim()}`));
+    });
+    child.stdin.end(prompt);
+  });
+}
 
 export interface MCPServer {
   id: string;
@@ -409,10 +474,7 @@ IMPORTANT: Return ONLY the JSON object, no additional commentary.
 
     try {
       // Use Claude Code CLI (user's Pro Max subscription)
-      const escapedPrompt = prompt.replace(/"/g, '\\"').replace(/\n/g, "\\n");
-      const { stdout } = await execAsync(
-        `echo "${escapedPrompt}" | claude --dangerously-skip-permissions`,
-      );
+      const stdout = await runClaude(prompt);
 
       const analysisText = stdout.trim();
       const analysis = JSON.parse(this.extractJSON(analysisText));

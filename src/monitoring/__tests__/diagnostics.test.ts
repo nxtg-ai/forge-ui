@@ -66,6 +66,7 @@ vi.mock("child_process", async () => {
   const mocked = {
     ...actual,
     execSync: vi.fn(),
+    execFileSync: vi.fn(),
   };
   return {
     ...mocked,
@@ -124,6 +125,7 @@ describe("DiagnosticTools", () => {
 
     // Set up child_process mock
     vi.mocked(childProcess.execSync).mockReturnValue("");
+    vi.mocked(childProcess.execFileSync).mockReturnValue("");
 
     // Set up os mocks
     vi.mocked(os.totalmem).mockReturnValue(16 * 1024 * 1024 * 1024);
@@ -587,10 +589,10 @@ describe("DiagnosticTools", () => {
 
   describe("testDiskSpace", () => {
     it("should pass when disk space is sufficient", async () => {
-      // Mock df command - returns last line only due to 'tail -1' in command
-      vi.mocked(childProcess.execSync).mockImplementation((cmd) => {
-        if (cmd.toString().includes('df')) {
-          return "/dev/sda1     1000000000 500000000 500000000  50%";
+      // df runs without a shell (argument array); the code takes the last line.
+      vi.mocked(childProcess.execFileSync).mockImplementation((file) => {
+        if (file === "df") {
+          return "Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/sda1     1000000000 500000000 500000000  50% /\n";
         }
         return "";
       });
@@ -600,13 +602,19 @@ describe("DiagnosticTools", () => {
       const diskTest = report.results.find((r) => r.name === "Disk Space");
 
       expect(diskTest?.passed).toBe(true);
+      // NEXUS: DIRECTIVE-NXTG-20260718-17 (b). The path is an argument, never shell text.
+      expect(childProcess.execFileSync).toHaveBeenCalledWith(
+        "df",
+        ["-kP", "--", mockProjectPath],
+        expect.objectContaining({ encoding: "utf-8" }),
+      );
     });
 
     it("should fail when disk space is low", async () => {
-      // Mock df command - returns last line only due to 'tail -1' in command
-      vi.mocked(childProcess.execSync).mockImplementation((cmd) => {
-        if (cmd.toString().includes('df')) {
-          return "/dev/sda1     1000000000 920000000  80000000  92%";
+      // df runs without a shell (argument array); the code takes the last line.
+      vi.mocked(childProcess.execFileSync).mockImplementation((file) => {
+        if (file === "df") {
+          return "Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/sda1     1000000000 920000000  80000000  92% /\n";
         }
         return "";
       });
@@ -848,10 +856,12 @@ describe("DiagnosticTools", () => {
         }
         return [] as any;
       });
+      vi.mocked(childProcess.execFileSync).mockImplementation((file) =>
+        file === "df"
+          ? "Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/sda1     1000000000 500000000 500000000  50% /\n"
+          : "",
+      );
       vi.mocked(childProcess.execSync).mockImplementation((cmd) => {
-        if (cmd.toString().includes('df')) {
-          return "/dev/sda1     1000000000 500000000 500000000  50%";
-        }
         if (cmd.toString().includes('npm --version')) {
           return "10.0.0";
         }

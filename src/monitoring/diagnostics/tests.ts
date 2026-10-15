@@ -5,7 +5,7 @@
 
 import * as fs from "fs";
 import * as path from "path";
-import { execSync } from "child_process";
+import { execFileSync, execSync } from "child_process";
 import * as os from "os";
 import * as dns from "dns";
 import { performance } from "perf_hooks";
@@ -458,10 +458,12 @@ export async function testDiskSpace(
 
   try {
     // Get disk usage for project path
-    const result = execSync(`df -k "${projectPath}" | tail -1`, {
+    // Argument array, no shell: projectPath is data (DIRECTIVE-NXTG-20260718-17).
+    // -P keeps one line per filesystem; "--" stops a path that starts with "-".
+    const result = execFileSync("df", ["-kP", "--", projectPath], {
       encoding: "utf-8",
     });
-    const parts = result.trim().split(/\s+/);
+    const parts = (result.trim().split("\n").pop() ?? "").trim().split(/\s+/);
 
     const total = parseInt(parts[1]) * 1024; // Convert to bytes
     const used = parseInt(parts[2]) * 1024;
