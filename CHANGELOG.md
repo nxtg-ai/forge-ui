@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The terminal no longer dies 5 minutes after a page reload.** Sessions share one shell, and cleaning up the abandoned session killed it for the open tab too.
 - When the terminal refuses a connection, the page shows the reason and no longer tells you to restart the server.
 - The Worker Pool panel no longer reports "healthy" while workers crash and restart, or when no worker is running.
+- Removing idle workers and stopping the pool no longer count as worker crashes, so a healthy pool that scales down reads healthy.
+- Terminal sessions that time out now release their memory (including up to 100 KB of scrollback) while other tabs keep the shared shell. A session whose connection failed with an error now times out too, instead of staying open forever.
 - The floating feedback button no longer covers the right-hand panel; feedback opens from a button in the header.
 
 ### Changed
