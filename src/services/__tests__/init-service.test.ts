@@ -665,24 +665,29 @@ describe("InitService", () => {
     });
 
     it("propagates the CLAUDE.md error after scaffold, agent-copy and governance all succeed", async () => {
-      // A DIRECTORY at the exact CLAUDE.md path makes the final write fail
-      // with EISDIR. forceOverwrite gets it past the up-front refusal.
-      await fs.mkdir(path.join(testDir, "CLAUDE.md"), { recursive: true });
+      // The first write (scaffold) succeeds; the CLAUDE.md write is forced to
+      // fail with EACCES after governance has been written.
+      const realWriteFile = vi.mocked(fs.writeFile).getMockImplementation()!;
+      vi.mocked(fs.writeFile).mockImplementation(async (file, ...rest) => {
+        if (String(file).endsWith("CLAUDE.md")) {
+          throw Object.assign(new Error("EACCES: permission denied"), { code: "EACCES" });
+        }
+        return realWriteFile(file, ...rest);
+      });
 
       const result = await initService.initializeProject({
         directive: "Build something great",
         projectType: "react",
         claudeMdOption: "generate",
-        forceOverwrite: true,
       });
+      vi.mocked(fs.writeFile).mockImplementation(realWriteFile);
 
       expect(result.isErr()).toBe(true);
       if (result.isErr()) {
         expect(result.error.code).toBe("CLAUDE_MD_ERROR");
-        expect(result.error.message).toContain(
-          "Failed to generate CLAUDE.md:",
+        expect(result.error.message).toBe(
+          "Failed to generate CLAUDE.md: EACCES: permission denied",
         );
-        expect(result.error.message).toContain("EISDIR");
       }
 
       // Governance DID complete before the CLAUDE.md step failed.
@@ -695,6 +700,25 @@ describe("InitService", () => {
       expect(governance.constitution.directive).toBe(
         "Build something great",
       );
+    });
+
+    // PRM-CLX9-20261015-06 item (a): a folder at CLAUDE.md is refused up front.
+    it("refuses a folder at the CLAUDE.md path before writing anything", async () => {
+      await fs.mkdir(path.join(testDir, "CLAUDE.md"), { recursive: true });
+
+      const result = await initService.initializeProject({
+        directive: "Build something great",
+        projectType: "react",
+        claudeMdOption: "generate",
+        forceOverwrite: true,
+      });
+
+      expect(result.isErr() && result.error.code).toBe("CLAUDE_MD_NOT_A_FILE");
+      const governanceExists = await fs
+        .access(path.join(testDir, ".claude/governance.json"))
+        .then(() => true)
+        .catch(() => false);
+      expect(governanceExists).toBe(false);
     });
 
     // PRM-CLX9-20261015-06 item (a): no CLAUDE.md write unless asked for.

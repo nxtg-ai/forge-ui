@@ -171,3 +171,52 @@ describe("InitService.generateClaudeMd refuses in the writer", () => {
     expect(readClaudeMd()).toBe(EXISTING);
   });
 });
+
+// forge-pm al:3bf042821a97a6ba: a cloned repo can ship CLAUDE.md as a symlink
+// to a file outside the project (e.g. a shell rc file, where the template's
+// backticks would run as command substitution). Every write path must refuse.
+describe("a symlinked CLAUDE.md pointing outside the project", () => {
+  const OUTSIDE = "# ~/.bashrc stand-in\nexport KEEP=1\n";
+  let outsideDir: string;
+  let outsideFile: string;
+
+  beforeEach(() => {
+    outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), "forge-init-outside-"));
+    outsideFile = path.join(outsideDir, "bashrc");
+    fs.writeFileSync(outsideFile, OUTSIDE);
+    fs.symlinkSync(outsideFile, claudeMdPath());
+  });
+
+  afterEach(() => {
+    fs.rmSync(outsideDir, { recursive: true, force: true });
+  });
+
+  const cases = [
+    { name: "merge", body: { claudeMdOption: "merge" } },
+    { name: "generate with forceOverwrite", body: { claudeMdOption: "generate", forceOverwrite: true } },
+    { name: "generate", body: { claudeMdOption: "generate" } },
+  ] as const;
+
+  for (const c of cases) {
+    it(`${c.name}: the route refuses and the target is unchanged`, async () => {
+      const res = await request(app)
+        .post("/api/forge/init")
+        .send({ directive: DIRECTIVE, ...c.body });
+
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe("CLAUDE_MD_NOT_A_FILE");
+      expect(fs.readFileSync(outsideFile, "utf-8")).toBe(OUTSIDE);
+      expect(fs.lstatSync(claudeMdPath()).isSymbolicLink()).toBe(true);
+    });
+
+    it(`${c.name}: the writer refuses when called directly`, async () => {
+      const option = c.body.claudeMdOption;
+      const forceOverwrite = "forceOverwrite" in c.body ? c.body.forceOverwrite : false;
+
+      const result = await service.generateClaudeMd("react", option, { forceOverwrite });
+
+      expect(result.isErr() && result.error.code).toBe("CLAUDE_MD_NOT_A_FILE");
+      expect(fs.readFileSync(outsideFile, "utf-8")).toBe(OUTSIDE);
+    });
+  }
+});

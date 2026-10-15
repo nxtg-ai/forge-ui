@@ -267,6 +267,10 @@ export class InitService extends BaseService {
    *   itself, so it holds even if an earlier existence check failed.
    * - "merge" appends the Forge section to the file on disk, or creates the
    *   file if there is none. Existing text is kept.
+   * In every mode, a CLAUDE.md that is not a regular file (a symlink, a
+   * folder) is refused with CLAUDE_MD_NOT_A_FILE, and the writes open with
+   * O_NOFOLLOW where the platform has it. A cloned repo can ship CLAUDE.md as
+   * a symlink to a file outside the project, such as a shell rc file.
    * PRM-CLX9-20261015-06 item (a).
    */
   async generateClaudeMd(
@@ -280,27 +284,39 @@ export class InitService extends BaseService {
 
     const claudeMdPath = path.join(this.projectRoot, "CLAUDE.md");
     try {
-      if (option === "merge") {
-        const existing = await readIfExists(claudeMdPath);
-        if (existing !== null) {
-          const separator = existing.endsWith("\n\n") ? "" : "\n\n";
-          await fs.appendFile(
-            claudeMdPath,
-            separator + "---\n\n" + generateForgeSection(projectType),
-            "utf-8",
-          );
-          return Result.ok(undefined);
-        }
+      const kind = await entryKind(claudeMdPath);
+      if (kind === "other") {
+        return Result.err(claudeMdNotAFileError());
+      }
+
+      if (option === "merge" && kind === "file") {
+        const existing = await fs.readFile(claudeMdPath, {
+          encoding: "utf-8",
+          flag: openFlags().read,
+        });
+        const separator = existing.endsWith("\n\n") ? "" : "\n\n";
+        await fs.appendFile(
+          claudeMdPath,
+          separator + "---\n\n" + generateForgeSection(projectType),
+          {
+            encoding: "utf-8",
+            flag: openFlags().append,
+          },
+        );
+        return Result.ok(undefined);
       }
 
       await fs.writeFile(claudeMdPath, generateCompleteClaude(projectType), {
         encoding: "utf-8",
-        flag: forceOverwrite ? "w" : "wx",
+        flag: forceOverwrite ? openFlags().truncate : openFlags().create,
       });
       return Result.ok(undefined);
     } catch (error) {
       if (isErrnoCode(error, "EEXIST")) {
         return Result.err(claudeMdExistsError());
+      }
+      if (isErrnoCode(error, "ELOOP")) {
+        return Result.err(claudeMdNotAFileError());
       }
       return Result.err(
         new IntegrationError(
@@ -342,12 +358,14 @@ export class InitService extends BaseService {
       // refused init leaves the project as it was.
       const claudeMdOption = validOptions.claudeMdOption ?? "skip";
       const forceOverwrite = validOptions.forceOverwrite === true;
-      if (
-        claudeMdOption === "generate" &&
-        !forceOverwrite &&
-        (await pathExists(path.join(this.projectRoot, "CLAUDE.md")))
-      ) {
-        return Result.err(claudeMdExistsError());
+      if (claudeMdOption !== "skip") {
+        const kind = await entryKind(path.join(this.projectRoot, "CLAUDE.md"));
+        if (kind === "other") {
+          return Result.err(claudeMdNotAFileError());
+        }
+        if (claudeMdOption === "generate" && !forceOverwrite && kind === "file") {
+          return Result.err(claudeMdExistsError());
+        }
       }
 
       // Step 2: Scaffold harness
@@ -443,10 +461,32 @@ export class InitService extends BaseService {
   }
 }
 
+/**
+ * open() flags for the CLAUDE.md writes. O_NOFOLLOW is 0 where the platform
+ * has none (Windows); the lstat check still runs there.
+ */
+function openFlags(): { read: number; append: number; create: number; truncate: number } {
+  const c = fs.constants;
+  const noFollow = c.O_NOFOLLOW ?? 0;
+  return {
+    read: c.O_RDONLY | noFollow,
+    append: c.O_WRONLY | c.O_APPEND | noFollow,
+    create: c.O_WRONLY | c.O_CREAT | c.O_EXCL | noFollow,
+    truncate: c.O_WRONLY | c.O_CREAT | c.O_TRUNC | noFollow,
+  };
+}
+
 function claudeMdExistsError(): IntegrationError {
   return new IntegrationError(
     "CLAUDE.md already exists. Use claudeMdOption \"merge\" to append the Forge section, or set forceOverwrite to replace the file.",
     "CLAUDE_MD_EXISTS",
+  );
+}
+
+function claudeMdNotAFileError(): IntegrationError {
+  return new IntegrationError(
+    "CLAUDE.md is not a regular file (it is a symlink, a folder or similar). forge-ui writes only to a regular CLAUDE.md in the project folder.",
+    "CLAUDE_MD_NOT_A_FILE",
   );
 }
 
@@ -458,26 +498,17 @@ function isErrnoCode(error: unknown, code: string): boolean {
   );
 }
 
-/** True if anything (file, folder or link) is at the path. */
-async function pathExists(filePath: string): Promise<boolean> {
+/**
+ * What is at the path, without following a symlink: nothing, a regular file,
+ * or anything else (symlink, folder, device).
+ */
+async function entryKind(filePath: string): Promise<"none" | "file" | "other"> {
   try {
-    await fs.lstat(filePath);
-    return true;
+    const stat = await fs.lstat(filePath);
+    return stat.isFile() ? "file" : "other";
   } catch (error) {
     if (isErrnoCode(error, "ENOENT")) {
-      return false;
-    }
-    throw error;
-  }
-}
-
-/** File contents, or null if there is no file. Other read errors throw. */
-async function readIfExists(filePath: string): Promise<string | null> {
-  try {
-    return await fs.readFile(filePath, "utf-8");
-  } catch (error) {
-    if (isErrnoCode(error, "ENOENT")) {
-      return null;
+      return "none";
     }
     throw error;
   }

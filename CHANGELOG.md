@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- `POST /api/forge/init` no longer writes CLAUDE.md unless the request asks for it (`claudeMdOption` now defaults to `skip`). `generate` refuses with `CLAUDE_MD_EXISTS` when a CLAUDE.md is already there, unless `forceOverwrite` is set; the refusal happens before init writes anything. `merge` appends the Forge section to the file on disk and keeps its text. The request's `directive` is no longer copied into CLAUDE.md, which coding agents read as instructions; it stays in `.claude/governance.json`.
+- `POST /api/forge/init` no longer writes CLAUDE.md unless the request asks for it (`claudeMdOption` now defaults to `skip`). `generate` refuses with `CLAUDE_MD_EXISTS` when a CLAUDE.md is already there, unless `forceOverwrite` is set; the refusal happens before init writes anything. `merge` appends the Forge section to the file on disk and keeps its text. The request's `directive` is no longer copied into CLAUDE.md, which coding agents read as instructions; it stays in `.claude/governance.json`. A CLAUDE.md that is a symlink or a folder is refused in every mode (`CLAUDE_MD_NOT_A_FILE`), and the writes open with `O_NOFOLLOW`, so a cloned repo whose CLAUDE.md links to a file outside the project cannot have that file written.
 
 ## [3.5.2] - 2026-10-15
 
