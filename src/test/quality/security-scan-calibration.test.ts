@@ -58,6 +58,7 @@ const REVIEW_SHAPES = [
   'import { promisify as pfy } from "util";',
   'import shell from "shelljs";',
   'import vm from "node:vm";',
+  'import { compileFunction, Script } from "vm";',
   "export async function handler(req: any, opts: any) {",
   '  const a = ["-c", req.body.cmd];',
   '  spawn("/bin/sh", a); // INJ argv in a variable',
@@ -90,9 +91,21 @@ const REVIEW_SHAPES = [
   "  new Function(req.body.code); // INJ",
   "  vm.runInNewContext(req.body.code); // INJ",
   "  new vm.Script(req.body.code); // INJ",
+  "  spawnSync(req.body.cmd, opts); // INJ second argument may be options",
+  '  require("child_process")["execSync"](req.body.cmd); // INJ',
+  '  spawn("sh", ["-c"].concat(req.body.cmd)); // INJ argv not a plain literal',
+  "  const ops = { run: cp.exec }; // INJ escapes as a value",
+  "  compileFunction(req.body.code); // INJ",
+  "  new Script(req.body.code); // INJ",
+  '  execFile("python3", a); // INJ interpreter with a hidden argv',
+  "  let child: ReturnType<typeof spawn>; // type position: clear",
+  '  const mode = { kind: "spawn", exec: "x" }; // strings: clear',
   '  spawn("ls", ["-la"], { shell: true }); // literal command with a shell: clear',
   '  spawn("git", ["-c", "core.pager=cat", "log"]); // -c with a literal: clear',
   '  new Function("return 1"); // literal: clear',
+  "}",
+  "class Runner {",
+  "  run = execSync; // INJ class field escapes as a value",
   "}",
 ];
 
@@ -151,7 +164,7 @@ describe("command-injection rule (red control ii)", () => {
   it("flags the shapes the independent review found, and only those", async () => {
     const report = await new SecurityAuditor().runAudit(root, { waivers: [] });
     const expected = REVIEW_SHAPES.flatMap((line, i) => (line.includes("// INJ") ? [i + 1] : []));
-    expect(expected.length).toBe(25);
+    expect(expected.length).toBe(33);
     expect(criticalLines(report, "review.ts")).toEqual(expected);
   });
 
@@ -275,12 +288,13 @@ describe("waivers are keyed to one symbol", () => {
       "    const t = `${'{'}{`;",
       "    // }",
       "    /* { */",
+      "    const re = /\\{/;",
       "  }",
       "  runB() {",
       "  }",
       "}",
     ];
-    expect(symbolLineRange(tricky, "runA")).toEqual([2, 7]);
+    expect(symbolLineRange(tricky, "runA")).toEqual([2, 8]);
     expect(symbolLineRange(two, "runB")).toEqual([6, 8]);
     expect(symbolLineRange(two, "runC")).toBeNull();
   });

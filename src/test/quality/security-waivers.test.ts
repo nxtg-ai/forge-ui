@@ -7,8 +7,9 @@
  *
  * Reachability is the import graph from every production file under
  * src/server (static, dynamic and re-export imports, `.js` specifiers, index
- * barrels and the `@/` alias), not a text search, so an indirect caller, a
- * barrel or an `import()` still counts.
+ * barrels and every tsconfig path alias), not a text search, so an indirect
+ * caller, a barrel or an `import()` still counts. A computed specifier cannot
+ * be followed, so a reachable module may not use one.
  */
 import { describe, it, expect, vi } from "vitest";
 
@@ -36,10 +37,22 @@ function productionFiles(dir = SRC): string[] {
   });
 }
 
+/** tsconfig.json `paths`: "@core/*" -> "<root>/src/core/". */
+const ALIASES: Array<[string, string]> = (() => {
+  const root = path.resolve(SRC, "..");
+  const config = ts.readConfigFile(path.join(root, "tsconfig.json"), (f) => fs.readFileSync(f, "utf-8")).config;
+  const paths = (config?.compilerOptions?.paths ?? {}) as Record<string, string[]>;
+  return Object.entries(paths).map(([alias, [target]]) => [
+    alias.replace(/\*$/, ""),
+    path.resolve(root, (config.compilerOptions.baseUrl as string | undefined) ?? ".", target.replace(/\*$/, "")),
+  ]);
+})();
+
 function resolveImport(from: string, spec: string): string | null {
   let base: string;
+  const alias = ALIASES.find(([prefix]) => spec.startsWith(prefix));
   if (spec.startsWith(".")) base = path.resolve(path.dirname(from), spec);
-  else if (spec.startsWith("@/")) base = path.join(SRC, spec.slice(2));
+  else if (alias) base = path.join(alias[1], spec.slice(alias[0].length));
   else return null;
   base = base.replace(/\.(js|jsx|ts|tsx|mjs|cjs)$/, "");
   for (const c of [`${base}.ts`, `${base}.tsx`, path.join(base, "index.ts"), path.join(base, "index.tsx")]) {
@@ -99,6 +112,20 @@ describe("command-injection waivers stay unreachable", () => {
     expect(isReachable("server/api-server.ts")).toBe(true);
     expect(isReachable("core/backends/wsl-backend.ts")).toBe(true);
     expect(reachable.size).toBeGreaterThan(20);
+    expect(ALIASES.map(([a]) => a)).toEqual(expect.arrayContaining(["@/", "@core/", "@utils/"]));
+  });
+
+  it("no module the server reaches loads a module by a computed specifier", () => {
+    // import(`../adapters/${name}`) or require(name) cannot be followed by the graph.
+    const computed = [...reachable]
+      .filter((f) => {
+        const text = noComments(read(f));
+        return [...text.matchAll(/(?<![\w$.])(import|require)\s*\(\s*([^)\s][^)]*)\)/g)].some(
+          ([, , arg]) => !/^(["'])[^"'`$]*\1$/.test(arg.trim()) && !/^`[^`$]*`$/.test(arg.trim()) && !/^\w+\s*:/.test(arg.trim()),
+        );
+      })
+      .map(rel);
+    expect(computed).toEqual([]);
   });
 
   it("CommandService and AutomationService, its only consumer, are not reachable from the server", () => {
@@ -129,7 +156,11 @@ describe("command-injection waivers stay unreachable", () => {
       // so that form is checked before string text is removed).
       const text = read(path.join(SRC, h));
       expect(/\bexecute\b/.test(code(text)), h).toBe(false);
-      expect(/\[\s*["'`]execute["'`]\s*\]/.test(noComments(text)), h).toBe(false);
+      // No "execute" string except pty-bridge's terminal message type
+      // (`case "execute":`), and no computed key built from strings
+      // (b["exec" + "ute"], b[`${x}`]) that could spell it.
+      expect(/(?<!case\s{1,4})["'`]execute["'`]/.test(noComments(text)), h).toBe(false);
+      expect(/\[[^\]\n]*(?:["'`]\s*\+|\+\s*["'`]|`[^`\]]*\$\{)[^\]\n]*\]/.test(noComments(text)), h).toBe(false);
     }
     // RunspaceManager keeps its backends private and never hands one out.
     const manager = code(read(path.join(SRC, "core/runspace-manager.ts")));

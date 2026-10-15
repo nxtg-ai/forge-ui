@@ -82,9 +82,12 @@ export interface SuppressedFinding {
  *   are followed. Method definitions and comment lines are not calls.
  * - `eval` in any form, `new Function(…)` and `vm.run*`/`new vm.Script` with a
  *   non-literal are CRITICAL.
- * - Limits (line-based, no type information): a call through a variable the
- *   scanner cannot trace to a process module, or a third-party runner other
- *   than shelljs (execa, zx), is not seen.
+ * - A process function used as a value (object property, class field,
+ *   argument) is CRITICAL: once it escapes, its calls cannot be checked.
+ * - Limits (line-based, no type or data-flow information): a shell string
+ *   assembled in a variable and passed through code the scanner cannot follow,
+ *   a third-party runner other than shelljs (execa, zx), setTimeout(string)
+ *   and fork() are not seen. The release gate is a backstop, not a proof.
  *
  * A CRITICAL finding can be waived only by an entry in
  * COMMAND_INJECTION_WAIVERS, keyed to one file and one function or method
@@ -97,12 +100,16 @@ const SHELL_STRING_CALLS = new Set(["exec", "execSync"]);
 const ARGV_CALLS = new Set(["spawn", "spawnSync", "execFile", "execFileSync"]);
 const PROCESS_MODULE = String.raw`['"](?:node:)?child_process['"]|['"]node-pty['"]|['"]cross-spawn['"]|['"]shelljs['"]`;
 const VM_MODULE = String.raw`['"](?:node:)?vm['"]`;
+const VM_CODE_FUNCTIONS = new Set(["runInNewContext", "runInThisContext", "runInContext", "compileFunction", "Script"]);
 /** A literal naming a shell, which parses its script argument. */
 const SHELL_EXECUTABLE = /^['"`](?:[\w./\\:-]*[/\\])?(?:sh|bash|zsh|dash|ksh|fish|cmd|cmd\.exe|powershell|powershell\.exe|pwsh)['"`]$/i;
 /** A literal naming an interpreter whose flag takes code. */
 const INTERPRETER = /^['"`](?:[\w./\\:-]*[/\\])?(?:node|deno|bun|python[\d.]*|perl|ruby|php)['"`]$/i;
 /** Flags after which a shell or interpreter takes a script. */
 const SCRIPT_FLAG = /^['"`](?:-[a-z]*c[a-z]*|\/c|\/k|-command|-e|--eval|-p|--print|-r)['"`]$/i;
+/** `const x = exec;`, `const x = cp.execSync;`, `const x = promisify(exec);` — aliases processCallContext follows. */
+const TRACKED_ALIAS =
+  /^\s*(?:export\s+)?(?:const|let|var)\s+[\w$]+\s*=\s*(?:[\w$.]+\(\s*)?(?:[\w$]+\.)?[\w$]+\s*\)?\s*;?\s*$/;
 /** Lines after the call line searched for its arguments. */
 const CALL_WINDOW_LINES = 8;
 
@@ -113,6 +120,10 @@ export interface ProcessCallContext {
   locals: Map<string, string>;
   /** Names bound to the `vm` module. */
   vmNamespaces: Set<string>;
+  /** `vm` code-compiling functions imported by name. */
+  vmLocals: Set<string>;
+  /** Whether the file loads a process module at all. */
+  importsProcessModule: boolean;
 }
 
 /** Which names in this file launch a process. */
@@ -169,7 +180,19 @@ export function processCallContext(content: string): ProcessCallContext {
   for (const pattern of vmPatterns) {
     for (const m of content.matchAll(new RegExp(pattern, "g"))) vmNamespaces.add(m[1]);
   }
-  return { namespaces, locals, vmNamespaces };
+  const vmLocals = new Set<string>();
+  const vmNamed = new RegExp(
+    String.raw`(?:import\s*(?:[\w$]+\s*,\s*)?\{([^}]*)\}\s*from\s*|(?:const|let|var)\s*\{([^}]*)\}\s*=\s*(?:require|(?:await\s+)?import)\(\s*)(?:${VM_MODULE})`,
+    "g",
+  );
+  for (const m of content.matchAll(vmNamed)) {
+    for (const part of (m[1] ?? m[2] ?? "").split(",")) {
+      const [imported, local] = part.split(/\s+as\s+|\s*:\s*/).map((x) => x.trim());
+      if (imported && VM_CODE_FUNCTIONS.has(imported)) vmLocals.add(local || imported);
+    }
+  }
+  const importsProcessModule = new RegExp(PROCESS_MODULE).test(content);
+  return { namespaces, locals, vmNamespaces, vmLocals, importsProcessModule };
 }
 
 /**
@@ -216,6 +239,28 @@ export function splitTopLevel(text: string, open: number): string[] {
   return items;
 }
 
+/** `[ … ]` with nothing after the closing bracket. */
+export function isArrayLiteral(text: string): boolean {
+  const t = text.trim();
+  if (!t.startsWith("[")) return false;
+  const stack: string[] = [];
+  for (let i = 0; i < t.length; i += 1) {
+    const c = t[i];
+    const top = stack[stack.length - 1];
+    if (top === '"' || top === "'" || top === "`") {
+      if (c === "\\") i += 1;
+      else if (c === top) stack.pop();
+      continue;
+    }
+    if (c === '"' || c === "'" || c === "`" || c === "(" || c === "[" || c === "{") stack.push(c);
+    else if (c === ")" || c === "]" || c === "}") {
+      stack.pop();
+      if (stack.length === 0) return i === t.length - 1;
+    }
+  }
+  return false;
+}
+
 /** A string literal, or a template literal with no `${}` substitution. */
 export function isLiteralString(arg: string | undefined): boolean {
   if (arg === undefined) return false;
@@ -240,7 +285,8 @@ export function classifyProcessCall(fn: string, args: string[]): ProcessCallVerd
   }
 
   const [file, argv] = args;
-  const argvIsArray = argv?.startsWith("[") ?? false;
+  // An array literal and nothing else: `["-c"].concat(x)` is not visible.
+  const argvIsArray = argv !== undefined && isArrayLiteral(argv);
   const argvItems = argvIsArray ? splitTopLevel(argv!, 0) : undefined;
   // Options are the object after the argv (or in its place). The scanner can
   // only see an object literal; anything else may set `shell`.
@@ -267,12 +313,21 @@ export function classifyProcessCall(fn: string, args: string[]): ProcessCallVerd
   }
 
   const fileIsShell = file !== undefined && SHELL_EXECUTABLE.test(file);
-  if (fileIsShell && !argvIsArray && argv !== undefined && !argvIsOptions) {
-    return { severity: "critical", description: `${fn}() runs a shell with arguments that are not a visible literal array` };
+  const fileIsInterpreter = file !== undefined && INTERPRETER.test(file);
+  const argvHidden = argv !== undefined && !argvIsArray && !argvIsOptions;
+  if ((fileIsShell || fileIsInterpreter) && argvHidden) {
+    return {
+      severity: "critical",
+      description: `${fn}() runs a ${fileIsShell ? "shell" : "interpreter"} with arguments that are not a visible literal array`,
+    };
+  }
+  // spawn(x, y) with a non-literal executable: y may be options that set shell.
+  if (args.length === 2 && argvHidden && !isLiteralString(file)) {
+    return { severity: "critical", description: `${fn}() passes a value that may be options (shell) with a non-literal command` };
   }
 
   if (argvItems) {
-    const scriptable = fileIsShell || (file !== undefined && INTERPRETER.test(file)) || !isLiteralString(file);
+    const scriptable = fileIsShell || fileIsInterpreter || !isLiteralString(file);
     const c = argvItems.findIndex((x) => /^['"`](?:-c|\/c|-Command)['"`]$/i.test(x) || (scriptable && SCRIPT_FLAG.test(x)));
     if (c >= 0 && argvItems[c + 1] !== undefined && !isLiteralString(argvItems[c + 1])) {
       return { severity: "critical", description: `${fn}() passes a script flag (${argvItems[c]}) with a non-literal script` };
@@ -379,6 +434,17 @@ export function symbolLineRange(lines: string[], name: string): [number, number]
         continue;
       }
       if (c === "/" && line[j + 1] === "/") break;
+      if (c === "/" && line[j + 1] !== "*" && /(?:^|[(,=:[!&|?{};+\-*%<>~^]|\breturn|\btypeof)\s*$/.test(line.slice(0, j))) {
+        // A regex literal: skip to its closing slash (escapes and [classes] respected).
+        let inClass = false;
+        for (j += 1; j < line.length; j += 1) {
+          if (line[j] === "\\") j += 1;
+          else if (line[j] === "[") inClass = true;
+          else if (line[j] === "]") inClass = false;
+          else if (line[j] === "/" && !inClass) break;
+        }
+        continue;
+      }
       if (c === "/" && line[j + 1] === "*") {
         stack.push("/*");
         j += 1;
@@ -631,7 +697,10 @@ export class SecurityAuditor {
     const window = lines.slice(index, index + 1 + CALL_WINDOW_LINES).join("\n");
     const names = [...context.locals.keys(), "eval"].map((n) => n.replace(/\$/g, "\\$")).join("|");
     const callRe = new RegExp(String.raw`(?<![\w$])(?:([\w$]+)\s*\.\s*)?(${names})\s*\(`, "g");
-    const requireRe = new RegExp(String.raw`require\(\s*(?:${PROCESS_MODULE})\s*\)\s*\.\s*([\w$]+)\s*\(`, "g");
+    const requireRe = new RegExp(
+      String.raw`require\(\s*(?:${PROCESS_MODULE})\s*\)\s*(?:\.\s*([\w$]+)|\[\s*['"\`]([\w$]+)['"\`]\s*\])\s*\(`,
+      "g",
+    );
 
     const found: Array<{ fn: string; open: number }> = [];
     for (const m of line.matchAll(callRe)) {
@@ -653,8 +722,9 @@ export class SecurityAuditor {
       found.push({ fn: name === "eval" ? "eval" : (context.locals.get(name) ?? name), open });
     }
     for (const m of line.matchAll(requireRe)) {
-      if (SHELL_STRING_CALLS.has(m[1]) || ARGV_CALLS.has(m[1])) {
-        found.push({ fn: m[1], open: (m.index ?? 0) + m[0].length - 1 });
+      const name = m[1] ?? m[2];
+      if (SHELL_STRING_CALLS.has(name) || ARGV_CALLS.has(name)) {
+        found.push({ fn: name, open: (m.index ?? 0) + m[0].length - 1 });
       }
     }
     // cp["exec"](x) and (0, cp.exec)(x) / (0, exec)(x)
@@ -678,6 +748,36 @@ export class SecurityAuditor {
     }
     for (const m of line.matchAll(/(?:\bnew\s+)?([\w$]+)\s*\.\s*(runInNewContext|runInThisContext|runInContext|compileFunction|Script)\s*\(/g)) {
       if (context.vmNamespaces.has(m[1])) found.push({ fn: "vm", open: (m.index ?? 0) + m[0].length - 1 });
+    }
+    for (const m of line.matchAll(/(?<![\w$.])(?:new\s+)?([\w$]+)\s*\(/g)) {
+      if (context.vmLocals.has(m[1])) found.push({ fn: "vm", open: (m.index ?? 0) + m[0].length - 1 });
+    }
+    // e: a process function used as a value (object property, class field,
+    // argument) escapes, and its calls cannot be traced. Tracked aliases
+    // (const e = exec; run = promisify(exec)) and import lines are excluded.
+    if (context.importsProcessModule && !/\bimport\b|\brequire\s*\(/.test(line) && !TRACKED_ALIAS.test(line)) {
+      const valueNames = [...context.locals.keys()].map((n) => n.replace(/\$/g, "\\$")).join("|");
+      const valueRe = new RegExp(
+        String.raw`(?<![\w$.])(?:([\w$]+)\s*\.\s*)?(${valueNames})\b(?!\s*\(|\s*\?\.\s*\(|\s*\)\s*\(|\s*:(?!:)|\s+as\b)`,
+        "g",
+      );
+      // String and template text is not code; `typeof spawn` is a type position.
+      const codeLine = line.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`/g, (q) => " ".repeat(q.length));
+      for (const m of codeLine.matchAll(valueRe)) {
+        const [, receiver, name] = m;
+        if (receiver !== undefined && !context.namespaces.has(receiver)) continue;
+        if (/^\s*(?:export\s+)?(?:const|let|var)\s*\{/.test(line)) continue;
+        if (/(?:function|async|\bnew|\btypeof)\s*$/.test(codeLine.slice(0, m.index ?? 0))) continue;
+        this.violations.push({
+          file,
+          line: index + 1,
+          severity: "critical",
+          category: "Command Injection",
+          description: `${receiver ? `${receiver}.` : ""}${name} is used as a value, so its calls cannot be checked`,
+          recommendation: "Call the process function directly, or keep it in a const the scanner can follow",
+        });
+        this.failedChecks++;
+      }
     }
 
     for (const { fn, open } of found) {
