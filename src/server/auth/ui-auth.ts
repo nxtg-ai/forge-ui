@@ -30,18 +30,35 @@ export const SESSION_COOKIE = "forge_session";
 const SESSION_MAX_AGE_S = 30 * 24 * 60 * 60;
 const MIN_SECRET_LENGTH = 32;
 
-export const DEFAULT_ALLOWED_ORIGINS = [
+/**
+ * The ONE browser-origin allowlist. CORS, authorize() (every /api route and
+ * both WebSocket upgrades), the /ws connection check and the /terminal bridge
+ * all use isAllowedOrigin(); none keeps a list of its own.
+ *
+ * The defaults are only origins forge-ui itself serves: the UI on 5050 and the
+ * API on 5051 (its Swagger page at /api/docs), on localhost and 127.0.0.1.
+ * Never another tool's default port such as Vite's 5173 or preview's 4173:
+ * ports do not make a different site, so a page on any other local dev server
+ * is same-site with forge-ui and the SameSite=Strict session cookie is sent
+ * (forge-pm security finding al:802d7317c90eb745, GHSA-rc7c-r55p-923j class).
+ * ALLOWED_ORIGINS replaces the defaults for other deployments.
+ */
+export const DEFAULT_ALLOWED_ORIGINS: readonly string[] = Object.freeze([
   "http://localhost:5050",
   "http://127.0.0.1:5050",
   "http://localhost:5051",
   "http://127.0.0.1:5051",
-  "http://localhost:5173",
-];
+]);
 
-export function getAllowedOrigins(): string[] {
+export function getAllowedOrigins(): readonly string[] {
   return process.env.ALLOWED_ORIGINS
     ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean)
     : DEFAULT_ALLOWED_ORIGINS;
+}
+
+/** Exact match against the allowlist: no prefixes, no wildcards. */
+export function isAllowedOrigin(origin: string): boolean {
+  return getAllowedOrigins().includes(origin);
 }
 
 /** Where the secret lives: FORGE_UI_SECRET_FILE, else $XDG_CONFIG_HOME (or ~/.config)/nxtg-forge/ui-secret. */
@@ -156,7 +173,7 @@ export type AuthDecision =
  */
 export function authorize(req: IncomingMessage): AuthDecision {
   const origin = headerValue(req.headers.origin);
-  if (origin !== undefined && !getAllowedOrigins().includes(origin)) {
+  if (origin !== undefined && !isAllowedOrigin(origin)) {
     return { ok: false, status: 403, reason: "Origin not allowed" };
   }
   let authenticated = false;
@@ -188,7 +205,7 @@ const PUBLIC_API_PATHS = new Set([
 export function requireApiAuth(req: Request, res: Response, next: NextFunction): void {
   if (PUBLIC_API_PATHS.has(req.path)) {
     const origin = req.headers.origin;
-    if (origin !== undefined && !getAllowedOrigins().includes(origin)) {
+    if (origin !== undefined && !isAllowedOrigin(origin)) {
       res.status(403).json({ success: false, error: "Origin not allowed", timestamp: new Date().toISOString() });
       return;
     }

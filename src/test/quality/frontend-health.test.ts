@@ -244,12 +244,14 @@ describe("Frontend Health", () => {
     });
 
     test("PTY bridge allows Vite proxy origins", () => {
-      const bridgePath = join(ROOT, "src/server/pty-bridge.ts");
-      const content = readFileSync(bridgePath, "utf-8");
+      // The bridge uses the one shared allowlist (forge-pm security finding
+      // al:802d7317c90eb745), which must allow Vite (5050) and the API (5051).
+      const bridge = readFileSync(join(ROOT, "src/server/pty-bridge.ts"), "utf-8");
+      const auth = readFileSync(join(ROOT, "src/server/auth/ui-auth.ts"), "utf-8");
 
-      // Must allow connections from both Vite (5050) and API server (5051)
-      expect(content).toContain("localhost:5050");
-      expect(content).toContain("localhost:5051");
+      expect(bridge).toContain("isAllowedOrigin(origin)");
+      expect(auth).toContain('"http://localhost:5050"');
+      expect(auth).toContain('"http://localhost:5051"');
     });
   });
 

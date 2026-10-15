@@ -25,6 +25,27 @@ export default defineConfig({
     // policy must also come as a header (DIRECTIVE-NXTG-20261008-03).
     // `vite preview` inherits server.headers.
     headers: { 'Referrer-Policy': 'strict-origin' },
+    // The dev server serves files from the repo root, which in dev is also the
+    // API's working directory. Refuse project state, docs and server code: any
+    // client of :5050 could read them without a credential (forge-pm security
+    // finding al:802d7317c90eb745). The first four entries are Vite's defaults,
+    // which this list replaces.
+    fs: {
+      deny: [
+        '.env',
+        '.env.*',
+        '*.{crt,pem}',
+        '**/.git/**',
+        '**/.claude/**',
+        '**/.forge/**',
+        '**/.asif/**',
+        '**/.github/**',
+        '**/*.md',
+        '**/src/server/**',
+        '**/scripts/**',
+        '**/docs/**',
+      ],
+    },
     proxy: {
       // 127.0.0.1, not localhost: the API binds IPv4 loopback only, and
       // `localhost` can resolve to ::1 first.

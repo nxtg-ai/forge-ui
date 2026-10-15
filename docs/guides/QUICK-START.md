@@ -30,7 +30,7 @@ npm install
 # Start the development server
 npm run dev
 
-# Open browser to http://localhost:5173
+# Open browser to http://localhost:5050
 ```
 
 **What you'll see:**

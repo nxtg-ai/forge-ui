@@ -12,7 +12,7 @@ import type { RunspaceManager } from "../core/runspace-manager";
 import type { Runspace } from "../core/runspace";
 import { WSLBackend } from "../core/backends/wsl-backend";
 import { consumeWSAuthToken } from "./routes/features";
-import { authorize } from "./auth/ui-auth";
+import { authorize, isAllowedOrigin } from "./auth/ui-auth";
 import { getLogger } from "../utils/logger";
 
 const logger = getLogger('pty-bridge');
@@ -57,20 +57,6 @@ const wslBackend = new WSLBackend();
 const authTokens = new Map<string, { sessionId: string; createdAt: number }>();
 const TOKEN_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
 
-// Security: Allowed origins (configurable via environment)
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
-  : [
-      "http://localhost:5050",
-      "http://localhost:5051",
-      "http://127.0.0.1:5050",
-      "http://127.0.0.1:5051",
-      "ws://localhost:5050",
-      "ws://localhost:5051",
-      "ws://127.0.0.1:5050",
-      "ws://127.0.0.1:5051",
-    ];
-
 // Security: Dangerous command patterns to block
 const DANGEROUS_COMMANDS = [
   /rm\s+-rf\s+\//,  // rm -rf /
@@ -107,8 +93,8 @@ function validateOrigin(origin: string | undefined): boolean {
     return true;
   }
 
-  // Exact match against allowed origins — no startsWith, no wildcards
-  return ALLOWED_ORIGINS.includes(origin);
+  // The one shared allowlist (ui-auth.ts); exact match, no prefixes or wildcards
+  return isAllowedOrigin(origin);
 }
 
 /**
