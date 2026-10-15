@@ -5,25 +5,55 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
-// Hoist mock setup
-const { mockExecAsync } = vi.hoisted(() => {
+// Hoist mock setup. The engine spawns the claude CLI (no shell) and writes the
+// prompt to stdin. mockExecAsync(commandLine, stdin) decides what the fake
+// child prints: resolve {stdout} for exit 0, reject for a spawn error.
+// The CLI is an external process, so it is mocked (CRUCIBLE gate 3).
+const { mockExecAsync, mockSpawn } = vi.hoisted(() => {
   const mockExecAsync = vi.fn();
-  return { mockExecAsync };
+  const emitter = () => {
+    const handlers: Record<string, Array<(arg: unknown) => void>> = {};
+    return {
+      on(event: string, cb: (arg: unknown) => void) {
+        (handlers[event] ??= []).push(cb);
+        return this;
+      },
+      emit(event: string, arg?: unknown) {
+        (handlers[event] ?? []).forEach((cb) => cb(arg));
+      },
+    };
+  };
+  const mockSpawn = vi.fn((file: string, args: string[]) => {
+    const child = {
+      ...emitter(),
+      stdout: emitter(),
+      stderr: emitter(),
+      stdin: {
+        end(input: string) {
+          Promise.resolve()
+            .then(() => mockExecAsync([file, ...args].join(" "), input))
+            .then(
+              (r: { stdout?: string } | undefined) => {
+                if (r?.stdout) child.stdout.emit("data", r.stdout);
+                child.emit("close", 0);
+              },
+              (e: unknown) => child.emit("error", e),
+            );
+        },
+      },
+    };
+    return child;
+  });
+  return { mockExecAsync, mockSpawn };
 });
 
-// Mock child_process
 vi.mock("child_process", () => ({
-  default: { exec: vi.fn() },
-  exec: vi.fn(),
-}));
-
-// Mock util to return our mockExecAsync when promisify is called
-vi.mock("util", () => ({
-  default: { promisify: vi.fn(() => mockExecAsync) },
-  promisify: vi.fn(() => mockExecAsync),
+  default: { spawn: mockSpawn },
+  spawn: mockSpawn,
 }));
 
 import {
+  CLAUDE_SUGGESTION_ARGV,
   MCPSuggestionEngine,
   VisionContext,
   MCPServer,
@@ -306,11 +336,39 @@ describe("MCPSuggestionEngine", () => {
     it("should call Claude CLI with proper prompt", async () => {
       await engine.suggestMCPs(mockVisionContext);
 
-      expect(mockExecAsync).toHaveBeenCalled();
-      const callArgs = mockExecAsync.mock.calls[0][0];
+      expect(mockSpawn).toHaveBeenCalledTimes(1);
+      const [file, argv, options] = mockSpawn.mock.calls[0] as unknown as [string, string[], Record<string, unknown>];
+      expect(file).toBe("claude");
+      expect(argv).toEqual([...CLAUDE_SUGGESTION_ARGV]);
+      expect(options).not.toHaveProperty("shell");
+      // The prompt goes on stdin, not into the command.
+      expect(mockExecAsync.mock.calls[0][1]).toContain("Analyze this project vision");
+    });
 
-      expect(callArgs).toContain("claude --dangerously-skip-permissions");
-      expect(callArgs).toContain("Analyze this project vision");
+    // DIRECTIVE-NXTG-20260718-17 (forge-pm ruling 1a): request text reaches
+    // claude as literal data. It used to pass through `echo "…" | claude`.
+    it("passes shell metacharacters in the vision to claude as literal stdin text", async () => {
+      const hostile = 'x" $(touch /tmp/forge-pwned) `id` ${HOME} ; rm -rf ~ | cat \\';
+      await engine.suggestMCPs({ ...mockVisionContext, mission: hostile });
+
+      const [file, argv] = mockSpawn.mock.calls[0] as unknown as [string, string[]];
+      expect([file, ...argv].join(" ")).not.toContain("touch");
+      const stdin = mockExecAsync.mock.calls[0][1] as string;
+      expect(stdin).toContain(JSON.stringify(hostile).slice(1, -1));
+    });
+
+    // DIRECTIVE-NXTG-20260718-17 (forge-pm ruling 1b): no permission bypass and
+    // no tools for a job that only needs JSON text back.
+    it("starts claude with no tools and without --dangerously-skip-permissions", async () => {
+      await engine.suggestMCPs(mockVisionContext);
+
+      const argv = mockSpawn.mock.calls[0][1] as string[];
+      expect(argv).not.toContain("--dangerously-skip-permissions");
+      expect(argv).not.toContain("--allow-dangerously-skip-permissions");
+      const tools = argv.indexOf("--tools");
+      expect(tools).toBeGreaterThanOrEqual(0);
+      expect(argv[tools + 1]).toBe("");
+      expect(argv).toContain("--strict-mcp-config");
     });
 
     it("should handle Claude CLI errors", async () => {
