@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 - **The API and both WebSockets accept only origins forge-ui serves.** The default origin allowlist also contained `http://localhost:5173`, the default port of any other project's Vite dev server. It now holds only forge-ui's UI (:5050) and API (:5051) origins on `localhost` and `127.0.0.1`, and the API, `/ws` and `/terminal` share one allowlist. `ALLOWED_ORIGINS` still replaces the defaults.
-- **The dev server no longer serves project files.** `npm run dev` refuses `.claude/`, `.forge/`, `.asif/`, `.github/`, Markdown files, server source, `scripts/` and `docs/`; the app itself is unchanged.
+- **The dev server no longer serves project files.** `npm run dev` serves only the app (`index.html`, `src/`, `public/`, `node_modules/`) and refuses project state, logs, build output, docs and server code inside it; the app itself is unchanged.
 
 ## [3.5.1] - 2026-10-14
 

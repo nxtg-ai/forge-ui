@@ -14,10 +14,21 @@ import path from "node:path";
 import type { ViteDevServer } from "vite";
 
 vi.unmock("fs");
+const fs = await vi.importActual<typeof import("node:fs")>("node:fs");
 
 const REPO_ROOT = path.resolve(__dirname, "../../..");
 let server: ViteDevServer | null = null;
 let base = "";
+
+// Runtime and build output that may or may not exist on a given machine.
+// Each gets a probe file, so the check does not depend on the machine's state.
+const PROBE = "__vite_fs_probe__";
+const FIXTURES = ["dist/server", "logs", "data", "coverage"].map((dir) => ({
+  dir: path.join(REPO_ROOT, dir),
+  file: path.join(REPO_ROOT, dir, `${PROBE}.txt`),
+  url: `/${dir}/${PROBE}.txt`,
+}));
+const createdDirs: string[] = [];
 
 function freePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -31,6 +42,16 @@ function freePort(): Promise<number> {
 }
 
 beforeAll(async () => {
+  for (const f of FIXTURES) {
+    if (!fs.existsSync(f.dir)) {
+      // Remember the outermost directory this test creates, to remove it after.
+      let top = f.dir;
+      while (!fs.existsSync(path.dirname(top))) top = path.dirname(top);
+      createdDirs.push(top);
+      fs.mkdirSync(f.dir, { recursive: true });
+    }
+    fs.writeFileSync(f.file, "probe\n");
+  }
   const { createServer } = await import("vite");
   const port = await freePort();
   server = await createServer({
@@ -45,9 +66,11 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await server?.close();
+  for (const f of FIXTURES) fs.rmSync(f.file, { force: true });
+  for (const dir of createdDirs) fs.rmSync(dir, { recursive: true, force: true });
 });
 
-const status = async (p: string): Promise<number> => (await fetch(`${base}${p}`)).status;
+const get = (p: string) => fetch(`${base}${p}`);
 
 describe("Vite dev server file exposure", () => {
   it.each([
@@ -57,13 +80,24 @@ describe("Vite dev server file exposure", () => {
     "/src/server/auth/ui-auth.ts?raw",
     "/src/server/api-server.ts",
     "/.github/workflows/terminal-e2e.yml",
-    "/.env.example",
+    "/package.json",
+    ...FIXTURES.map((f) => f.url),
   ])("refuses %s", async (p) => {
-    expect(await status(p)).toBe(403);
+    expect((await get(p)).status).toBe(403);
   });
 
-  it("still serves the app itself", async () => {
-    expect(await status("/")).toBe(200);
-    expect(await status("/src/main.tsx")).toBe(200);
+  it("still serves the app itself, with real content", async () => {
+    const page = await get("/");
+    expect(page.status).toBe(200);
+    expect(await page.text()).toContain('<div id="root">');
+
+    const entry = await get("/src/main.tsx");
+    expect(entry.status).toBe(200);
+    expect(await entry.text()).not.toContain("<!DOCTYPE html>");
+
+    // public/CHANGELOG.md is fetched by the in-app changelog dialog.
+    const changelog = await get("/CHANGELOG.md");
+    expect(changelog.status).toBe(200);
+    expect(await changelog.text()).toMatch(/^# /m);
   });
 });
