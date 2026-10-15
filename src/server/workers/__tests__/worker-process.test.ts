@@ -182,7 +182,8 @@ describe("worker-process", () => {
     priority: "medium",
     // Must be on the worker allowlist (task-policy.ts, GHSA-rc7c-r55p-923j).
     command: "codex",
-    args: ["hello"],
+    // No args: the worker refuses them (PRM-CLX9-20261015-06 item c).
+    args: [],
     createdAt: new Date(),
     ...overrides,
   });
@@ -251,7 +252,6 @@ describe("worker-process", () => {
         const task = createMockTask({
           type: "shell",
           command: "codex",
-          args: ["test"],
         });
 
         // Send task message
@@ -267,7 +267,7 @@ describe("worker-process", () => {
 
         expect(mockSpawn).toHaveBeenCalledWith(
           "codex",
-          ["test"],
+          [],
           expect.objectContaining({
             // Argument array, never a shell: args are not re-parsed by /bin/sh.
             shell: false,
@@ -453,7 +453,6 @@ describe("worker-process", () => {
         const task = createMockTask({
           type: "script",
           command: "codex",
-          args: ["script.js"],
         });
 
         emitProcessEvent("message", {
@@ -465,7 +464,7 @@ describe("worker-process", () => {
 
         await waitForNextTick();
 
-        expect(mockSpawn).toHaveBeenCalledWith("codex", ["script.js"], expect.any(Object));
+        expect(mockSpawn).toHaveBeenCalledWith("codex", [], expect.any(Object));
       });
 
       it("refuses a command off the allowlist without spawning it", async () => {
@@ -496,8 +495,7 @@ describe("worker-process", () => {
       it("should handle claude-code task type", async () => {
         const task = createMockTask({
           type: "claude-code",
-          command: "analyze",
-          args: ["file.ts"],
+          command: "analyze file.ts",
         });
 
         emitProcessEvent("message", {
@@ -511,16 +509,62 @@ describe("worker-process", () => {
 
         expect(mockSpawn).toHaveBeenCalledWith(
           "claude",
-          ["analyze", "file.ts"],
+          ["analyze file.ts"],
           expect.any(Object)
         );
+      });
+
+      // PRM-CLX9-20261015-06 item (c): the worker re-checks argv itself.
+      it("refuses an agent task that carries args, without spawning", async () => {
+        const task = createMockTask({
+          type: "agent",
+          command: "review",
+          args: ["--settings", '{"hooks":{}}'],
+        });
+
+        emitProcessEvent("message", {
+          type: "task",
+          id: "msg-1",
+          timestamp: Date.now(),
+          payload: task,
+        });
+
+        await waitForNextTick();
+
+        expect(mockSpawn).not.toHaveBeenCalled();
+        expect(getMessagesByType("result")[0].payload).toMatchObject({
+          success: false,
+          error: "COMMAND_NOT_ALLOWED",
+        });
+      });
+
+      it("refuses a shell task that carries args, without spawning", async () => {
+        const task = createMockTask({
+          type: "shell",
+          command: "codex",
+          args: ["--dangerously-bypass-approvals-and-sandbox", "exec", "x"],
+        });
+
+        emitProcessEvent("message", {
+          type: "task",
+          id: "msg-1",
+          timestamp: Date.now(),
+          payload: task,
+        });
+
+        await waitForNextTick();
+
+        expect(mockSpawn).not.toHaveBeenCalled();
+        expect(getMessagesByType("result")[0].payload).toMatchObject({
+          success: false,
+          error: "COMMAND_NOT_ALLOWED",
+        });
       });
 
       it("should handle agent task type", async () => {
         const task = createMockTask({
           type: "agent",
-          command: "review",
-          args: ["--strict"],
+          command: "review the diff",
         });
 
         emitProcessEvent("message", {
@@ -534,7 +578,7 @@ describe("worker-process", () => {
 
         expect(mockSpawn).toHaveBeenCalledWith(
           "claude",
-          ["review", "--strict"],
+          ["review the diff"],
           expect.any(Object)
         );
       });
@@ -1103,7 +1147,7 @@ describe("worker-process", () => {
 
     it("should handle task with all optional parameters", async () => {
       const task = createMockTask({
-        args: ["arg1", "arg2", "arg3"],
+        args: [],
         env: { VAR1: "value1", VAR2: "value2" },
         cwd: "/custom/working/dir",
         timeout: 30000,
@@ -1123,7 +1167,7 @@ describe("worker-process", () => {
 
       expect(mockSpawn).toHaveBeenCalledWith(
         expect.any(String),
-        expect.arrayContaining(["arg1", "arg2", "arg3"]),
+        [],
         expect.objectContaining({
           cwd: "/custom/working/dir",
           env: expect.objectContaining({

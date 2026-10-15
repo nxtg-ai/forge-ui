@@ -341,7 +341,6 @@ describe("Worker Routes", () => {
         type: "shell",
         priority: "high",
         command: "codex",
-        args: ["exec", "--prod"],
       };
 
       const res = await request(app)
@@ -356,9 +355,29 @@ describe("Worker Routes", () => {
           type: "shell",
           priority: "high",
           command: "codex",
-          args: ["exec", "--prod"],
         })
       );
+    });
+
+    // PRM-CLX9-20261015-06 item (c): args are refused over HTTP.
+    it("rejects args for an allow-listed CLI and submits nothing", async () => {
+      const res = await request(app)
+        .post("/api/workers/tasks")
+        .send({ type: "shell", command: "codex", args: ["--dangerously-bypass-approvals-and-sandbox", "exec", "x"] })
+        .expect(400);
+
+      expect(res.body.error).toBe("args are not accepted for tasks submitted over HTTP");
+      expect(mockWorkerPool.submitTask).not.toHaveBeenCalled();
+    });
+
+    it("rejects an agent prompt that starts with '-' and submits nothing", async () => {
+      const res = await request(app)
+        .post("/api/workers/tasks")
+        .send({ type: "claude-code", command: "--dangerously-skip-permissions" })
+        .expect(400);
+
+      expect(res.body.error).toBe('the prompt for claude-code tasks must not start with "-"');
+      expect(mockWorkerPool.submitTask).not.toHaveBeenCalled();
     });
 
     it("submits task with optional fields", async () => {
@@ -396,7 +415,7 @@ describe("Worker Routes", () => {
     it("rejects a free-form shell command and submits nothing", async () => {
       const res = await request(app)
         .post("/api/workers/tasks")
-        .send({ type: "shell", command: "touch", args: ["/tmp/forge-marker"] })
+        .send({ type: "shell", command: "touch" })
         .expect(400);
 
       expect(res.body.success).toBe(false);
@@ -407,7 +426,7 @@ describe("Worker Routes", () => {
     it("rejects env over HTTP and submits nothing", async () => {
       const res = await request(app)
         .post("/api/workers/tasks")
-        .send({ type: "claude-code", command: "review", env: { NODE_OPTIONS: "--require /tmp/x" } })
+        .send({ type: "claude-code", command: "review the diff", env: { NODE_OPTIONS: "--require /tmp/x" } })
         .expect(400);
 
       expect(res.body.error).toBe("env is not accepted for tasks submitted over HTTP");
@@ -474,7 +493,7 @@ describe("Worker Routes", () => {
       vi.mocked(intelligenceInjector.getIntelligenceContext).mockResolvedValue(mockIntelligence);
       vi.mocked(intelligenceInjector.injectIntelligence).mockReturnValue({
         command: `${mockIntelligence}\n\nOriginal command`,
-        args: ["arg1"],
+        args: undefined,
       });
 
       mockWorkerPool.submitTask.mockResolvedValue("task-789");
@@ -482,7 +501,6 @@ describe("Worker Routes", () => {
       const task = {
         type: "agent",
         command: "Original command",
-        args: ["arg1"],
       };
 
       const res = await request(app)
@@ -500,7 +518,7 @@ describe("Worker Routes", () => {
       );
       expect(intelligenceInjector.injectIntelligence).toHaveBeenCalledWith(
         "Original command",
-        ["arg1"],
+        undefined,
         mockIntelligence
       );
     });
@@ -550,14 +568,13 @@ describe("Worker Routes", () => {
       );
     });
 
-    it("extracts context keywords from command and args", async () => {
+    it("extracts context keywords from the prompt", async () => {
       vi.mocked(intelligenceInjector.getIntelligenceContext).mockResolvedValue("");
       mockWorkerPool.submitTask.mockResolvedValue("task-222");
 
       const task = {
         type: "agent",
-        command: "Implement user authentication with password reset",
-        args: ["using bcrypt and email"],
+        command: "Implement user authentication with password reset using bcrypt and email",
       };
 
       await request(app)
@@ -1075,7 +1092,6 @@ describe("Worker Routes", () => {
         type: "shell",
         command: "codex",
         priority: "critical",
-        args: ["--production"],
         workstreamId: "ws-prod-123",
         timeout: 60000,
         metadata: {
@@ -1096,7 +1112,6 @@ describe("Worker Routes", () => {
           type: "shell",
           command: "codex",
           priority: "critical",
-          args: ["--production"],
           workstreamId: "ws-prod-123",
           timeout: 60000,
           metadata: {
@@ -1112,7 +1127,7 @@ describe("Worker Routes", () => {
       const mockIntelligence = "[INTELLIGENCE]\n- RULE: Test [high]\n[/INTELLIGENCE]";
       vi.mocked(intelligenceInjector.getIntelligenceContext).mockResolvedValue(mockIntelligence);
       vi.mocked(intelligenceInjector.injectIntelligence).mockReturnValue({
-        command: `${mockIntelligence}\n\nOriginal`,
+        command: `${mockIntelligence}\n\nOriginal prompt`,
         args: undefined,
       });
 
@@ -1120,7 +1135,7 @@ describe("Worker Routes", () => {
 
       const task = {
         type: "agent",
-        command: "Original",
+        command: "Original prompt",
       };
 
       const res = await request(app)
@@ -1130,7 +1145,7 @@ describe("Worker Routes", () => {
 
       expect(res.body.success).toBe(true);
       expect(intelligenceInjector.injectIntelligence).toHaveBeenCalledWith(
-        "Original",
+        "Original prompt",
         undefined,
         mockIntelligence
       );
@@ -1139,16 +1154,15 @@ describe("Worker Routes", () => {
     it("handles empty intelligence context gracefully", async () => {
       vi.mocked(intelligenceInjector.getIntelligenceContext).mockResolvedValue("");
       vi.mocked(intelligenceInjector.injectIntelligence).mockReturnValue({
-        command: "Original",
-        args: ["arg1"],
+        command: "Original prompt",
+        args: undefined,
       });
 
       mockWorkerPool.submitTask.mockResolvedValue("task-no-intel");
 
       const task = {
         type: "agent",
-        command: "Original",
-        args: ["arg1"],
+        command: "Original prompt",
       };
 
       const res = await request(app)
@@ -1159,8 +1173,7 @@ describe("Worker Routes", () => {
       expect(res.body.success).toBe(true);
       expect(mockWorkerPool.submitTask).toHaveBeenCalledWith(
         expect.objectContaining({
-          command: "Original",
-          args: ["arg1"],
+          command: "Original prompt",
         })
       );
     });

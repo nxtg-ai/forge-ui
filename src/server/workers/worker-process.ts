@@ -6,7 +6,7 @@
 import { spawn, ChildProcess } from "child_process";
 import * as os from "os";
 import { IPCMessage, AgentTask, TaskResult } from "./types";
-import { assertSpawnAllowed } from "./task-policy";
+import { assertSpawnAllowed, assertTaskArgvAllowed } from "./task-policy";
 
 const WORKER_ID = process.env.WORKER_ID || "unknown";
 const WORKER_DIR = process.env.WORKER_DIR || process.cwd();
@@ -149,6 +149,20 @@ async function executeClaudeCode(task: AgentTask): Promise<TaskResult> {
 async function executeTask(task: AgentTask): Promise<TaskResult> {
   log("info", `Executing task ${task.id}: ${task.type} - ${task.command}`);
   aborted = false;
+
+  try {
+    assertTaskArgvAllowed(task);
+  } catch (error) {
+    return {
+      taskId: task.id,
+      success: false,
+      exitCode: 1,
+      stdout: "",
+      stderr: error instanceof Error ? error.message : String(error),
+      duration: 0,
+      error: "COMMAND_NOT_ALLOWED",
+    };
+  }
 
   try {
     switch (task.type) {

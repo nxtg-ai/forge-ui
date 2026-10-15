@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `POST /api/workers/tasks` refuses `args` (400 "args are not accepted for tasks submitted over HTTP") and refuses a `claude-code`/`agent` prompt that starts with `-` or is a single word (a single token can name a CLI subcommand such as `claude update`). The allow-listed CLIs (`claude`, `codex`, `gemini`) turn flags and subcommands into code execution, and only the command was checked. The worker re-checks both before it spawns. The worker task example in docs/infinity-terminal/README.md now uses a request the API accepts.
 - `POST /api/diffs/apply` now says what it does. It changes no file, and the response used to claim "Successfully applied changes". It now returns `applied: false` with the message "No file was changed", and broadcasts `diff.accepted` instead of `diff.applied`. The client `applyDiff()` passes the server's message on instead of its own success text.
 - The README's install step clones the current release tag (`git clone --branch v3.5.2`), and the stage check fails if that tag and the package version disagree. The stage check also verifies the README stage text word for word and, where the governance registry is readable, that `STAGE` matches forge-ui's own registry row.
 
