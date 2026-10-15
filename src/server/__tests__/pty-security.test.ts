@@ -26,6 +26,7 @@ const TEST_SECRET = vi.hoisted(() => {
 // command filtering and token generation (not WS auth)
 vi.mock("../routes/features", () => ({
   validateWSAuthToken: () => true,
+  consumeWSAuthToken: () => true,
 }));
 
 // Mock node-pty

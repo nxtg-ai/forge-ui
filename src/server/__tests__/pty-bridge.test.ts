@@ -14,6 +14,7 @@ import type { Runspace } from "../../core/runspace";
 // Mock auth validation — always approve for PTY functionality tests
 vi.mock("../routes/features", () => ({
   validateWSAuthToken: () => true,
+  consumeWSAuthToken: () => true,
 }));
 
 // Mock node-pty
