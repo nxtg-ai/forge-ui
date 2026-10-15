@@ -420,20 +420,20 @@ describe("BetaFeedback", () => {
   // NEXUS: DIRECTIVE-NXTG-20261014-15 items 2-3. The header opens the form;
   // no floating trigger covers page content, and nothing says "beta".
   describe("Opened from the app header", () => {
-    it("opens when the parent sets open, with no floating trigger", () => {
+    test("opens when the parent sets open, with no floating trigger", () => {
       render(<BetaFeedback open showTrigger={false} />);
 
       expect(screen.getByText("Public preview feedback")).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Send feedback" })).not.toBeInTheDocument();
     });
 
-    it("renders nothing visible when closed and the trigger is hidden", () => {
+    test("renders nothing visible when closed and the trigger is hidden", () => {
       const { container } = render(<BetaFeedback open={false} showTrigger={false} />);
 
       expect(container.textContent).toBe("");
     });
 
-    it("says public preview and never beta", () => {
+    test("says public preview and never beta", () => {
       render(<BetaFeedback open />);
 
       expect(document.body.textContent ?? "").not.toMatch(/\bbeta\b/i);
