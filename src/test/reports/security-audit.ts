@@ -107,6 +107,11 @@ const SHELL_EXECUTABLE = /^['"`](?:[\w./\\:-]*[/\\])?(?:sh|bash|zsh|dash|ksh|fis
 const INTERPRETER = /^['"`](?:[\w./\\:-]*[/\\])?(?:node|deno|bun|python[\d.]*|perl|ruby|php)['"`]$/i;
 /** Flags after which a shell or interpreter takes a script. */
 const SCRIPT_FLAG = /^['"`](?:-[a-z]*c[a-z]*|\/c|\/k|-command|-e|--eval|-p|--print|-r)['"`]$/i;
+/** Escape every regex metacharacter, so a name is matched literally. */
+export function escapeRegExp(text: string): string {
+  return text.replace(/[\\^$.*+?()[\]{}|/]/g, "\\$&");
+}
+
 /** `const x = exec;`, `const x = cp.execSync;`, `const x = promisify(exec);` — aliases processCallContext follows. */
 const TRACKED_ALIAS =
   /^\s*(?:export\s+)?(?:const|let|var)\s+[\w$]+\s*=\s*(?:[\w$.]+\(\s*)?(?:[\w$]+\.)?[\w$]+\s*\)?\s*;?\s*$/;
@@ -403,7 +408,7 @@ export const COMMAND_INJECTION_WAIVERS: readonly CommandInjectionWaiver[] = [
  */
 export function symbolLineRange(lines: string[], name: string): [number, number] | null {
   const def = new RegExp(
-    String.raw`^\s*(?:export\s+)?(?:(?:public|private|protected|static|async|override)\s+)*(?:function\s+)?${name}\s*(?:<[^>]*>)?\(`,
+    String.raw`^\s*(?:export\s+)?(?:(?:public|private|protected|static|async|override)\s+)*(?:function\s+)?${escapeRegExp(name)}\s*(?:<[^>]*>)?\(`,
   );
   const starts = lines.flatMap((line, i) => (def.test(line) ? [i] : []));
   if (starts.length !== 1) return null;
@@ -695,7 +700,7 @@ export class SecurityAuditor {
     if (trimmed.startsWith("//") || trimmed.startsWith("/*") || /^\*(?:\s|\/|$)/.test(trimmed)) return;
 
     const window = lines.slice(index, index + 1 + CALL_WINDOW_LINES).join("\n");
-    const names = [...context.locals.keys(), "eval"].map((n) => n.replace(/\$/g, "\\$")).join("|");
+    const names = [...context.locals.keys(), "eval"].map((n) => escapeRegExp(n)).join("|");
     const callRe = new RegExp(String.raw`(?<![\w$])(?:([\w$]+)\s*\.\s*)?(${names})\s*\(`, "g");
     const requireRe = new RegExp(
       String.raw`require\(\s*(?:${PROCESS_MODULE})\s*\)\s*(?:\.\s*([\w$]+)|\[\s*['"\`]([\w$]+)['"\`]\s*\])\s*\(`,
@@ -716,7 +721,7 @@ export class SecurityAuditor {
       const before = line.slice(0, m.index ?? 0);
       if (/(?:function|\.)\s*$/.test(before)) continue;
       const definition = new RegExp(
-        String.raw`^\s*(?:(?:public|private|protected|static|async|override)\s+)*${name.replace(/\$/g, "\\$")}\s*(?:<[^>]*>)?\s*\([^)]*\)\s*(?::\s*[^{=;]+)?\{`,
+        String.raw`^\s*(?:(?:public|private|protected|static|async|override)\s+)*${escapeRegExp(name)}\s*(?:<[^>]*>)?\s*\([^)]*\)\s*(?::\s*[^{=;]+)?\{`,
       );
       if (definition.test(line)) continue;
       found.push({ fn: name === "eval" ? "eval" : (context.locals.get(name) ?? name), open });
@@ -756,7 +761,7 @@ export class SecurityAuditor {
     // argument) escapes, and its calls cannot be traced. Tracked aliases
     // (const e = exec; run = promisify(exec)) and import lines are excluded.
     if (context.importsProcessModule && !/\bimport\b|\brequire\s*\(/.test(line) && !TRACKED_ALIAS.test(line)) {
-      const valueNames = [...context.locals.keys()].map((n) => n.replace(/\$/g, "\\$")).join("|");
+      const valueNames = [...context.locals.keys()].map((n) => escapeRegExp(n)).join("|");
       const valueRe = new RegExp(
         String.raw`(?<![\w$.])(?:([\w$]+)\s*\.\s*)?(${valueNames})\b(?!\s*\(|\s*\?\.\s*\(|\s*\)\s*\(|\s*:(?!:)|\s+as\b)`,
         "g",
