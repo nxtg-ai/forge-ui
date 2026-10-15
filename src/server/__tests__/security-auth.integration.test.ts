@@ -345,6 +345,79 @@ describe.sequential("API and terminal require authentication (GHSA-rc7c-r55p-923
     expect(created).toBe(true);
   }, 45_000);
 
+  // NEXUS: DIRECTIVE-NXTG-20261014-15 item 1. The control above connects
+  // without a sessionId; the real client (useSessionPersistence) always sends
+  // a client-generated sessionId with a bootstrap token, and that shape was
+  // rejected as a reattach with an unknown token, so no browser ever connected.
+  async function bootstrapToken(cookie: string): Promise<string> {
+    const res = await fetch(`${base}/api/ws-token`, { method: "POST", headers: { Cookie: cookie } });
+    expect(res.status).toBe(200);
+    return (await res.json()).data.token as string;
+  }
+
+  /** Open /terminal and return the socket plus the first message the bridge sends. */
+  async function openTerminal(query: string, cookie: string): Promise<{ ws: WebSocket; first: Record<string, unknown> }> {
+    const ws = new WebSocket(`ws://127.0.0.1:${port}/terminal?${query}`, {
+      headers: { Cookie: cookie, Origin: "http://localhost:5050" },
+    });
+    const first = new Promise<Record<string, unknown>>((resolve, reject) => {
+      ws.once("message", (data) => resolve(JSON.parse(String(data))));
+      ws.once("close", () => reject(new Error("closed before any message")));
+      setTimeout(() => reject(new Error("no message within 15 s")), 15_000);
+    });
+    await new Promise<void>((resolve, reject) => {
+      ws.once("open", () => resolve());
+      ws.once("unexpected-response", (_r, res) => reject(new Error(`upgrade refused: ${res.statusCode}`)));
+      ws.once("error", reject);
+    });
+    return { ws, first: await first };
+  }
+
+  it("the real client shape (client sessionId + bootstrap token) gets a terminal that runs input", async () => {
+    const cookie = await login();
+    const sessionId = `${Date.now()}-clientgen1`;
+    const { ws, first } = await openTerminal(`sessionId=${sessionId}&token=${await bootstrapToken(cookie)}`, cookie);
+    expect(first).toMatchObject({ type: "session", sessionId, restored: false });
+
+    const marker = path.join(workDir, "client-shape-marker");
+    await new Promise((r) => setTimeout(r, 500));
+    ws.send(JSON.stringify({ type: "input", data: `touch ${marker}\r` }));
+    const created = await waitForFile(marker, 20_000);
+    ws.terminate();
+    expect(created).toBe(true);
+  }, 45_000);
+
+  it("a reopened browser reattaches its session with a fresh bootstrap token", async () => {
+    const cookie = await login();
+    const sessionId = `${Date.now()}-clientgen2`;
+    const one = await openTerminal(`sessionId=${sessionId}&token=${await bootstrapToken(cookie)}`, cookie);
+    expect(one.first).toMatchObject({ type: "session", restored: false });
+    one.ws.close();
+    await new Promise((r) => setTimeout(r, 300));
+
+    const two = await openTerminal(`sessionId=${sessionId}&token=${await bootstrapToken(cookie)}`, cookie);
+    two.ws.terminate();
+    expect(two.first).toMatchObject({ type: "session", sessionId, restored: true });
+  }, 45_000);
+
+  it("refuses to reattach a session with a made-up token or another session's reattach token", async () => {
+    const cookie = await login();
+    const a = await openTerminal(`sessionId=${Date.now()}-sessA&token=${await bootstrapToken(cookie)}`, cookie);
+    const b = await openTerminal(`sessionId=${Date.now()}-sessB&token=${await bootstrapToken(cookie)}`, cookie);
+    const aToken = a.first.token as string;
+    const bId = b.first.sessionId as string;
+    a.ws.terminate();
+    b.ws.terminate();
+
+    const forged = await openTerminal(`sessionId=${bId}&token=${"0".repeat(64)}`, cookie);
+    forged.ws.terminate();
+    expect(forged.first).toMatchObject({ type: "error", data: "Invalid or expired token" });
+
+    const crossed = await openTerminal(`sessionId=${bId}&token=${aToken}`, cookie);
+    crossed.ws.terminate();
+    expect(crossed.first).toMatchObject({ type: "error", data: "Token does not match session" });
+  }, 45_000);
+
   it("listens on loopback only by default", async () => {
     expect(serverLog).toContain(`running on http://127.0.0.1:${port}`);
 

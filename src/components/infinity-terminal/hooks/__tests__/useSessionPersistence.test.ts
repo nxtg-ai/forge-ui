@@ -865,7 +865,36 @@ describe("useSessionPersistence", () => {
       });
 
       expect(result.current.state.error).toBe(
-        "Terminal connection rejected. Restart the API server.",
+        "Terminal connection refused. Reload the page; if it happens again, sign in again.",
+      );
+      expect(result.current.state.error).not.toMatch(/restart the api server/i);
+    });
+
+    // NEXUS: DIRECTIVE-NXTG-20261014-15 item 1. The bridge's reason is shown.
+    it("shows the bridge's refusal reason when it sent one before closing", async () => {
+      const { result } = renderHook(() =>
+        useSessionPersistence({ config: { autoReconnect: false } }),
+      );
+
+      act(() => {
+        result.current.connect();
+      });
+
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+
+      const ws = result.current.getWebSocket();
+
+      act(() => {
+        ws?.onmessage?.(
+          new MessageEvent("message", { data: JSON.stringify({ type: "error", data: "Invalid or expired token" }) }),
+        );
+        ws?.onclose?.(new CloseEvent("close", { code: 1005 }));
+      });
+
+      expect(result.current.state.error).toBe(
+        "Terminal connection refused: Invalid or expired token. Reload the page; if it happens again, sign in again.",
       );
     });
 

@@ -278,28 +278,33 @@ export function createPTYBridge(
       const requestedSessionId = url.searchParams.get("sessionId");
       const authToken = url.searchParams.get("token");
 
-      // Security: Validate auth token for session reattachment
-      if (requestedSessionId && authToken) {
-        const tokenData = authTokens.get(authToken);
-        if (!tokenData) {
-          logger.error(`[PTY Bridge] Invalid or expired auth token`);
-          ws.send(JSON.stringify({ type: "error", data: "Invalid or expired token" }));
-          ws.close();
-          return;
-        }
-
-        if (tokenData.sessionId !== requestedSessionId) {
+      // Security: which token a connection needs depends on whether its
+      // session exists (DIRECTIVE-NXTG-20261014-15). The upgrade itself already
+      // required the per-install secret (authorize() above).
+      // - An existing session takes its own reattach token, or a fresh
+      //   bootstrap token from POST /api/ws-token: both are issued only to a
+      //   client holding the install secret, and the browser keeps only the
+      //   bootstrap token across a reload.
+      // - A new session takes a bootstrap token (checked below).
+      // The reattach check used to run first for ANY sessionId + token, so a
+      // first visit (client-generated sessionId + bootstrap token) was always
+      // rejected as "Invalid or expired auth token".
+      if (requestedSessionId && sessions.has(requestedSessionId)) {
+        const tokenData = authToken ? authTokens.get(authToken) : undefined;
+        const reattachTokenOk =
+          tokenData !== undefined &&
+          tokenData.sessionId === requestedSessionId &&
+          Date.now() - tokenData.createdAt <= TOKEN_EXPIRY_MS;
+        if (tokenData && tokenData.sessionId !== requestedSessionId) {
           logger.error(`[PTY Bridge] Token/session mismatch`);
           ws.send(JSON.stringify({ type: "error", data: "Token does not match session" }));
           ws.close();
           return;
         }
-
-        // Check token expiry
-        if (Date.now() - tokenData.createdAt > TOKEN_EXPIRY_MS) {
-          logger.error(`[PTY Bridge] Expired auth token`);
-          authTokens.delete(authToken);
-          ws.send(JSON.stringify({ type: "error", data: "Token expired" }));
+        if (!reattachTokenOk && !validateWSAuthToken(authToken ?? undefined)) {
+          if (tokenData) authTokens.delete(authToken!);
+          logger.error(`[PTY Bridge] Reattach rejected: missing, invalid or expired token`);
+          ws.send(JSON.stringify({ type: "error", data: "Invalid or expired token" }));
           ws.close();
           return;
         }
