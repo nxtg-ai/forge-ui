@@ -256,38 +256,68 @@ export class InitService extends BaseService {
   }
 
   /**
-   * Generate or merge CLAUDE.md
+   * Write the Forge section of CLAUDE.md.
+   *
+   * CLAUDE.md is read by coding agents as instructions, so this never puts
+   * request text in it (the directive stays in .claude/governance.json) and
+   * never replaces an existing file unless forceOverwrite is set:
+   * - "skip" (the default) writes nothing.
+   * - "generate" creates the file, and refuses with CLAUDE_MD_EXISTS if one is
+   *   already there. The refusal is the exclusive-create flag on the write
+   *   itself, so it holds even if an earlier existence check failed.
+   * - "merge" appends the Forge section to the file on disk, or creates the
+   *   file if there is none. Existing text is kept.
+   * In every mode, a CLAUDE.md that is not a regular file (a symlink, a
+   * folder) is refused with CLAUDE_MD_NOT_A_FILE, and the writes open with
+   * O_NOFOLLOW where the platform has it. A cloned repo can ship CLAUDE.md as
+   * a symlink to a file outside the project, such as a shell rc file.
+   * PRM-CLX9-20261015-06 item (a).
    */
   async generateClaudeMd(
-    vision: string,
     projectType: ProjectType,
-    option: "generate" | "merge" | "skip" = "generate",
-    existingContent?: string,
+    option: "generate" | "merge" | "skip" = "skip",
+    { forceOverwrite = false }: { forceOverwrite?: boolean } = {},
   ): Promise<Result<void, IntegrationError>> {
     if (option === "skip") {
       return Result.ok(undefined);
     }
 
+    const claudeMdPath = path.join(this.projectRoot, "CLAUDE.md");
     try {
-      const claudeMdPath = path.join(this.projectRoot, "CLAUDE.md");
-      let content = "";
-
-      if (option === "merge" && existingContent) {
-        // Merge forge section at bottom
-        content = existingContent;
-        if (!content.endsWith("\n\n")) {
-          content += "\n\n";
-        }
-        content += "---\n\n";
-        content += generateForgeSection(vision, projectType);
-      } else {
-        // Generate new CLAUDE.md
-        content = generateCompleteClaude(vision, projectType);
+      const kind = await entryKind(claudeMdPath);
+      if (kind === "other") {
+        return Result.err(claudeMdNotAFileError());
       }
 
-      await fs.writeFile(claudeMdPath, content, "utf-8");
+      if (option === "merge" && kind === "file") {
+        const existing = await fs.readFile(claudeMdPath, {
+          encoding: "utf-8",
+          flag: openFlags().read,
+        });
+        const separator = existing.endsWith("\n\n") ? "" : "\n\n";
+        await fs.appendFile(
+          claudeMdPath,
+          separator + "---\n\n" + generateForgeSection(projectType),
+          {
+            encoding: "utf-8",
+            flag: openFlags().append,
+          },
+        );
+        return Result.ok(undefined);
+      }
+
+      await fs.writeFile(claudeMdPath, generateCompleteClaude(projectType), {
+        encoding: "utf-8",
+        flag: forceOverwrite ? openFlags().truncate : openFlags().create,
+      });
       return Result.ok(undefined);
     } catch (error) {
+      if (isErrnoCode(error, "EEXIST")) {
+        return Result.err(claudeMdExistsError());
+      }
+      if (isErrnoCode(error, "ELOOP")) {
+        return Result.err(claudeMdNotAFileError());
+      }
       return Result.err(
         new IntegrationError(
           `Failed to generate CLAUDE.md: ${error instanceof Error ? error.message : String(error)}`,
@@ -324,6 +354,20 @@ export class InitService extends BaseService {
         projectType = detectionResult.unwrap().projectType;
       }
 
+      // Refuse before writing anything if CLAUDE.md would be replaced, so a
+      // refused init leaves the project as it was.
+      const claudeMdOption = validOptions.claudeMdOption ?? "skip";
+      const forceOverwrite = validOptions.forceOverwrite === true;
+      if (claudeMdOption !== "skip") {
+        const kind = await entryKind(path.join(this.projectRoot, "CLAUDE.md"));
+        if (kind === "other") {
+          return Result.err(claudeMdNotAFileError());
+        }
+        if (claudeMdOption === "generate" && !forceOverwrite && kind === "file") {
+          return Result.err(claudeMdExistsError());
+        }
+      }
+
       // Step 2: Scaffold harness
       const scaffoldResult = await this.scaffoldHarness(projectType);
       if (scaffoldResult.isErr()) {
@@ -348,18 +392,11 @@ export class InitService extends BaseService {
       }
       created.push(".claude/governance.json");
 
-      // Step 5: Generate CLAUDE.md
-      const existingSetup = await this.checkExistingSetup();
-      const claudeMdOption = validOptions.claudeMdOption || "generate";
-      const existingContent = existingSetup.isOk()
-        ? existingSetup.unwrap().claudeMdContent
-        : "";
-
+      // Step 5: Write CLAUDE.md (skipped unless the caller asked for it)
       const claudeMdResult = await this.generateClaudeMd(
-        validOptions.directive,
         projectType,
         claudeMdOption,
-        existingContent,
+        { forceOverwrite },
       );
       if (claudeMdResult.isErr()) {
         return Result.err(claudeMdResult.error);
@@ -421,5 +458,58 @@ export class InitService extends BaseService {
       AGENT_TEMPLATES.fullstack,
       "utf-8",
     );
+  }
+}
+
+/**
+ * open() flags for the CLAUDE.md writes. O_NOFOLLOW is 0 where the platform
+ * has none (Windows); the lstat check still runs there.
+ */
+function openFlags(): { read: number; append: number; create: number; truncate: number } {
+  const c = fs.constants;
+  const noFollow = c.O_NOFOLLOW ?? 0;
+  return {
+    read: c.O_RDONLY | noFollow,
+    append: c.O_WRONLY | c.O_APPEND | noFollow,
+    create: c.O_WRONLY | c.O_CREAT | c.O_EXCL | noFollow,
+    truncate: c.O_WRONLY | c.O_CREAT | c.O_TRUNC | noFollow,
+  };
+}
+
+function claudeMdExistsError(): IntegrationError {
+  return new IntegrationError(
+    "CLAUDE.md already exists. Use claudeMdOption \"merge\" to append the Forge section, or set forceOverwrite to replace the file.",
+    "CLAUDE_MD_EXISTS",
+  );
+}
+
+function claudeMdNotAFileError(): IntegrationError {
+  return new IntegrationError(
+    "CLAUDE.md is not a regular file (it is a symlink, a folder or similar). forge-ui writes only to a regular CLAUDE.md in the project folder.",
+    "CLAUDE_MD_NOT_A_FILE",
+  );
+}
+
+function isErrnoCode(error: unknown, code: string): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as NodeJS.ErrnoException).code === code
+  );
+}
+
+/**
+ * What is at the path, without following a symlink: nothing, a regular file,
+ * or anything else (symlink, folder, device).
+ */
+async function entryKind(filePath: string): Promise<"none" | "file" | "other"> {
+  try {
+    const stat = await fs.lstat(filePath);
+    return stat.isFile() ? "file" : "other";
+  } catch (error) {
+    if (isErrnoCode(error, "ENOENT")) {
+      return "none";
+    }
+    throw error;
   }
 }

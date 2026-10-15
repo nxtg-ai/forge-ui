@@ -155,15 +155,13 @@ quality:
 /**
  * Generate complete CLAUDE.md
  */
-export function generateCompleteClaude(
-  vision: string,
-  projectType: ProjectType,
-): string {
+export function generateCompleteClaude(projectType: ProjectType): string {
   return `# Project Knowledge Base
 
 ## Vision
 
-${vision}
+The project's directive and goals are kept in \`.claude/governance.json\`
+(\`constitution\`), and the dashboard shows them. They are not copied into this file.
 
 ## Project Type
 
@@ -189,17 +187,14 @@ ${projectType}
 
 ---
 
-${generateForgeSection(vision, projectType)}
+${generateForgeSection(projectType)}
 `;
 }
 
 /**
  * Generate NXTG-Forge section for CLAUDE.md
  */
-export function generateForgeSection(
-  vision: string,
-  projectType: ProjectType,
-): string {
+export function generateForgeSection(projectType: ProjectType): string {
   return `## NXTG-Forge Integration
 
 This project is enhanced with NXTG-Forge - an AI-orchestrated development system.
@@ -215,7 +210,8 @@ NXTG-Forge is your AI Chief of Staff that:
 
 ### Project Vision
 
-${vision}
+The project's directive and goals are kept in \`.claude/governance.json\`
+(\`constitution\`), and the dashboard shows them. They are not copied into this file.
 
 ### Available Commands
 

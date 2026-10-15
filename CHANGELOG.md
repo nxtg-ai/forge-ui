@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `POST /api/diffs/apply` now says what it does. It changes no file, and the response used to claim "Successfully applied changes". It now returns `applied: false` with the message "No file was changed", and broadcasts `diff.accepted` instead of `diff.applied`. The client `applyDiff()` passes the server's message on instead of its own success text.
 - The README's install step clones the current release tag (`git clone --branch v3.5.2`), and the stage check fails if that tag and the package version disagree. The stage check also verifies the README stage text word for word and, where the governance registry is readable, that `STAGE` matches forge-ui's own registry row.
 
+### Fixed
+
+- `POST /api/forge/init` no longer writes CLAUDE.md unless the request asks for it (`claudeMdOption` now defaults to `skip`). `generate` refuses with `CLAUDE_MD_EXISTS` when a CLAUDE.md is already there, unless `forceOverwrite` is set; the refusal happens before init writes anything. `merge` appends the Forge section to the file on disk and keeps its text. The request's `directive` is no longer copied into CLAUDE.md, which coding agents read as instructions; it stays in `.claude/governance.json`. A CLAUDE.md that is a symlink or a folder is refused in every mode (`CLAUDE_MD_NOT_A_FILE`), and the writes open with `O_NOFOLLOW`, so a cloned repo whose CLAUDE.md links to a file outside the project cannot have that file written.
+
 ## [3.5.2] - 2026-10-15
 
 forge-ui is a **Public preview**; interfaces may change. This is a security release for two advisories: GHSA-fmh9-88rc-jwh3 (High: the default origin allowlist trusted another local dev server's port) and GHSA-q5hx-8rpm-fq48 (Medium: the dev server served project files). **Upgrade from v3.5.1.**
