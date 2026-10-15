@@ -338,9 +338,9 @@ describe("Worker Routes", () => {
       mockWorkerPool.submitTask.mockResolvedValue("task-123");
 
       const task = {
-        type: "shell",
+        type: "claude-code",
         priority: "high",
-        command: "codex",
+        command: "Review the diff",
       };
 
       const res = await request(app)
@@ -352,18 +352,31 @@ describe("Worker Routes", () => {
       expect(res.body.data.taskId).toBe("task-123");
       expect(mockWorkerPool.submitTask).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: "shell",
+          type: "claude-code",
           priority: "high",
-          command: "codex",
+          command: "Review the diff",
         })
       );
+    });
+
+    // forge-pm al:1e8b0762ef802d95: shell/script tasks are refused over HTTP.
+    it("refuses a shell task for an allow-listed CLI and submits nothing", async () => {
+      const res = await request(app)
+        .post("/api/workers/tasks")
+        .send({ type: "shell", command: "codex" })
+        .expect(400);
+
+      expect(res.body.error).toBe(
+        "shell and script tasks are not accepted over HTTP; submit a claude-code or agent task with a prompt",
+      );
+      expect(mockWorkerPool.submitTask).not.toHaveBeenCalled();
     });
 
     // PRM-CLX9-20261015-06 item (c): args are refused over HTTP.
     it("rejects args for an allow-listed CLI and submits nothing", async () => {
       const res = await request(app)
         .post("/api/workers/tasks")
-        .send({ type: "shell", command: "codex", args: ["--dangerously-bypass-approvals-and-sandbox", "exec", "x"] })
+        .send({ type: "claude-code", command: "Review the diff", args: ["--dangerously-skip-permissions"] })
         .expect(400);
 
       expect(res.body.error).toBe("args are not accepted for tasks submitted over HTTP");
@@ -384,8 +397,8 @@ describe("Worker Routes", () => {
       mockWorkerPool.submitTask.mockResolvedValue("task-456");
 
       const task = {
-        type: "shell",
-        command: "claude",
+        type: "claude-code",
+        command: "Review the diff",
         workstreamId: "ws-1",
         timeout: 5000,
         metadata: { source: "api" },
@@ -400,8 +413,8 @@ describe("Worker Routes", () => {
       expect(res.body.data.taskId).toBe("task-456");
       expect(mockWorkerPool.submitTask).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: "shell",
-          command: "claude",
+          type: "claude-code",
+          command: "Review the diff",
           priority: "medium",
           workstreamId: "ws-1",
           timeout: 5000,
@@ -419,7 +432,7 @@ describe("Worker Routes", () => {
         .expect(400);
 
       expect(res.body.success).toBe(false);
-      expect(res.body.error).toBe("command for shell tasks must be one of: claude, codex, gemini");
+      expect(res.body.error).toBe("shell and script tasks are not accepted over HTTP; submit a claude-code or agent task with a prompt");
       expect(mockWorkerPool.submitTask).not.toHaveBeenCalled();
     });
 
@@ -475,8 +488,8 @@ describe("Worker Routes", () => {
       mockWorkerPool.submitTask.mockRejectedValue(new Error("Queue full"));
 
       const task = {
-        type: "shell",
-        command: "claude",
+        type: "claude-code",
+        command: "Review the diff",
       };
 
       const res = await request(app)
@@ -547,25 +560,19 @@ describe("Worker Routes", () => {
       expect(intelligenceInjector.getIntelligenceContext).toHaveBeenCalled();
     });
 
-    it("skips intelligence injection for non-agent tasks", async () => {
-      mockWorkerPool.submitTask.mockResolvedValue("task-111");
-
+    it("refuses a script task before any intelligence lookup", async () => {
       const task = {
-        type: "shell",
+        type: "script",
         command: "gemini",
       };
 
       await request(app)
         .post("/api/workers/tasks")
         .send(task)
-        .expect(200);
+        .expect(400);
 
       expect(intelligenceInjector.getIntelligenceContext).not.toHaveBeenCalled();
-      expect(mockWorkerPool.submitTask).toHaveBeenCalledWith(
-        expect.objectContaining({
-          command: "gemini",
-        })
-      );
+      expect(mockWorkerPool.submitTask).not.toHaveBeenCalled();
     });
 
     it("extracts context keywords from the prompt", async () => {
@@ -1024,8 +1031,8 @@ describe("Worker Routes", () => {
       mockWorkerPool.submitTask.mockResolvedValue("task-empty-args");
 
       const task = {
-        type: "shell",
-        command: "codex",
+        type: "claude-code",
+        command: "Review the diff",
         args: [],
       };
 
@@ -1046,8 +1053,8 @@ describe("Worker Routes", () => {
       mockWorkerPool.submitTask.mockResolvedValue("task-null-priority");
 
       const task = {
-        type: "shell",
-        command: "claude",
+        type: "claude-code",
+        command: "Review the diff",
         priority: null,
       };
 
@@ -1068,8 +1075,8 @@ describe("Worker Routes", () => {
       mockWorkerPool.submitTask.mockResolvedValue("task-undef-priority");
 
       const task = {
-        type: "shell",
-        command: "claude",
+        type: "claude-code",
+        command: "Review the diff",
       };
 
       const res = await request(app)
@@ -1089,8 +1096,8 @@ describe("Worker Routes", () => {
       mockWorkerPool.submitTask.mockResolvedValue("task-metadata");
 
       const task = {
-        type: "shell",
-        command: "codex",
+        type: "claude-code",
+        command: "Review the diff",
         priority: "critical",
         workstreamId: "ws-prod-123",
         timeout: 60000,
@@ -1109,8 +1116,8 @@ describe("Worker Routes", () => {
       expect(res.body.success).toBe(true);
       expect(mockWorkerPool.submitTask).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: "shell",
-          command: "codex",
+          type: "claude-code",
+          command: "Review the diff",
           priority: "critical",
           workstreamId: "ws-prod-123",
           timeout: 60000,

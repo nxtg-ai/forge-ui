@@ -5,12 +5,22 @@
 import { describe, it, expect } from "vitest";
 import { assertSpawnAllowed, assertTaskArgvAllowed, validateHttpTask } from "../task-policy";
 
+const SHELL_ERROR = "shell and script tasks are not accepted over HTTP; submit a claude-code or agent task with a prompt";
+
 describe("validateHttpTask", () => {
+  // forge-pm al:1e8b0762ef802d95 (follow-up to PRM-CLX9-20261015-06 item c):
+  // with args refused, a shell/script task over HTTP could only start a bare
+  // CLI with no input, so those two types are refused over HTTP.
+  it("refuses shell and script tasks, even with an allow-listed CLI and no args", () => {
+    for (const type of ["shell", "script"]) {
+      for (const command of ["claude", "codex", "gemini"]) {
+        expect(validateHttpTask({ type, command })).toEqual({ ok: false, error: SHELL_ERROR });
+      }
+    }
+  });
+
   it("rejects a free-form shell command", () => {
-    expect(validateHttpTask({ type: "shell", command: "touch" })).toEqual({
-      ok: false,
-      error: "command for shell tasks must be one of: claude, codex, gemini",
-    });
+    expect(validateHttpTask({ type: "shell", command: "touch" })).toEqual({ ok: false, error: SHELL_ERROR });
     expect(validateHttpTask({ type: "script", command: "/bin/sh" })).toMatchObject({ ok: false });
     expect(validateHttpTask({ type: "shell", command: "npm run build" })).toMatchObject({ ok: false });
   });
@@ -35,13 +45,13 @@ describe("validateHttpTask", () => {
   });
 
   it("rejects non-string args", () => {
-    expect(validateHttpTask({ type: "shell", command: "claude", args: [1] })).toMatchObject({ ok: false });
+    expect(validateHttpTask({ type: "claude-code", command: "Review the diff", args: [1] })).toMatchObject({ ok: false });
   });
 
   it("accepts an agent prompt and an allow-listed CLI", () => {
     expect(validateHttpTask({ type: "claude-code", command: "Review src/ for bugs" })).toEqual({ ok: true });
     expect(validateHttpTask({ type: "agent", command: "Plan the release" })).toEqual({ ok: true });
-    expect(validateHttpTask({ type: "shell", command: "claude", env: {} })).toEqual({ ok: true });
+    expect(validateHttpTask({ type: "claude-code", command: "Review the diff", env: {} })).toEqual({ ok: true });
   });
 });
 
@@ -53,9 +63,9 @@ describe("validateHttpTask args", () => {
 
   it("rejects flags for an allow-listed CLI", () => {
     expect(
-      validateHttpTask({ type: "shell", command: "codex", args: ["--dangerously-bypass-approvals-and-sandbox", "exec", "x"] }),
+      validateHttpTask({ type: "agent", command: "Review the diff", args: ["--dangerously-bypass-approvals-and-sandbox", "exec", "x"] }),
     ).toEqual(ARGS_ERROR);
-    expect(validateHttpTask({ type: "script", command: "gemini", args: ["--yolo"] })).toEqual(ARGS_ERROR);
+    expect(validateHttpTask({ type: "claude-code", command: "Review the diff", args: ["--yolo"] })).toEqual(ARGS_ERROR);
   });
 
   it("rejects extra args after an agent prompt", () => {
@@ -66,8 +76,8 @@ describe("validateHttpTask args", () => {
   });
 
   it("rejects positional args too (subcommands such as mcp add)", () => {
-    expect(validateHttpTask({ type: "shell", command: "claude", args: ["mcp", "add", "x", "sh"] })).toEqual(ARGS_ERROR);
-    expect(validateHttpTask({ type: "shell", command: "codex", args: ["exec", "hello"] })).toEqual(ARGS_ERROR);
+    expect(validateHttpTask({ type: "claude-code", command: "Review the diff", args: ["mcp", "add", "x", "sh"] })).toEqual(ARGS_ERROR);
+    expect(validateHttpTask({ type: "agent", command: "Review the diff", args: ["exec", "hello"] })).toEqual(ARGS_ERROR);
   });
 
   it("rejects an agent prompt that the CLI would read as a flag", () => {
