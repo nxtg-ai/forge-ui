@@ -90,7 +90,7 @@ describe.sequential("API and terminal require authentication (GHSA-rc7c-r55p-923
     port = await freePort();
     base = `http://127.0.0.1:${port}`;
 
-    const env = { ...process.env, PORT: String(port), FORGE_UI_SECRET_FILE: secretFile, NODE_ENV: "test" };
+    const env = { ...process.env, PORT: String(port), FORGE_UI_SECRET_FILE: secretFile, NODE_ENV: "test", FORGE_TERMINAL_KEEPALIVE_MS: "1500" };
     delete env.FORGE_UI_SECRET;
     delete env.FORGE_UI_HOST;
     delete env.ALLOWED_ORIGINS;
@@ -387,7 +387,7 @@ describe.sequential("API and terminal require authentication (GHSA-rc7c-r55p-923
     expect(created).toBe(true);
   }, 45_000);
 
-  it("a reopened browser reattaches its session with a fresh bootstrap token", async () => {
+  it("a client that reconnects with its sessionId and a fresh bootstrap token reattaches", async () => {
     const cookie = await login();
     const sessionId = `${Date.now()}-clientgen2`;
     const one = await openTerminal(`sessionId=${sessionId}&token=${await bootstrapToken(cookie)}`, cookie);
@@ -398,6 +398,35 @@ describe.sequential("API and terminal require authentication (GHSA-rc7c-r55p-923
     const two = await openTerminal(`sessionId=${sessionId}&token=${await bootstrapToken(cookie)}`, cookie);
     two.ws.terminate();
     expect(two.first).toMatchObject({ type: "session", sessionId, restored: true });
+  }, 45_000);
+
+  it("spends a bootstrap token on one connection", async () => {
+    const cookie = await login();
+    const token = await bootstrapToken(cookie);
+    const one = await openTerminal(`sessionId=${Date.now()}-once1&token=${token}`, cookie);
+    one.ws.terminate();
+    expect(one.first).toMatchObject({ type: "session", restored: false });
+
+    const two = await openTerminal(`sessionId=${Date.now()}-once2&token=${token}`, cookie);
+    two.ws.terminate();
+    expect(two.first).toMatchObject({ type: "error" });
+  }, 45_000);
+
+  // Review finding: default-shell sessions share one PTY, and an abandoned
+  // session's keepalive cleanup killed it, ending the live tab's terminal.
+  it("an abandoned session's cleanup does not kill a PTY a live session still uses", async () => {
+    const cookie = await login();
+    const old = await openTerminal(`sessionId=${Date.now()}-abandoned&token=${await bootstrapToken(cookie)}`, cookie);
+    const live = await openTerminal(`sessionId=${Date.now()}-live&token=${await bootstrapToken(cookie)}`, cookie);
+    old.ws.close();
+    // The test server's keepalive is 1.5 s; wait past it.
+    await new Promise((r) => setTimeout(r, 3000));
+
+    const marker = path.join(workDir, "shared-pty-marker");
+    live.ws.send(JSON.stringify({ type: "input", data: `touch ${marker}\r` }));
+    const created = await waitForFile(marker, 20_000);
+    live.ws.terminate();
+    expect(created).toBe(true);
   }, 45_000);
 
   it("refuses to reattach a session with a made-up token or another session's reattach token", async () => {

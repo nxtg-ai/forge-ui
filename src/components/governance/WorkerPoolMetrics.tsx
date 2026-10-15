@@ -142,7 +142,11 @@ export const WorkerPoolMetrics: React.FC<WorkerPoolMetricsProps> = ({
     // even when none is in an error state right now (DIRECTIVE-NXTG-20261014-15).
     const crashes = metrics.recentCrashes ?? 0;
     if (crashes >= 3) return { status: "unhealthy: workers keep crashing", color: "text-red-400" };
-    if (metrics.totalWorkers === 0) return { status: "no workers running", color: "text-red-400" };
+    if (metrics.totalWorkers === 0) {
+      return poolStatus === "starting"
+        ? { status: "starting", color: "text-gray-400" }
+        : { status: "no workers running", color: "text-red-400" };
+    }
     if (crashes > 0) return { status: "degraded", color: "text-yellow-400" };
     const errorRate =
       metrics.totalWorkers > 0

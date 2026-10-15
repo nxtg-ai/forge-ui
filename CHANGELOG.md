@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **The Infinity Terminal connects in a new browser session.** The terminal bridge checked a reconnect token before checking whether the session existed, so every first visit was refused (also in v3.4.1). A new session now takes the sign-in token the page already fetches, and a reopened browser reattaches its session. A token for another session is still refused.
+- **The Infinity Terminal connects in a new browser session.** The terminal bridge checked a reconnect token before checking whether the session existed, so every first visit was refused (also in v3.4.1). A new session now takes the sign-in token the page already fetches. A token for another session is still refused, and each sign-in token opens one terminal connection.
+- **The terminal no longer dies 5 minutes after a page reload.** Sessions share one shell, and cleaning up the abandoned session killed it for the open tab too.
 - When the terminal refuses a connection, the page shows the reason and no longer tells you to restart the server.
 - The Worker Pool panel no longer reports "healthy" while workers crash and restart, or when no worker is running.
 - The floating feedback button no longer covers the right-hand panel; feedback opens from a button in the header.

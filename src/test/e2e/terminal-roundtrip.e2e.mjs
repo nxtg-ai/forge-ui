@@ -34,7 +34,22 @@ const logFile = process.env.E2E_LOG || path.join(scratch, "dev.log");
 const log = fs.openSync(logFile, "a");
 const report = { signed_in: false, terminal_opened: false, terminal_roundtrip: false, console_errors: [], page_errors: [] };
 
+// A busy port would make the test drive some other server, so refuse to start.
+for (const port of [5050, 5051]) {
+  if (await portOpen(port)) {
+    console.log(JSON.stringify({ pass: false, error: `port ${port} is already in use; stop that server first` }));
+    process.exit(1);
+  }
+}
+
 const stack = spawn("npm", ["run", "dev"], { cwd: ROOT, env, detached: true, stdio: ["ignore", log, log] });
+// Ctrl-C or a CI cancel must not leave the dev stack running.
+for (const signal of ["SIGINT", "SIGTERM"]) {
+  process.on(signal, () => {
+    stopStack();
+    process.exit(130);
+  });
+}
 
 function portOpen(port) {
   return new Promise((resolve) => {

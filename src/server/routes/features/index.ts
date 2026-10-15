@@ -4,7 +4,7 @@
  * Re-exports createFeatureRoutes and validateWSAuthToken for backward compatibility.
  */
 
-export { validateWSAuthToken } from "./auth";
+export { validateWSAuthToken, consumeWSAuthToken } from "./auth";
 
 import express from "express";
 import type { RouteContext } from "../../route-context";

@@ -11,7 +11,7 @@ import * as crypto from "crypto";
 import type { RunspaceManager } from "../core/runspace-manager";
 import type { Runspace } from "../core/runspace";
 import { WSLBackend } from "../core/backends/wsl-backend";
-import { validateWSAuthToken } from "./routes/features";
+import { consumeWSAuthToken } from "./routes/features";
 import { authorize } from "./auth/ui-auth";
 import { getLogger } from "../utils/logger";
 
@@ -30,7 +30,8 @@ interface TerminalSession {
 }
 
 // How long to keep a PTY alive after WebSocket disconnects (5 minutes)
-const SESSION_KEEPALIVE_MS = 5 * 60 * 1000;
+// Overridable for tests only (FORGE_TERMINAL_KEEPALIVE_MS); 5 minutes otherwise.
+const SESSION_KEEPALIVE_MS = Number(process.env.FORGE_TERMINAL_KEEPALIVE_MS) || 5 * 60 * 1000;
 // Max scrollback buffer size in bytes (~100KB)
 const MAX_SCROLLBACK_SIZE = 100 * 1024;
 
@@ -233,9 +234,15 @@ export function createPTYBridge(
 
       session.cleanupTimer = setTimeout(() => {
         logger.info(`[PTY Bridge] Session ${session.sessionId} timed out, cleaning up`);
-        session.pty.pty.kill();
         sessions.delete(session.sessionId);
-        wslBackend.removeSession(session.runspaceId);
+        // Default-shell and runspace sessions can share one PTY. Killing it here
+        // would end every other tab's live terminal 5 minutes after a reload
+        // (DIRECTIVE-NXTG-20261014-15 review). Kill only the last user's PTY.
+        const shared = [...sessions.values()].some((s) => s.pty === session.pty);
+        if (!shared) {
+          session.pty.pty.kill();
+          wslBackend.removeSession(session.runspaceId);
+        }
       }, SESSION_KEEPALIVE_MS);
     });
 
@@ -283,9 +290,9 @@ export function createPTYBridge(
       // required the per-install secret (authorize() above).
       // - An existing session takes its own reattach token, or a fresh
       //   bootstrap token from POST /api/ws-token: both are issued only to a
-      //   client holding the install secret, and the browser keeps only the
-      //   bootstrap token across a reload.
+      //   client holding the install secret.
       // - A new session takes a bootstrap token (checked below).
+      // A bootstrap token opens one terminal connection, then it is spent.
       // The reattach check used to run first for ANY sessionId + token, so a
       // first visit (client-generated sessionId + bootstrap token) was always
       // rejected as "Invalid or expired auth token".
@@ -301,7 +308,7 @@ export function createPTYBridge(
           ws.close();
           return;
         }
-        if (!reattachTokenOk && !validateWSAuthToken(authToken ?? undefined)) {
+        if (!reattachTokenOk && !consumeWSAuthToken(authToken ?? undefined)) {
           if (tokenData) authTokens.delete(authToken!);
           logger.error(`[PTY Bridge] Reattach rejected: missing, invalid or expired token`);
           ws.send(JSON.stringify({ type: "error", data: "Invalid or expired token" }));
@@ -355,7 +362,7 @@ export function createPTYBridge(
 
       // --- NEW session ---
       // Security: Require a valid auth token to create new PTY sessions
-      if (!authToken || !validateWSAuthToken(authToken)) {
+      if (!authToken || !consumeWSAuthToken(authToken)) {
         logger.error("[PTY Bridge] New session rejected: missing or invalid auth token");
         ws.send(JSON.stringify({ type: "error", data: "Authentication required. Obtain a token via POST /api/ws-token" }));
         ws.close();

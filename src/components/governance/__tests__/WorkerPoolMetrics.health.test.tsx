@@ -30,10 +30,10 @@ function metrics(overrides: Record<string, number>) {
   };
 }
 
-function serve(m: ReturnType<typeof metrics>) {
+function serve(m: ReturnType<typeof metrics>, status = "running") {
   mockApiFetch.mockResolvedValue({
     ok: true,
-    json: async () => ({ success: true, data: { status: "running", metrics: m } }),
+    json: async () => ({ success: true, data: { status, metrics: m } }),
   });
 }
 
@@ -57,6 +57,12 @@ describe("WorkerPoolMetrics health", () => {
     serve(metrics({ totalWorkers: 0, idleWorkers: 0 }));
     render(<WorkerPoolMetrics />);
     await waitFor(() => expect(screen.getByText("Health: no workers running")).toBeInTheDocument());
+  });
+
+  it("says starting, not 'no workers running', while the pool starts", async () => {
+    serve(metrics({ totalWorkers: 0, idleWorkers: 0 }), "starting");
+    render(<WorkerPoolMetrics />);
+    await waitFor(() => expect(screen.getByText("Health: starting")).toBeInTheDocument());
   });
 
   it("is degraded after a single recent crash", async () => {

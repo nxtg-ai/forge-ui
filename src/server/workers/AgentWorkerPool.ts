@@ -263,7 +263,8 @@ export class AgentWorkerPool extends EventEmitter {
       count: toAdd,
       timestamp: new Date(),
     };
-    this._status = "running";
+    // Scaling must not mask a crash loop (review): settle, do not force "running".
+    this._status = this.settledStatus();
     this.emitEvent({ type: "pool.scaled", direction: "up", count: toAdd });
   }
 
@@ -295,7 +296,8 @@ export class AgentWorkerPool extends EventEmitter {
       count: idleWorkers.length,
       timestamp: new Date(),
     };
-    this._status = "running";
+    // Scaling must not mask a crash loop (review): settle, do not force "running".
+    this._status = this.settledStatus();
     this.emitEvent({
       type: "pool.scaled",
       direction: "down",
@@ -442,6 +444,13 @@ export class AgentWorkerPool extends EventEmitter {
     this.dispatchTasks();
   }
 
+  /** "degraded" during a crash loop or with an empty pool; otherwise "running". */
+  private settledStatus(): PoolStatus["status"] {
+    const crashLoop = this.recentCrashCount() >= CRASH_LOOP_THRESHOLD;
+    const empty = this.workers.size === 0 && this.config.minWorkers > 0;
+    return crashLoop || empty ? "degraded" : "running";
+  }
+
   /** Crashes inside the window; older entries are dropped. */
   private recentCrashCount(): number {
     const cutoff = Date.now() - CRASH_WINDOW_MS;
@@ -545,9 +554,7 @@ export class AgentWorkerPool extends EventEmitter {
 
     // A crash loop (workers exit and respawn) or an empty pool is not
     // healthy, even when no worker is in an error state at this instant.
-    const crashLoop = this.recentCrashCount() >= CRASH_LOOP_THRESHOLD;
-    const empty = this.workers.size === 0 && this.config.minWorkers > 0;
-    if (errorCount > this.workers.size * 0.5 || crashLoop || empty) {
+    if (errorCount > this.workers.size * 0.5 || this.settledStatus() === "degraded") {
       this._status = "degraded";
     } else if (this._status === "degraded") {
       this._status = "running";

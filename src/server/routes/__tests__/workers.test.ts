@@ -818,6 +818,33 @@ describe("Worker Routes", () => {
   // ============= Health Check Routes =============
 
   describe("GET /api/workers/health", () => {
+    // NEXUS: DIRECTIVE-NXTG-20261014-15 item 4. A crash loop leaves 0 errored
+    // workers; the route must still not say healthy.
+    it("is unhealthy during a crash loop even with no errored worker", async () => {
+      mockWorkerPool.getStatus.mockReturnValue({
+        status: "degraded",
+        metrics: { totalWorkers: 2, activeWorkers: 0, idleWorkers: 2, errorWorkers: 0, tasksQueued: 0, avgQueueWaitTime: 0, recentCrashes: 4 },
+        workers: [],
+      });
+
+      const res = await request(app).get("/api/workers/health").expect(200);
+
+      expect(res.body.data.status).toBe("unhealthy");
+      expect(res.body.data.recentCrashes).toBe(4);
+    });
+
+    it("is unhealthy with no workers once the pool has started", async () => {
+      mockWorkerPool.getStatus.mockReturnValue({
+        status: "running",
+        metrics: { totalWorkers: 0, activeWorkers: 0, idleWorkers: 0, errorWorkers: 0, tasksQueued: 0, avgQueueWaitTime: 0, recentCrashes: 0 },
+        workers: [],
+      });
+
+      const res = await request(app).get("/api/workers/health").expect(200);
+
+      expect(res.body.data.status).toBe("unhealthy");
+    });
+
     it("should return healthy status", async () => {
       const mockStatus = {
         status: "running",

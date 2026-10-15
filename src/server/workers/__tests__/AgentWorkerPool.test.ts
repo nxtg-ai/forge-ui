@@ -1069,6 +1069,15 @@ describe("AgentWorkerPool", () => {
       expect(pool["_status"]).toBe("degraded");
     });
 
+    it("stays degraded when it scales during a crash loop", async () => {
+      const workerId = Array.from(pool["workers"].keys())[0];
+      for (let i = 0; i < 3; i += 1) await pool["handleWorkerCrash"](workerId);
+
+      await pool.scaleUp(1);
+
+      expect(pool.getStatus().status).toBe("degraded");
+    });
+
     it("forgets crashes older than the crash window", async () => {
       const workerId = Array.from(pool["workers"].keys())[0];
       await pool["handleWorkerCrash"](workerId);

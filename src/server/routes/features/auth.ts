@@ -33,6 +33,17 @@ export function validateWSAuthToken(token: string | undefined): boolean {
   return true;
 }
 
+/**
+ * Validate a bootstrap token and spend it: one terminal connection per token
+ * (DIRECTIVE-NXTG-20261014-15 review). The terminal client fetches a new one
+ * for every connection attempt.
+ */
+export function consumeWSAuthToken(token: string | undefined): boolean {
+  if (!validateWSAuthToken(token)) return false;
+  wsAuthTokens.delete(token!);
+  return true;
+}
+
 // Cleanup expired tokens periodically
 setInterval(() => {
   const now = Date.now();
