@@ -106,6 +106,17 @@ describe("check-stage", () => {
     expect(out).toContain("README clones the release tag v9.9.9");
   });
 
+  // Under `set -o pipefail`, `tr | grep -q` turned a found string red when grep
+  // exited at the match and tr then died of SIGPIPE writing the rest. README is
+  // just over one write buffer, so CI saw it intermittently (2026-10-15, #76).
+  // A README longer than the pipe buffer makes the race certain.
+  it("finds a string near the top of a file longer than the pipe buffer", () => {
+    fs.appendFileSync(path.join(dir, "README.md"), "padding line for the pipe buffer\n".repeat(8000));
+    const { code, out } = run();
+    expect(code, out).toBe(0);
+    expect(out).toContain("ok   README badge = stage-public_preview");
+  });
+
   it("skips, and says so, where the registry is not readable", () => {
     const r = spawnSync("bash", [SCRIPT], {
       cwd: dir,
