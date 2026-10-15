@@ -6,7 +6,7 @@
 
 [![stage: public preview](https://img.shields.io/badge/stage-public_preview-blue)](STAGE)
 
-**Stage: Public preview.** Forge is a public preview: anyone may install and use it. No SLA, and interfaces may change without notice.
+**Stage: Public preview.** The Forge plugin and orchestrator are in alpha. This dashboard, forge-ui, was not part of the pre-registered core-job test behind that stage and is still a public preview.
 
 **Full visual platform for multi-tool AI orchestration.**
 
