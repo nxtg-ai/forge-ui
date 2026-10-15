@@ -12,9 +12,13 @@ import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import net from "node:net";
 import path from "node:path";
 import type { ViteDevServer } from "vite";
+import { literalGlobPath } from "../../../vite.config";
 
 vi.unmock("fs");
 const fs = await vi.importActual<typeof import("node:fs")>("node:fs");
+// Vite's own matcher (picomatch ships no types; this is the slice used here).
+type Matcher = (glob: string, opts: Record<string, boolean>) => (file: string) => boolean;
+const picomatch = (await vi.importActual<{ default: Matcher }>("picomatch")).default;
 
 const REPO_ROOT = path.resolve(__dirname, "../../..");
 let server: ViteDevServer | null = null;
@@ -105,5 +109,27 @@ describe("Vite dev server file exposure", () => {
     const changelog = await get("/CHANGELOG.md");
     expect(changelog.status).toBe(200);
     expect(await changelog.text()).toMatch(/^# /m);
+  });
+});
+
+// The src/server deny rule is an absolute path. Built naively, a checkout under
+// a folder with glob characters ("John (Work)") made it match nothing, and the
+// dev server served server source again. Same matcher options as Vite 7's
+// fsDenyGlob (node_modules/vite/dist/node/chunks/config.js).
+describe("server-source deny rule under any checkout path", () => {
+  it.each([
+    "/home/a/forge-ui",
+    "/home/John (Work)/forge-ui",
+    "/srv/@(team)/forge-ui",
+    "/srv/[x]/forge-ui",
+    "/srv/a+b{c}!/forge-ui",
+    "C:\\Users\\J (W)\\forge-ui",
+  ])("%s", (root) => {
+    const r = root.replace(/\\/g, "/");
+    const isDenied = picomatch(`${literalGlobPath(`${root}/src/server`)}/**`, { matchBase: false, nocase: true, dot: true });
+    expect(isDenied(`${r}/src/server/api-server.ts`)).toBe(true);
+    expect(isDenied(`${r}/src/server/auth/ui-auth.ts`)).toBe(true);
+    expect(isDenied(`${r}/src/servers/x.ts`)).toBe(false);
+    expect(isDenied(`${r}/src/main.tsx`)).toBe(false);
   });
 });

@@ -3,6 +3,16 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 
+/**
+ * A literal filesystem path as a glob prefix. Every glob character is put in
+ * brackets, so a checkout under a folder such as "John (Work)" cannot turn the
+ * server-source deny rule into a pattern that matches nothing (review seat on
+ * forge-pm security finding al:802d7317c90eb745).
+ */
+export function literalGlobPath(p: string): string {
+  return p.replace(/\\/g, '/').replace(/[()[\]{}*?!+@|]/g, (c) => `[${c}]`);
+}
+
 export default defineConfig({
   plugins: [tailwindcss(), react()],
   resolve: {
@@ -44,7 +54,7 @@ export default defineConfig({
         '**/.claude/**',
         '**/.forge/**',
         '**/.asif/**',
-        `${path.resolve(__dirname, 'src/server').replace(/\\/g, '/')}/**`,
+        `${literalGlobPath(path.resolve(__dirname, 'src/server'))}/**`,
       ],
     },
     proxy: {
