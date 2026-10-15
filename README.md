@@ -12,7 +12,7 @@
 
 This is L3: Ship Lord.
 
-forge-ui gives you a terminal in the browser (the Infinity Terminal), a governance dashboard with a project health score, and a command center that runs a fixed set of project commands from the browser. An agent activity feed is planned.
+forge-ui gives you a terminal in the browser (the Infinity Terminal), a governance dashboard with a health score, and a command center that runs a fixed set of project commands from the browser. An agent activity feed is planned.
 
 ## Install
 
@@ -35,7 +35,7 @@ npx tsx src/server/auth/print-auth-url.ts      # or: node dist/server/auth/print
 
 Open the link it prints. The token is created on first run at `~/.config/nxtg-forge/ui-secret` (mode 0600); you can also paste it into the sign-in screen. Tools can send it as `Authorization: Bearer <token>`.
 
-The dashboard (5050) and API server (5051) listen on `127.0.0.1` only. To open the dashboard from another device, set `FORGE_UI_HOST=0.0.0.0` (both servers bind to it, and the API prints a warning) and add the device-facing origin to `ALLOWED_ORIGINS`, e.g. `ALLOWED_ORIGINS=http://192.168.1.206:5050`. Every request still needs the token.
+The dashboard (5050) and API server (5051) listen on `127.0.0.1` only. To open the dashboard from another device, set `FORGE_UI_HOST=0.0.0.0` (both servers bind to it, and the API prints a warning) and set `ALLOWED_ORIGINS` to the full list of origins you will open it from, e.g. `ALLOWED_ORIGINS=http://localhost:5050,http://127.0.0.1:5050,http://192.168.1.206:5050`. `ALLOWED_ORIGINS` replaces the defaults, so include the local origins you still use. Every request still needs the token.
 
 ## The Infinity Terminal
 
@@ -43,15 +43,15 @@ A shell on the machine running forge-ui, in your browser. Browser tabs on the sa
 
 ## Governance Dashboard
 
-The dashboard shows a project health score from 0 to 100. It comes from the Forge Orchestrator when that is installed, otherwise from the Forge plugin's governance health, otherwise from a local estimate that is labelled as one. A letter grade is planned.
+The dashboard shows a health score from 0 to 100 for the folder forge-ui runs from; run as installed (`npm run dev` in the clone), that is the forge-ui checkout itself. The score comes from the Forge Orchestrator when that is installed, otherwise from the Forge plugin's governance health, otherwise from a local estimate that is labelled as one. A letter grade is planned.
 
-Governance state is read from the project's `.claude/governance.json`. The UI displays it; policy decisions are made by Forge's other tools, not in the frontend.
+Governance state is read from `.claude/governance.json` in the folder forge-ui runs from. Pointing it at another project is planned. The UI displays it; policy decisions are made by Forge's other tools, not in the frontend.
 
 ## What You Get
 
 | Feature | What It Does |
 |---------|-------------|
-| Governance dashboard | A 0-100 project health score and the project's governance state |
+| Governance dashboard | A 0-100 health score and the governance state of the folder forge-ui runs from |
 | Infinity Terminal | A browser terminal on a shared shell that survives a closed tab or a network drop, not a server restart |
 | Command center | Runs project status, tests, a type-check and build pre-flight, and a gap analysis from the browser |
 | Multi-device access | Open the dashboard from another device on your network (`FORGE_UI_HOST` plus `ALLOWED_ORIGINS`, see above) |
@@ -59,7 +59,7 @@ Governance state is read from the project's `.claude/governance.json`. The UI di
 ## Prerequisites
 
 - Node.js 22.12 or later (Vite 7 needs `^20.19 || >=22.12`; `package.json` asks for Node 22)
-- Optional: the [Forge Orchestrator](https://github.com/nxtg-ai/forge-orchestrator) in your project, for its health score
+- Optional: the [Forge Orchestrator](https://github.com/nxtg-ai/forge-orchestrator) installed as `forge` on your PATH (or `FORGE_BIN`), which supplies the health score
 
 ## Links
 
