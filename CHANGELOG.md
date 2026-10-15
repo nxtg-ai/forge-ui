@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.5.1] - 2026-10-14
+
+forge-ui is a **Public preview**; interfaces may change. This release fixes the Infinity Terminal, which never connected in a new browser session in v3.4.1 and v3.5.0. **Upgrade from v3.5.0.**
+
+Includes #65.
+
 ### Fixed
 
 - **The Infinity Terminal connects in a new browser session.** The terminal bridge checked a reconnect token before checking whether the session existed, so every first visit was refused (also in v3.4.1). A new session now takes the sign-in token the page already fetches. A token for another session is still refused, and each sign-in token opens one terminal connection.
@@ -22,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The banner and feedback form say "public preview" instead of "Beta".
+- The Command Center's floating ⌘ button moved into its quick-actions bar, so it no longer sits in the same corner as other controls.
+- The README and the header stage tooltip describe the stage without maturity wording.
 
 ### Added
 
