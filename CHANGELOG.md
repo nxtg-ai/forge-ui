@@ -9,10 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.5.2] - 2026-10-15
+
+forge-ui is a **Public preview**; interfaces may change. This is a security release for two advisories: GHSA-fmh9-88rc-jwh3 (High: the default origin allowlist trusted another local dev server's port) and GHSA-q5hx-8rpm-fq48 (Medium: the dev server served project files). **Upgrade from v3.5.1.**
+
+Includes #68 and #70.
+
 ### Security
 
-- **The API and both WebSockets accept only origins forge-ui serves.** The default origin allowlist also contained `http://localhost:5173`, the default port of any other project's Vite dev server. It now holds only forge-ui's UI (:5050) and API (:5051) origins on `localhost` and `127.0.0.1`, and the API, `/ws` and `/terminal` share one allowlist. `ALLOWED_ORIGINS` still replaces the defaults.
-- **The dev server no longer serves project files.** `npm run dev` serves only the app (`index.html`, `src/`, `public/`, `node_modules/`) and refuses project state, logs, build output, docs and server code inside it; the app itself is unchanged.
+- **The API and both WebSockets accept only origins forge-ui serves** (GHSA-fmh9-88rc-jwh3). The default origin allowlist also contained `http://localhost:5173`, the default port of any other project's Vite dev server. It now holds only forge-ui's UI (:5050) and API (:5051) origins on `localhost` and `127.0.0.1`, and the API, `/ws` and `/terminal` share one allowlist. `ALLOWED_ORIGINS` still replaces the defaults.
+- **The dev server no longer serves project files** (GHSA-q5hx-8rpm-fq48). `npm run dev` serves only the app (`index.html`, `src/`, `public/`, `node_modules/`) and refuses project state, logs, build output, docs and server code inside it; the app itself is unchanged.
+
+### Fixed
+
+- A worker that has already exited no longer causes an uncaught `write EPIPE` in the API server when the pool shuts down or restarts it (#70).
 
 ## [3.5.1] - 2026-10-14
 
