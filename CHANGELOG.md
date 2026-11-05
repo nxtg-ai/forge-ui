@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.5.4] - 2026-11-05
+
+forge-ui is a **Public preview**; interfaces may change. This is a dependency security release: it updates four packages with published advisories, and nothing else. **Upgrade from v3.5.3.**
+
+Includes #83.
+
+### Security
+
+- **vite 7.3.6 to 7.3.7** (the dev server that serves the dashboard): GHSA-rq7h-c2jc-7f22 (medium), where files outside `server.fs.allow` could be served when project paths match system paths on non-Windows machines; and GHSA-9jrq-w75r-8gcw (low), cross-origin script execution through Vite custom middleware. forge-ui relies on `server.fs.allow` to keep project files off the dev server.
+- **body-parser 2.3.0 to 2.4.0** (used by the API server): GHSA-27r3-jxmh-p828 (high), denial of service through trailing bytes after a compressed request body.
+- **qs 6.16.0 to 6.17.1**: GHSA-6pq8-jhm2-2vcw (moderate), an uncaught TypeError in `qs.stringify` with `arrayFormat: 'comma'` (denial of service).
+- **zod 4.3.6 to 4.6.7**: GHSA-mrhx-c7xc-m3w5 (high), memory exhaustion while validating oversized constrained collections.
+- iconv-lite 0.7.2 to 0.7.3 comes with body-parser.
+
+`npm audit --omit=dev` reports 0 vulnerabilities at this release.
+
 ## [3.5.3] - 2026-10-15
 
 forge-ui is a **Public preview**; interfaces may change. This release hardens the worker task API and project init, and `/api/diffs/apply` now reports what it does. **Upgrade from v3.5.2.**
