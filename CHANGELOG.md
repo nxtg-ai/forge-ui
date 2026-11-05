@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Semgrep and Gitleaks results publish to GitHub code scanning again (categories `semgrep` and `gitleaks`). From 2026-04-13 they were kept only as workflow artifacts, so their alerts never opened or closed. The Gitleaks download is pinned to v8.30.1 instead of `releases/latest` (tested by `src/test/quality/security-scan-upload.test.ts`).
+
 ### Fixed
 
 - `POST /api/mcp/configure` returned 500 when `selectedServers` held `constructor` (or `__proto__`), and put a stray `constructor` entry in the generated config. Those names resolve to Object built-ins, so the registry lookup treated them as servers. Only the registry's own keys count now, and the route answers 400 unless `selectedServers` is an array of strings (code scanning #138; tested in `mcp-suggestion-engine.test.ts` and `features.test.ts`).

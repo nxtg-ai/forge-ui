@@ -13,6 +13,10 @@ jobs:
   semgrep:
     name: Semgrep SAST
     runs-on: ubuntu-latest
+    # security-events: write lets the job publish its SARIF to code scanning.
+    permissions:
+      contents: read
+      security-events: write
     container:
       image: semgrep/semgrep
     steps:
@@ -40,6 +44,15 @@ jobs:
           path: semgrep.sarif
           retention-days: 30
         continue-on-error: true
+      # Publish to code scanning so alerts open and close with the code. Without
+      # this upload (2026-04-13 to now) the Semgrep alerts froze at e2f637a.
+      # Fork PRs get a read-only token, so they keep the artifact only.
+      - name: Upload SARIF to code scanning
+        if: always() && hashFiles('semgrep.sarif') != '' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
 
   bandit:
     name: Bandit (Python SAST)
@@ -123,13 +136,16 @@ jobs:
   gitleaks:
     name: Secret Scanning
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Install Gitleaks
         run: |
-          curl -sSfL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_8.30.1_linux_x64.tar.gz | tar xz -C /usr/local/bin
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz | tar xz -C /usr/local/bin
       - name: Scan for secrets
         run: gitleaks detect --source . --verbose --report-format sarif --report-path gitleaks.sarif --exit-code 0
       - name: Findings summary
@@ -152,3 +168,9 @@ jobs:
           path: gitleaks.sarif
           retention-days: 30
         continue-on-error: true
+      - name: Upload SARIF to code scanning
+        if: always() && hashFiles('gitleaks.sarif') != '' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: gitleaks.sarif
+          category: gitleaks
