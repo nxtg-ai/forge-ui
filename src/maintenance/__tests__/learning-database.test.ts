@@ -798,13 +798,24 @@ describe('LearningDatabase', () => {
         timestamp: new Date().toISOString(),
       };
 
-      // Add 1100 events
-      for (let i = 0; i < 1100; i++) {
-        await database.logHealthEvent(event);
-      }
+      // Seed 1099 events in memory, then log one more through the real path.
+      // Logging 1100 events one by one rewrote the whole file 1100 times
+      // (8-13 s on a loaded machine, over the 10 s timeout); a timed-out body
+      // kept running and wrote into the next test's database (#100).
+      const seeded = await database.export();
+      seeded.healthEvents = Array.from({ length: 1099 }, (_, i) => ({
+        ...event,
+        id: `seed-${i}`,
+      }));
+      await database.import(seeded);
+
+      await database.logHealthEvent({ ...event, message: 'Newest' });
 
       const allData = await database.export();
       expect(allData.healthEvents.length).toBe(1000);
+      // The oldest 100 are dropped and the newest is kept.
+      expect(allData.healthEvents[0].id).toBe('seed-100');
+      expect(allData.healthEvents[999].message).toBe('Newest');
     });
 
     it('should filter health events by hours', async () => {
