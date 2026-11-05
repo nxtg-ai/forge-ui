@@ -795,6 +795,25 @@ Hope this helps!`;
   // Code scanning #138 (js/remote-property-injection): ids that name Object
   // built-ins must be treated as unknown, not as registry entries.
   describe("server ids that are not registry keys", () => {
+    it("drops model-returned ids that are not registry keys", async () => {
+      mockExecAsync.mockResolvedValue({
+        stdout: JSON.stringify({
+          scores: {
+            github: { priority: "essential", relevanceScore: 95, reasoning: "repo" },
+            constructor: { priority: "essential", relevanceScore: 99, reasoning: "x" },
+            ["__proto__"]: { priority: "essential", relevanceScore: 98, reasoning: "x" },
+            "not-a-server": { priority: "optional", relevanceScore: 80, reasoning: "x" },
+          },
+        }),
+      });
+
+      const result = await engine.suggestMCPs(mockVisionContext);
+      const ids = [...result.essential, ...result.recommended, ...result.optional].map(
+        (s) => s.id,
+      );
+      expect(ids).toEqual(["github"]);
+    });
+
     it("leaves __proto__ and constructor out of the generated config", () => {
       const parsed = JSON.parse(
         engine.generateMCPConfig(["__proto__", "constructor", "toString"]),

@@ -459,8 +459,9 @@ export function createForgeRoutes(ctx: ForgeRouteContext): express.Router {
         ? feedbackList.reduce((sum: number, f: { rating: number }) => sum + f.rating, 0) / totalCount
         : 0;
 
-      // Count by category
-      const byCategory: Record<string, number> = {};
+      // Count by category. A null-prototype map, so a category such as
+      // "__proto__" is counted as its own key instead of vanishing.
+      const byCategory: Record<string, number> = Object.create(null);
       feedbackList.forEach((f: { category: string }) => {
         byCategory[f.category] = (byCategory[f.category] || 0) + 1;
       });

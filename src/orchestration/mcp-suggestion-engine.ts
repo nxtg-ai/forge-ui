@@ -490,10 +490,12 @@ IMPORTANT: Return ONLY the JSON object, no additional commentary.
       const analysisText = stdout.trim();
       const analysis = JSON.parse(this.extractJSON(analysisText));
 
-      // Merge scores with registry data
+      // Merge scores with registry data. The ids come from model output, so
+      // only the registry's own keys count (see registryEntry).
       return Object.entries(analysis.scores)
+        .filter(([id]) => registryEntry(id) !== undefined)
         .map(([id, score]: [string, any]) => ({
-          ...MCP_REGISTRY[id],
+          ...registryEntry(id)!,
           priority: score.priority,
           relevanceScore: score.relevanceScore,
           reasoning: score.reasoning,
