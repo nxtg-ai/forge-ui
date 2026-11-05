@@ -17,7 +17,7 @@ forge-ui gives you a terminal in the browser (the Infinity Terminal), a governan
 ## Install
 
 ```bash
-git clone --branch v3.5.4 https://github.com/nxtg-ai/forge-ui
+git clone --branch v3.5.5 https://github.com/nxtg-ai/forge-ui
 cd forge-ui
 npm install
 npm run dev

@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.5.5] - 2026-11-05
+
+forge-ui is a **Public preview**; interfaces may change. This is a fix release. The command center now lists only the commands it can run, three other bugs are fixed, and the docs describe what forge-ui ships. Dependencies are unchanged from v3.5.4. **Upgrade from v3.5.4.**
+
+Includes #87, #88, #89, #92, #94 and #95.
+
 ### Changed
 
 - The stale bot no longer marks an outside author's issue or PR stale. Before `actions/stale` runs, `.github/scripts/community-label.mjs` labels them `community`, which it exempts (tested by `src/test/quality/stale-community.test.ts`).
