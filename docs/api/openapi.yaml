@@ -5,7 +5,7 @@ info:
     REST API for forge-ui, the Forge browser dashboard.
 
     ## Authentication
-    Every /api route needs this install's token: `Authorization: Bearer <token>`,
+    Every /api route except sign-in (login, logout, redeem) needs this install's token: `Authorization: Bearer <token>`,
     the `X-Forge-Token` header, or the `forge_session` cookie set at sign-in.
     See docs/api/LOCAL-CLIENT-AUTH.md. Requests without it get 401.
 
@@ -1322,7 +1322,7 @@ components:
       properties:
         command:
           type: string
-          description: A command id from GET /api/commands, for example frg-status. Unknown ids get 404.
+          description: A command id that the server can run (EXECUTABLE_COMMANDS in src/server/routes/commands.ts), for example frg-status. Any other id gets 404, including 14 of the ids GET /api/commands lists.
 
     ArchitectureDecision:
       type: object

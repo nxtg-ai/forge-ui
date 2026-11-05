@@ -80,7 +80,7 @@ Agent Teams are enabled with `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in your Cl
 ### Before Making Claims About This Codebase
 
 1. **READ THE CODE** - Don't assume. Check `src/` for actual implementation
-2. **CHECK EXISTING DOCS** - `docs/infinity-terminal/README.md`, `.claude/` files
+2. **CHECK EXISTING DOCS** - `docs/README.md` (the docs index), `.claude/` files
 3. **VERIFY RUNNING SERVICES** - `ss -tlnp | grep 505` to see what's actually running
 4. **TEST BEFORE CLAIMING** - Don't say "X doesn't work" without testing
 

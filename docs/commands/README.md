@@ -4,7 +4,13 @@
 
 The Forge slash commands (`/frg-*`) and agents ship in [forge-plugin](https://github.com/nxtg-ai/forge-plugin), not in this repo. See that repo for the current list.
 
-The dashboard's command center runs a fixed set of these from the browser (`src/server/routes/commands.ts`): project status, tests (`npx vitest run`), a deploy pre-flight (`npx tsc --noEmit`, then `npx vite build`), and a gap analysis. `GET /api/commands` lists them.
+The dashboard's command center runs commands through `POST /api/commands/execute` with a command id. Only the ids in `EXECUTABLE_COMMANDS` (`src/server/routes/commands.ts`) run; any other id gets 404:
+
+- `frg-status`, `frg-test` (`npx vitest run`), `frg-deploy` (`npx tsc --noEmit`, then `npx vite build`) and `frg-gap-analysis`;
+- `frg-feature`, which only replies that feature creation needs the Infinity Terminal;
+- `git-status`, `git-diff`, `git-log`, `analyze-types`, `analyze-lint`, `analyze-deps`, `analyze-bundle`, `test-coverage` and `system-info`.
+
+`GET /api/commands` returns a different list: the 19 entries of `src/config/forge-commands.ts`. Five of those run (the `frg-` ids above), the other 14 return 404, and the nine `git-`, `analyze-`, `test-coverage` and `system-info` commands are not in it.
 
 ## npm scripts
 
