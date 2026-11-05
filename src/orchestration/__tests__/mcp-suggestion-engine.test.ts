@@ -791,4 +791,21 @@ Hope this helps!`;
       expect(result).toBeDefined();
     });
   });
+
+  // Code scanning #138 (js/remote-property-injection): ids that name Object
+  // built-ins must be treated as unknown, not as registry entries.
+  describe("server ids that are not registry keys", () => {
+    it("leaves __proto__ and constructor out of the generated config", () => {
+      const parsed = JSON.parse(
+        engine.generateMCPConfig(["__proto__", "constructor", "toString"]),
+      );
+      expect(parsed.servers).toEqual({});
+    });
+
+    it("builds a setup guide without throwing for constructor", () => {
+      const guide = engine.generateSetupGuide(["constructor", "github"]);
+      expect(guide).toContain("## GitHub");
+      expect(guide).not.toContain("## undefined");
+    });
+  });
 });

@@ -423,6 +423,21 @@ describe("Feature Routes", () => {
   });
 
   describe("POST /api/mcp/configure", () => {
+    it.each([
+      ["a string", "github"],
+      ["an object", { __proto__: { polluted: true } }],
+      ["an array with a non-string", ["github", 42]],
+      ["missing", undefined],
+    ])("returns 400 when selectedServers is %s", async (_label, selectedServers) => {
+      const res = await request(app)
+        .post("/api/mcp/configure")
+        .send({ selectedServers })
+        .expect(400);
+
+      expect(res.body.success).toBe(false);
+      expect(mockCtx.mcpSuggestionEngine.generateMCPConfig).not.toHaveBeenCalled();
+    });
+
     it("generates MCP configuration and setup guide", async () => {
       const mockConfig = { mcpServers: { filesystem: { command: "npx" } } };
       const mockGuide = "# Setup Guide\n1. Install packages";
