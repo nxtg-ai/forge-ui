@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `npm run init` and three other shell scripts (`check-testids.sh`, `start-integrated.sh`, `test-governance-websocket.sh`) failed on their second line because they were committed with CRLF line endings. They are LF now, and `.gitattributes` keeps `*.sh` LF (tested by `src/test/quality/shell-line-endings.test.ts`).
 - The terminal no longer sends a made-up diff event when its output contains a git diff. Any chunk with `diff --git` used to trigger a fixed placeholder (`example.ts`, `// old code`) that the terminal passed to the diff view. The diff text still shows in the terminal; no diff event is sent.
 
 ### Documentation
