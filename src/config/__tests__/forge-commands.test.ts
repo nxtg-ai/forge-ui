@@ -10,10 +10,12 @@ import {
   getCommandsWithHotkeys,
   searchCommands,
 } from "../forge-commands";
+import { getIconByName } from "../../utils/icon-mapper";
+import { HelpCircle } from "lucide-react";
 
 describe("FORGE_COMMANDS", () => {
-  it("should have exactly 19 commands", () => {
-    expect(FORGE_COMMANDS).toHaveLength(19);
+  it("should have exactly 14 commands", () => {
+    expect(FORGE_COMMANDS).toHaveLength(14);
   });
 
   it("should have all required fields for each command", () => {
@@ -22,32 +24,27 @@ describe("FORGE_COMMANDS", () => {
       expect(cmd).toHaveProperty("name");
       expect(cmd).toHaveProperty("description");
       expect(cmd).toHaveProperty("category");
-      expect(cmd).toHaveProperty("icon");
-      expect(cmd.id).toMatch(/^frg-/);
+      expect(cmd).toHaveProperty("iconName");
+      expect(cmd.id).toMatch(/^(frg|git|analyze|test|system)-[a-z-]+$/);
     });
   });
 
   it("should have all expected command IDs", () => {
     const expectedIds = [
       "frg-status",
-      "frg-status-enhanced",
       "frg-gap-analysis",
-      "frg-report",
       "frg-test",
       "frg-feature",
-      "frg-spec",
-      "frg-checkpoint",
-      "frg-restore",
       "frg-deploy",
-      "frg-optimize",
-      "frg-integrate",
-      "frg-upgrade",
-      "frg-agent-assign",
-      "frg-init",
-      "frg-enable-forge",
-      "frg-docs-status",
-      "frg-docs-update",
-      "frg-docs-audit",
+      "git-status",
+      "git-diff",
+      "git-log",
+      "analyze-types",
+      "analyze-lint",
+      "analyze-deps",
+      "analyze-bundle",
+      "test-coverage",
+      "system-info",
     ];
 
     const actualIds = FORGE_COMMANDS.map((cmd) => cmd.id).sort();
@@ -62,13 +59,7 @@ describe("FORGE_COMMANDS", () => {
   });
 
   it("should mark dangerous commands with requiresConfirmation", () => {
-    const dangerousCommands = [
-      "frg-restore",
-      "frg-deploy",
-      "frg-upgrade",
-      "frg-init",
-      "frg-enable-forge",
-    ];
+    const dangerousCommands = ["frg-deploy"];
 
     dangerousCommands.forEach((cmdId) => {
       const cmd = getCommandById(cmdId);
@@ -107,10 +98,12 @@ describe("getCommandsByCategory", () => {
     });
   });
 
-  it("should return exactly 1 test command", () => {
+  it("should return exactly 2 test commands", () => {
     const testCommands = getCommandsByCategory("test");
-    expect(testCommands).toHaveLength(1);
-    expect(testCommands[0].id).toBe("frg-test");
+    expect(testCommands.map((cmd) => cmd.id)).toEqual([
+      "frg-test",
+      "test-coverage",
+    ]);
   });
 
   it("should return exactly 1 deploy command", () => {
@@ -204,11 +197,10 @@ describe("Additional command validation", () => {
     });
   });
 
-  it("should have valid icon components", () => {
+  it("should have icon names the client can render", () => {
     FORGE_COMMANDS.forEach((cmd) => {
-      expect(cmd.icon).toBeDefined();
-      // Lucide icons are objects (React components), not raw functions
-      expect(typeof cmd.icon).toMatch(/^(function|object)$/);
+      // HelpCircle is the client fallback for an unknown icon name
+      expect(getIconByName(cmd.iconName)).not.toBe(HelpCircle);
     });
   });
 
@@ -224,14 +216,18 @@ describe("Additional command validation", () => {
     });
   });
 
-  it("should have exactly 5 analyze commands", () => {
+  it("should have exactly 6 analyze commands", () => {
     const analyzeCommands = getCommandsByCategory("analyze");
-    expect(analyzeCommands).toHaveLength(5);
+    expect(analyzeCommands).toHaveLength(6);
   });
 
-  it("should have exactly 2 git commands", () => {
+  it("should have exactly 3 git commands", () => {
     const gitCommands = getCommandsByCategory("git");
-    expect(gitCommands).toHaveLength(2);
+    expect(gitCommands.map((cmd) => cmd.id)).toEqual([
+      "git-status",
+      "git-diff",
+      "git-log",
+    ]);
   });
 
   it("should have expected hotkey mappings", () => {
@@ -246,8 +242,8 @@ describe("Additional command validation", () => {
     expect(hotkeyMap["g"]).toBe("frg-gap-analysis");
     expect(hotkeyMap["t"]).toBe("frg-test");
     expect(hotkeyMap["f"]).toBe("frg-feature");
-    expect(hotkeyMap["c"]).toBe("frg-checkpoint");
     expect(hotkeyMap["d"]).toBe("frg-deploy");
+    expect(Object.keys(hotkeyMap).sort()).toEqual(["d", "f", "g", "s", "t"]);
   });
 
   it("should have short hotkeys (1 character)", () => {
@@ -258,47 +254,36 @@ describe("Additional command validation", () => {
     });
   });
 
-  it("should mark restore, deploy, upgrade as requiring confirmation", () => {
-    const confirmationRequired = [
-      "frg-restore",
-      "frg-deploy",
-      "frg-upgrade",
-      "frg-init",
-      "frg-enable-forge",
-    ];
-
-    confirmationRequired.forEach((cmdId) => {
-      const cmd = getCommandById(cmdId);
-      expect(cmd?.requiresConfirmation).toBe(true);
-    });
+  it("should mark only the build check as requiring confirmation", () => {
+    const confirmationRequired = FORGE_COMMANDS.filter(
+      (cmd) => cmd.requiresConfirmation,
+    ).map((cmd) => cmd.id);
+    expect(confirmationRequired).toEqual(["frg-deploy"]);
   });
 
   it("should have forge category commands", () => {
     const forgeCommands = getCommandsByCategory("forge");
-    expect(forgeCommands.length).toBeGreaterThan(5);
-
     const forgeIds = forgeCommands.map((cmd) => cmd.id);
-    expect(forgeIds).toContain("frg-feature");
-    expect(forgeIds).toContain("frg-init");
+    expect(forgeIds).toEqual(["frg-status", "frg-feature"]);
   });
 
   it("should search partial matches", () => {
-    const results = searchCommands("doc");
+    const results = searchCommands("analy");
     expect(results.length).toBeGreaterThan(0);
-    expect(results.some((cmd) => cmd.id.includes("docs"))).toBe(true);
+    expect(results.some((cmd) => cmd.id.includes("analyze"))).toBe(true);
   });
 
   it("should find commands with common words", () => {
     const statusResults = searchCommands("status");
-    expect(statusResults.length).toBeGreaterThanOrEqual(2); // status and status-enhanced
+    expect(statusResults.length).toBeGreaterThanOrEqual(2); // frg-status and git-status
 
-    const docsResults = searchCommands("docs");
-    expect(docsResults.length).toBeGreaterThanOrEqual(3); // docs-status, docs-update, docs-audit
+    const gitResults = searchCommands("git");
+    expect(gitResults.length).toBeGreaterThanOrEqual(3); // git-status, git-diff, git-log
   });
 
   it("should have consistent ID format", () => {
     FORGE_COMMANDS.forEach((cmd) => {
-      expect(cmd.id).toMatch(/^frg-[a-z-]+$/);
+      expect(cmd.id).toMatch(/^(frg|git|analyze|test|system)-[a-z-]+$/);
     });
   });
 
@@ -313,8 +298,8 @@ describe("Additional command validation", () => {
 
     expect(categoryCounts.forge).toBeGreaterThan(0);
     expect(categoryCounts.analyze).toBeGreaterThan(0);
-    expect(categoryCounts.test).toBe(1);
+    expect(categoryCounts.test).toBe(2);
     expect(categoryCounts.deploy).toBe(1);
-    expect(categoryCounts.git).toBe(2);
+    expect(categoryCounts.git).toBe(3);
   });
 });

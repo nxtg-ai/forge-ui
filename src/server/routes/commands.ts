@@ -84,8 +84,8 @@ export function createCommandRoutes(ctx: RouteContext): express.Router {
         hotkey: cmd.hotkey,
         requiresConfirmation: cmd.requiresConfirmation,
         severity: cmd.severity,
-        // Icon name is sent as string, component resolves on client
-        iconName: cmd.icon.name,
+        // The client resolves the icon component from this name
+        iconName: cmd.iconName,
       }));
 
       res.json({
