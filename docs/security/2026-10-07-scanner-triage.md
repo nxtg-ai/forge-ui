@@ -1,5 +1,7 @@
 # Security scanner triage — 2026-10-07
 
+> **Historical record.** The findings below were fixed after this triage: API and terminal authentication in #52 (v3.4.1), scanner calibration and the disk check in #63, and worker shell tasks in #78 (v3.5.3). The release advice at the end is out of date.
+
 DIRECTIVE-NXTG-20261007-08. This is a triage only; nothing here fixes a finding.
 
 Scanner: `src/test/reports/security-audit.ts`, run on `main` @ `8fec4fe`, v3.4.0. It reports **728 findings** (40 critical, 627 high, 61 medium) across 267 files.

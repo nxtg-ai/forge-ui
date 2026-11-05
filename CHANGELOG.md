@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- README and docs now describe what forge-ui ships. The README states that the terminal replays up to about 100 KB of recent output on reconnect, and no longer lists planned features. The OpenAPI spec has the real authentication, version, license and request schemas. Docs that described unbuilt designs, other repos, or internal plans and status reports were moved to `docs/archive/` (with a README saying they are historical) or, for roadmap and strategy notes, removed. New short pages for testing, ports and commands are written from the code. `docs/README.md` is the index.
+
 ## [3.5.4] - 2026-11-05
 
 forge-ui is a **Public preview**; interfaces may change. This is a dependency security release: it updates four packages with published advisories, and nothing else. **Upgrade from v3.5.3.**

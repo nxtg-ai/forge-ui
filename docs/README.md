@@ -1,63 +1,27 @@
-# NXTG-Forge Documentation
+# forge-ui documentation
 
-## Documentation Structure
+Start with the [README](../README.md): what forge-ui is, how to install it, sign-in and network access. These pages go further.
 
-### [Architecture](./architecture/)
-System design, port configuration, MCP integration, agent worker pool, and real-time UX patterns.
+## Using forge-ui
 
-### [Agents](./agents/)
-Agent capabilities, quick reference, and communication patterns.
+- [Ports](./architecture/PORT-CONFIGURATION.md): the two ports, opening the dashboard from another device, changing ports
+- [Local client authentication](./api/LOCAL-CLIENT-AUTH.md): the access token, sign-in links, and how tools and WebSocket clients authenticate
+- [API reference (OpenAPI)](./api/openapi.yaml): also served by a running forge-ui at `/api/docs`. It covers part of the API; the spec says which routes are not described yet.
+- [Commands](./commands/README.md): the npm scripts, and where the Forge slash commands live
 
-### [API Reference](./api/)
-REST API reference (runspaces, WebSocket), OpenAPI spec.
+## Contributing
 
-### [Commands](./commands/)
-Command reference and usage patterns.
+- [Testing guide](./guides/TESTING-GUIDE.md): running the tests, coverage, the browser test, and what CI runs
+- [Best practices](./best-practices/README.md): code, testing and review conventions
+- [Runtime state vs versioned config](./architecture/RUNTIME-STATE-SPLIT.md): which governance files are local state and which are config
+- [Checkpoint manager](./guides/checkpoint-manager-usage.md): saving and restoring task checkpoints
+- [ErrorBoundary](./components/ErrorBoundary-Usage.md): the React error boundary
+- [Maintenance daemon](./maintenance/README.md): `npm run maintain`
+- Components: the source in `src/components/layout/` is the reference for [AppHeader](./components/AppHeader.md) and [AppShell](./components/AppShell-Architecture.md)
 
-### [Components](./components/)
-Component architecture docs (AppHeader, AppShell, ErrorBoundary, engagement mode).
+## Records
 
-### [Features](./features/)
-- [Multi-Project Runspaces](./features/multi-project/) - v1.0 production ready
+- [Security scanner triage, 2026-10-07](./security/2026-10-07-scanner-triage.md): a historical record; the findings are fixed
+- [Archive](./archive/README.md): historical working notes. They do not describe the released product.
 
-### [Guides](./guides/)
-Getting started, quick start, testing guide, quality reference, dogfooding, and integration protocols.
-
-### [Hooks](./hooks/)
-Hook points, event-driven automation, and custom hook creation.
-
-### [Infinity Terminal](./infinity-terminal/)
-Terminal architecture, session persistence, and panel resize documentation.
-
-### [Operations](./operations/)
-Deployment, production readiness, SBOM, release readiness, and debug guides.
-
-### [Specs](./specs/)
-Infinity Terminal specification.
-
-### [Testing](./testing/)
-Data test-id process, implementation reports, and UAT coverage.
-
-### [Reports](./reports/)
-Security fixes required, documentation audit index.
-
-### [Archive](./archive/)
-Historical documents from early v3 development and Feb 2026 audit cycle.
-
----
-
-## Quick Navigation
-
-- [Getting Started](./guides/GETTING-STARTED.md)
-- [Quick Start](./guides/QUICK-START.md)
-- [Architecture Overview](./architecture/README.md)
-- [Agent Quick Reference](./agents/QUICKREF.md)
-- [Testing Guide](./guides/TESTING-GUIDE.md)
-- [Quality Reference](./guides/QUALITY-QUICK-REFERENCE.md)
-- [Changelog](../CHANGELOG.md)
-- [License](../LICENSE)
-- [Full Documentation Index](./DOCS-INDEX.md)
-
----
-
-This documentation is for **NXTG-Forge v3.x**.
+The changelog is [CHANGELOG.md](../CHANGELOG.md). The license is [FSL-1.1-ALv2](../LICENSE.md).

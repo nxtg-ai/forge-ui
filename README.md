@@ -12,7 +12,7 @@
 
 This is L3: Ship Lord.
 
-forge-ui gives you a terminal in the browser (the Infinity Terminal), a governance dashboard with a health score, and a command center that runs a fixed set of project commands from the browser. An agent activity feed is planned.
+forge-ui gives you a terminal in the browser (the Infinity Terminal), a governance dashboard with a health score, and a command center that runs a fixed set of project commands from the browser.
 
 ## Install
 
@@ -39,13 +39,13 @@ The dashboard (5050) and API server (5051) listen on `127.0.0.1` only. To open t
 
 ## The Infinity Terminal
 
-A shell on the machine running forge-ui, in your browser. Browser tabs on the same project share one shell. If you close the tab or lose the network, the shell keeps running: reopen the page within 5 minutes and you are back in the same shell, though output from while you were away is not replayed. Restarting the forge-ui server ends the shell. Sessions that survive a server restart are planned.
+A shell on the machine running forge-ui, in your browser. Browser tabs on the same project share one shell. If you close the tab or lose the network, the shell keeps running: reopen the page within 5 minutes and you are back in the same shell, and up to about 100 KB of recent output is replayed. Restarting the forge-ui server still ends the shell.
 
 ## Governance Dashboard
 
-The dashboard shows a health score from 0 to 100 for the folder forge-ui runs from; run as installed (`npm run dev` in the clone), that is the forge-ui checkout itself. The score comes from the Forge Orchestrator when that is installed, otherwise from the Forge plugin's governance health, otherwise from a local estimate that is labelled as one. A letter grade is planned.
+The dashboard shows a health score from 0 to 100 for the folder forge-ui runs from; run as installed (`npm run dev` in the clone), that is the forge-ui checkout itself. The score comes from the Forge Orchestrator when that is installed, otherwise from the Forge plugin's governance health, otherwise from a local estimate that is labelled as one.
 
-Governance state is read from `.claude/governance.json` in the folder forge-ui runs from. Pointing it at another project is planned. The UI displays it; policy decisions are made by Forge's other tools, not in the frontend.
+Governance state is read from `.claude/governance.json` in the folder forge-ui runs from. The UI displays it; policy decisions are made by Forge's other tools, not in the frontend.
 
 ## What You Get
 

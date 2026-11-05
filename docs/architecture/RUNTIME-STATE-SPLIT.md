@@ -2,7 +2,6 @@
 
 **Status**: Implemented
 **Directive**: DIRECTIVE-NXTG-20260718-04 item 3
-**Related**: [PRODUCT-vs-RUNTIME-FILES.md](./PRODUCT-vs-RUNTIME-FILES.md)
 
 ## Problem
 
@@ -25,15 +24,16 @@ wrote `0` over a real count — active corruption, not staleness.
 
 Split by **lifecycle**, not by file:
 
-- **Versioned config** stays in `.claude/` — human-authored, committed,
-  reviewed. For governance that is `version` + `constitution` (directive,
+- **Versioned config** stays in `.claude/` — human-authored. Since v3.5.3
+  `.claude/governance.json` is gitignored in this repo, so each checkout keeps
+  its own copy. For governance that is `version` + `constitution` (directive,
   vision, status, confidence).
 - **Runtime state** moves to `.forge/` — already gitignored. That is
   `sentinelLog`, `timestamp`, `workstreams`, `metadata`, plus `last_session`
   and `quality` from `project.json`.
 
 ```
-.claude/governance.json        → { version, constitution }          (tracked)
+.claude/governance.json        → { version, constitution }          (local, gitignored)
 .forge/governance-runtime.json → { timestamp, workstreams,          (ignored)
                                    sentinelLog, metadata }
 .claude/project.json           → agents, architecture, mcp_servers, (tracked)

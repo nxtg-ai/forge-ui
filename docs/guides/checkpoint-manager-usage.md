@@ -13,7 +13,7 @@ Checkpoints are stored in `.forge/checkpoints/{taskId}.json` and contain:
 ## Basic Usage
 
 ```typescript
-import { CheckpointManager, TaskCheckpoint } from '@nxtg-forge/core';
+import { CheckpointManager, TaskCheckpoint } from './src/core/checkpoint-manager';
 
 // Initialize
 const manager = new CheckpointManager('/path/to/project');
@@ -78,7 +78,7 @@ const cleaned = await manager.cleanupOldCheckpoints(24 * 60 * 60 * 1000);
 The `StateManager` includes checkpoint methods for convenience:
 
 ```typescript
-import { StateManager } from '@nxtg-forge/core';
+import { StateManager } from './src/core/state';
 
 const stateManager = new StateManager('/path/to/project');
 await stateManager.initialize();
@@ -92,7 +92,7 @@ await stateManager.clearCheckpoint(taskId);
 
 ## Error Handling
 
-All methods return `Result<T, string>` for predictable error handling:
+Most methods return `Result<T, string>` for predictable error handling (`listCheckpoints`, `clearCheckpoint` and `hasCheckpoint` do not):
 
 ```typescript
 const result = await manager.saveCheckpoint(taskId, checkpoint);
@@ -232,4 +232,3 @@ All 22 tests cover:
 - File sanitization
 - Cleanup operations
 - Edge cases
-```
