@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 - The release workflow (`.github/workflows/deploy.yml`) no longer pastes `${{ }}` values, such as the `workflow_dispatch` version input or the version derived from the tag, into its shell scripts. They reach the scripts through `env:`, and a version that is not semver stops the build. Only users with write access can trigger the workflow (code scanning #388; tested by `src/test/quality/deploy-workflow.test.ts`).
+- Development dependencies only; nothing that ships changes. vitest, @vitest/ui and @vitest/coverage-v8 4.1.10 to 4.1.12 (GHSA-82fw-gwwq-j7x9, GHSA-qxg6-89mg-rqv8). minimatch 9.0.9 and 10.2.4 to 11.0.4 through an override (GHSA-g3hv-75wg-m249). glob 13 to 14.0.3 (GHSA-3g3m-2fjr-6pw4). The unused `c8` package is removed. `npm audit` reports 0 vulnerabilities.
 
 ## [3.5.5] - 2026-11-05
 
