@@ -175,43 +175,9 @@ jobs:
         id: changelog
         run: |
           VERSION=${{ needs.build.outputs.version }}
-
-          # Get previous tag
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-
-          # Generate changelog
-          if [ -n "$PREV_TAG" ]; then
-            echo "## What's Changed" > CHANGELOG_RELEASE.md
-            echo "" >> CHANGELOG_RELEASE.md
-            git log --pretty=format:"* %s (%h)" ${PREV_TAG}..HEAD >> CHANGELOG_RELEASE.md
-          else
-            echo "## Initial Release" > CHANGELOG_RELEASE.md
-            echo "" >> CHANGELOG_RELEASE.md
-            echo "First release of NXTG-Forge v${VERSION}" >> CHANGELOG_RELEASE.md
-          fi
-
-          echo "" >> CHANGELOG_RELEASE.md
-          echo "---" >> CHANGELOG_RELEASE.md
-          echo "" >> CHANGELOG_RELEASE.md
-          echo "### Installation" >> CHANGELOG_RELEASE.md
-          echo "" >> CHANGELOG_RELEASE.md
-          echo '```bash' >> CHANGELOG_RELEASE.md
-          echo "# Download and extract" >> CHANGELOG_RELEASE.md
-          echo "wget https://github.com/${{ github.repository }}/releases/download/v${VERSION}/nxtg-forge-v${VERSION}.tar.gz" >> CHANGELOG_RELEASE.md
-          echo "tar -xzf nxtg-forge-v${VERSION}.tar.gz" >> CHANGELOG_RELEASE.md
-          echo "" >> CHANGELOG_RELEASE.md
-          echo "# Install dependencies and run" >> CHANGELOG_RELEASE.md
-          echo "npm install --production" >> CHANGELOG_RELEASE.md
-          echo "npm start" >> CHANGELOG_RELEASE.md
-          echo '```' >> CHANGELOG_RELEASE.md
-
-          echo "" >> CHANGELOG_RELEASE.md
-          echo "### Checksums" >> CHANGELOG_RELEASE.md
-          echo "" >> CHANGELOG_RELEASE.md
-          echo '```' >> CHANGELOG_RELEASE.md
-          cat nxtg-forge-v${VERSION}.tar.gz.sha256 >> CHANGELOG_RELEASE.md
-          cat nxtg-forge-v${VERSION}.zip.sha256 >> CHANGELOG_RELEASE.md
-          echo '```' >> CHANGELOG_RELEASE.md
+          # The release body is this version's CHANGELOG.md section, the reviewed notes.
+          # release-notes.sh fails the job if the section is missing or empty.
+          bash .github/scripts/release-notes.sh "$VERSION" > CHANGELOG_RELEASE.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The stale bot no longer marks an outside author's issue or PR stale. Before `actions/stale` runs, `.github/scripts/community-label.mjs` labels them `community`, which it exempts (tested by `src/test/quality/stale-community.test.ts`).
+- The GitHub release body is now the CHANGELOG section for the tagged version (`.github/scripts/release-notes.sh`), not a git log with an install footer. The release fails if the section is missing. Tested by `src/test/quality/release-notes.test.ts`.
 
 ### Fixed
 
