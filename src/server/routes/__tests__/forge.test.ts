@@ -919,6 +919,24 @@ describe("Forge Routes", () => {
       expect(response.body.data.byCategory.feature).toBe(1);
     });
 
+    it("counts a __proto__ category instead of dropping it", async () => {
+      const ts = new Date().toISOString();
+      const feedbackList = [
+        { id: "f1", rating: 4, category: "__proto__", description: "A", timestamp: ts },
+        { id: "f2", rating: 2, category: "constructor", description: "B", timestamp: ts },
+        { id: "f3", rating: 5, category: "bug", description: "C", timestamp: ts },
+      ];
+      mockFs.readFile.mockResolvedValue(JSON.stringify(feedbackList));
+
+      const response = await request(app).get("/api/feedback/stats");
+
+      expect(response.status).toBe(200);
+      const byCategory = response.body.data.byCategory;
+      expect(Object.keys(byCategory).sort()).toEqual(["__proto__", "bug", "constructor"]);
+      expect(Object.getOwnPropertyDescriptor(byCategory, "__proto__")?.value).toBe(1);
+      expect(byCategory.constructor).toBe(1);
+    });
+
     it("handles read errors", async () => {
       mockFs.readFile.mockRejectedValue(new Error("Read error"));
 

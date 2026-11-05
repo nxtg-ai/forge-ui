@@ -490,10 +490,12 @@ IMPORTANT: Return ONLY the JSON object, no additional commentary.
       const analysisText = stdout.trim();
       const analysis = JSON.parse(this.extractJSON(analysisText));
 
-      // Merge scores with registry data
+      // Merge scores with registry data. The ids come from model output, so
+      // only the registry's own keys count (see registryEntry).
       return Object.entries(analysis.scores)
+        .filter(([id]) => registryEntry(id) !== undefined)
         .map(([id, score]: [string, any]) => ({
-          ...MCP_REGISTRY[id],
+          ...registryEntry(id)!,
           priority: score.priority,
           relevanceScore: score.relevanceScore,
           reasoning: score.reasoning,
@@ -532,7 +534,9 @@ IMPORTANT: Return ONLY the JSON object, no additional commentary.
       const mcp = registryEntry(serverId);
       if (!mcp) continue;
 
-      servers[serverId] = {
+      // Key by the registry entry's own id (equal to its registry key), so the
+      // property name never comes from the request (code scanning #138).
+      servers[mcp.id] = {
         command: mcp.command,
         args: mcp.args || [],
         ...(mcp.env && { env: mcp.env }),

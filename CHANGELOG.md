@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Two more lookups treated `__proto__` and `constructor` as real keys. MCP suggestions now keep only model-returned ids that are registry servers. Feedback statistics count a `__proto__` category instead of dropping it (`GET /api/feedback/stats`). Tested in `mcp-suggestion-engine.test.ts` and `forge.test.ts`.
 - `POST /api/mcp/configure` returned 500 when `selectedServers` held `constructor` (or `__proto__`), and put a stray `constructor` entry in the generated config. Those names resolve to Object built-ins, so the registry lookup treated them as servers. Only the registry's own keys count now, and the route answers 400 unless `selectedServers` is an array of strings (code scanning #138; tested in `mcp-suggestion-engine.test.ts` and `features.test.ts`).
 
 ### Security
