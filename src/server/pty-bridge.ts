@@ -542,23 +542,8 @@ function interceptOutput(data: string, ws: WebSocket): string {
     }
   }
 
-  // Check for diff output
-  if (data.includes("diff --git")) {
-    // Parse diff and send to UI
-    // This is a simplified version - real implementation would parse full diff
-    ws.send(
-      JSON.stringify({
-        type: "diff",
-        data: {
-          filePath: "example.ts",
-          language: "typescript",
-          oldContent: "// old code",
-          newContent: "// new code",
-          changes: [],
-        },
-      }),
-    );
-  }
+  // Diff output in the stream is left as terminal output. A PTY chunk cannot carry the old and
+  // new file contents a "diff" event promises, so none is sent.
 
   // Check for cost/token info
   const tokenMatch = data.match(/Tokens:\s+(\d+)/);

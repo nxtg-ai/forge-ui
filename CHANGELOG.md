@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The stale bot no longer marks an outside author's issue or PR stale. Before `actions/stale` runs, `.github/scripts/community-label.mjs` labels them `community`, which it exempts (tested by `src/test/quality/stale-community.test.ts`).
 
+### Fixed
+
+- The terminal no longer sends a made-up diff event when its output contains a git diff. Any chunk with `diff --git` used to trigger a fixed placeholder (`example.ts`, `// old code`) that the terminal passed to the diff view. The diff text still shows in the terminal; no diff event is sent.
+
 ### Documentation
 
 - README and docs now describe what forge-ui ships. The README states that the terminal replays up to about 100 KB of recent output on reconnect, and no longer lists planned features. The OpenAPI spec has the real authentication, version, license and request schemas. Docs that described unbuilt designs, other repos, or internal plans and status reports were moved to `docs/archive/` (with a README saying they are historical) or, for roadmap and strategy notes, removed. New short pages for testing, ports and commands are written from the code. `docs/README.md` is the index.
