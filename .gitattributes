@@ -1,2 +1,5 @@
 # Shell scripts must keep LF line endings; bash fails on CRLF.
 *.sh text eol=lf
+
+# The CHANGELOG is LF; release notes and the stage check read it.
+CHANGELOG.md text eol=lf
