@@ -534,7 +534,9 @@ IMPORTANT: Return ONLY the JSON object, no additional commentary.
       const mcp = registryEntry(serverId);
       if (!mcp) continue;
 
-      servers[serverId] = {
+      // Key by the registry entry's own id (equal to its registry key), so the
+      // property name never comes from the request (code scanning #138).
+      servers[mcp.id] = {
         command: mcp.command,
         args: mcp.args || [],
         ...(mcp.env && { env: mcp.env }),
