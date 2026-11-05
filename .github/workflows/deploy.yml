@@ -91,13 +91,22 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
+      # Expressions reach run: scripts only through env, never interpolated into
+      # the script text (code scanning #388; src/test/quality/deploy-workflow.test.ts).
       - name: Determine version
         id: version
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            VERSION="${{ github.event.inputs.version }}"
+          if [ "$EVENT_NAME" == "workflow_dispatch" ]; then
+            VERSION="$INPUT_VERSION"
           else
             VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Version is not semver"
+            exit 1
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Building version: $VERSION"
@@ -114,8 +123,9 @@ jobs:
         run: npm run build:server
 
       - name: Create release archive
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          VERSION=${{ steps.version.outputs.version }}
           mkdir -p release
 
           # Copy built files. `npm start` runs dist/server/api-server.js, so the
@@ -173,8 +183,9 @@ jobs:
 
       - name: Generate changelog
         id: changelog
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
-          VERSION=${{ needs.build.outputs.version }}
           # The release body is this version's CHANGELOG.md section, the reviewed notes.
           # release-notes.sh fails the job if the section is missing or empty.
           bash .github/scripts/release-notes.sh "$VERSION" > CHANGELOG_RELEASE.md
@@ -214,8 +225,9 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Verify checksums and structure
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
-          VERSION=${{ needs.build.outputs.version }}
           sha256sum -c nxtg-forge-v${VERSION}.tar.gz.sha256
           sha256sum -c nxtg-forge-v${VERSION}.zip.sha256
 
