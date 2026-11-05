@@ -94,6 +94,17 @@ export function createMcpRoutes(ctx: RouteContext): express.Router {
     try {
       const { selectedServers } = req.body;
 
+      if (
+        !Array.isArray(selectedServers) ||
+        !selectedServers.every((id) => typeof id === "string")
+      ) {
+        return res.status(400).json({
+          success: false,
+          error: "selectedServers must be an array of server ids",
+          timestamp: new Date().toISOString(),
+        });
+      }
+
       // Generate .claude/mcp.json configuration
       const mcpConfig = ctx.mcpSuggestionEngine.generateMCPConfig(selectedServers);
       const setupGuide = ctx.mcpSuggestionEngine.generateSetupGuide(selectedServers);

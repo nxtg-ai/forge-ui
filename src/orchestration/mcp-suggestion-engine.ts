@@ -399,6 +399,17 @@ const MCP_REGISTRY: Record<
   },
 };
 
+/**
+ * Registry entry for an id, or undefined. Only the registry's own keys count,
+ * so ids such as "__proto__" or "constructor" (which resolve to Object
+ * built-ins on a plain object) are unknown, not entries.
+ */
+function registryEntry(serverId: string) {
+  return Object.prototype.hasOwnProperty.call(MCP_REGISTRY, serverId)
+    ? MCP_REGISTRY[serverId]
+    : undefined;
+}
+
 export class MCPSuggestionEngine {
   constructor() {
     // No API key needed - we use Claude Code CLI with user's subscription
@@ -518,7 +529,7 @@ IMPORTANT: Return ONLY the JSON object, no additional commentary.
     const servers: Record<string, any> = {};
 
     for (const serverId of selectedServers) {
-      const mcp = MCP_REGISTRY[serverId];
+      const mcp = registryEntry(serverId);
       if (!mcp) continue;
 
       servers[serverId] = {
@@ -538,7 +549,7 @@ IMPORTANT: Return ONLY the JSON object, no additional commentary.
     let guide = "# MCP Server Setup Guide\n\n";
 
     for (const serverId of selectedServers) {
-      const mcp = MCP_REGISTRY[serverId];
+      const mcp = registryEntry(serverId);
       if (!mcp) continue;
 
       guide += `## ${mcp.name}\n\n`;
