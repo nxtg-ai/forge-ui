@@ -25,7 +25,7 @@ Authorization: Bearer <token>
 X-Forge-Token: <token>
 ```
 
-WebSocket clients send the same header on the upgrade request. That needs a client that can set upgrade headers, such as the `ws` package this repo's tests use; Node's built-in `WebSocket` and browsers can't. The dashboard therefore uses a session cookie instead.
+WebSocket clients send the same header on the upgrade request. The header alone is not enough: `/ws` also needs `?token=` from `POST /api/ws-token` (valid for 10 minutes), and a new `/terminal` session needs a single-use token from the same route. That needs a client that can set upgrade headers, such as the `ws` package this repo's tests use; Node's built-in `WebSocket` and browsers can't. The dashboard therefore uses a session cookie instead.
 
 ## 3. Recipes
 
@@ -72,7 +72,7 @@ const token = process.env.FORGE_UI_SECRET ?? readFileSync(file, "utf-8").trim();
 
 ### You drive a browser from an agent (Playwright MCP, automation)
 
-An agent that drives a browser through tool calls (`browser_navigate`, `browser_type`, …) has every value it passes recorded in its transcript. So never navigate to a `?forge_token=` link and never type the token: both put the token into a tool call. Use a **one-time sign-in link** instead. It is on `main` after v3.4.1 and ships in the next release:
+An agent that drives a browser through tool calls (`browser_navigate`, `browser_type`, …) has every value it passes recorded in its transcript. So never navigate to a `?forge_token=` link and never type the token: both put the token into a tool call. Use a **one-time sign-in link** instead. It shipped in v3.5.0:
 
 1. On the machine running Forge, mint a link. The script reads the token from its file (or `FORGE_UI_SECRET`), sends it only in a request header to the running server, and prints a link carrying a one-time code, never the token:
 

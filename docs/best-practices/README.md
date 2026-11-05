@@ -19,21 +19,16 @@ This directory contains curated best practices for:
 ## Quick Links
 
 ### Code Quality
-- **[Quality Quick Reference](../guides/QUALITY-QUICK-REFERENCE.md)** - Essential code quality standards and enforcement gates
 
 ### Testing
 - **[Testing Guide](../guides/TESTING-GUIDE.md)** - Comprehensive testing strategy (unit, integration, E2E, security)
-- **[Data TestID Process](../testing/data-testid-process.md)** - Semantic testing approach for reliable E2E tests
 
 ### Performance
-- **[Performance Optimization](../operations/PRODUCTION-READINESS.md#performance-requirements)** - Production performance targets and optimization techniques
 
 ### Development Workflow
 - **[Contributing Guide](../../CONTRIBUTING.md)** - Branch names, commits, PR process, code review checklist
 
 ### Deployment
-- **[Production Readiness](../operations/PRODUCTION-READINESS.md)** - Checklist and requirements for production deployment
-- **[Release Process](../operations/RELEASE-READINESS.md)** - Version management and release procedures
 
 ---
 
@@ -70,11 +65,10 @@ function calc(m: any): any {
 Every line of code must meet high standards.
 
 **Standards:**
-- **TypeScript Strict:** All type errors resolved, no `any` types
-- **ESLint:** Zero warnings, enforced via CI
-- **Test Coverage:** 85% minimum (enforced in vitest.config.ts)
+- **TypeScript Strict:** `strict` is on in `tsconfig.app.json`; `any` is discouraged (ESLint `no-explicit-any` warns)
+- **ESLint:** runs in CI (`npm run lint`); warnings are reported but do not fail the build
+- **Test Coverage:** 80% minimum for lines, functions, branches and statements (enforced by the thresholds in vitest.config.ts)
 - **Code Review:** Two eyes on every change
-- **Accessibility:** WCAG 2.1 AA compliance
 
 **Verification:**
 ```bash
@@ -126,24 +120,9 @@ Let machines handle repetitive work.
 
 ## Architecture Patterns
 
-### Multi-Agent Orchestration
+### Agents
 
-NXTG-Forge uses a 22-agent ecosystem for specialized work.
-
-**Pattern:**
-```
-Orchestrator Agent (coordinates)
-  ├── Builder Agent (implementation)
-  ├── Guardian Agent (quality & security)
-  ├── Detective Agent (debugging)
-  ├── Planner Agent (task breakdown)
-  ├── Architecture Agent (design)
-  └── Specialist Agents (testing, docs, ops, etc.)
-```
-
-**Key Principle:** Agents communicate through shared state, not RPC.
-
-See: **[Agent Documentation](../agents/README.md)**
+The Forge agents and commands ship in [forge-plugin](https://github.com/nxtg-ai/forge-plugin), not in this repo. See that repo for the current list.
 
 ---
 
@@ -205,16 +184,14 @@ Write tests before implementation:
 1. **Write failing test** - Red
 2. **Implement feature** - Green
 3. **Refactor** - Refactor
-4. **Coverage check** - 85%+ required
+4. **Coverage check** - 80%+ required
 
 ### Test Categories
 
 | Category | Tool | Threshold | Focus |
 |----------|------|-----------|-------|
-| **Unit** | Vitest | 85% | Individual functions/components |
-| **Integration** | Vitest | 85% | Component interactions, API calls |
-| **E2E** | Vitest (TSX) | 80% | Full user workflows |
-| **Security** | Custom | 100% | OWASP Top 10 vulnerabilities |
+| **Unit** | Vitest | 80% | Individual functions/components |
+| **Integration** | Vitest | 80% | Component interactions, API calls |
 | **Performance** | Custom | SLA-based | Response time, memory usage |
 
 ### Semantic Testing
@@ -233,7 +210,7 @@ expect(mockFn).toHaveBeenCalled();
 
 **Benefit:** Tests are decoupled from CSS/text changes
 
-See: **[Data TestID Process](../testing/data-testid-process.md)**
+See: **[Testing guide](../guides/TESTING-GUIDE.md)**
 
 ---
 
@@ -379,21 +356,6 @@ export function calculateHealthScore(metrics: HealthMetrics): number {
 - [ ] Rollback plan documented
 - [ ] Monitoring/alerting configured
 
-### Blue-Green Deployment
-
-Minimize downtime and risk:
-
-```bash
-# Deploy to "green" environment
-kubectl apply -f deployment-green.yaml
-
-# Run smoke tests
-./scripts/smoke-tests.sh --target=green
-
-# Switch traffic (instant rollback possible)
-kubectl patch service api -p '{"spec":{"selector":{"version":"green"}}}'
-```
-
 ---
 
 ## Common Patterns
@@ -466,8 +428,6 @@ Effective for:
 
 ## Learning Resources
 
-- **[Agent Documentation](../agents/README.md)** - 22-agent ecosystem
-- **[Architecture Decisions](../architecture/README.md)** - Design philosophy
 - **[CLAUDE.md](../../CLAUDE.md)** - Project conventions and architecture notes
 - **[Example Code](../../src/)** - Real production code to learn from
 
@@ -484,8 +444,8 @@ A: Add tests around it first (approval testing), then refactor safely.
 **Q: Should I comment all my code?**
 A: No. Well-named functions are better. Comments should explain WHY decisions were made, not WHAT the code does.
 
-**Q: How strict is the 85% coverage threshold?**
-A: CI will fail if coverage drops below 85%. Some exceptions can be made for difficult-to-test code (complex UI, integration points), but justify these explicitly.
+**Q: How strict is the 80% coverage threshold?**
+A: CI will fail if coverage drops below 80%. Some exceptions can be made for difficult-to-test code (complex UI, integration points), but justify these explicitly.
 
 ---
 

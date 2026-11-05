@@ -1,226 +1,40 @@
-# NXTG-Forge Port Configuration
-
-## 🔌 Dedicated Ports
-
-To avoid conflicts with other applications, NXTG-Forge uses dedicated ports:
-
-| Service | Port | URL |
-|---------|------|-----|
-| **UI (Frontend)** | **5050** | http://localhost:5050 |
-| **API (Backend)** | **5051** | http://localhost:5051 |
-| **WebSocket** | **5051** | ws://localhost:5051/ws |
-
----
-
-## 🎯 Why These Ports?
-
-- **Easy to remember**: Sequential ports (5050, 5051)
-- **Distinctive**: Not commonly used by other frameworks
-- **No conflicts**: Avoids common ports (3000, 5173, 8080, etc.)
-- **CEO-friendly**: Managing multiple products? These won't clash!
-
----
-
-## 🚀 Quick Start
-
-```bash
-# Start both UI + API together
-npm run dev
-
-# Access points:
-# - UI:        http://localhost:5050
-# - API:       http://localhost:5051/api
-# - WebSocket: ws://localhost:5051/ws
-# - Health:    http://localhost:5051/api/health
-```
-
----
-
-## ⚙️ Configuration Files
-
-### 1. **vite.config.ts** (UI Port)
-```typescript
-server: {
-  port: 5050, // NXTG-Forge dedicated UI port
-  open: true,
-}
-```
-
-### 2. **src/server/api-server.ts** (API Port)
-```typescript
-const PORT = process.env.PORT || 5051; // NXTG-Forge dedicated API port
-```
-
-### 3. **.env** (Environment Variables)
-```env
 # Ports
-PORT=5051              # API Server
-VITE_PORT=5050         # UI
 
-# URLs
-FRONTEND_URL=http://localhost:5050
-# No VITE_API_URL / VITE_WS_URL: the browser calls /api, /ws and /terminal on
-# the page's own origin, and the UI server proxies them to PORT.
-```
+forge-ui uses two ports on the machine that runs it.
 
----
+| Port | Service | Set in | Default bind |
+|---|---|---|---|
+| 5050 | Vite dev server (the dashboard) | `vite.config.ts` (`server.port: 5050`, `strictPort: true`) | `127.0.0.1` |
+| 5051 | API server, `/ws` and `/terminal` (`src/server/api-server.ts`) | `PORT`, default 5051 | `127.0.0.1` |
 
-## 🔧 Changing Ports
+The browser talks only to 5050. Vite proxies `/api`, `/ws` and `/terminal` to `127.0.0.1:5051` (`vite.config.ts`, `server.proxy`), so client code uses relative URLs.
 
-Need different ports? Update these 3 files:
+`strictPort` means the dev server stops with an error if 5050 is taken, instead of moving to another port.
 
-1. **vite.config.ts**: Change `server.port` and the `server.proxy` targets
-2. **src/server/api-server.ts**: Change `PORT` default
-3. **.env**: Update `PORT` and `VITE_PORT`
+## Opening the dashboard from another device
 
-Example for ports 6000/6001:
-```bash
-# .env
-PORT=6001
-VITE_PORT=6000
-FRONTEND_URL=http://localhost:6000
-```
-
----
-
-## 🌐 Production Deployment
-
-For production, use environment variables:
+Both servers bind to `FORGE_UI_HOST`, default `127.0.0.1`. To reach the dashboard from another device on your network:
 
 ```bash
-# Set via environment
-export PORT=80
-export VITE_PORT=443
-export FRONTEND_URL=https://forge.yourdomain.com
+FORGE_UI_HOST=0.0.0.0 \
+ALLOWED_ORIGINS=http://localhost:5050,http://127.0.0.1:5050,http://192.0.2.10:5050 \
+npm run dev
 ```
 
-The browser always calls `/api`, `/ws` and `/terminal` on the origin that served the page, so serve them from that same origin. A separate API origin is not supported: an absolute `VITE_API_URL` or `VITE_WS_URL` is ignored.
+- The API prints a warning when it binds beyond loopback.
+- `ALLOWED_ORIGINS` replaces the default list (the 5050 and 5051 origins on `localhost` and `127.0.0.1`). Include every origin you will open the dashboard from. Requests from other origins get 403.
+- Every request still needs the access token; see [LOCAL-CLIENT-AUTH.md](../api/LOCAL-CLIENT-AUTH.md).
 
-Or use a reverse proxy (nginx/caddy):
-```nginx
-# nginx example
-server {
-  listen 80;
-  server_name forge.yourdomain.com;
+## Changing the ports
 
-  location / {
-    proxy_pass http://localhost:5050;
-  }
+- **API port:** set `PORT`, and change the three proxy targets in `vite.config.ts` to match. They are hard-coded to `127.0.0.1:5051`.
+- **Dashboard port:** change `server.port` in `vite.config.ts`.
+- **Allowed origins:** after changing either port, set `ALLOWED_ORIGINS` to the new origins. The defaults only cover 5050 and 5051.
 
-  location /api {
-    proxy_pass http://localhost:5051;
-  }
+## Checking what is running
 
-  location /ws {
-    proxy_pass http://localhost:5051;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
-  }
-}
-```
-
----
-
-## 🐛 Troubleshooting
-
-### Port Already in Use?
-
-**Check what's using the port:**
 ```bash
-# Windows (in PowerShell)
-netstat -ano | findstr :5050
-netstat -ano | findstr :5051
-
-# Linux/WSL
-lsof -i :5050
-lsof -i :5051
+ss -tlnp | grep -E ':(5050|5051)'
 ```
 
-**Kill the process:**
-```bash
-# Windows (PowerShell as Admin)
-Stop-Process -Id <PID> -Force
-
-# Linux/WSL
-kill -9 <PID>
-```
-
-### Can't Access from Browser?
-
-1. **Check if server is running:**
-   ```bash
-   curl http://localhost:5050
-   curl http://localhost:5051/api/health
-   ```
-
-2. **Check WSL networking** (if using WSL on Windows):
-   ```bash
-   # Get WSL IP
-   hostname -I
-
-   # Try accessing via IP instead
-   http://<wsl-ip>:5050
-   ```
-
-3. **Check firewall settings:**
-   - Windows Firewall may block ports
-   - Add exception for ports 5050-5051
-
----
-
-## 📊 Port Usage Summary
-
-```
-╔═══════════════════════════════════════════════╗
-║         NXTG-Forge Port Allocation            ║
-╠═══════════════════════════════════════════════╣
-║ 🎨 UI (Vite)          → Port 5050             ║
-║ ⚙️  API (Express)      → Port 5051             ║
-║ 🔌 WebSocket          → Port 5051/ws          ║
-║ 💚 Health Check       → Port 5051/api/health  ║
-╚═══════════════════════════════════════════════╝
-```
-
----
-
-## 🎯 CEO Multi-Product Setup
-
-Running multiple products? Here's a suggested port scheme:
-
-| Product | UI Port | API Port |
-|---------|---------|----------|
-| **NXTG-Forge** | 5050 | 5051 |
-| Product A | 5060 | 5061 |
-| Product B | 5070 | 5071 |
-| Product C | 5080 | 5081 |
-
-Benefits:
-- ✅ No port conflicts
-- ✅ Easy to remember (increments of 10)
-- ✅ Clear organization
-- ✅ Can run all simultaneously
-
----
-
-## 💡 Pro Tips
-
-1. **Add to /etc/hosts** for easier access:
-   ```
-   127.0.0.1 forge.local
-   ```
-   Then access: http://forge.local:5050
-
-2. **Bookmark the URLs:**
-   - UI: http://localhost:5050
-   - API Health: http://localhost:5051/api/health
-
-3. **Use PM2** for production:
-   ```bash
-   pm2 start npm --name "forge-ui" -- run ui:dev
-   pm2 start npm --name "forge-api" -- run server:dev
-   ```
-
----
-
-**Questions?** Check the [QUICK-START.md](./QUICK-START.md) or [INTEGRATION-COMPLETE.md](../archive/architecture-v3-early/INTEGRATION-COMPLETE.md)
+On WSL2 with mirrored networking, a Windows `netsh interface portproxy` rule can hold a port while `ss` inside WSL shows it free. If the dev server reports the port in use, check `netsh interface portproxy show all` on Windows.

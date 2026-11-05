@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `ErrorBoundary` component is a production-ready React error boundary that catches JavaScript errors anywhere in the component tree, logs those errors, and displays a beautiful fallback UI instead of crashing the whole application.
+The `ErrorBoundary` component is a React error boundary that catches JavaScript errors anywhere in the component tree, logs those errors, and displays a beautiful fallback UI instead of crashing the whole application.
 
 ## Features
 
@@ -72,7 +72,7 @@ Use for cards, widgets, dashboard components:
 
 ```tsx
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { trackError } from "@/services/analytics";
+import { trackError } from "./your-analytics"; // placeholder: forge-ui ships no analytics service
 
 function Dashboard() {
   const handleError = (error: Error, errorInfo: ErrorInfo) => {
@@ -218,13 +218,12 @@ The error boundary automatically resets when the user navigates to a different p
 **Triggers:**
 - Browser back/forward buttons
 - `history.pushState` calls
-- React Router navigation
 - Direct URL changes
 
 ### Retry Count vs Error Count
 
 - **errorCount**: Total errors caught (increments on every error)
-- **retryCount**: User retry attempts (increments on each retry)
+- **retryCount**: increments with `errorCount` on every caught error; Reset does not increment it
 - **Critical state**: When `retryCount >= maxRetries`
 
 ### Development vs Production
@@ -233,13 +232,12 @@ The error boundary automatically resets when the user navigates to a different p
 - Shows component stack in collapsible section
 - Shows full stack trace
 - More verbose error details
-- Longer default retry count
 
 **Production Mode:**
 - Hides stack traces
 - Cleaner error messages
-- Logs to console for monitoring service integration
-- Shorter retry count (fail fast)
+- Posts the error to `/api/errors` and logs it
+- `maxRetries` defaults to 3 in both modes
 
 ## Best Practices
 
@@ -370,7 +368,7 @@ function BrokenComponent() {
 </ErrorBoundary>
 ```
 
-### Unit Testing with Jest
+### Unit Testing with Vitest
 
 ```tsx
 import { render, screen } from "@testing-library/react";

@@ -2,24 +2,31 @@ openapi: 3.1.0
 info:
   title: NXTG-Forge API
   description: |
-    REST API for NXTG-Forge - AI-Orchestrated Development System.
+    REST API for forge-ui, the Forge browser dashboard.
 
     ## Authentication
-    Currently no authentication required for local development.
-    Production deployments should configure JWT authentication.
+    Every /api route needs this install's token: `Authorization: Bearer <token>`,
+    the `X-Forge-Token` header, or the `forge_session` cookie set at sign-in.
+    See docs/api/LOCAL-CLIENT-AUTH.md. Requests without it get 401.
 
     ## WebSocket
-    Real-time updates available at `ws://localhost:5051/ws`
+    Real-time updates at `/ws`. The upgrade needs the same credential plus
+    `?token=` from `POST /api/ws-token`.
 
     ## Terminal
-    PTY terminal sessions at `ws://localhost:5051/terminal`
-  version: 3.0.0
+    PTY terminal sessions at `/terminal`, with the same credential and a
+    single-use token from `POST /api/ws-token` for a new session.
+
+    ## Coverage
+    This spec covers part of the API. Some routes (sign-in, feedback,
+    compliance, governance context, forge detect/init) are not described here yet.
+  version: 3.5.3
   contact:
-    name: NXTG Team
-    url: https://github.com/nxtg-ai/forge
+    name: NXTG.ai
+    url: https://github.com/nxtg-ai/forge-ui
   license:
-    name: MIT
-    url: https://opensource.org/licenses/MIT
+    name: FSL-1.1-ALv2
+    url: https://github.com/nxtg-ai/forge-ui/blob/main/LICENSE.md
 
 servers:
   - url: http://localhost:5051
@@ -72,7 +79,7 @@ paths:
                 success: true
                 data:
                   mission: "Build the Ultimate Chief of Staff for Developers"
-                  goals: ["Launch v3.0", "Build Agent Ecosystem"]
+                  strategicGoals: []
                   principles: ["Ship fast", "Iterate faster"]
                   currentFocus: "Production Polish"
                 timestamp: "2026-02-03T00:00:00Z"
@@ -206,6 +213,7 @@ paths:
               properties:
                 phase:
                   type: string
+                  description: Suggested values; the server stores any string.
                   enum: [planning, development, testing, deployment, maintenance]
                   example: development
       responses:
@@ -820,7 +828,7 @@ paths:
     post:
       tags: [Workers]
       summary: Initialize worker pool
-      description: Initialize the agent worker pool
+      description: Returns the pool status. The pool is disabled (503) when a Claude Code backend is detected.
       responses:
         '200':
           description: Pool initialized
@@ -1198,7 +1206,16 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ApiResponse'
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  applied:
+                    type: boolean
+                    const: false
+                  message:
+                    type: string
+                    example: No file was changed
         '400':
           description: Missing filePath
         '500':
@@ -1268,46 +1285,44 @@ components:
     Vision:
       type: object
       properties:
+        version:
+          type: string
         mission:
           type: string
-        goals:
-          type: array
-          items:
-            type: string
         principles:
           type: array
           items:
             type: string
+        strategicGoals:
+          type: array
+          items:
+            type: object
         currentFocus:
           type: string
-        techStack:
+        successMetrics:
           type: object
 
     AgentTask:
       type: object
-      required: [name]
+      required: [name, type]
       properties:
         name:
           type: string
-        description:
+        type:
           type: string
         priority:
           type: string
           enum: [low, medium, high, critical]
-        deadline:
-          type: string
-          format: date-time
+        context:
+          type: object
 
     Command:
       type: object
-      required: [type]
+      required: [command]
       properties:
-        type:
+        command:
           type: string
-        payload:
-          type: object
-        correlationId:
-          type: string
+          description: A command id from GET /api/commands, for example frg-status. Unknown ids get 404.
 
     ArchitectureDecision:
       type: object
@@ -1329,41 +1344,53 @@ components:
 
     RunspaceConfig:
       type: object
-      required: [name, projectPath]
+      required: [name, path]
       properties:
         name:
           type: string
-        projectPath:
+        displayName:
           type: string
-        description:
+        path:
           type: string
-        backend:
+          description: An existing folder
+        backendType:
           type: string
-          enum: [wsl, container, vm]
+          enum: [wsl]
           default: wsl
+        tags:
+          type: array
+          items:
+            type: string
+        color:
+          type: string
+        icon:
+          type: string
+        vision:
+          type: object
+        mcpConfig:
+          type: object
+        autoStart:
+          type: boolean
 
     WorkerTask:
       type: object
       required: [type, command]
+      description: Over HTTP only prompt tasks are accepted. Non-empty args or env, shell or script tasks, and a prompt that starts with '-' or is a single word are refused with 400.
       properties:
         type:
           type: string
+          enum: [claude-code, agent]
         command:
           type: string
-        args:
-          type: array
-          items:
-            type: string
+          description: The prompt
         priority:
           type: string
-          enum: [low, medium, high, critical]
+          enum: [high, medium, low, background]
           default: medium
         workstreamId:
           type: string
         timeout:
           type: integer
-        env:
-          type: object
         metadata:
           type: object
 

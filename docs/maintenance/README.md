@@ -38,7 +38,7 @@ Applies learned improvements to agent specs:
 - Rollback capability
 
 ### 5. Learning Database
-Persistent storage for:
+Persistent storage (a JSON file) for:
 - Discovered patterns
 - Performance metrics
 - Health events
@@ -129,7 +129,6 @@ When health issues are detected, the system can automatically:
 - Clean up old checkpoints (>7 days)
 - Remove stale sessions (>24 hours)
 - Clean up old logs (>30 days)
-- Vacuum database when too large
 - Free up disk space
 
 ## Pattern Learning
@@ -200,7 +199,7 @@ const daemon = new MaintenanceDaemon({
   enableHealthMonitor: true,
   enableAutoUpdates: true,
 
-  // Database location
+  // Database location (the file holds JSON despite the .db name)
   databasePath: '.forge/maintenance.db',
 
   // Auto-apply threshold (0-1)
@@ -289,7 +288,12 @@ src/maintenance/
 ├── index.ts               # Module exports
 └── __tests__/             # Test suite
     ├── daemon.test.ts
-    └── health-monitor.test.ts
+    ├── health-monitor.test.ts
+    ├── cli.test.ts
+    ├── learning-database.test.ts
+    ├── pattern-scanner.test.ts
+    ├── performance-analyzer.test.ts
+    └── update-applier.test.ts
 ```
 
 ## Best Practices
@@ -304,7 +308,7 @@ src/maintenance/
 ## Troubleshooting
 
 ### Daemon won't start
-- Check if port/process already running
+- Check if the process is already running
 - Verify `.forge` directory permissions
 - Check disk space
 
@@ -323,16 +327,6 @@ src/maintenance/
 - Check database has metrics stored
 - Ensure minimum task threshold met (default: 5)
 
-## Future Enhancements
-
-- [ ] Machine learning-based pattern recognition
-- [ ] Automated A/B testing of agent specs
-- [ ] Integration with external monitoring systems
-- [ ] Historical trend visualization
-- [ ] Anomaly detection
-- [ ] Predictive maintenance
-- [ ] Multi-project learning aggregation
-
 ## License
 
-MIT License - See LICENSE file for details
+FSL-1.1-ALv2 - see [LICENSE.md](../../LICENSE.md)
