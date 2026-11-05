@@ -38,7 +38,7 @@ vi.mock("../../../config/forge-commands", () => ({
       hotkey: "s",
       requiresConfirmation: false,
       severity: "safe",
-      icon: { name: "Activity" },
+      iconName: "Activity",
     },
     {
       id: "frg-test",
@@ -48,7 +48,7 @@ vi.mock("../../../config/forge-commands", () => ({
       hotkey: "t",
       requiresConfirmation: false,
       severity: "safe",
-      icon: { name: "CheckCircle" },
+      iconName: "CheckCircle",
     },
   ],
 }));
@@ -250,7 +250,7 @@ describe("Command Routes", () => {
       expect(firstCommand.iconName).toBe("Activity");
     });
 
-    it("transforms icon objects to iconName strings", async () => {
+    it("sends iconName strings, not icon objects", async () => {
       const res = await request(app).get("/api/commands/").expect(200);
 
       res.body.data.forEach((cmd: any) => {
