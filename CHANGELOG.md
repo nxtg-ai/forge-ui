@@ -9,14 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.5.6] - 2026-11-05
+
+forge-ui is a **Public preview**; interfaces may change. This is a security fix release: two server fixes for crafted names such as `__proto__` and `constructor`, a hardened release workflow, development dependency updates, and code scanning restored for Semgrep and Gitleaks. Checksums remain release assets (`.sha256`). **Upgrade from v3.5.5.**
+
+Includes #97, #98, #99, #101, #102, #103 and #104.
+
 ### Changed
 
 - Semgrep and Gitleaks results publish to GitHub code scanning again (categories `semgrep` and `gitleaks`). From 2026-04-13 they were kept only as workflow artifacts, so their alerts never opened or closed. The Gitleaks download is pinned to v8.30.1 instead of `releases/latest` (tested by `src/test/quality/security-scan-upload.test.ts`).
+- The release-protocol drift check (`.github/workflows/release-protocol-check.yml`) is re-copied from its updated shared template: values reach its scripts through `env:`, and it also runs on pushes to main (tested by `src/test/quality/release-protocol-workflow.test.ts`).
 
 ### Fixed
 
-- Two more lookups treated `__proto__` and `constructor` as real keys. MCP suggestions now keep only model-returned ids that are registry servers. Feedback statistics count a `__proto__` category instead of dropping it (`GET /api/feedback/stats`). Tested in `mcp-suggestion-engine.test.ts` and `forge.test.ts`.
 - `POST /api/mcp/configure` returned 500 when `selectedServers` held `constructor` (or `__proto__`), and put a stray `constructor` entry in the generated config. Those names resolve to Object built-ins, so the registry lookup treated them as servers. Only the registry's own keys count now, and the route answers 400 unless `selectedServers` is an array of strings (code scanning #138; tested in `mcp-suggestion-engine.test.ts` and `features.test.ts`).
+- Two more lookups treated `__proto__` and `constructor` as real keys. MCP suggestions now keep only model-returned ids that are registry servers. Feedback statistics count a `__proto__` category instead of dropping it (`GET /api/feedback/stats`). Tested in `mcp-suggestion-engine.test.ts` and `forge.test.ts`.
+- A maintenance test (`learning-database.test.ts`) failed on and off: its 1000-event case took longer than its timeout, and the timed-out body then wrote into the next test's database. It now seeds the events directly (#100).
 
 ### Security
 
