@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Removed the `status` npm script. It ran `scripts/status.ts`, which was never committed, so `npm run status` always failed. Use `npm run maintain:check` for health checks. A new test checks that every file an npm script runs exists (#91).
+
 ## [3.5.6] - 2026-11-05
 
 forge-ui is a **Public preview**; interfaces may change. This is a security fix release: two server fixes for crafted names such as `__proto__` and `constructor`, a hardened release workflow, development dependency updates, and code scanning restored for Semgrep and Gitleaks. Checksums remain release assets (`.sha256`). **Upgrade from v3.5.5.**
