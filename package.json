@@ -31,7 +31,6 @@
     "maintain:start": "tsx scripts/maintain.ts --start",
     "maintain:patterns": "tsx scripts/maintain.ts --patterns",
     "maintain:performance": "tsx scripts/maintain.ts --performance",
-    "status": "tsx scripts/status.ts",
     "clean": "rm -rf dist node_modules && npm install",
     "lint": "eslint src",
     "format": "prettier --write \"src/**/*.{ts,tsx}\"",

@@ -340,7 +340,7 @@ npm run dev
 **Option B: CLI Status**
 ```bash
 # Check system health
-npm run status
+npm run maintain:check
 
 # View current vision
 cat .claude/VISION.md
