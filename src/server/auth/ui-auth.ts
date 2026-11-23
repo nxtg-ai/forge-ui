@@ -21,6 +21,7 @@
 
 import * as crypto from "crypto";
 import * as fs from "fs";
+import * as net from "net";
 import * as os from "os";
 import * as path from "path";
 import type { IncomingMessage } from "http";
@@ -226,6 +227,61 @@ export function sessionCookieHeader(): string {
 
 export function clearedSessionCookieHeader(): string {
   return `${SESSION_COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0`;
+}
+
+const LOOPBACK = new net.BlockList();
+LOOPBACK.addSubnet("127.0.0.0", 8, "ipv4");
+LOOPBACK.addAddress("::1", "ipv6");
+
+/**
+ * True for a loopback IP literal: 127.0.0.0/8, ::1, and IPv4-mapped 127.x
+ * (BlockList matches mapped IPv6 addresses against the IPv4 rule). Names such
+ * as "localhost" are not addresses and are refused.
+ */
+export function isLoopbackAddress(address: string): boolean {
+  const a = address.trim();
+  const family = net.isIPv4(a) ? "ipv4" : net.isIPv6(a) ? "ipv6" : undefined;
+  return family !== undefined && LOOPBACK.check(a, family);
+}
+
+/** One address a proxy recorded, without quotes, brackets or port. */
+function recordedAddress(raw: string): string {
+  let v = raw.trim().replace(/^"|"$/g, "");
+  const bracketed = /^\[([^\]]+)\](?::\d+)?$/.exec(v);
+  if (bracketed) return bracketed[1];
+  const v4WithPort = /^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/.exec(v);
+  if (v4WithPort) v = v4WithPort[1];
+  return v;
+}
+
+function headerList(value: string | string[] | undefined): string[] {
+  if (value === undefined) return [];
+  return (Array.isArray(value) ? value : [value]).flatMap((v) => v.split(","));
+}
+
+/**
+ * True only when the request comes from this machine: the TCP peer is loopback
+ * AND every client address a proxy recorded (X-Forwarded-For, X-Real-IP,
+ * Forwarded: for=) is loopback too. The Vite dev proxy reaches the API from
+ * 127.0.0.1 for every client, LAN devices included, and appends the real
+ * client address to X-Forwarded-For (`xfwd`), so a client that sends its own
+ * "127.0.0.1" still ends with its real address in the list. Anything that
+ * cannot be read as an address counts as not local.
+ *
+ * NEXUS: GHSA-r49v-8jjx-w5f9 (one-time sign-in codes).
+ */
+export function isLocalRequest(req: IncomingMessage): boolean {
+  const peer = req.socket?.remoteAddress;
+  if (!peer || !isLoopbackAddress(peer)) return false;
+
+  const recorded = [...headerList(req.headers["x-forwarded-for"]), ...headerList(req.headers["x-real-ip"])];
+  for (const element of headerList(req.headers.forwarded)) {
+    const pairs = element.split(";").map((p) => p.trim()).filter((p) => p !== "");
+    const forPairs = pairs.filter((p) => p.toLowerCase().startsWith("for="));
+    if (forPairs.length === 0) return false;
+    for (const p of forPairs) recorded.push(p.slice("for=".length));
+  }
+  return recorded.every((raw) => isLoopbackAddress(recordedAddress(raw)));
 }
 
 export function isLoopbackHost(host: string): boolean {

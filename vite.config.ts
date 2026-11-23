@@ -63,6 +63,10 @@ export default defineConfig({
       '/api': {
         target: 'http://127.0.0.1:5051',
         changeOrigin: true,
+        // Every client reaches the API from 127.0.0.1 through this proxy, so
+        // record the real client address in X-Forwarded-For. The API refuses
+        // sign-in codes when any recorded address is another machine.
+        xfwd: true,
       },
       '/ws': {
         target: 'ws://127.0.0.1:5051',

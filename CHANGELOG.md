@@ -9,9 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.5.7] - 2026-11-23
+
+forge-ui is a **Public preview**; interfaces may change. This is a security fix release: one-time sign-in codes now work only on the machine running forge-ui. It also removes a broken npm script and pins the browser test runner. **Upgrade from v3.5.6.**
+
+Includes #108, #109 and #110.
+
+### Changed
+
+- The terminal browser test (`terminal-e2e` workflow) runs on `ubuntu-24.04`. `ubuntu-latest` moved to 26.04, where Playwright 1.58.2 cannot install Chromium (#109).
+- The Gemini CLI framework note (`.claude/skills/gemini/gemini-framework.md`) is marked as reference for the old client. Google is moving Gemini CLI users to Antigravity CLI; the note is not a setup guide (#110).
+
 ### Fixed
 
 - Removed the `status` npm script. It ran `scripts/status.ts`, which was never committed, so `npm run status` always failed. Use `npm run maintain:check` for health checks. A new test checks that every file an npm script runs exists (#91).
+
+### Security
+
+- One-time sign-in codes (`POST /api/auth/login-code` and `POST /api/auth/redeem`) now work only from the machine running forge-ui. A request from another machine is refused with 403, including one that reaches the API through the `npm run dev` proxy, which now records the client address in `X-Forwarded-For`. Use `npm run auth:login-link` on that machine as before (GHSA-r49v-8jjx-w5f9).
 
 ## [3.5.6] - 2026-11-05
 
