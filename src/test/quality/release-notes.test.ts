@@ -61,6 +61,27 @@ describe("release notes from the CHANGELOG", () => {
     }
   });
 
+  // Quality Gates run 45192334585 failed here with exit 141 (SIGPIPE): the script piped the whole
+  // CHANGELOG into awk, awk exited at the next heading, and the writer died on the closed pipe
+  // whenever it had not finished writing (forge-pm al:b1828dba4a505d4b). A CHANGELOG larger than a
+  // pipe buffer (64 KiB on Linux) made it fail every time.
+  it("reads the newest section of a CHANGELOG larger than a pipe buffer without SIGPIPE", () => {
+    const older = Array.from({ length: 2000 }, (_, i) => `## [1.0.${i}] - 2026-01-01\r\n\r\n- ${"x".repeat(200)}\r\n\r\n`);
+    const big = "# Changelog\r\n\r\n## [2.0.0] - 2026-01-02\r\n\r\nNewest.\r\n\r\n" + older.join("");
+    expect(big.length).toBeGreaterThan(256 * 1024);
+    const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "release-notes-")), "CHANGELOG.md");
+    fs.writeFileSync(file, big);
+    const r = notes("2.0.0", file);
+    expect(r.status, r.stderr).toBe(0);
+    expect(r.stdout).toBe("Newest.\n");
+  });
+
+  it("reads this repo's CHANGELOG for the current version 20 times in a row", () => {
+    const version = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf-8")).version;
+    const statuses = Array.from({ length: 20 }, () => notes(version).status);
+    expect(statuses).toEqual(Array(20).fill(0));
+  });
+
   it("reads this repo's CHANGELOG for the current version", () => {
     const version = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf-8")).version;
     const r = notes(version);
