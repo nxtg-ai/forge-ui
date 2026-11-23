@@ -42,3 +42,35 @@ describe("release-protocol-check.yml run steps", () => {
     expect(piped).toEqual([]);
   });
 });
+
+/**
+ * The drift check must not race the release. On a release push the check ran
+ * on the merge, before deploy.yml had created the tag and release, and opened
+ * a false drift issue (#18, #19, #27, #106, #112). It now runs after Deploy &
+ * Release completes, plus the daily schedule (forge-pm al:7e63e862cfcff11e).
+ */
+describe("release-protocol-check.yml triggers", () => {
+  const wf = yaml.load(readFileSync(WORKFLOW, "utf-8")) as {
+    on: Record<string, unknown>;
+    jobs: Record<string, { if?: string }>;
+  };
+  const deploy = yaml.load(readFileSync(resolve(__dirname, "../../../.github/workflows/deploy.yml"), "utf-8")) as {
+    name: string;
+  };
+
+  it("does not run on push", () => {
+    expect(Object.keys(wf.on)).not.toContain("push");
+  });
+
+  it("runs when Deploy & Release completes, and on the daily schedule", () => {
+    expect(wf.on.workflow_run).toEqual({ workflows: [deploy.name], types: ["completed"] });
+    expect(deploy.name).toBe("Deploy & Release");
+    expect(wf.on.schedule).toEqual([{ cron: "0 8 * * *" }]);
+  });
+
+  it("skips when the triggering deploy run did not succeed", () => {
+    expect(wf.jobs["drift-check"].if).toBe(
+      "github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'",
+    );
+  });
+});
