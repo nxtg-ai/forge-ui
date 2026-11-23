@@ -2,7 +2,7 @@ name: Release Protocol Drift Check
 # ASIF Release Protocol Enforcement — Layer 2 (ADR-036)
 # standards/release-protocol-enforcement.md
 #
-# Runs daily and on main pushes. Verifies the manifest version matches:
+# Runs daily and after each Deploy & Release run. Verifies the manifest version matches:
 #   - latest git tag matching v*
 #   - latest GitHub Release
 #   - latest published registry version (npm / cargo / pypi)
@@ -26,9 +26,12 @@ name: Release Protocol Drift Check
 on:
   schedule:
     - cron: '0 8 * * *'  # 08:00 UTC daily
-  push:
-    branches:
-      - main
+  # forge-ui: after Deploy & Release, not on main pushes. On a release push the
+  # check ran on the merge, before deploy.yml had made the tag and release, and
+  # opened a false drift issue (#18, #19, #27, #106, #112).
+  workflow_run:
+    workflows: ['Deploy & Release']
+    types: [completed]
   workflow_dispatch:
     inputs:
       registry:
@@ -42,6 +45,8 @@ permissions:
 
 jobs:
   drift-check:
+    # A failed or cancelled release run is its own signal; check only after a success.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
