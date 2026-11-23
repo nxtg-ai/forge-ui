@@ -10,7 +10,7 @@ import express from "express";
 import * as crypto from "crypto";
 import type { RouteContext } from "../../route-context";
 import { rateLimit, authLimiter } from "../../middleware";
-import { clearedSessionCookieHeader, sessionCookieHeader, verifySecret } from "../../auth/ui-auth";
+import { clearedSessionCookieHeader, sessionCookieHeader, verifySecret, isLocalRequest } from "../../auth/ui-auth";
 import { mintLoginCode, redeemLoginCode } from "../../auth/login-codes";
 
 const wsAuthTokens = new Map<string, { createdAt: number; clientId: string }>();
@@ -68,10 +68,19 @@ export function createAuthRoutes(_ctx: RouteContext): express.Router {
     res.json({ success: true, data: { authenticated: true }, timestamp: new Date().toISOString() });
   });
 
+  // One-time sign-in codes are for a browser on this machine. Mint and redeem
+  // refuse any request from another machine, including one that reaches the
+  // API through the dev proxy (GHSA-r49v-8jjx-w5f9).
+  const LOCAL_ONLY = "Sign-in codes can be used only on the machine running forge-ui";
+
   // Mint a one-time sign-in code for an automated browser session
   // (DIRECTIVE-NXTG-20261007-15). Authenticated: the caller already holds the
   // token; the code lets a browser sign in without the token entering a URL.
-  router.post("/login-code", rateLimit(authLimiter), (_req, res) => {
+  router.post("/login-code", rateLimit(authLimiter), (req, res) => {
+    if (!isLocalRequest(req)) {
+      res.status(403).json({ success: false, error: LOCAL_ONLY, timestamp: new Date().toISOString() });
+      return;
+    }
     const minted = mintLoginCode();
     if (!minted) {
       res.status(429).json({ success: false, error: "Too many outstanding sign-in codes", timestamp: new Date().toISOString() });
@@ -83,6 +92,11 @@ export function createAuthRoutes(_ctx: RouteContext): express.Router {
   // Spend a one-time code for the normal session cookie. Public by necessity
   // (the browser has no credential yet); the code is single-use and short-lived.
   router.post("/redeem", rateLimit(authLimiter), (req, res) => {
+    // Checked before the code is spent, so a refused request leaves it usable.
+    if (!isLocalRequest(req)) {
+      res.status(403).json({ success: false, error: LOCAL_ONLY, timestamp: new Date().toISOString() });
+      return;
+    }
     const code = (req.body as { code?: unknown } | undefined)?.code;
     if (!redeemLoginCode(code)) {
       res.status(401).json({ success: false, error: "Invalid or expired sign-in code", timestamp: new Date().toISOString() });

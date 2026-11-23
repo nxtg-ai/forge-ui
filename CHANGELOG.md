@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Removed the `status` npm script. It ran `scripts/status.ts`, which was never committed, so `npm run status` always failed. Use `npm run maintain:check` for health checks. A new test checks that every file an npm script runs exists (#91).
 
+### Security
+
+- One-time sign-in codes (`POST /api/auth/login-code` and `POST /api/auth/redeem`) now work only from the machine running forge-ui. A request from another machine is refused with 403, including one that reaches the API through the `npm run dev` proxy, which now records the client address in `X-Forwarded-For`. Use `npm run auth:login-link` on that machine as before (GHSA-r49v-8jjx-w5f9).
+
 ## [3.5.6] - 2026-11-05
 
 forge-ui is a **Public preview**; interfaces may change. This is a security fix release: two server fixes for crafted names such as `__proto__` and `constructor`, a hardened release workflow, development dependency updates, and code scanning restored for Semgrep and Gitleaks. Checksums remain release assets (`.sha256`). **Upgrade from v3.5.5.**
