@@ -6,11 +6,14 @@
 set -euo pipefail
 VERSION="${1:?usage: release-notes.sh <version> [changelog]}"
 FILE="${2:-CHANGELOG.md}"
-notes=$(tr -d '\r' < "$FILE" | awk -v v="$VERSION" '
+# awk reads the file itself, with no pipe in front of it. It stops at the next heading; a writer
+# piped into it could die of SIGPIPE (exit 141 under pipefail) when it had not finished writing.
+notes=$(awk -v v="$VERSION" '
+  { gsub(/\r/, "") }
   index($0, "## [" v "]") == 1 { f = 1; next }
   f && /^## \[/ { exit }
   f { print }
-')
+' "$FILE")
 # Trim leading and trailing blank lines.
 notes=$(printf '%s\n' "$notes" | sed -e '/./,$!d' | sed -e ':a' -e '/^\n*$/{$d;N;ba' -e '}')
 if [ -z "${notes//[[:space:]]/}" ]; then
