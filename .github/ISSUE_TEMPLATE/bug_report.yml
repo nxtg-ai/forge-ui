@@ -21,7 +21,7 @@ body:
       label: Steps to reproduce
       description: Exact commands or UI clicks needed to trigger the bug.
       placeholder: |
-        1. git clone --branch v3.5.7 https://github.com/nxtg-ai/forge-ui
+        1. git clone --branch v3.5.8 https://github.com/nxtg-ai/forge-ui
         2. npm install && npm run dev
         3. Open Infinity Terminal and ...
     validations:
@@ -31,7 +31,7 @@ body:
     attributes:
       label: Environment
       description: OS (Linux / WSL2 / macOS), Node.js version (`node -v`), browser, and `forge-ui` version/tag.
-      placeholder: "Ubuntu 24.04 (WSL2), Node v22.12.0, Chrome 131, v3.5.7"
+      placeholder: "Ubuntu 24.04 (WSL2), Node v22.12.0, Chrome 131, v3.5.8"
     validations:
       required: true
   - type: dropdown
