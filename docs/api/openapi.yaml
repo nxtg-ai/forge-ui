@@ -25,7 +25,7 @@ info:
     name: NXTG.ai
     url: https://github.com/nxtg-ai/forge-ui
   license:
-    name: MIT
+    name: Apache-2.0
     url: https://github.com/nxtg-ai/forge-ui/blob/main/LICENSE.md
 
 servers:

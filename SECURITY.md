@@ -1,7 +1,7 @@
 # NXTG-Forge Security Policy
 
 **Version:** 3.0.0
-**Release Type:** Open source (MIT, see LICENSE.md)
+**Release Type:** Open source (Apache-2.0, see LICENSE.md and NOTICE)
 **Last Updated:** 2026-02-05
 **Status:** PRODUCTION HARDENING REQUIRED
 

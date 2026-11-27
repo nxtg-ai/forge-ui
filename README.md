@@ -70,4 +70,4 @@ Governance state is read from `.claude/governance.json` in the folder forge-ui r
 
 ## License
 
-Open source under the [MIT License](./LICENSE.md). See [LICENSE.md](./LICENSE.md) for full terms.
+Open source under the [Apache License, Version 2.0](./LICENSE.md). See [LICENSE.md](./LICENSE.md) and [NOTICE](./NOTICE) for full terms.

@@ -24,4 +24,4 @@ Start with the [README](../README.md): what forge-ui is, how to install it, sign
 - [Security scanner triage, 2026-10-07](./security/2026-10-07-scanner-triage.md): a historical record; the findings are fixed
 - [Archive](./archive/README.md): historical working notes. They do not describe the released product.
 
-The changelog is [CHANGELOG.md](../CHANGELOG.md). The license is [MIT](../LICENSE.md).
+The changelog is [CHANGELOG.md](../CHANGELOG.md). The license is [Apache-2.0](../LICENSE.md).
