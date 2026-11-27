@@ -1,0 +1,29 @@
+name: Feature Request
+description: Propose a focused improvement to NXTG-Forge UI
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Tell us about the real workflow bottleneck you want to solve in **NXTG-Forge UI**.
+        Note: Policy enforcement and orchestration core live in [forge-orchestrator](https://github.com/nxtg-ai/forge-orchestrator) (L2) and [forge-plugin](https://github.com/nxtg-ai/forge-plugin) (L1).
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or workflow bottleneck
+      description: What are you trying to accomplish today, and where does forge-ui get in your way?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the smallest, cleanest behavior that would solve this.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Optional workarounds or tradeoffs you've already evaluated.

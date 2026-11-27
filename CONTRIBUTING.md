@@ -1,332 +1,124 @@
-# Contributing to NXTG-Forge v3
+# Contributing to NXTG-Forge UI (`nxtg-ai/forge-ui`)
 
-Welcome to NXTG-Forge v3 - an AI-orchestrated development system built with React 19, TypeScript, and Claude Code agents.
+Welcome to `nxtg-ai/forge-ui` — the local browser dashboard and Infinity Terminal (Level 3) for NXTG-Forge, built with React 19, Vite 7, Express 5, TypeScript 5, `xterm.js` 6, and `node-pty`.
+
+> Looking for a scoped first PR? Check open issues labeled [`good first issue`](https://github.com/nxtg-ai/forge-ui/labels/good%20first%20issue).
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js >= 18.0.0
-- npm (comes with Node.js)
-- Git
+- **Node.js >= 22.12** (Vite 7 requires `^20.19 || >=22.12`; `package.json` enforces `>=22.0.0`)
+- **npm** (bundled with Node.js)
+- **Native build toolchain** for `node-pty` (`python3`, `make`, `g++` — e.g. `sudo apt-get install -y python3 make g++` on Debian/Ubuntu/WSL2, or `xcode-select --install` on macOS)
+- **Git**
 
 ### Initial Setup
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/NXTG-Forge.git
-cd NXTG-Forge/v3
+git clone https://github.com/nxtg-ai/forge-ui.git
+cd forge-ui
 
 # Install dependencies
 npm install
 
-# Start development servers (API server + Vite UI)
+# Start development servers (API server on :5051 + Vite UI on :5050)
 npm run dev
 
-# The UI will be available at http://localhost:5050
-# API server runs on http://localhost:5051
+# In a second terminal, generate a single-use 60-second browser sign-in link:
+npm run auth:login-link
 ```
 
 ### Available Scripts
 
 ```bash
-npm run dev              # Start both API server and UI dev server
-npm run test             # Run tests in watch mode
-npm run test:coverage    # Generate coverage report (85% threshold)
-npm run lint             # Run ESLint
+npm run dev              # Start both API server (:5051) and UI dev server (:5050)
+npm run auth:login-link  # Print a single-use 60-second browser sign-in link
+npm run build            # TypeScript check + Vite UI production build
+npm run build:server     # Compile Express/WebSocket server to dist/
+npm run lint             # Run ESLint across src/
 npm run format           # Format code with Prettier
-npm run build            # Build UI for production
-npm run quality:gates    # Run full quality gate checks (build, lint, test, coverage)
+npm run test             # Run Vitest in watch mode
+npm run test:coverage    # Run full test suite with coverage report
+npm run test:security    # Run security test suite
+npm run test:quality     # Run quality invariant tests (type-safety, stage, release-notes)
+npm run quality:gates    # Full local gate check (build, server build, smoke, lint, coverage, audits)
 ```
 
 ## Project Structure
 
-```
-v3/
+```text
+forge-ui/
 ├── src/
-│   ├── components/        # React components
-│   │   ├── infinity-terminal/  # Terminal component with session persistence
-│   │   ├── dashboard/          # Main dashboard UI
-│   │   ├── ui/                 # Reusable UI components
-│   │   └── ...
-│   ├── server/           # Backend API server (Express + WebSocket)
-│   ├── core/             # Core business logic
-│   ├── hooks/            # Custom React hooks
-│   ├── types/            # TypeScript type definitions
-│   ├── utils/            # Utility functions
-│   └── test/             # Test suites
-│       ├── integration/  # Integration tests
-│       ├── performance/  # Performance tests
-│       ├── quality/      # Quality assurance tests
-│       └── security/     # Security tests
-├── .claude/
-│   ├── agents/           # Claude Code agent definitions
-│   └── plans/            # Implementation plans
-└── dist-ui/              # Production build output
+│   ├── components/            # React 19 UI components
+│   │   ├── infinity-terminal/ # Persistent xterm.js terminal UI
+│   │   ├── dashboard/         # Governance HUD & dashboard panels
+│   │   ├── layout/            # AppHeader, AppShell
+│   │   └── ui/                # Reusable primitives
+│   ├── pages/                 # Full-view screens (Dashboard, Infinity Terminal, Command, Vision, Architect)
+│   ├── server/                # Express 5 + WebSocket API server, auth, and PTY bridge
+│   ├── core/                  # Core state, vision, and runspace managers
+│   ├── services/              # Init, status, governance, and API services
+│   ├── hooks/                 # React hooks (including session persistence)
+│   ├── types/                 # TypeScript types and Zod schemas
+│   └── test/                  # Integration, e2e, performance, quality, and security suites
+├── docs/                      # Architecture docs, API OpenAPI spec, and UI screenshots
+├── scripts/                   # Dev startup, ESM import fixer, and smoke checks
+└── .github/                   # Workflows, issue templates, PR template, and stage checks
 ```
 
 ## Development Workflow
 
 ### Branch Naming
 
-Use descriptive branch names with prefixes:
+Create a feature branch from `main` (never push directly to `main`):
 
-- `feature/` - New features (e.g., `feature/oauth-integration`)
-- `fix/` - Bug fixes (e.g., `fix/terminal-reconnect`)
-- `docs/` - Documentation updates (e.g., `docs/api-reference`)
-- `refactor/` - Code refactoring (e.g., `refactor/auth-service`)
-- `test/` - Test improvements (e.g., `test/coverage-increase`)
+- `feature/` — New features (e.g., `feature/terminal-search-highlight`)
+- `fix/` — Bug or security fixes (e.g., `fix/terminal-reconnect`)
+- `docs/` — Documentation updates (e.g., `docs/quickstart-prereqs`)
+- `refactor/` — Code refactoring (e.g., `refactor/vision-serializer`)
+- `test/` — Test additions or flake fixes (e.g., `test/worker-spawn-timeout`)
 
 ### Commit Messages
 
-Follow [Conventional Commits](https://www.conventionalcommits.org/) format:
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
-```
+```text
 <type>(<scope>): <description>
-
-[optional body]
-
-[optional footer]
 ```
 
-**Types:**
-- `feat:` - New feature
-- `fix:` - Bug fix
-- `docs:` - Documentation changes
-- `refactor:` - Code refactoring
-- `test:` - Test additions/changes
-- `chore:` - Maintenance tasks
-
-**Examples:**
-```
-feat(auth): Add OAuth2 authentication flow
-fix(terminal): Resolve session persistence on reconnect
-docs(api): Add comprehensive API documentation
-refactor(services): Apply SOLID principles to UserService
-test(auth): Increase coverage for authentication module
-```
+Common types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`.
 
 ### Contributor License Agreement (CLA)
 
-All contributors must sign the CLA before a pull request can be merged.
+All external contributors must sign the CLA before a pull request can be merged. When you open a PR, the CLA bot comments on the PR. Reply with:
 
-When you open a PR, the CLA bot will post a comment. Reply with:
-
-```
+```text
 I have read the CLA Document and I hereby sign the CLA
 ```
 
-This records your agreement in `.github/cla-signatures.json`. You only need to sign once — subsequent PRs will be recognized automatically.
+This records your signature once in `.github/cla-signatures.json`. The CLA document is in [`CLA.md`](./CLA.md) (based on Apache ICLA terms).
 
-The CLA document is in [`CLA.md`](./CLA.md) (based on Apache ICLA terms). Bots and `dependabot[bot]` are automatically allowlisted.
+### Pull Request Process & CI Gates
 
-> **Note:** The `CLA_PERSONAL_ACCESS_TOKEN` repository secret must be set for the bot to commit signatures. Contact a maintainer if the bot fails to record your signature.
+Every PR targeting `main` runs required automated checks:
 
-### Pull Request Process
-
-1. **Sign the CLA** (first-time contributors — see above)
-2. **Create a feature branch** from `main`
-2. **Make your changes** following code standards (see below)
-3. **Write tests** - Minimum 85% coverage required
-4. **Run quality checks** - `npm run quality:gates`
-5. **Commit with conventional format** - See commit message guidelines above
-6. **Push and create PR** with descriptive title and summary
-7. **Wait for CI** - Quality gates must pass (build, lint, test, security)
-8. **Address review feedback** - Make requested changes
-9. **Merge** - Squash and merge once approved
+1. **Stage consistency** (`bash .github/scripts/check-stage.sh`) — `STAGE`, `README.md` line 9, `CHANGELOG.md`, and `src/services/app-stage.ts` must stay synchronized.
+2. **Build & Server Smoke** (`npm run build`, `npm run build:server`, `npm run smoke:built`).
+3. **Lint & Type Safety** (`npx tsc --noEmit`, `npm run lint`, and `src/test/quality/type-safety.test.ts` which ratchets explicit `any` and type assertions).
+4. **Tests & Coverage** — `PR Protection` enforces a **test-count ratchet (`>= 4513` passing tests)** so existing tests are never silently dropped, and `Quality Gates` enforces the `vitest.config.ts` line coverage floor (**60% CI floor; 80%+ target for new code**).
+5. **Security & E2E** — `npm audit --omit=dev`, CodeQL (`Analyze (javascript-typescript)`), Semgrep SAST, Gitleaks secret scanning, and Playwright Chromium `Terminal E2E`.
 
 ## Code Standards
 
-### TypeScript
-
-- **Strict mode enabled** - All type errors must be resolved
-- **No `any` types** - Use proper type definitions or `unknown` with type guards
-- **Type all function signatures** - Parameters and return types required
-- **Use path aliases** - `@/`, `@components/`, `@core/`, `@utils/`, `@types/`
-
-```typescript
-// Good
-function calculateScore(coverage: number, security: number): number {
-  return Math.round(coverage * 0.5 + security * 0.5);
-}
-
-// Bad - missing types
-function calculateScore(coverage, security) {
-  return Math.round(coverage * 0.5 + security * 0.5);
-}
-```
-
-### React Components
-
-- **React 19 functional components only** - No class components
-- **Use TypeScript interfaces for props** - Type all component props
-- **Tailwind CSS only** - No inline styles, no CSS modules, no styled-components
-- **Extract complex logic to hooks** - Keep components focused on rendering
-
-```tsx
-// Good
-interface ButtonProps {
-  label: string;
-  onClick: () => void;
-  variant?: 'primary' | 'secondary';
-}
-
-export function Button({ label, onClick, variant = 'primary' }: ButtonProps) {
-  return (
-    <button
-      onClick={onClick}
-      className={variant === 'primary' ? 'bg-blue-500' : 'bg-gray-500'}
-    >
-      {label}
-    </button>
-  );
-}
-```
-
-### Testing
-
-- **Vitest for all tests** - No Jest, no other frameworks
-- **Coverage thresholds** - 85% lines, 85% statements, 80% branches, 85% functions
-- **Test file naming** - `*.test.ts` or `*.test.tsx` alongside source files
-- **Test structure** - Arrange, Act, Assert pattern
-
-```typescript
-// Good test structure
-describe('AuthService', () => {
-  it('should successfully authenticate valid credentials', () => {
-    // Arrange
-    const authService = new AuthService();
-    const credentials = { email: 'test@example.com', password: 'secret' };
-
-    // Act
-    const result = authService.login(credentials);
-
-    // Assert
-    expect(result.isOk()).toBe(true);
-    expect(result.unwrap().email).toBe('test@example.com');
-  });
-});
-```
-
-### Code Quality
-
-- **Functions < 25 lines** - Ideal 5-15 lines, maximum 25 lines
-- **Single Responsibility** - One function, one job
-- **Descriptive naming** - No abbreviations except universally known (HTTP, API, UI)
-- **Comments for WHY, not WHAT** - Code should be self-documenting
-
-## Testing
-
-### Run Tests
-
-```bash
-npm run test              # Watch mode
-npm run test:coverage     # Generate coverage report
-npm run test:ui           # Interactive UI mode
-```
-
-### Test Categories
-
-```bash
-npm run test:integration  # Integration tests (*.integration.test.ts)
-npm run test:security     # Security tests
-npm run test:quality      # Quality assurance tests
-```
-
-### Coverage Requirements
-
-- Overall: 85% minimum (enforced in CI)
-- Critical business logic: 100% coverage expected
-- UI components: 80% minimum acceptable
-- Utility functions: 100% coverage expected
-
-CI will fail if coverage drops below thresholds defined in `vitest.config.ts`.
-
-## Agent Development
-
-NXTG-Forge uses Claude Code agents for orchestration. Agents are defined in `.claude/agents/`.
-
-### Agent File Format
-
-```markdown
----
-name: agent-name
-description: |
-  When to use this agent and what it does.
-model: sonnet
-color: blue
-tools: Glob, Grep, Read, Write, Edit, Bash
----
-
-# Agent Name
-
-Agent implementation details and instructions...
-```
-
-### Creating a New Agent
-
-1. Create file in `.claude/agents/` with format `[AFRG]-agent-name.md`
-2. Define YAML frontmatter (name, description, model, tools)
-3. Write agent instructions following existing patterns
-4. Test agent by invoking it through the orchestrator
-
-**Important:** Agents use Claude Code's native tools (Read, Write, Edit, Bash). Do NOT build TypeScript meta-services for orchestration.
-
-## Code Review Checklist
-
-Before requesting review, ensure:
-
-### Code Quality
-- [ ] TypeScript strict mode passes (no `any` types)
-- [ ] ESLint passes with no warnings (`npm run lint`)
-- [ ] Code formatted with Prettier (`npm run format`)
-- [ ] Functions under 25 lines
-- [ ] Descriptive variable/function names
-
-### Testing
-- [ ] Tests written for new code
-- [ ] Coverage meets 85% threshold (`npm run test:coverage`)
-- [ ] All tests pass locally
-- [ ] Edge cases covered
-
-### Documentation
-- [ ] Public functions have JSDoc comments
-- [ ] Complex logic explained in comments (WHY, not WHAT)
-- [ ] README updated if adding new features
-- [ ] CLAUDE.md updated if changing architecture
-
-### CI/CD
-- [ ] Quality gates pass locally (`npm run quality:gates`)
-- [ ] No security vulnerabilities introduced
-- [ ] Build succeeds (`npm run build`)
-
-### PR Description
-- [ ] Clear title describing the change
-- [ ] Summary of what changed and why
-- [ ] Test plan or steps to verify
-- [ ] Screenshots/videos for UI changes
-
-## Architecture Notes
-
-### Multi-Device Access
-- UI uses Vite's proxy for multi-device access (dev mode)
-- DO NOT hardcode `localhost` URLs in client code
-- Use relative URLs (`/api/...`) - Vite proxy handles routing
-- Production builds use environment variables
-
-### Session Persistence
-- Infinity Terminal has BUILT-IN session persistence
-- Sessions survive browser close/reopen and network disconnects
-- Zellij is OPTIONAL, NOT required
-- See `CLAUDE.md` for architecture details
+- **TypeScript strict mode** — Avoid `any`; prefer `unknown` with runtime type guards or Zod schemas. Keep explicit type assertions (`as`) within the `type-safety.test.ts` ratchet.
+- **React 19 functional components** — Type all props with interfaces, use Tailwind CSS classes, and extract stateful logic into hooks.
+- **Vitest only** — Co-locate unit tests (`*.test.ts` / `*.test.tsx`) next to source files or under `src/test/{security,quality,integration}/`. Use concrete assertions (avoid hollow `toBeDefined()` checks).
+- **Relative URLs in client code** — Use `/api/...` and `/ws` so Vite's proxy and multi-device LAN/WSL2 access keep working without hardcoded `localhost` URLs.
+- **Infinity Terminal architecture** — Session persistence is built into the PTY bridge (`src/server/pty-bridge.ts`) and `useSessionPersistence.ts`. Zellij and tmux are not required.
 
 ## Questions?
 
-- Check `CLAUDE.md` for project conventions
-- Review existing code in `src/` for patterns
-- Read agent definitions in `.claude/agents/` for examples
-- Open an issue for clarification
-
----
-
-**Remember:** Quality over speed. Write code you'd be proud to review.
+- Check [`docs/README.md`](./docs/README.md) for architecture and API documentation.
+- Open an issue using the [issue chooser](https://github.com/nxtg-ai/forge-ui/issues/new/choose).

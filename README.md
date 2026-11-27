@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/forge-logo.png" alt="Forge" width="120">
+  <img src="docs/images/forge-logo.png" alt="NXTG-Forge UI" width="120">
 </p>
 
 # forge-ui
@@ -8,13 +8,54 @@
 
 **Stage: Public preview.** The Forge plugin and orchestrator are in alpha. This dashboard, forge-ui, was not part of the pre-registered core-job test behind that stage and is still a public preview.
 
-**A browser dashboard for Forge.**
+[![Quality Gates](https://github.com/nxtg-ai/forge-ui/actions/workflows/quality-gates.yml/badge.svg)](https://github.com/nxtg-ai/forge-ui/actions/workflows/quality-gates.yml) [![Terminal E2E](https://github.com/nxtg-ai/forge-ui/actions/workflows/terminal-e2e.yml/badge.svg)](https://github.com/nxtg-ai/forge-ui/actions/workflows/terminal-e2e.yml) [![Security Scan](https://github.com/nxtg-ai/forge-ui/actions/workflows/security-scan.yml/badge.svg)](https://github.com/nxtg-ai/forge-ui/actions/workflows/security-scan.yml) [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE.md) [![Release](https://img.shields.io/badge/release-v3.5.7-orange)](https://github.com/nxtg-ai/forge-ui/releases/tag/v3.5.7) [![Node >=22.12](https://img.shields.io/badge/node-%3E%3D22.12-brightgreen)](package.json)
 
-This is L3: Ship Lord.
+**NXTG-Forge UI (L3: Ship Lord)** is an open-source, local-first browser dashboard and persistent terminal (**Infinity Terminal**) for AI-assisted coding workflows — built with React 19, Express 5, `xterm.js` 6, and `node-pty`.
 
-forge-ui gives you a terminal in the browser (the Infinity Terminal), a governance dashboard with a health score, and a command center that runs a fixed set of project commands from the browser.
+> **Disambiguation:** This is **NXTG-Forge UI** (`nxtg-ai/forge-ui`), the browser dashboard for the [NXTG-Forge](https://forge.nxtg.ai) AI coding orchestration suite. It is **unrelated to Stable Diffusion WebUI Forge**.  
+> **License:** Open source under the [Apache License, Version 2.0](./LICENSE.md) (see [NOTICE](./NOTICE)).
 
-## Install
+<p align="center">
+  <img src="docs/images/terminal.png" alt="NXTG-Forge UI Infinity Terminal and live Governance HUD" width="100%">
+</p>
+
+## Why NXTG-Forge UI Exists
+
+When you run long-lived AI coding sessions across a workstation, WSL2, or a second device on your LAN, two routine failures break flow:
+
+1. **Closing a browser tab or dropping Wi-Fi kills your shell** unless you maintain tmux/Zellij + SSH tunnels by hand.
+2. **Project governance and health stay invisible** inside hidden JSON files while agents edit your repository.
+
+`forge-ui` solves both locally — binding `127.0.0.1` by default with zero third-party cloud relay:
+
+- **Infinity Terminal:** A shared browser PTY over WebSocket + `node-pty`. Multiple tabs attach to the same shell. Close the tab or lose the network and the shell keeps running for **5 minutes**, replaying up to **~100 KB** of recent scrollback on reconnect (no tmux or Zellij required; restarting the `forge-ui` server still ends the shell).
+- **Live Governance HUD:** Shows a **0–100 health score** and live governance state for the workspace `forge-ui` runs from — backed by [forge-orchestrator](https://github.com/nxtg-ai/forge-orchestrator) (L2) when installed, `.claude/governance.json` from [forge-plugin](https://github.com/nxtg-ai/forge-plugin) (L1), or a clearly labeled local estimate when running standalone. Policy enforcement stays in Forge's CLI/hooks, never in the frontend.
+- **Command Center:** Triggers a fixed set of project status, test, type-check/build pre-flight, and gap-analysis commands directly from the browser.
+- **Local-First Token Auth & Opt-In Multi-Device Access:** Listens on `127.0.0.1` only (`:5050` UI / `:5051` API) with a `0600` bearer token and 60-second single-use login codes.
+
+<details>
+<summary><strong>More screenshots: Live Dashboard &amp; Command Center</strong></summary>
+
+<p align="center">
+  <img src="docs/images/forge-dashboard.png" alt="NXTG-Forge UI Live Dashboard and Governance HUD" width="100%">
+</p>
+<p align="center">
+  <img src="docs/images/command-center.png" alt="NXTG-Forge UI Command Center" width="100%">
+</p>
+
+</details>
+
+## Quickstart (Under 60 Seconds)
+
+### Prerequisites
+
+- **Node.js 22.12 or later** (Vite 7 requires `^20.19 || >=22.12`; `package.json` specifies `>=22.0.0`)
+- **Native C/C++ build tools** (`python3`, `make`, `g++`) — `node-pty@1.1.0` compiles from source via `node-gyp` when no prebuild matches your OS/architecture:
+  - **Debian / Ubuntu / WSL2:** `sudo apt-get install -y python3 make g++`
+  - **macOS:** `xcode-select --install`
+- **Optional:** [Forge Orchestrator](https://github.com/nxtg-ai/forge-orchestrator) (`forge` on `PATH` or `FORGE_BIN`) for orchestrator-backed health scores
+
+### Install & Run Standalone
 
 ```bash
 git clone --branch v3.5.7 https://github.com/nxtg-ai/forge-ui
@@ -23,50 +64,66 @@ npm install
 npm run dev
 ```
 
-Runs on its own. With the [Forge Orchestrator](https://github.com/nxtg-ai/forge-orchestrator) (L2: Pro Builder) installed, the health score comes from the orchestrator.
+Runs standalone with zero external dependencies (verified in a clean `node:22-slim` container with `python3`, `make`, and `g++`). With [Forge Orchestrator](https://github.com/nxtg-ai/forge-orchestrator) (L2) installed, the Governance HUD reads live orchestrator state automatically.
 
-### Sign-in and network access
+### Sign-In and Network Access
 
-The dashboard asks for this install's access token the first time you open it. On the machine running Forge:
+The dashboard requires this install's access token on first open. In a second terminal on the machine running `forge-ui`:
 
 ```bash
+# Recommended: single-use 60-second sign-in link (keeps the long-lived token out of browser history)
+npm run auth:login-link
+
+# Or print the direct access-token link (human interactive use only):
 npx tsx src/server/auth/print-auth-url.ts      # or: node dist/server/auth/print-auth-url.js
 ```
 
-Open the link it prints. The token is created on first run at `~/.config/nxtg-forge/ui-secret` (mode 0600); you can also paste it into the sign-in screen. Tools can send it as `Authorization: Bearer <token>`.
+Open the printed URL (`http://localhost:5050/...`). The underlying secret is created on first run at `~/.config/nxtg-forge/ui-secret` (mode `0600`) and can also be pasted into the sign-in screen or sent as `Authorization: Bearer <token>`.
 
-The dashboard (5050) and API server (5051) listen on `127.0.0.1` only. To open the dashboard from another device, set `FORGE_UI_HOST=0.0.0.0` (both servers bind to it, and the API prints a warning) and set `ALLOWED_ORIGINS` to the full list of origins you will open it from, e.g. `ALLOWED_ORIGINS=http://localhost:5050,http://127.0.0.1:5050,http://192.0.2.10:5050`. `ALLOWED_ORIGINS` replaces the defaults, so include the local origins you still use. Every request still needs the token.
+Both the dashboard (`5050`) and API server (`5051`) bind to `127.0.0.1` only. To open the dashboard from another device on your LAN (such as a tablet or phone over WSL2):
 
-## The Infinity Terminal
+```bash
+FORGE_UI_HOST=0.0.0.0 \
+ALLOWED_ORIGINS=http://localhost:5050,http://127.0.0.1:5050,http://192.0.2.10:5050 \
+npm run dev
+```
 
-A shell on the machine running forge-ui, in your browser. Browser tabs on the same project share one shell. If you close the tab or lose the network, the shell keeps running: reopen the page within 5 minutes and you are back in the same shell, and up to about 100 KB of recent output is replayed. Restarting the forge-ui server still ends the shell.
+`ALLOWED_ORIGINS` replaces the defaults, so include the local origins you still use. Every HTTP and WebSocket request still requires the access token.
 
-## Governance Dashboard
+## How It Fits the NXTG-Forge Suite
 
-The dashboard shows a health score from 0 to 100 for the folder forge-ui runs from; run as installed (`npm run dev` in the clone), that is the forge-ui checkout itself. The score comes from the Forge Orchestrator when that is installed, otherwise from the Forge plugin's governance health, otherwise from a local estimate that is labelled as one.
+| Level | Repository | Role | License |
+| :--- | :--- | :--- | :--- |
+| **L1: Vibe Coder** | [nxtg-ai/forge-plugin](https://github.com/nxtg-ai/forge-plugin) | Claude Code governance hooks, 24 commands, 33 agents, 27 skills | Open source (MIT) |
+| **L2: Pro Builder** | [nxtg-ai/forge-orchestrator](https://github.com/nxtg-ai/forge-orchestrator) | Single-binary Rust MCP orchestrator (file locking, task board, knowledge flywheel, drift detection) | Open source (Apache-2.0) |
+| **L3: Ship Lord** | **nxtg-ai/forge-ui** *(this repo)* | React 19 browser dashboard, Infinity Terminal, and Governance HUD | Open source (Apache-2.0) |
 
-Governance state is read from `.claude/governance.json` in the folder forge-ui runs from. The UI displays it; policy decisions are made by Forge's other tools, not in the frontend.
+Each level works independently — adopt only what solves a real bottleneck.
 
-## What You Get
+## Feature Matrix
 
-| Feature | What It Does |
-|---------|-------------|
-| Governance dashboard | A 0-100 health score and the governance state of the folder forge-ui runs from |
-| Infinity Terminal | A browser terminal on a shared shell that survives a closed tab or a network drop, not a server restart |
-| Command center | Runs project status, tests, a type-check and build pre-flight, and a gap analysis from the browser |
-| Multi-device access | Open the dashboard from another device on your network (`FORGE_UI_HOST` plus `ALLOWED_ORIGINS`, see above) |
+| Feature | Verified Behavior |
+| :--- | :--- |
+| **Infinity Terminal** | Browser shell (`xterm.js` 6 + WebSocket + `node-pty`) on a shared PTY that survives closed tabs and network drops (5-minute retention, ~100 KB replay; server restart ends the shell) |
+| **Governance HUD** | Real-time 0–100 health score and `.claude/governance.json` state for the active workspace (orchestrator → plugin → labeled local estimate) |
+| **Command Center** | Runs project status, tests, type-check/build pre-flight, and gap analysis from the browser |
+| **Multi-Device Access** | Explicit opt-in LAN/WSL2 access via `FORGE_UI_HOST` + `ALLOWED_ORIGINS`, still token-gated on every request |
+| **Security & E2E Gates** | Loopback default, `0600` secret file, single-use login codes, CodeQL + Semgrep + Gitleaks CI, and real Chromium Playwright terminal round-trip E2E |
 
-## Prerequisites
+## Contributing
 
-- Node.js 22.12 or later (Vite 7 needs `^20.19 || >=22.12`; `package.json` asks for Node 22)
-- Optional: the [Forge Orchestrator](https://github.com/nxtg-ai/forge-orchestrator) installed as `forge` on your PATH (or `FORGE_BIN`), which supplies the health score
+Contributions are welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md) for local setup, the `npm run quality:gates` check, CLA signing ([CLA.md](./CLA.md)), and PR conventions.
+
+- Browse scoped starter tasks: [`good first issue`](https://github.com/nxtg-ai/forge-ui/labels/good%20first%20issue)
+- Report a bug or request a feature using our [issue templates](https://github.com/nxtg-ai/forge-ui/issues/new/choose)
+- Security disclosures: see [SECURITY.md](./SECURITY.md)
 
 ## Links
 
 - [Forge Product Page](https://forge.nxtg.ai)
-- [Forge Plugin](https://github.com/nxtg-ai/forge-plugin) (L1: Vibe Coder — start here if you're new)
-- [Forge Orchestrator](https://github.com/nxtg-ai/forge-orchestrator) (L2: Pro Builder)
 - [Documentation](https://forge.nxtg.ai/docs)
+- [Forge Plugin](https://github.com/nxtg-ai/forge-plugin) (L1 — MIT)
+- [Forge Orchestrator](https://github.com/nxtg-ai/forge-orchestrator) (L2 — Apache-2.0)
 
 ## License
 

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Vulnerability Report
+    url: https://github.com/nxtg-ai/forge-ui/blob/main/SECURITY.md
+    about: Please report security issues privately via SECURITY.md instead of a public issue.
+  - name: Forge Orchestrator (L2 Rust CLI & MCP Server)
+    url: https://github.com/nxtg-ai/forge-orchestrator/issues
+    about: Issues with task planning, file locking, MCP tools, or the `forge` binary.
+  - name: Forge Plugin (L1 Claude Code Governance)
+    url: https://github.com/nxtg-ai/forge-plugin/issues
+    about: Issues with Claude Code slash commands, hooks, skills, or agents.
