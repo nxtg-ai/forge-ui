@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [3.5.9] - 2026-11-27
 
+forge-ui is a **Public preview**.
+
 ### Fixed
 
 - Corrected the legal entity name in NOTICE to NXTG.AI LLC.
