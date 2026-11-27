@@ -15,7 +15,12 @@ import {
   type InitResult,
   type GovernanceConstitution,
   InitOptionsSchema,
+  MAX_DIRECTIVE_LENGTH,
+  MAX_GOAL_LENGTH,
+  MAX_GOALS_COUNT,
   AGENT_TEMPLATES,
+  canonicalizeProjectType,
+  sanitizeInitText,
   generateConfig,
   generateCompleteClaude,
   generateForgeSection,
@@ -83,6 +88,7 @@ export class InitService extends BaseService {
     projectType: ProjectType,
   ): Promise<Result<string[], IntegrationError>> {
     try {
+      const safeProjectType = canonicalizeProjectType(projectType);
       const createdPaths: string[] = [];
 
       // Create directory structure
@@ -102,13 +108,19 @@ export class InitService extends BaseService {
         createdPaths.push(dir);
       }
 
-      // Create config.yml
+      // Create config.yml (refuse symlinks)
       const configPath = path.join(
         this.projectRoot,
         ".claude/forge/config.yml",
       );
-      const config = generateConfig(projectType);
-      await fs.writeFile(configPath, config, "utf-8");
+      if (await isSymbolicLinkPath(configPath)) {
+        return Result.err(notARegularFileError(".claude/forge/config.yml", "CONFIG_NOT_A_FILE"));
+      }
+      const config = generateConfig(safeProjectType);
+      await fs.writeFile(configPath, config, {
+        encoding: "utf-8",
+        flag: openFlags().truncate,
+      });
       createdPaths.push(".claude/forge/config.yml");
 
       // Create starter agent templates
@@ -117,6 +129,9 @@ export class InitService extends BaseService {
 
       return Result.ok(createdPaths);
     } catch (error) {
+      if (isErrnoCode(error, "ELOOP")) {
+        return Result.err(notARegularFileError(".claude/forge/config.yml", "CONFIG_NOT_A_FILE"));
+      }
       return Result.err(
         new IntegrationError(
           `Failed to scaffold harness: ${error instanceof Error ? error.message : String(error)}`,
@@ -199,10 +214,18 @@ export class InitService extends BaseService {
         this.projectRoot,
         ".claude/governance.json",
       );
+      if (await isSymbolicLinkPath(governancePath)) {
+        return Result.err(notARegularFileError(".claude/governance.json", "GOVERNANCE_NOT_A_FILE"));
+      }
+
+      const safeDirective = sanitizeInitText(directive, MAX_DIRECTIVE_LENGTH);
+      const safeGoals = (goals || [])
+        .slice(0, MAX_GOALS_COUNT)
+        .map((g) => sanitizeInitText(g, MAX_GOAL_LENGTH));
 
       const constitution: GovernanceConstitution = {
-        directive,
-        vision: goals || [],
+        directive: safeDirective,
+        vision: safeGoals,
         status: "ACTIVE",
         confidence: 100,
         updatedBy: "/frg-init wizard",
@@ -224,8 +247,8 @@ export class InitService extends BaseService {
             source: "init-service",
             message: "NXTG-Forge initialized successfully",
             context: {
-              directive,
-              goals,
+              directive: safeDirective,
+              goals: safeGoals,
             },
             actionRequired: false,
           },
@@ -238,14 +261,17 @@ export class InitService extends BaseService {
         },
       };
 
-      await fs.writeFile(
-        governancePath,
-        JSON.stringify(governance, null, 2),
-        "utf-8",
-      );
+      const serialized = JSON.stringify(governance, null, 2);
+      await fs.writeFile(governancePath, serialized, {
+        encoding: "utf-8",
+        flag: openFlags().truncate,
+      });
 
       return Result.ok(undefined);
     } catch (error) {
+      if (isErrnoCode(error, "ELOOP")) {
+        return Result.err(notARegularFileError(".claude/governance.json", "GOVERNANCE_NOT_A_FILE"));
+      }
       return Result.err(
         new IntegrationError(
           `Failed to initialize governance: ${error instanceof Error ? error.message : String(error)}`,
@@ -284,6 +310,7 @@ export class InitService extends BaseService {
 
     const claudeMdPath = path.join(this.projectRoot, "CLAUDE.md");
     try {
+      const safeProjectType = canonicalizeProjectType(projectType);
       const kind = await entryKind(claudeMdPath);
       if (kind === "other") {
         return Result.err(claudeMdNotAFileError());
@@ -297,7 +324,7 @@ export class InitService extends BaseService {
         const separator = existing.endsWith("\n\n") ? "" : "\n\n";
         await fs.appendFile(
           claudeMdPath,
-          separator + "---\n\n" + generateForgeSection(projectType),
+          separator + "---\n\n" + generateForgeSection(safeProjectType),
           {
             encoding: "utf-8",
             flag: openFlags().append,
@@ -306,7 +333,7 @@ export class InitService extends BaseService {
         return Result.ok(undefined);
       }
 
-      await fs.writeFile(claudeMdPath, generateCompleteClaude(projectType), {
+      await fs.writeFile(claudeMdPath, generateCompleteClaude(safeProjectType), {
         encoding: "utf-8",
         flag: forceOverwrite ? openFlags().truncate : openFlags().create,
       });
@@ -484,9 +511,13 @@ function claudeMdExistsError(): IntegrationError {
 }
 
 function claudeMdNotAFileError(): IntegrationError {
+  return notARegularFileError("CLAUDE.md", "CLAUDE_MD_NOT_A_FILE");
+}
+
+function notARegularFileError(fileName: string, code: string): IntegrationError {
   return new IntegrationError(
-    "CLAUDE.md is not a regular file (it is a symlink, a folder or similar). forge-ui writes only to a regular CLAUDE.md in the project folder.",
-    "CLAUDE_MD_NOT_A_FILE",
+    `${fileName} is not a regular file (it is a symlink, a folder or similar). forge-ui writes only to a regular ${fileName} in the project folder.`,
+    code,
   );
 }
 
@@ -502,6 +533,18 @@ function isErrnoCode(error: unknown, code: string): boolean {
  * What is at the path, without following a symlink: nothing, a regular file,
  * or anything else (symlink, folder, device).
  */
+async function isSymbolicLinkPath(filePath: string): Promise<boolean> {
+  try {
+    const stat = await fs.lstat(filePath);
+    return stat.isSymbolicLink();
+  } catch (error) {
+    if (isErrnoCode(error, "ENOENT")) {
+      return false;
+    }
+    throw error;
+  }
+}
+
 async function entryKind(filePath: string): Promise<"none" | "file" | "other"> {
   try {
     const stat = await fs.lstat(filePath);

@@ -277,7 +277,7 @@ export function createForgeRoutes(ctx: ForgeRouteContext): express.Router {
   });
 
   // Initialize NXTG-Forge
-  router.post("/forge/init", async (req, res) => {
+  router.post("/forge/init", rateLimit(writeLimiter), async (req, res) => {
     try {
       const options: InitOptions = req.body;
 

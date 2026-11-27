@@ -3,11 +3,58 @@
  * Manages the strategic vision and alignment checking
  */
 
-import { promises as fs } from "fs";
+import { promises as fs, constants } from "fs";
 import * as path from "path";
 import { z } from "zod";
 import * as crypto from "crypto";
 import { Logger } from "../utils/logger";
+
+const MAX_VISION_FILE_BYTES = 128 * 1024;
+
+function stripControlChars(text: string, maxLen: number): string {
+  if (typeof text !== "string") {
+    return "";
+  }
+  const safeMax = Math.min(Math.max(0, maxLen), MAX_VISION_FILE_BYTES);
+  const limit = Math.min(text.length, safeMax);
+  let out = "";
+  for (let i = 0; i < limit; i++) {
+    const code = text.charCodeAt(i);
+    if (code === 9 || code === 10 || code === 13 || (code >= 32 && code !== 127)) {
+      out += text.charAt(i);
+    }
+  }
+  return out;
+}
+
+function sanitizeVisionLine(text: string, maxLen = 10000): string {
+  // Strip NUL and non-printable control bytes (preserving tabs/newlines) and
+  // neutralize bare YAML frontmatter fences so user text cannot corrupt VISION.md.
+  return stripControlChars(text, maxLen).replace(/^---$/gm, "- - -");
+}
+
+function isEnoent(error: unknown): boolean {
+  return error instanceof Error && "code" in error && error.code === "ENOENT";
+}
+
+async function assertRegularOrMissing(filePath: string): Promise<void> {
+  try {
+    const stat = await fs.lstat(filePath);
+    if (!stat.isFile()) {
+      throw new Error(`Refusing to write non-regular file: ${path.basename(filePath)}`);
+    }
+  } catch (error) {
+    if (isEnoent(error)) {
+      return;
+    }
+    throw error;
+  }
+}
+
+function noFollowTruncateFlag(): number {
+  const noFollow = constants.O_NOFOLLOW ?? 0;
+  return constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | noFollow;
+}
 import {
   CanonicalVision,
   VisionEvent,
@@ -76,6 +123,7 @@ export class VisionManager {
    */
   async loadVision(): Promise<CanonicalVision> {
     try {
+      await assertRegularOrMissing(this.visionPath);
       const content = await fs.readFile(this.visionPath, "utf-8");
       const visionFile = parseVisionFile(content);
 
@@ -124,11 +172,24 @@ export class VisionManager {
   }
 
   /**
-   * Save vision to file
+   * Save vision to file (refusing symlinks and enforcing size limit)
    */
   private async saveVision(vision: CanonicalVision): Promise<void> {
-    const markdown = visionToMarkdown(vision);
-    await fs.writeFile(this.visionPath, markdown, "utf-8");
+    await assertRegularOrMissing(this.visionPath);
+    const sanitizedVision: CanonicalVision = {
+      ...vision,
+      mission: sanitizeVisionLine(vision.mission, 10000),
+      currentFocus: sanitizeVisionLine(vision.currentFocus, 5000),
+      principles: vision.principles.map((p) => sanitizeVisionLine(p, 1000)),
+    };
+    const markdown = visionToMarkdown(sanitizedVision);
+    if (Buffer.byteLength(markdown, "utf-8") > MAX_VISION_FILE_BYTES) {
+      throw new Error("Vision document exceeds maximum allowed size");
+    }
+    await fs.writeFile(this.visionPath, markdown, {
+      encoding: "utf-8",
+      flag: noFollowTruncateFlag(),
+    });
     logger.info("Vision saved to file");
   }
 
@@ -446,10 +507,14 @@ export class VisionManager {
   }
 
   /**
-   * Save event history
+   * Save event history (refusing symlinks)
    */
   private async saveEvents(): Promise<void> {
-    await fs.writeFile(this.eventsPath, JSON.stringify(this.events, null, 2));
+    await assertRegularOrMissing(this.eventsPath);
+    await fs.writeFile(this.eventsPath, JSON.stringify(this.events, null, 2), {
+      encoding: "utf-8",
+      flag: noFollowTruncateFlag(),
+    });
   }
 
   /**

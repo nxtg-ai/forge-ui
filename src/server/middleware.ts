@@ -110,6 +110,29 @@ export const visionCaptureSchema = z.object({
   text: z.string().min(1).max(10000),
 });
 
+export const visionUpdateSchema = z.object({
+  mission: z.string().max(10000).optional(),
+  principles: z.array(z.string().max(1000)).max(50).optional(),
+  strategicGoals: z
+    .array(
+      z.object({
+        id: z.string().max(200),
+        title: z.string().max(500),
+        description: z.string().max(5000),
+        priority: z.enum(["critical", "high", "medium", "low"]),
+        deadline: z.union([z.date(), z.string()]).optional(),
+        metrics: z.array(z.string().max(500)).max(50),
+        status: z.enum(["not-started", "in-progress", "completed", "blocked"]),
+        progress: z.number().min(0).max(100),
+      }),
+    )
+    .max(50)
+    .optional(),
+  currentFocus: z.string().max(5000).optional(),
+  successMetrics: z.record(z.string().max(200), z.union([z.string().max(500), z.number()])).optional(),
+  goals: z.array(z.string().max(1000)).max(50).optional(),
+});
+
 export const commandExecuteSchema = z.object({
   name: z.string().min(1).max(200),
   args: z.record(z.string(), z.unknown()).optional(),
