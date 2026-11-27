@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.5.9] - 2026-11-27
+
+forge-ui is a **Public preview**.
+
+### Fixed
+
+- Corrected the legal entity name in NOTICE to NXTG.AI LLC.
+
 ## [3.5.8] - 2026-11-27
 
 forge-ui is a **Public preview**; interfaces may change. This release relicenses forge-ui to **Apache-2.0** (with standard `NOTICE` attribution), hardens HTTP-to-file writes across `InitService` and `VisionManager`, and overhauls onboarding documentation, issue templates, and live screenshots. **Upgrade from v3.5.7.**
