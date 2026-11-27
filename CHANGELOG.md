@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.5.8] - 2026-11-27
+
+forge-ui is a **Public preview**; interfaces may change. This release relicenses forge-ui to **Apache-2.0** (with standard `NOTICE` attribution), hardens HTTP-to-file writes across `InitService` and `VisionManager`, and overhauls onboarding documentation, issue templates, and live screenshots. **Upgrade from v3.5.7.**
+
+Includes #113, #115, #116, #117 and #118.
+
+### Changed
+
+- Relicensed `forge-ui` from `FSL-1.1-ALv2` to **Apache License, Version 2.0** (`LICENSE.md` + root `NOTICE` file, `package.json`, `package-lock.json`, `claude.json`, `docs/api/openapi.yaml`, `SECURITY.md`, and docs). Release archives now bundle and smoke-verify `NOTICE` alongside `LICENSE.md` (#118).
+- Overhauled `README.md`, `CONTRIBUTING.md`, `.github/ISSUE_TEMPLATE/` forms, and `scripts/dev-start.sh` with clean-container verified OS prerequisites (`python3`/`make`/`g++` for `node-pty`), `npm run auth:login-link` onboarding, and fresh `1440x900` live screenshots (#117).
+- Release-protocol drift check now runs after `Deploy & Release` rather than on every push to `main` (#113).
+
+### Fixed
+
+- Fixed a `SIGPIPE` flake in `release-notes.sh` by reading `CHANGELOG.md` without a pipe that can terminate early (#115).
+
+### Security
+
+- Hardened HTTP-to-file writes in `InitService` and `VisionManager` against CodeQL `js/http-to-file-access` alerts with strict path containment, symlink refusal, control-character sanitization, and route-level rate limiting, covered by 9 new security tests (#116).
+
 ## [3.5.7] - 2026-11-23
 
 forge-ui is a **Public preview**; interfaces may change. This is a security fix release: one-time sign-in codes now work only on the machine running forge-ui. It also removes a broken npm script and pins the browser test runner. **Upgrade from v3.5.6.**

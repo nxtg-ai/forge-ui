@@ -139,6 +139,7 @@ jobs:
           cp .env.example release/
           cp README.md release/
           cp LICENSE.md release/
+          cp NOTICE release/
 
           # Create archives
           cd release
@@ -233,7 +234,7 @@ jobs:
 
           mkdir pkg
           tar -xzf nxtg-forge-v${VERSION}.tar.gz -C pkg
-          for f in package.json package-lock.json LICENSE.md .env.example dist/server/api-server.js scripts/smoke-built-server.mjs; do
+          for f in package.json package-lock.json LICENSE.md NOTICE .env.example dist/server/api-server.js scripts/smoke-built-server.mjs; do
             [ -f "pkg/$f" ] || { echo "::error::Archive is missing $f"; exit 1; }
           done
           [ -d pkg/dist-ui ] || { echo "::error::Archive is missing dist-ui/"; exit 1; }

@@ -8,7 +8,7 @@
 
 **Stage: Public preview.** The Forge plugin and orchestrator are in alpha. This dashboard, forge-ui, was not part of the pre-registered core-job test behind that stage and is still a public preview.
 
-[![Quality Gates](https://github.com/nxtg-ai/forge-ui/actions/workflows/quality-gates.yml/badge.svg)](https://github.com/nxtg-ai/forge-ui/actions/workflows/quality-gates.yml) [![Terminal E2E](https://github.com/nxtg-ai/forge-ui/actions/workflows/terminal-e2e.yml/badge.svg)](https://github.com/nxtg-ai/forge-ui/actions/workflows/terminal-e2e.yml) [![Security Scan](https://github.com/nxtg-ai/forge-ui/actions/workflows/security-scan.yml/badge.svg)](https://github.com/nxtg-ai/forge-ui/actions/workflows/security-scan.yml) [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE.md) [![Release](https://img.shields.io/badge/release-v3.5.7-orange)](https://github.com/nxtg-ai/forge-ui/releases/tag/v3.5.7) [![Node >=22.12](https://img.shields.io/badge/node-%3E%3D22.12-brightgreen)](package.json)
+[![Quality Gates](https://github.com/nxtg-ai/forge-ui/actions/workflows/quality-gates.yml/badge.svg)](https://github.com/nxtg-ai/forge-ui/actions/workflows/quality-gates.yml) [![Terminal E2E](https://github.com/nxtg-ai/forge-ui/actions/workflows/terminal-e2e.yml/badge.svg)](https://github.com/nxtg-ai/forge-ui/actions/workflows/terminal-e2e.yml) [![Security Scan](https://github.com/nxtg-ai/forge-ui/actions/workflows/security-scan.yml/badge.svg)](https://github.com/nxtg-ai/forge-ui/actions/workflows/security-scan.yml) [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE.md) [![Release](https://img.shields.io/badge/release-v3.5.8-orange)](https://github.com/nxtg-ai/forge-ui/releases/tag/v3.5.8) [![Node >=22.12](https://img.shields.io/badge/node-%3E%3D22.12-brightgreen)](package.json)
 
 **NXTG-Forge UI (L3: Ship Lord)** is an open-source, local-first browser dashboard and persistent terminal (**Infinity Terminal**) for AI-assisted coding workflows — built with React 19, Express 5, `xterm.js` 6, and `node-pty`.
 
@@ -58,7 +58,7 @@ When you run long-lived AI coding sessions across a workstation, WSL2, or a seco
 ### Install & Run Standalone
 
 ```bash
-git clone --branch v3.5.7 https://github.com/nxtg-ai/forge-ui
+git clone --branch v3.5.8 https://github.com/nxtg-ai/forge-ui
 cd forge-ui
 npm install
 npm run dev
