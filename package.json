@@ -48,7 +48,7 @@
     "automation"
   ],
   "author": "NXTG Team",
-  "license": "FSL-1.1-ALv2",
+  "license": "Apache-2.0",
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@sentry/node": "^10.43.0",
