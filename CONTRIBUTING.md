@@ -90,15 +90,9 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 Common types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`.
 
-### Contributor License Agreement (CLA)
+### Contribution License
 
-All external contributors must sign the CLA before a pull request can be merged. When you open a PR, the CLA bot comments on the PR. Reply with:
-
-```text
-I have read the CLA Document and I hereby sign the CLA
-```
-
-This records your signature once in `.github/cla-signatures.json`. The CLA document is in [`CLA.md`](./CLA.md) (based on Apache ICLA terms).
+Contributions are submitted under the project’s [Apache License 2.0](./LICENSE.md).
 
 ### Pull Request Process & CI Gates
 
