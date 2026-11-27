@@ -9,6 +9,7 @@ import {
   writeLimiter,
   validateRequest,
   visionCaptureSchema,
+  visionUpdateSchema,
 } from "../../middleware";
 
 export function createVisionRoutes(ctx: RouteContext): express.Router {
@@ -31,23 +32,28 @@ export function createVisionRoutes(ctx: RouteContext): express.Router {
     }
   });
 
-  router.put("/", async (req, res) => {
-    try {
-      const vision = await ctx.visionSystem.updateVision(req.body);
-      ctx.broadcast("vision.change", vision);
-      res.json({
-        success: true,
-        data: vision,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-        timestamp: new Date().toISOString(),
-      });
-    }
-  });
+  router.put(
+    "/",
+    rateLimit(writeLimiter),
+    validateRequest(visionUpdateSchema),
+    async (req, res) => {
+      try {
+        const vision = await ctx.visionSystem.updateVision(req.body);
+        ctx.broadcast("vision.change", vision);
+        res.json({
+          success: true,
+          data: vision,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+          timestamp: new Date().toISOString(),
+        });
+      }
+    },
+  );
 
   router.post(
     "/capture",
