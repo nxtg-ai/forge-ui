@@ -112,12 +112,16 @@ export function canonicalizeProjectType(value: string): ProjectType {
  * tabs and newlines) and cap length before writing user text to disk.
  */
 export function sanitizeInitText(value: string, maxLength: number): string {
+  if (typeof value !== "string") {
+    return "";
+  }
+  const safeMax = Math.min(Math.max(0, maxLength), MAX_DIRECTIVE_LENGTH);
+  const limit = Math.min(value.length, safeMax);
   let out = "";
-  const limit = Math.min(value.length, maxLength);
-  for (let i = 0; i < value.length && out.length < limit; i++) {
+  for (let i = 0; i < limit; i++) {
     const code = value.charCodeAt(i);
     if (code === 9 || code === 10 || code === 13 || (code >= 32 && code !== 127)) {
-      out += value[i];
+      out += value.charAt(i);
     }
   }
   return out;

@@ -3,7 +3,7 @@
  * Manages the strategic vision and alignment checking
  */
 
-import { promises as fs, constants as fsConstants } from "fs";
+import { promises as fs, constants } from "fs";
 import * as path from "path";
 import { z } from "zod";
 import * as crypto from "crypto";
@@ -11,12 +11,17 @@ import { Logger } from "../utils/logger";
 
 const MAX_VISION_FILE_BYTES = 128 * 1024;
 
-function stripControlChars(text: string): string {
+function stripControlChars(text: string, maxLen: number): string {
+  if (typeof text !== "string") {
+    return "";
+  }
+  const safeMax = Math.min(Math.max(0, maxLen), MAX_VISION_FILE_BYTES);
+  const limit = Math.min(text.length, safeMax);
   let out = "";
-  for (let i = 0; i < text.length; i++) {
+  for (let i = 0; i < limit; i++) {
     const code = text.charCodeAt(i);
     if (code === 9 || code === 10 || code === 13 || (code >= 32 && code !== 127)) {
-      out += text[i];
+      out += text.charAt(i);
     }
   }
   return out;
@@ -25,7 +30,11 @@ function stripControlChars(text: string): string {
 function sanitizeVisionLine(text: string, maxLen = 10000): string {
   // Strip NUL and non-printable control bytes (preserving tabs/newlines) and
   // neutralize bare YAML frontmatter fences so user text cannot corrupt VISION.md.
-  return stripControlChars(text).replace(/^---$/gm, "- - -").slice(0, maxLen);
+  return stripControlChars(text, maxLen).replace(/^---$/gm, "- - -");
+}
+
+function isEnoent(error: unknown): boolean {
+  return error instanceof Error && "code" in error && error.code === "ENOENT";
 }
 
 async function assertRegularOrMissing(filePath: string): Promise<void> {
@@ -35,7 +44,7 @@ async function assertRegularOrMissing(filePath: string): Promise<void> {
       throw new Error(`Refusing to write non-regular file: ${path.basename(filePath)}`);
     }
   } catch (error) {
-    if (typeof error === "object" && error !== null && (error as NodeJS.ErrnoException).code === "ENOENT") {
+    if (isEnoent(error)) {
       return;
     }
     throw error;
@@ -43,8 +52,8 @@ async function assertRegularOrMissing(filePath: string): Promise<void> {
 }
 
 function noFollowTruncateFlag(): number {
-  const noFollow = fsConstants.O_NOFOLLOW ?? 0;
-  return fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_TRUNC | noFollow;
+  const noFollow = constants.O_NOFOLLOW ?? 0;
+  return constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | noFollow;
 }
 import {
   CanonicalVision,
