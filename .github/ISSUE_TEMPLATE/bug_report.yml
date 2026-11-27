@@ -1,0 +1,55 @@
+name: Bug Report
+description: Report a reproducible bug in NXTG-Forge UI (Infinity Terminal, Governance HUD, auth, or build)
+title: "fix: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting an issue in **NXTG-Forge UI** (`nxtg-ai/forge-ui`).
+        Please do **not** paste your `~/.config/nxtg-forge/ui-secret` token or full sign-in URLs here.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Concise description of the unexpected behavior and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Exact commands or UI clicks needed to trigger the bug.
+      placeholder: |
+        1. git clone --branch v3.5.7 https://github.com/nxtg-ai/forge-ui
+        2. npm install && npm run dev
+        3. Open Infinity Terminal and ...
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      description: OS (Linux / WSL2 / macOS), Node.js version (`node -v`), browser, and `forge-ui` version/tag.
+      placeholder: "Ubuntu 24.04 (WSL2), Node v22.12.0, Chrome 131, v3.5.7"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Infinity Terminal (xterm.js / node-pty / reconnect)
+        - Governance HUD / Dashboard
+        - Sign-in / Auth / Multi-device LAN access
+        - Install / Native build (node-pty)
+        - Command Center / API
+        - Documentation / Other
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or screenshots
+      description: Redact any access tokens or personal paths before pasting.
+      render: shell
