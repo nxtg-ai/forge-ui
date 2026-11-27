@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="docs/images/forge-logo.png" alt="NXTG-Forge UI" width="120">
+  <img src="docs/images/forge-ui-banner.png" alt="NXTG Forge UI, a local browser terminal and project dashboard for AI-assisted coding">
+  <br>Reconnect to your local project shell from a browser and see project health alongside it.
 </p>
-
-# forge-ui
+# NXTG Forge UI
 
 [![stage: public preview](https://img.shields.io/badge/stage-public_preview-blue)](STAGE)
 
@@ -45,7 +45,7 @@ When you run long-lived AI coding sessions across a workstation, WSL2, or a seco
 
 </details>
 
-## Quickstart (Under 60 Seconds)
+## Quickstart
 
 ### Prerequisites
 
@@ -64,7 +64,7 @@ npm install
 npm run dev
 ```
 
-Runs standalone with zero external dependencies (verified in a clean `node:22-slim` container with `python3`, `make`, and `g++`). With [Forge Orchestrator](https://github.com/nxtg-ai/forge-orchestrator) (L2) installed, the Governance HUD reads live orchestrator state automatically.
+Runs standalone without the Forge plugin or orchestrator (verified in a clean `node:22-slim` container with `python3`, `make`, and `g++`). With [Forge Orchestrator](https://github.com/nxtg-ai/forge-orchestrator) (L2) installed, the Governance HUD reads live orchestrator state automatically.
 
 ### Sign-In and Network Access
 
